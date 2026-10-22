@@ -1,12 +1,12 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
+import { RoadmapCanvas } from "../RoadmapCanvas";
+import { getCatalogRoadmapChapters } from "../../data/catalogRoadmaps";
 
 export interface RoadmapPageRoadmap {
   id: string;
   title: string;
 }
-
-const ROADMAP_PAGE_CONTENT: Record<string, React.ReactNode> = {};
 
 interface RoadmapPageProps {
   roadmap: RoadmapPageRoadmap;
@@ -14,26 +14,42 @@ interface RoadmapPageProps {
 }
 
 export const RoadmapPage: React.FC<RoadmapPageProps> = ({ roadmap, onBack }) => {
+  const chapters = useMemo(
+    () => getCatalogRoadmapChapters(roadmap.id, roadmap.title),
+    [roadmap.id, roadmap.title]
+  );
+
   return (
-    <div className="explore-screen fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A] animate-in fade-in duration-150">
-      <button
-        type="button"
-        onClick={onBack}
-        className="fixed left-4 top-4 z-20 inline-flex h-8 items-center gap-1.5 px-3 text-[12px] font-medium text-[#0F172A] cursor-pointer"
-      >
-        <ArrowLeft size={14} />
-        Back
-      </button>
+    <div className="explore-screen fixed inset-0 z-[60] bg-[#FFFFFF] font-sans text-[#0F172A] animate-in fade-in duration-150 flex flex-col">
+      {/* Top Navigation Bar with Back Button */}
+      <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-white/95 backdrop-blur-xs border-b border-slate-100">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex h-8 items-center gap-1.5 px-3 text-[12px] font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+        >
+          <ArrowLeft size={14} />
+          Back to Roadmaps
+        </button>
+        <span className="text-[12px] font-medium text-slate-500 uppercase tracking-wider font-mono">
+          Interactive Node Roadmap
+        </span>
+      </div>
 
-      <div className="mx-auto w-full max-w-[1440px] px-6 pb-24 pt-24 sm:pt-[6rem]">
-        <div className="flex items-center justify-center">
-          <h1 className="font-serif text-4xl sm:text-5xl font-normal text-[#0F172A] tracking-tight leading-tight">
-            {roadmap.title}
-          </h1>
-        </div>
-
-        <div className="mt-12 min-h-[50vh]">{ROADMAP_PAGE_CONTENT[roadmap.id] ?? null}</div>
+      {/* Embedded Native RoadmapCanvas with Full Node System */}
+      <div className="flex-1 w-full h-[calc(100vh-48px)] overflow-hidden">
+        <RoadmapCanvas
+          isOpen={true}
+          onClose={onBack}
+          chapters={chapters}
+          docTitle={`${roadmap.title} Roadmap`}
+          mode="docked"
+          showExploreButton={false}
+          onSelectChapter={() => {}}
+        />
       </div>
     </div>
   );
 };
+
+export default RoadmapPage;

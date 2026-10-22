@@ -29,6 +29,7 @@ export interface RoadmapCanvasProps {
   onSelectChapter: (rowNumber: number) => void;
   docTitle?: string;
   mode?: "modal" | "docked";
+  showExploreButton?: boolean;
 }
 
 interface LayoutMilestone {
@@ -337,6 +338,7 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   onSelectChapter,
   docTitle = "Document Roadmap",
   mode = "docked",
+  showExploreButton = true,
 }) => {
   const docKey = useMemo(() => docTitle.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase(), [docTitle]);
 
@@ -447,20 +449,22 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
           className="min-w-[1280px] max-w-[1280px] mx-auto py-8 px-4 relative flex flex-col items-center"
           style={{ height: `${layout.totalHeight}px`, zoom: 1.15 }}
         >
-          <button
-            type="button"
-            onClick={() => setIsExploreOpen(true)}
-            className="absolute z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-none border border-black bg-white text-[12px] font-semibold text-black cursor-pointer"
-            style={{
-              top: "5%",
-              right: "0px",
-              transform: "translateX(7%) scale(0.97)",
-              transformOrigin: "center",
-            }}
-          >
-            Explore
-            <ArrowRight size={12} />
-          </button>
+          {showExploreButton && (
+            <button
+              type="button"
+              onClick={() => setIsExploreOpen(true)}
+              className="absolute z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-none border border-black bg-white text-[12px] font-semibold text-black cursor-pointer"
+              style={{
+                top: "5%",
+                right: "0px",
+                transform: "translateX(7%) scale(0.97)",
+                transformOrigin: "center",
+              }}
+            >
+              Explore
+              <ArrowRight size={12} />
+            </button>
+          )}
           {/* SVG Connectors behind nodes */}
           <svg
             className="absolute inset-0 pointer-events-none"
