@@ -338,7 +338,7 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   onSelectChapter,
   docTitle = "Document Roadmap",
   mode = "docked",
-  showExploreButton = true,
+  showExploreButton = false,
 }) => {
   const docKey = useMemo(() => docTitle.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase(), [docTitle]);
 

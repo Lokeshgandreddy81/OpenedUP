@@ -7,6 +7,7 @@ import { ProjectsView } from "../projects/ProjectsView";
 import { ArtifactsView } from "./artifacts/ArtifactsView";
 import { CustomizeView } from "./CustomizeView";
 import { PluginsView } from "./PluginsView";
+import { BenchmarksView } from "../benchmarks/BenchmarksView";
 import type { ChatConversation, ChatMessage, AiModelId } from "./chatTypes";
 import type { ComputedRow } from "@charan-interiors/shared";
 
@@ -38,8 +39,8 @@ export interface ChatWindowProps {
   docTitle?: string;
   onSelectChapter?: (rowNumber: number) => void;
   onOpenScheduledTasks?: () => void;
-  initialView?: "chat" | "projects" | "artifacts" | "customize" | "plugins";
-  onViewChange?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins") => void;
+  initialView?: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks";
+  onViewChange?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks") => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -53,7 +54,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onViewChange,
 }) => {
   const [activeView, setActiveView] = useState<
-    "chat" | "projects" | "artifacts" | "customize" | "plugins"
+    "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks"
   >(initialView);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isScheduledTasksInternalOpen, setIsScheduledTasksInternalOpen] = useState(false);
@@ -67,7 +68,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const [projectsNavKey, setProjectsNavKey] = useState(0);
 
-  const handleSelectView = (view: "chat" | "projects" | "artifacts" | "customize" | "plugins") => {
+  const handleSelectView = (
+    view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks"
+  ) => {
     if (view === "projects") {
       setProjectsNavKey((k) => k + 1);
     }
@@ -349,7 +352,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         onSelectView={handleSelectView}
       />
 
-      {/* Main stage: Projects view, Artifacts view, Customize view, Plugins view, or Chat canvas */}
+      {/* Main stage: Projects view, Artifacts view, Customize view, Plugins view, Benchmarks view, or Chat canvas */}
       {activeView === "projects" ? (
         <ProjectsView
           key={projectsNavKey}
@@ -381,6 +384,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             }
           }}
         />
+      ) : activeView === "benchmarks" ? (
+        <div className="flex-1 w-full h-full min-h-0 overflow-y-auto">
+          <BenchmarksView
+            isOpen={true}
+            onClose={() => handleSelectView("chat")}
+            docTitle={docTitle}
+          />
+        </div>
       ) : (
         <main
           aria-label="Chat canvas"
@@ -425,6 +436,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     onChangeModel={(m) => setSelectedModel(m)}
                     onOpenProjects={() => handleSelectView("projects")}
                     onOpenPlugins={() => handleSelectView("plugins")}
+                    onOpenBenchmarks={() => handleSelectView("benchmarks")}
                   />
                 </div>
               </div>
@@ -487,6 +499,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   onChangeModel={(m) => setSelectedModel(m)}
                   onOpenProjects={() => handleSelectView("projects")}
                   onOpenPlugins={() => handleSelectView("plugins")}
+                  onOpenBenchmarks={() => handleSelectView("benchmarks")}
                 />
               </div>
             </>

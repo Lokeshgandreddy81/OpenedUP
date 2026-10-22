@@ -7,6 +7,7 @@ import {
   Shapes,
   Briefcase,
   Blocks,
+  BarChart3,
   Loader2,
   Trash2,
   MoreHorizontal,
@@ -76,8 +77,8 @@ interface ChatSidebarProps {
   onRenameConversation?: (id: string, newTitle: string) => void;
   onArchiveConversation?: (id: string) => void;
   onOpenScheduledTasks?: () => void;
-  activeView?: "chat" | "projects" | "artifacts" | "customize" | "plugins";
-  onSelectView?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins") => void;
+  activeView?: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks";
+  onSelectView?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks") => void;
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -236,6 +237,19 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         >
           <Blocks size={16} strokeWidth={1.8} />
         </button>
+        <button
+          type="button"
+          onClick={() => onSelectView?.("benchmarks")}
+          title="Benchmarks"
+          aria-label="Benchmarks"
+          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+            activeView === "benchmarks"
+              ? "bg-[#ECECF1] text-slate-950 font-medium"
+              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <BarChart3 size={16} strokeWidth={1.8} />
+        </button>
 
         {/* Bottom profile avatar in collapsed rail */}
         <div className="mt-auto pt-2">
@@ -358,6 +372,19 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         >
           <Blocks size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
           <span>Plugins</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSelectView?.("benchmarks")}
+          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+            activeView === "benchmarks"
+              ? "bg-[#ECECF1] text-slate-950 font-medium"
+              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+          }`}
+        >
+          <BarChart3 size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <span>Benchmarks</span>
         </button>
       </div>
 

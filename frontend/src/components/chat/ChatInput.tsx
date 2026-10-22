@@ -10,6 +10,7 @@ import {
   Boxes,
   Palette,
   Plug,
+  BarChart3,
   ChevronRight,
   Mic,
 } from "lucide-react";
@@ -59,6 +60,7 @@ interface ChatInputProps {
   onChangeModel: (model: AiModelId) => void;
   onOpenProjects?: () => void;
   onOpenPlugins?: () => void;
+  onOpenBenchmarks?: () => void;
   initialText?: string;
 }
 
@@ -123,6 +125,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onChangeModel,
   onOpenProjects,
   onOpenPlugins,
+  onOpenBenchmarks,
   initialText = "",
 }) => {
   const [text, setText] = useState(initialText);
@@ -420,6 +423,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       className="text-slate-600 group-hover:text-slate-900 shrink-0"
                     />
                     <span className="text-[13px] text-slate-800 font-normal">Plugins</span>
+                  </div>
+                  <ChevronRight size={13} className="text-slate-400 shrink-0" />
+                </button>
+
+                {/* Benchmarks */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPlusMenuOpen(false);
+                    onOpenBenchmarks?.();
+                  }}
+                  className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <BarChart3
+                      size={15}
+                      strokeWidth={1.8}
+                      className="text-slate-600 group-hover:text-slate-900 shrink-0"
+                    />
+                    <span className="text-[13px] text-slate-800 font-normal">Benchmarks</span>
                   </div>
                   <ChevronRight size={13} className="text-slate-400 shrink-0" />
                 </button>

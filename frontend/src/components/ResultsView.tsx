@@ -238,13 +238,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     return false;
   });
   const [chatInitialView, setChatInitialView] = useState<
-    "chat" | "projects" | "artifacts" | "customize" | "plugins"
+    "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks"
   >(() => {
     if (typeof window !== "undefined") {
       if (window.location.search.includes("tab=plugins")) return "plugins";
       if (window.location.search.includes("tab=customize")) return "customize";
       if (window.location.search.includes("tab=artifacts")) return "artifacts";
       if (window.location.search.includes("tab=projects")) return "projects";
+      if (window.location.search.includes("tab=benchmarks")) return "benchmarks";
     }
     return "chat";
   });

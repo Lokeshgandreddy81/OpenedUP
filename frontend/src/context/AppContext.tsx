@@ -94,11 +94,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const navigate = useNavigate();
   const reducedMotion = usePrefersReducedMotion();
   const isDemo = typeof window !== "undefined" && window.location.search.includes("demo=true");
-  const isPdfDemo = typeof window !== "undefined" && window.location.search.includes("mode=pdf");
+  const isPdfDemo = false;
 
-  const [photos, setPhotos] = useState<UploadedPhoto[]>(() =>
-    isDemo ? (isPdfDemo ? DEMO_PDF_PHOTOS : DEMO_SPEND_PHOTOS) : []
-  );
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [privacyAccepted, setPrivacyAccepted] = useState<boolean>(true);
   const [readingPhase, setReadingPhase] = useState<ReadingPhase>("idle");
   const [totalReceiptsFound, setTotalReceiptsFound] = useState<number>(0);
@@ -106,9 +104,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     Array<{ merchant: string; total: number | null; currency: string }>
   >([]);
   const [failedBatches, setFailedBatches] = useState<FailedBatchInfo[]>([]);
-  const [rows, setRows] = useState<ReceiptRow[]>(() =>
-    isDemo ? applyCodeVerifiedDuplicates(isPdfDemo ? DEMO_PDF_ROWS : DEMO_SPEND_ROWS, []) : []
-  );
+  const [rows, setRows] = useState<ReceiptRow[]>([]);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
   const [connectedEmail, setConnectedEmail] = useState<string | null>(
     () => getSavedWorkspaceSession()?.accountEmail ?? null
