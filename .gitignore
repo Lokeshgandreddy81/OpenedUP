@@ -55,6 +55,8 @@ pnpm-debug.log*
 # Platform and workspace tool cache
 .freebuff/
 **/.freebuff/
+.vite/
+**/.vite/
 
 # Python
 __pycache__/
