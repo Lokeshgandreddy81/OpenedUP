@@ -418,7 +418,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             return { ok: true as const, photo: ready };
           } catch (err: unknown) {
             const message = err instanceof Error ? err.message : `Could not process ${p.name}`;
-            console.error("PREP_FAILED", p.name, message, err);
             return { ok: false as const, photo: p, message };
           }
         })

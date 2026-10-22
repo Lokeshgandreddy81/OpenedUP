@@ -12,7 +12,7 @@
   "scripts": {
     "dev:frontend": "npm run --workspace=@charan-interiors/frontend dev",
     "dev:backend": "npm run --workspace=@charan-interiors/backend dev",
-    "dev": "npm run dev:frontend",
+    "dev": "npm run dev:backend & npm run dev:frontend",
     "build": "npm run --workspaces --if-present build",
     "test": "npm run --workspaces --if-present test",
     "test:coverage": "npm run --workspaces --if-present test:coverage",

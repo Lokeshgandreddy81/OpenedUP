@@ -414,6 +414,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                       : `${b.startPhotoIndex}–${b.endPhotoIndex}`
                   )
                   .join(", ")}
+                : {failedBatches.map((b) => b.errorMessage).join("; ")}
               </span>
               <button
                 type="button"
