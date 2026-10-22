@@ -336,7 +336,7 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   chapters,
   selectedRow,
   onSelectChapter,
-  docTitle = "Document Roadmap",
+  docTitle = "Roadmaps",
   mode = "docked",
   showExploreButton = false,
 }) => {
@@ -431,8 +431,6 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
   }
 
   if (!isOpen) return null;
-
-  const totalChapters = Math.max(1, graph.totalChapters);
 
   return (
     <div
@@ -540,9 +538,6 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
             <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight font-sans leading-snug break-words max-w-[620px]">
               {docTitle}
             </h1>
-            <p className="text-[11px] font-mono uppercase tracking-wider text-slate-400 mt-1 font-semibold">
-              Visual Roadmap · {totalChapters} Chapters
-            </p>
           </div>
 
           {/* Spine Milestone Nodes */}

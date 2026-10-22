@@ -238,6 +238,68 @@ const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({
 
       renderTask = page.render({ canvasContext: ctx, viewport });
       await renderTask.promise;
+      if (cancelled) return;
+
+      // Auto-detect and trim excessive blank top whitespace (common on section divider pages)
+      // so content starts flush at the top, perfectly matching the first cover node's height.
+      try {
+        const w = canvas.width;
+        const h = canvas.height;
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const pixels = imgData.data;
+        let topBlankRows = 0;
+        const sampleStepX = Math.max(1, Math.floor(w / 40));
+
+        for (let y = 0; y < Math.floor(h * 0.35); y++) {
+          let isRowBlank = true;
+          const rowOffset = y * w * 4;
+          for (let x = 0; x < w; x += sampleStepX) {
+            const idx = rowOffset + x * 4;
+            const r = pixels[idx];
+            const g = pixels[idx + 1];
+            const b = pixels[idx + 2];
+            const a = pixels[idx + 3];
+            // Non-white or non-transparent pixel
+            if (a > 20 && (r < 240 || g < 240 || b < 240)) {
+              isRowBlank = false;
+              break;
+            }
+          }
+          if (isRowBlank) {
+            topBlankRows++;
+          } else {
+            break;
+          }
+        }
+
+        // If top blank margin is significant (> 5% of height), trim it
+        if (topBlankRows > h * 0.05 && topBlankRows < h * 0.5) {
+          const trimmedHeight = h - topBlankRows;
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = w;
+          tempCanvas.height = trimmedHeight;
+          const tempCtx = tempCanvas.getContext("2d");
+          if (tempCtx) {
+            tempCtx.drawImage(
+              canvas,
+              0,
+              topBlankRows,
+              w,
+              trimmedHeight,
+              0,
+              0,
+              w,
+              trimmedHeight
+            );
+            canvas.height = trimmedHeight;
+            ctx.drawImage(tempCanvas, 0, 0);
+            setAspect(w / trimmedHeight);
+          }
+        }
+      } catch {
+        // Tainted canvas or reading failure: keep normal viewport
+      }
+
       page.cleanup();
     })().catch(() => {
       // aborted or failed render; the sheet stays blank

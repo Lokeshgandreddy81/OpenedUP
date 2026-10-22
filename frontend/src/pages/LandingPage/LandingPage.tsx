@@ -6,22 +6,7 @@ import { LandingPageErrorBoundary } from "./ErrorBoundary";
 
 export const LandingPageContent: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    photos,
-    privacyAccepted,
-    readingPhase,
-    totalReceiptsFound,
-    recentDiscoveries,
-    failedBatches,
-    connectedEmail,
-    isDemo,
-    handleAddFiles,
-    handleRemovePhoto,
-    setPrivacyAccepted,
-    handleStartVisualise,
-    handleRetryFailedBatches,
-    setIsWorkspaceModalOpen,
-  } = useAppContext();
+  const { isDemo } = useAppContext();
 
   useEffect(() => {
     if (isDemo && typeof window !== "undefined" && window.location.pathname === "/") {
@@ -29,23 +14,11 @@ export const LandingPageContent: React.FC = () => {
     }
   }, [isDemo, navigate]);
 
-  return (
-    <LandingView
-      photos={photos}
-      privacyAccepted={privacyAccepted}
-      readingPhase={readingPhase}
-      totalReceiptsFound={totalReceiptsFound}
-      recentDiscoveries={recentDiscoveries}
-      failedBatches={failedBatches}
-      connectedEmail={connectedEmail}
-      onAddFiles={handleAddFiles}
-      onRemovePhoto={handleRemovePhoto}
-      onTogglePrivacy={() => setPrivacyAccepted((v) => !v)}
-      onStartVisualise={handleStartVisualise}
-      onRetryFailedBatches={handleRetryFailedBatches}
-      onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
-    />
-  );
+  const handleGetStarted = () => {
+    navigate("/chat");
+  };
+
+  return <LandingView onGetStarted={handleGetStarted} />;
 };
 
 export const LandingPage: React.FC = () => {

@@ -8,6 +8,8 @@ import {
   Briefcase,
   Blocks,
   BarChart3,
+  BookOpen,
+  GitFork,
   Loader2,
   Trash2,
   MoreHorizontal,
@@ -77,8 +79,8 @@ interface ChatSidebarProps {
   onRenameConversation?: (id: string, newTitle: string) => void;
   onArchiveConversation?: (id: string) => void;
   onOpenScheduledTasks?: () => void;
-  activeView?: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks";
-  onSelectView?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks") => void;
+  activeView?: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps";
+  onSelectView?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps") => void;
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -250,6 +252,32 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         >
           <BarChart3 size={16} strokeWidth={1.8} />
         </button>
+        <button
+          type="button"
+          onClick={() => onSelectView?.("chapters")}
+          title="Chapters"
+          aria-label="Chapters"
+          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+            activeView === "chapters"
+              ? "bg-[#ECECF1] text-slate-950 font-medium"
+              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <BookOpen size={16} strokeWidth={1.8} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelectView?.("roadmaps")}
+          title="Roadmaps"
+          aria-label="Roadmaps"
+          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+            activeView === "roadmaps"
+              ? "bg-[#ECECF1] text-slate-950 font-medium"
+              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <GitFork size={16} strokeWidth={1.8} />
+        </button>
 
         {/* Bottom profile avatar in collapsed rail */}
         <div className="mt-auto pt-2">
@@ -385,6 +413,32 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         >
           <BarChart3 size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
           <span>Benchmarks</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSelectView?.("chapters")}
+          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+            activeView === "chapters"
+              ? "bg-[#ECECF1] text-slate-950 font-medium"
+              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+          }`}
+        >
+          <BookOpen size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <span>Chapters</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSelectView?.("roadmaps")}
+          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+            activeView === "roadmaps"
+              ? "bg-[#ECECF1] text-slate-950 font-medium"
+              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+          }`}
+        >
+          <GitFork size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <span>Roadmaps</span>
         </button>
       </div>
 

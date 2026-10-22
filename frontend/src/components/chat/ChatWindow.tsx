@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
@@ -8,6 +9,7 @@ import { ArtifactsView } from "./artifacts/ArtifactsView";
 import { CustomizeView } from "./CustomizeView";
 import { PluginsView } from "./PluginsView";
 import { BenchmarksView } from "../benchmarks/BenchmarksView";
+import { ExploreScreen } from "../roadmap/ExploreScreen";
 import type { ChatConversation, ChatMessage, AiModelId } from "./chatTypes";
 import type { ComputedRow } from "@charan-interiors/shared";
 
@@ -39,8 +41,8 @@ export interface ChatWindowProps {
   docTitle?: string;
   onSelectChapter?: (rowNumber: number) => void;
   onOpenScheduledTasks?: () => void;
-  initialView?: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks";
-  onViewChange?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks") => void;
+  initialView?: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps";
+  onViewChange?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps") => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -53,24 +55,57 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   initialView = "chat",
   onViewChange,
 }) => {
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<
-    "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks"
+    "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps"
   >(initialView);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isScheduledTasksInternalOpen, setIsScheduledTasksInternalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AiModelId>("claude-opus-5.5");
 
   useEffect(() => {
+    if (initialView === "chapters") {
+      if (onViewChange) {
+        onViewChange("chapters");
+      } else {
+        navigate("/results");
+      }
+      return;
+    }
+    if (initialView === "roadmaps") {
+      if (onViewChange) {
+        onViewChange("roadmaps");
+      } else {
+        navigate("/roadmap");
+      }
+      return;
+    }
     if (initialView && initialView !== activeView) {
       setActiveView(initialView);
     }
-  }, [initialView]);
+  }, [initialView, onViewChange, navigate]);
 
   const [projectsNavKey, setProjectsNavKey] = useState(0);
 
   const handleSelectView = (
-    view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks"
+    view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps"
   ) => {
+    if (view === "chapters") {
+      if (onViewChange) {
+        onViewChange("chapters");
+      } else {
+        navigate("/results");
+      }
+      return;
+    }
+    if (view === "roadmaps") {
+      if (onViewChange) {
+        onViewChange("roadmaps");
+      } else {
+        navigate("/roadmap");
+      }
+      return;
+    }
     if (view === "projects") {
       setProjectsNavKey((k) => k + 1);
     }
@@ -391,6 +426,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             onClose={() => handleSelectView("chat")}
             docTitle={docTitle}
           />
+        </div>
+      ) : activeView === "roadmaps" ? (
+        <div className="flex-1 w-full h-full min-h-0 overflow-y-auto">
+          <ExploreScreen onBack={() => handleSelectView("chat")} />
         </div>
       ) : (
         <main

@@ -1,35 +1,20 @@
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
-import { RoadmapCanvas } from "../../components/RoadmapCanvas";
-import { useAppContext } from "../../context/AppContext";
+import { ExploreScreen } from "../../components/roadmap/ExploreScreen";
 import { RoadmapPageErrorBoundary } from "./ErrorBoundary";
 
 export const RoadmapPageContent: React.FC = () => {
   const navigate = useNavigate();
-  const { engineOutput } = useAppContext();
-  const [selectedRow, setSelectedRow] = useState<number | null>(null);
 
   const handleClose = () => {
     if (window.history.length > 1) {
       navigate(-1);
     } else {
-      navigate("/results");
+      navigate("/chat");
     }
   };
 
-  return (
-    <div className="w-screen h-screen bg-white">
-      <RoadmapCanvas
-        isOpen={true}
-        onClose={handleClose}
-        chapters={engineOutput.computedRows}
-        selectedRow={selectedRow}
-        onSelectChapter={(rowNum) => setSelectedRow(rowNum)}
-        docTitle="Document Roadmap"
-        mode="modal"
-      />
-    </div>
-  );
+  return <ExploreScreen onBack={handleClose} />;
 };
 
 export const RoadmapPage: React.FC = () => {

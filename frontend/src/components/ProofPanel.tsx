@@ -130,12 +130,25 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
   const [sliceFailed, setSliceFailed] = useState<boolean>(false);
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset scroll position to top whenever navigating to a chapter
+  const effectivePdfUrl =
+    chapterPdfUrl ||
+    (photo?.objectUrl
+      ? `${photo.objectUrl}#page=${row.start_page ?? 1}`
+      : photo?.base64Data
+        ? `data:application/pdf;base64,${
+            photo.base64Data.includes(",")
+              ? photo.base64Data.slice(photo.base64Data.indexOf(",") + 1).trim()
+              : photo.base64Data.trim()
+          }#page=${row.start_page ?? 1}`
+        : null);
+  const isBoundedChapterPdf = Boolean(chapterPdfUrl);
+
+  // Reset scroll position to top whenever navigating to a chapter or PDF content updates
   useEffect(() => {
     if (canvasAreaRef.current) {
       canvasAreaRef.current.scrollTop = 0;
     }
-  }, [row.row]);
+  }, [row.row, effectivePdfUrl]);
 
   // Extract only the current chapter's pages (from start_page to end_page) with instant caching
   useEffect(() => {
@@ -162,6 +175,8 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
         return;
       }
 
+      // Clear previous chapter's sliced URL so stale chapter doesn't linger while slicing
+      setChapterPdfUrl(null);
       setIsSlicingPdf(true);
       setSliceFailed(false);
       try {
@@ -270,19 +285,6 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
       active = false;
     };
   }, [isChapter, photo, row.start_page, row.end_page]);
-
-  const effectivePdfUrl =
-    chapterPdfUrl ||
-    (photo?.objectUrl
-      ? `${photo.objectUrl}#page=${row.start_page ?? 1}`
-      : photo?.base64Data
-        ? `data:application/pdf;base64,${
-            photo.base64Data.includes(",")
-              ? photo.base64Data.slice(photo.base64Data.indexOf(",") + 1).trim()
-              : photo.base64Data.trim()
-          }#page=${row.start_page ?? 1}`
-        : null);
-  const isBoundedChapterPdf = Boolean(chapterPdfUrl);
 
   // Page range fed to the canvas renderer: a sliced chapter blob contains only
   // the chapter's pages (1..n), while the full-document fallback must be
@@ -745,16 +747,12 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
           {/* Scrollable Canvas Viewport */}
           <div
             ref={canvasAreaRef}
-            className="study-stage relative flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden flex flex-col items-center pt-16 pb-20 px-4 sm:px-6"
+            className="study-stage relative flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden flex flex-col items-center pt-8 pb-20 px-4 sm:px-6"
           >
             {effectivePdfUrl ? (
               <div
                 key={`page-${row.row}`}
-                className="study-page-enter w-full max-w-[1430px] self-end flex flex-col items-center"
-                style={{
-                  width: "calc(100% + 5%)",
-                  marginRight: "max(0.5rem, calc((100% - 1032px) / 2 - 124px - 5%))",
-                }}
+                className="study-page-enter w-full max-w-[1430px] flex flex-col items-center mx-auto"
               >
                 <div className="study-page w-full bg-transparent shadow-none border border-transparent rounded-xl overflow-hidden">
                   <PdfCanvasPages
@@ -763,18 +761,14 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                     fromPage={chapterViewFromPage}
                     toPage={chapterViewToPage}
                     aspectHint={chapterAspect}
-                    className="w-full flex flex-col"
+                    className="w-full flex flex-col items-center"
                   />
                 </div>
               </div>
             ) : canSliceChapterPdf && !sliceFailed ? (
               <div
                 key={`skeleton-${row.row}`}
-                className="study-page-enter w-full max-w-[1430px] self-end flex flex-col items-center"
-                style={{
-                  width: "calc(100% + 5%)",
-                  marginRight: "max(0.5rem, calc((100% - 1032px) / 2 - 124px - 5%))",
-                }}
+                className="study-page-enter w-full max-w-[1430px] flex flex-col items-center mx-auto"
               >
                 <div
                   className="study-page w-full bg-transparent shadow-none border border-transparent rounded-xl relative overflow-hidden"

@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  ArrowLeft,
   BookOpen,
   Briefcase,
   Check,
@@ -15,6 +17,7 @@ import {
   PanelLeft,
   PanelLeftClose,
   PanelLeftOpen,
+  Plus,
   Search,
   Tag,
   GitFork,
@@ -24,7 +27,6 @@ import { RoadmapCanvas } from "./RoadmapCanvas";
 import { ChatWindow } from "./chat/ChatWindow";
 import { BenchmarksView } from "./benchmarks/BenchmarksView";
 import { ScheduledTasksView } from "./scheduled/ScheduledTasksView";
-import { CodexNavRail, type SidebarTab } from "./CodexNavRail";
 import { getStoredRoadmapProgress } from "../utils/roadmapEngine";
 import type {
   ComputedRow,
@@ -81,6 +83,7 @@ interface ResultsViewProps {
 }
 
 export type GroupingMode = "tile" | "category" | "source" | "cost_center";
+export type SidebarTab = "chapters" | "roadmap" | "chat" | "benchmarks";
 
 const CATEGORIES: ReceiptCategory[] = ["Meals", "Travel", "Lodging", "Office", "Other"];
 
@@ -210,10 +213,15 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   onOpenWorkspaceModal,
   onNewPile,
 }) => {
+  const navigate = useNavigate();
   const reducedMotion = usePrefersReducedMotion();
   const addFilesInputRef = useRef<HTMLInputElement | null>(null);
   const sidebarClosedRef = useRef(false);
   const lastOpenTileIdRef = useRef<string | null>(null);
+
+  const handleBackToChat = useCallback(() => {
+    navigate("/chat");
+  }, [navigate]);
 
   // On arrival, the largest merchant opens in the sidebar, as in ad1_results.png (A5 Step 3)
   const [openTileId, setOpenTileId] = useState<string | null>(() =>
@@ -238,7 +246,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     return false;
   });
   const [chatInitialView, setChatInitialView] = useState<
-    "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks"
+    "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps"
   >(() => {
     if (typeof window !== "undefined") {
       if (window.location.search.includes("tab=plugins")) return "plugins";
@@ -246,6 +254,8 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
       if (window.location.search.includes("tab=artifacts")) return "artifacts";
       if (window.location.search.includes("tab=projects")) return "projects";
       if (window.location.search.includes("tab=benchmarks")) return "benchmarks";
+      if (window.location.search.includes("tab=chapters")) return "chapters";
+      if (window.location.search.includes("tab=roadmaps") || window.location.search.includes("tab=roadmap")) return "roadmaps";
     }
     return "chat";
   });
@@ -429,12 +439,16 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   }, [openTileId, merchantTiles, reducedMotion]);
 
   // PDF / Study Mode detection
-  const isPdfDocument = useMemo(
-    () =>
-      computedRows.some((r) => r.start_page !== undefined || r.chapter_number !== undefined) ||
-      photos.some((p) => p.mimeType === "application/pdf" || p.name.toLowerCase().endsWith(".pdf")),
-    [computedRows, photos]
-  );
+  const isPdfDocument = useMemo(() => {
+    const hasOnlyImageReceipts =
+      photos.length > 0 &&
+      photos.every((p) => p.mimeType !== "application/pdf" && !p.name.toLowerCase().endsWith(".pdf")) &&
+      computedRows.length > 0 &&
+      computedRows.every((r) => r.start_page === undefined && r.chapter_number === undefined);
+
+    if (hasOnlyImageReceipts) return false;
+    return true;
+  }, [computedRows, photos]);
 
   // Study mode reads as an outline of the active document (or summary across multiple documents)
   const pdfDocTitle = useMemo(() => {
@@ -644,7 +658,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   const activeChapterRowRef = useRef<HTMLLIElement | null>(null);
   useEffect(() => {
     if (selectedProofRow && activeChapterRowRef.current && isSidebarOpen) {
-      activeChapterRowRef.current.scrollIntoView({
+      activeChapterRowRef.current?.scrollIntoView?.({
         behavior: reducedMotion ? "auto" : "smooth",
         block: "nearest",
       });
@@ -653,7 +667,23 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
 
   // Determine the currently open tile data (or the special "N to check" flagged list)
   const activeOpenTile: MerchantTileData | null = useMemo(() => {
-    if (!openTileId) return null;
+    if (!openTileId) {
+      if (isPdfDocument) {
+        return {
+          id: "chapters-drawer",
+          name: "Chapters",
+          isForeign: false,
+          isOtherGroup: false,
+          currency: reconciliation.mainCurrency || "USD",
+          totalCents: 0,
+          totalAmount: 0,
+          sharePercent: 0,
+          receipts: computedRows,
+          flaggedCount: 0,
+        };
+      }
+      return null;
+    }
     if (openTileId === FLAG_CHECK_TILE_ID) {
       const flaggedRows = computedRows.filter((r) => r.needs_check && !r.excluded);
       return {
@@ -670,7 +700,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
       };
     }
     return merchantTiles.find((t) => t.id === openTileId) || null;
-  }, [openTileId, merchantTiles, computedRows, reconciliation.mainCurrency]);
+  }, [openTileId, merchantTiles, computedRows, reconciliation.mainCurrency, isPdfDocument]);
 
   // Sidebar hero: the document in study mode; the open tile (or grouping) in audit mode.
   const sidebarTitle = isPdfDocument
@@ -1514,74 +1544,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
 
       {/* Main stage above footer: sidebar + right pane split with 0px gutters */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row relative overflow-hidden">
-        {/* 1. Codex-inspired slim icon navigation rail on the far left */}
-        {isPdfDocument && (
-          <CodexNavRail
-            activeTab={isChatOpen ? "chat" : isBenchmarksOpen ? "benchmarks" : activeNavTab}
-            isOpen={isChatOpen || isBenchmarksOpen || isScheduledTasksOpen || isSidebarOpen}
-            onSelectTab={(tab) => {
-              if (tab === "roadmap") {
-                setIsChatOpen(false);
-                setIsBenchmarksOpen(false);
-                setIsScheduledTasksOpen(false);
-                setActiveNavTab("roadmap");
-              } else if (tab === "chat") {
-                setIsBenchmarksOpen(false);
-                setIsScheduledTasksOpen(false);
-                if (isChatOpen) {
-                  setIsChatOpen(false);
-                  setActiveNavTab("chapters");
-                } else {
-                  setChatInitialView("chat");
-                  setIsChatOpen(true);
-                  setActiveNavTab("chat");
-                }
-              } else if (tab === "benchmarks") {
-                if (isChatOpen) {
-                  setIsChatOpen(false);
-                }
-                setIsScheduledTasksOpen(false);
-                if (isBenchmarksOpen) {
-                  setIsBenchmarksOpen(false);
-                  setActiveNavTab("chapters");
-                } else {
-                  setIsBenchmarksOpen(true);
-                  setActiveNavTab("benchmarks");
-                }
-              } else {
-                setIsChatOpen(false);
-                setIsBenchmarksOpen(false);
-                setIsScheduledTasksOpen(false);
-                if (activeNavTab === "chapters" && isSidebarOpen) {
-                  setIsSidebarOpen(false);
-                } else {
-                  setActiveNavTab("chapters");
-                  setIsSidebarOpen(true);
-                }
-              }
-            }}
-            onToggleOpen={() => {
-              if (isChatOpen) {
-                setIsChatOpen(false);
-                setActiveNavTab("chapters");
-              } else if (isBenchmarksOpen) {
-                setIsBenchmarksOpen(false);
-                setActiveNavTab("chapters");
-              } else if (isScheduledTasksOpen) {
-                setIsScheduledTasksOpen(false);
-                setActiveNavTab("chapters");
-              } else {
-                setIsSidebarOpen((v) => !v);
-              }
-            }}
-            onExport={handleExportCsv}
-            totalChapters={computedRows.length}
-            roadmapProgressPercent={roadmapProgressPercent}
-            userInitials="LO"
-          />
-        )}
-
-        {/* 2. Chapters / Outline collapsible left drawer */}
+        {/* Chapters / Outline collapsible left drawer */}
         {activeOpenTile && (
           <aside
             ref={(el) =>
@@ -1630,10 +1593,30 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                 {isPdfDocument ? (
                   /* Minimalist Sidebar Header styled exactly like screenshot */
                   <div className="shrink-0 mb-3 flex items-center justify-between px-1.5 pt-1 pb-1 select-none">
-                    <span className="text-[17px] font-semibold text-slate-900 tracking-tight">
-                      Chapters
-                    </span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={handleBackToChat}
+                        title="Back to chat"
+                        aria-label="Back to chat"
+                        className="w-7 h-7 -ml-1 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer shrink-0"
+                      >
+                        <ArrowLeft size={16} strokeWidth={2} aria-hidden={true} />
+                      </button>
+                      <span className="text-[17px] font-semibold text-slate-900 tracking-tight truncate">
+                        Chapters
+                      </span>
+                    </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => addFilesInputRef.current?.click()}
+                        title="Add PDF"
+                        aria-label="Add PDF"
+                        className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer"
+                      >
+                        <Plus size={17} strokeWidth={2} aria-hidden={true} />
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -2142,7 +2125,23 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                       ) : activeOpenTile.id === FLAG_CHECK_TILE_ID ? (
                         "All flagged receipts have been checked ✓"
                       ) : isPdfDocument ? (
-                        "No chapters found."
+                        <div className="py-12 px-4 text-center select-none flex flex-col items-center">
+                          <div className="w-10 h-10 flex items-center justify-center mb-3 text-black border border-transparent shadow-none">
+                            <Plus size={20} strokeWidth={1.8} />
+                          </div>
+                          <p className="m-0 text-[13px] font-medium text-slate-700">No documents yet</p>
+                          <p className="m-0 mt-1 text-[11.5px] text-slate-400 leading-relaxed max-w-[200px]">
+                            Add a PDF to extract and view chapter outlines.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => addFilesInputRef.current?.click()}
+                            className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-none bg-black hover:bg-neutral-800 text-white text-[12px] font-medium transition-colors cursor-pointer"
+                          >
+                            <Plus size={13} strokeWidth={2} />
+                            <span>Add PDF</span>
+                          </button>
+                        </div>
                       ) : (
                         "No receipts in this view."
                       )}
@@ -2171,25 +2170,24 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                 : "var(--white)",
           }}
         >
-          {/* Floating open sidebar button for receipt mode when sidebar is closed */}
-          {!isPdfDocument &&
-            !isSidebarOpen &&
-            (!activeProofRowObj || proofPhase === "hidden") &&
-            merchantTiles.length > 0 && (
-              <div className="absolute top-3 left-3 z-30 animate-fade-in flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(true)}
-                  title="Show sidebar"
-                  aria-label="Show sidebar"
-                  className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/30 text-white border border-white/20 shadow-md backdrop-blur-md transition-all duration-150 cursor-pointer text-[12px] font-medium"
-                >
-                  <span className="text-[11px] font-mono tracking-wider uppercase text-white/90">
-                    Sidebar
-                  </span>
-                </button>
-              </div>
-            )}
+          {/* Floating open sidebar button when sidebar is closed */}
+          {!isSidebarOpen && (
+            <div className="absolute top-3.5 left-3.5 z-40 animate-fade-in flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                title="Open sidebar"
+                aria-label="Open sidebar"
+                className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer border border-transparent shadow-none ${
+                  isPdfDocument
+                    ? "bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900"
+                    : "bg-transparent hover:bg-white/20 text-white"
+                }`}
+              >
+                <PanelLeftOpen size={18} strokeWidth={1.8} aria-hidden={true} />
+              </button>
+            </div>
+          )}
           {isPdfDocument && activeNavTab === "roadmap" ? (
             <RoadmapCanvas
               isOpen={true}
@@ -2253,7 +2251,24 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                 onNewPile={onNewPile}
               />
             </ErrorBoundary>
-          ) : isPdfDocument ? null : positionedTiles.length === 0 ? (
+          ) : isPdfDocument ? (
+            <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-8 text-center bg-[#F8FAFC] select-none">
+              <div className="w-14 h-14 flex items-center justify-center mb-4 text-black border border-transparent shadow-none">
+                <BookOpen size={30} strokeWidth={1.8} className="text-black" />
+              </div>
+              <h3 className="text-[19px] font-medium text-slate-800 m-0 mb-5 tracking-tight">
+                No PDF loaded
+              </h3>
+              <button
+                type="button"
+                onClick={() => addFilesInputRef.current?.click()}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-none bg-black hover:bg-neutral-800 active:bg-neutral-900 text-white text-[13.5px] font-medium tracking-tight transition-colors cursor-pointer select-none"
+              >
+                <Plus size={16} strokeWidth={2} />
+                <span>Add PDF</span>
+              </button>
+            </div>
+          ) : positionedTiles.length === 0 ? (
             <div
               className="w-full h-full flex flex-col items-start justify-between select-none"
               style={{
@@ -2506,8 +2521,18 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
           isOpen={isChatOpen}
           initialView={chatInitialView}
           onViewChange={(v) => {
-            setChatInitialView(v);
-            setActiveNavTab("chat");
+            if (v === "chapters") {
+              setIsChatOpen(false);
+              setActiveNavTab("chapters");
+              setIsSidebarOpen(true);
+            } else if (v === "roadmaps") {
+              setIsChatOpen(false);
+              setActiveNavTab("roadmap");
+              setIsSidebarOpen(true);
+            } else {
+              setChatInitialView(v);
+              setActiveNavTab("chat");
+            }
           }}
           onClose={() => {
             setIsChatOpen(false);

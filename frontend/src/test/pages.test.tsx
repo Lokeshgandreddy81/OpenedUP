@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AppProvider } from "../context/AppContext";
 
@@ -43,6 +43,14 @@ describe("Page Route Smoke Tests", () => {
       expect(document.body).toBeInTheDocument();
     });
 
+    it("renders neat Get Started button without pdf injection inputs", () => {
+      renderWithProviders(<LandingPage />, ["/"]);
+      const getStartedButton = screen.getByRole("button", { name: /get started/i });
+      expect(getStartedButton).toBeInTheDocument();
+      expect(screen.queryByText(/drop documents here/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/or choose files/i)).not.toBeInTheDocument();
+    });
+
     it("renders LandingPageSkeleton with status role", () => {
       render(<LandingPageSkeleton />);
       expect(screen.getByRole("status", { name: /loading landing page/i })).toBeInTheDocument();
@@ -55,6 +63,25 @@ describe("Page Route Smoke Tests", () => {
       expect(document.body).toBeInTheDocument();
     });
 
+    it("does not render demo chapters and has Add PDF button with no left nav rail", () => {
+      renderWithProviders(<ResultsPage />, ["/results"]);
+      expect(screen.queryByText(/Quarterly Financial Report Q3/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Auditor General Ledger Notes/i)).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: /add pdf/i }).length).toBeGreaterThan(0);
+      expect(screen.getByRole("button", { name: /back to chat/i })).toBeInTheDocument();
+      expect(screen.queryByLabelText(/codex navigation rail/i)).not.toBeInTheDocument();
+    });
+
+    it("provides an open sidebar button when the sidebar is closed and re-opens it", () => {
+      renderWithProviders(<ResultsPage />, ["/results"]);
+      const closeBtn = screen.getByRole("button", { name: /close sidebar/i });
+      fireEvent.click(closeBtn);
+      const openBtn = screen.getByRole("button", { name: /open sidebar/i });
+      expect(openBtn).toBeInTheDocument();
+      fireEvent.click(openBtn);
+      expect(screen.getByRole("button", { name: /close sidebar/i })).toBeInTheDocument();
+    });
+
     it("renders ResultsPageSkeleton with status role", () => {
       render(<ResultsPageSkeleton />);
       expect(screen.getByRole("status", { name: /loading results/i })).toBeInTheDocument();
@@ -65,6 +92,13 @@ describe("Page Route Smoke Tests", () => {
     it("renders RoadmapPage without crashing", () => {
       renderWithProviders(<RoadmapPage />, ["/roadmap"]);
       expect(document.body).toBeInTheDocument();
+    });
+
+    it("renders Roles, Skills, and Best Practices roadmaps catalog", () => {
+      renderWithProviders(<RoadmapPage />, ["/roadmap"]);
+      expect(screen.getByRole("heading", { name: /^roles$/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /^skills$/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /^best practices$/i })).toBeInTheDocument();
     });
 
     it("renders RoadmapPageSkeleton with status role", () => {
@@ -89,6 +123,18 @@ describe("Page Route Smoke Tests", () => {
     it("renders ChatPage without crashing", () => {
       renderWithProviders(<ChatPage />, ["/chat"]);
       expect(document.body).toBeInTheDocument();
+    });
+
+    it("renders Chapters navigation button and opens Chapters view", async () => {
+      renderWithProviders(<ChatPage />, ["/chat"]);
+      const chaptersBtn = screen.getByRole("button", { name: /^chapters$/i });
+      expect(chaptersBtn).toBeInTheDocument();
+    });
+
+    it("renders Roadmaps navigation button and opens Roadmaps view", async () => {
+      renderWithProviders(<ChatPage />, ["/chat"]);
+      const roadmapsBtn = screen.getByRole("button", { name: /^roadmaps$/i });
+      expect(roadmapsBtn).toBeInTheDocument();
     });
 
     it("renders ChatPageSkeleton with status role", () => {

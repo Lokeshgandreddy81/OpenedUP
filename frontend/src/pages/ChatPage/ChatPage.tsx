@@ -20,6 +20,16 @@ export const ChatPageContent: React.FC = () => {
     navigate("/scheduled");
   };
 
+  const handleViewChange = (
+    view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps"
+  ) => {
+    if (view === "chapters") {
+      navigate("/results");
+    } else if (view === "roadmaps") {
+      navigate("/roadmap");
+    }
+  };
+
   return (
     <div className="w-screen h-screen">
       <ChatWindow
@@ -28,6 +38,7 @@ export const ChatPageContent: React.FC = () => {
         chapters={engineOutput.computedRows}
         docTitle="Chat Assistant"
         onOpenScheduledTasks={handleOpenScheduledTasks}
+        onViewChange={handleViewChange}
       />
     </div>
   );
