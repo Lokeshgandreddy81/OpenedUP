@@ -83,21 +83,36 @@ graph TD
 │   ├── CODEOWNERS                  # Component code ownership specifications
 │   ├── dependabot.yml              # Automated dependency update configuration
 │   └── PULL_REQUEST_TEMPLATE.md    # Strict PR checklist and gate enforcement
-├── apps/
-│   └── expense-receipts-analytics/ # Core analytics, UI suite, and API server
-│       ├── e2e/                    # Playwright end-to-end smoke tests
-│       ├── public/                 # Static assets, logos, and icons
-│       ├── server/                 # Decoupled Express modular backend
-│       │   ├── middleware/         # Logging, validation, and error handling
-│       │   ├── routes/             # API endpoints (/healthz, /api/*)
-│       │   ├── schemas/            # Zod & GenAI schema definitions
-│       │   └── services/           # Gemini AI & PDF parsing services
-│       └── src/                    # React 19 client application
-│           ├── components/         # Modular presentation & interactive views
-│           ├── test/               # Vitest unit & component test suites
-│           └── utils/              # Pure financial, chapter, & roadmap algorithms
-├── docs/                           # Architecture decision records & previews
-├── packages/                       # Shared monorepo packages and libraries
+├── frontend/                       # React 19 + Vite 8 + Tailwind 4 UI App
+│   ├── public/                     # Static assets, logos, and icons
+│   ├── src/                        # Presentation, state, and client algorithms
+│   │   ├── components/             # React presentation views & controls
+│   │   ├── test/                   # Vitest unit & component test suites
+│   │   └── utils/                  # Pure financial & image processing utilities
+│   ├── tests/e2e/                  # Playwright end-to-end smoke tests
+│   ├── Dockerfile                  # Multi-stage production container with Nginx
+│   └── vite.config.ts              # Vite bundle configuration & reverse proxy
+├── backend/                        # Modular Express Node 22 API
+│   ├── src/
+│   │   ├── config/                 # Secrets & environment resolution
+│   │   ├── controllers/            # HTTP endpoint handlers
+│   │   ├── middleware/             # Request ID, Pino logging, Zod validation
+│   │   ├── models/                 # Domain models
+│   │   ├── routes/                 # Health, analytics, pdf, chat routes
+│   │   ├── services/               # Gemini AI & PDF processing engines
+│   │   └── utils/                  # Structured logger & chapter repair
+│   ├── tests/                      # Unit & integration test suites (supertest)
+│   └── Dockerfile                  # Multi-stage production container
+├── shared/                         # Shared package (@charan-interiors/shared)
+│   ├── src/schemas/                # Canonical Zod request/response validation
+│   ├── src/types/                  # Strict TypeScript interfaces
+│   └── src/utils/                  # Chapter sorting & numeral normalization
+├── docs/                           # Architecture decision records & OpenAPI spec
+│   ├── adr/                        # Architectural Decision Records
+│   └── api/openapi.yaml            # OpenAPI 3.1 specification
+├── infra/                          # Infrastructure & Docker configuration
+│   └── docker/nginx.conf           # Production Nginx reverse proxy configuration
+├── docker-compose.yml              # Local multi-container orchestration
 ├── pyproject.toml                  # Python packaging & tool configuration (Ruff)
 ├── scripts/                        # Standalone Python PDF processing utilities
 │   ├── pdf_chapter_extractor.py    # Native document boundary parser
@@ -130,7 +145,8 @@ npm ci
 Copy the example environment configuration into the application directory:
 
 ```bash
-cp apps/expense-receipts-analytics/.env.example apps/expense-receipts-analytics/.env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
 | Variable           | Required | Default | Description                                                                      |

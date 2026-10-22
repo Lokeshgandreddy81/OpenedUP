@@ -1,0 +1,205 @@
+openapi: 3.1.0
+info:
+  title: Charan Interiors & Openedup Analytics API
+  description: High-performance, modular enterprise API for expense & receipts analytics, AI document segmentation, benchmarks, and chat.
+  version: 0.1.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.charaninteriors.com
+    description: Production gateway
+
+paths:
+  /healthz:
+    get:
+      summary: Liveness Probe
+      description: Returns HTTP 200 with process uptime when the server process is alive.
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  uptime:
+                    type: number
+                    example: 12.34
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /readyz:
+    get:
+      summary: Readiness Probe
+      description: Returns HTTP 200 when all critical internal dependencies and configurations are resolved.
+      responses:
+        "200":
+          description: Service is ready to accept traffic.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+                  checks:
+                    type: object
+                    properties:
+                      geminiApiKeyConfigured:
+                        type: boolean
+                        example: true
+                      firebaseConfigured:
+                        type: boolean
+                        example: true
+
+  /api/workspace-config:
+    get:
+      summary: Get Workspace Configuration
+      description: Returns client configuration for Firebase applet and API key status without leaking secrets.
+      responses:
+        "200":
+          description: Workspace configuration details.
+
+  /api/benchmarks:
+    get:
+      summary: Get AI Model Benchmarks
+      description: Returns frontier model intelligence and coding benchmarks metadata.
+      responses:
+        "200":
+          description: List of benchmarked models and provider capability scores.
+
+  /api/logs:
+    get:
+      summary: Retrieve Recent Observability Logs
+      description: Returns recent in-memory and disk structured logs formatted with Pino.
+      responses:
+        "200":
+          description: Array of structured log entries.
+
+  /api/check-duplicates:
+    post:
+      summary: Detect Receipt Duplicates
+      description: Runs code-verified multi-pass fuzzy duplicate detection against receipt line items.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rows
+              properties:
+                rows:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: Deduped receipts with duplicate_of and duplicate_reason annotations.
+        "400":
+          description: Invalid request payload.
+
+  /api/read-receipts:
+    post:
+      summary: Multi-Photo Receipt Vision OCR & Ingestion
+      description: Batched multimodal ingestion of receipt images using Gemini Flash / Pro with cascading fallback.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - photos
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - globalIndex
+                      - totalPhotos
+                      - base64Data
+                    properties:
+                      globalIndex:
+                        type: integer
+                      totalPhotos:
+                        type: integer
+                      mimeType:
+                        type: string
+                      base64Data:
+                        type: string
+      responses:
+        "200":
+          description: Extracted receipts and metadata.
+        "400":
+          description: Invalid photo payload or validation failure.
+
+  /api/parse-pdf-chapters:
+    post:
+      summary: Segment PDF into Logical Chapters
+      description: Parses and validates hierarchical document chapters with automated page gap repair.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - base64Data
+              properties:
+                mimeType:
+                  type: string
+                  default: application/pdf
+                base64Data:
+                  type: string
+                fileName:
+                  type: string
+      responses:
+        "200":
+          description: Parsed PDF chapter boundaries, summaries, and key topics.
+        "400":
+          description: Invalid PDF file or corrupted byte header.
+
+  /api/chat:
+    post:
+      summary: Document Chat & Inquiry
+      description: Context-aware interactive Q&A grounded in document chapters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messages
+              properties:
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - role
+                      - content
+                    properties:
+                      role:
+                        type: string
+                        enum: [user, assistant]
+                      content:
+                        type: string
+                context:
+                  type: object
+      responses:
+        "200":
+          description: Generated assistant response.
+        "400":
+          description: Validation error.

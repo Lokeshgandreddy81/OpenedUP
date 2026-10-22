@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "outDir": "./dist",
+    "paths": {
+      "@charan-interiors/shared": ["../shared/src/index.ts"],
+      "@charan-interiors/shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}

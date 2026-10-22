@@ -4,5 +4,5 @@ useDefault = true
 [allowlist]
 description = "Firebase public client configuration identifiers"
 paths = [
-  '''apps/expense-receipts-analytics/firebase-applet-config\.json''',
+  '''frontend/firebase-applet-config\.json''',
 ]
