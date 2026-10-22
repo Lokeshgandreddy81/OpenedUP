@@ -7,7 +7,7 @@ import {
   saveRoadmapProgress,
   exportRoadmapToMarkdown,
 } from "../utils/roadmapEngine.ts";
-import type { ComputedRow } from "../types";
+import type { ComputedRow } from "@charan-interiors/shared";
 
 describe("roadmapEngine utils", () => {
   beforeEach(() => {

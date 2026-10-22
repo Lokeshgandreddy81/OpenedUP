@@ -12,7 +12,7 @@ import {
   isBoxValid,
   generateReceiptsCsv,
 } from "../utils/engine.ts";
-import type { ComputedRow } from "../types";
+import type { ComputedRow } from "@charan-interiors/shared";
 
 describe("engine financial & ledger utils", () => {
   describe("currency calculations", () => {

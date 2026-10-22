@@ -6,7 +6,7 @@ import {
   isSupportedImageFile,
   buildPhotoBatches,
 } from "../utils/imageProcessor.ts";
-import type { UploadedPhoto } from "../types";
+import type { UploadedPhoto } from "@charan-interiors/shared";
 
 describe("imageProcessor utils", () => {
   describe("stripFileExtension", () => {

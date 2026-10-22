@@ -36,7 +36,7 @@ import type {
   ReconciliationResult,
   TileColorToken,
   UploadedPhoto,
-} from "../types";
+} from "@charan-interiors/shared";
 import {
   formatCurrencyAmount,
   formatDisplayDate,

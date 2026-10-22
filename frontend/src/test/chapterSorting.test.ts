@@ -6,7 +6,7 @@ import {
   sortChapterItems,
   stripChapterNumberPrefix,
   isChapterItem,
-} from "../utils/chapterSorting.ts";
+} from "@charan-interiors/shared";
 
 describe("chapterSorting utils", () => {
   describe("romanToInteger", () => {

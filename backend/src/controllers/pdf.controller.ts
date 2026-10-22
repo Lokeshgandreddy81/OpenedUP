@@ -7,7 +7,7 @@ import { logEvent } from "../utils/logger.js";
 export async function handleParsePdfChapters(
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): Promise<void> {
   const startTime = Date.now();
   try {

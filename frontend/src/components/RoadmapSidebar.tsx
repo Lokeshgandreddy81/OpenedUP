@@ -16,7 +16,7 @@ import {
   Check,
   Maximize2,
 } from "lucide-react";
-import type { ComputedRow } from "../types";
+import type { ComputedRow } from "@charan-interiors/shared";
 import {
   generateRoadmapFromChapters,
   getStoredRoadmapProgress,

@@ -8,14 +8,14 @@ import type {
   ReceiptRow,
   ReconciliationResult,
   TileColorToken,
-} from "../types";
+} from "@charan-interiors/shared";
 import {
   normalizeChapterNumber,
   extractChapterNumberFromObject,
   isChapterItem,
   sortChapterItems,
   stripChapterNumberPrefix,
-} from "./chapterSorting";
+} from "@charan-interiors/shared";
 
 export type { ComputedRow };
 export {

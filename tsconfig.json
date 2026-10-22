@@ -1,4 +1,4 @@
 {
   "files": [],
-  "references": [{ "path": "./apps/expense-receipts-analytics" }]
+  "references": [{ "path": "./shared" }, { "path": "./backend" }, { "path": "./frontend" }]
 }

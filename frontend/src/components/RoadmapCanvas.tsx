@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { X, Check, ArrowRight, BookOpen } from "lucide-react";
 
-import type { ComputedRow } from "../types";
+import type { ComputedRow } from "@charan-interiors/shared";
 import {
   generateRoadmapFromChapters,
   getStoredRoadmapProgress,

@@ -8,7 +8,7 @@ import { ArtifactsView } from "./artifacts/ArtifactsView";
 import { CustomizeView } from "./CustomizeView";
 import { PluginsView } from "./PluginsView";
 import type { ChatConversation, ChatMessage, AiModelId } from "./chatTypes";
-import type { ComputedRow } from "../../types";
+import type { ComputedRow } from "@charan-interiors/shared";
 
 const GhostIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 18,

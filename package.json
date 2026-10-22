@@ -21,7 +21,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "e2e": "npm run --workspace=@charan-interiors/frontend e2e"
+    "e2e": "npm run --workspace=@charan-interiors/frontend e2e",
+    "start": "npm run build && npm run --workspace=backend start"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",

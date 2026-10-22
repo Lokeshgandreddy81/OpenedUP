@@ -1,6 +1,6 @@
 import dagre from "@dagrejs/dagre";
 import { MarkerType, Position, type Node, type Edge } from "@xyflow/react";
-import type { ComputedRow } from "../types";
+import type { ComputedRow } from "@charan-interiors/shared";
 import { formatDisplayTitle, stripChapterNumberPrefix } from "./engine";
 
 export type NodeStatus = "todo" | "in_progress" | "completed";

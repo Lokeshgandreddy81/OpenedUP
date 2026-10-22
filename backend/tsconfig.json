@@ -12,10 +12,12 @@
     "esModuleInterop": true,
     "declaration": true,
     "outDir": "./dist",
-    "paths": {
-      "@charan-interiors/shared": ["../shared/src/index.ts"],
-      "@charan-interiors/shared/*": ["../shared/src/*"]
-    }
+    "composite": true
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*"],
+  "references": [
+    {
+      "path": "../shared"
+    }
+  ]
 }

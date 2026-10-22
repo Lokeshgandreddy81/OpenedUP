@@ -8,6 +8,7 @@ const execFileAsync = promisify(execFile);
 export function getHealthz(_req: Request, res: Response): void {
   res.status(200).json({
     status: "ok",
+    version: "0.1.0",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });

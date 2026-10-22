@@ -1,4 +1,4 @@
-import type { UploadedPhoto } from "../types";
+import type { UploadedPhoto } from "@charan-interiors/shared";
 export type { UploadedPhoto };
 
 const MAX_DIMENSION = 2048;

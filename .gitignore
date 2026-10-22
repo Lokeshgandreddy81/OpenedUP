@@ -13,6 +13,12 @@ coverage/
 **/coverage/
 .next/
 .nuxt/
+*.tsbuildinfo
+**/*.tsbuildinfo
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
 
 # Environment files and Secrets
 .env

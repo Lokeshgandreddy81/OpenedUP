@@ -7,7 +7,7 @@ import {
   type User,
 } from "firebase/auth";
 import firebaseConfig from "../../firebase-applet-config.json";
-import type { WorkspaceSourceMeta } from "../types";
+import type { WorkspaceSourceMeta } from "@charan-interiors/shared";
 
 export interface DriveFolderItem {
   id: string;

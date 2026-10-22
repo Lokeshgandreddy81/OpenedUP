@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { FailedBatchInfo, UploadedPhoto } from "../types";
+import type { FailedBatchInfo, UploadedPhoto } from "@charan-interiors/shared";
 import { formatCurrencyAmount } from "../utils/engine";
 import {
   CustomScrollList,

@@ -3,7 +3,7 @@ import type { ChatRequest } from "@charan-interiors/shared";
 import { processChat } from "../services/chat.service.js";
 import { logEvent } from "../utils/logger.js";
 
-export async function handleChat(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function handleChat(req: Request, res: Response, _next: NextFunction): Promise<void> {
   const startTime = Date.now();
   try {
     const payload = req.body as ChatRequest;

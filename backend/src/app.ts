@@ -1,4 +1,7 @@
 import express, { type Express } from "express";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import { requestIdMiddleware } from "./middleware/requestId.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -29,6 +32,17 @@ export function createApp(): Express {
   app.use("/api", pdfRouter);
   app.use("/api", chatRouter);
   app.use("/api", benchmarksRouter);
+
+  // Serve built frontend (if present) for production/E2E
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const frontendDist = path.resolve(__dirname, "..", "..", "frontend", "dist");
+  if (fs.existsSync(frontendDist)) {
+    app.use(express.static(frontendDist));
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api") || req.path === "/healthz") return next();
+      res.sendFile(path.join(frontendDist, "index.html"));
+    });
+  }
 
   // 404 Handler for undefined routes
   app.use((req, res) => {

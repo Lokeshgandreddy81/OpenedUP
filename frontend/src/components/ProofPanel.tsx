@@ -9,7 +9,12 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
-import type { ComputedRow, ReceiptCategory, ReceiptRow, UploadedPhoto } from "../types";
+import type {
+  ComputedRow,
+  ReceiptCategory,
+  ReceiptRow,
+  UploadedPhoto,
+} from "@charan-interiors/shared";
 import {
   clearResolvedModelFlags,
   formatCurrencyAmount,

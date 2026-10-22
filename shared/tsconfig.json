@@ -9,7 +9,11 @@
     "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "composite": true,
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true
   },
   "include": ["src/**/*", "tests/**/*"]
 }
