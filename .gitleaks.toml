@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Firebase public client configuration identifiers"
+paths = [
+  '''apps/expense-receipts-analytics/firebase-applet-config\.json''',
+]

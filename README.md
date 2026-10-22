@@ -1,13 +1,109 @@
-# Charan Interiors & OpenedUp Monorepo
+# Openedup — Spend Audit & Document Intelligence Platform
 
-[![CI](https://github.com/Charan-Interiors/journal/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
-[![Security & Audit](https://github.com/Charan-Interiors/journal/actions/workflows/security.yml/badge.svg)](.github/workflows/security.yml)
+[![CI](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/ci.yml/badge.svg)](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/ci.yml)
+[![Security & Audit](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/security.yml/badge.svg)](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/security.yml)
+[![TypeScript Strict](https://img.shields.io/badge/TypeScript-Strict%205.8-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22%20LTS-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-blue.svg)](.nvmrc)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8%2B-3178c6.svg)](tsconfig.json)
-[![Code Style: Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](.prettierrc.json)
+[![Audit](https://img.shields.io/badge/Audit-0%20Vulnerabilities-brightgreen.svg)](SECURITY.md)
 
-Enterprise monorepo housing the **Expense & Receipts Analytics** suite, automated receipt ingestion pipelines, and the **OpenedUp Frontier AI Benchmark Observatory**.
+Enterprise document intelligence and spend reconciliation platform designed for multi-source receipt auditing, PDF structural decomposition, and automated B2B expense verification.
+
+---
+
+## Architecture Overview
+
+```mermaid
+graph TD
+    subgraph Client ["Frontend Client (React 19 + Vite 8 + Tailwind 4)"]
+        UI["Landing & Workspace Views"]
+        AuditView["Spend Audit & Treemap Ledger"]
+        RoadmapCanvas["Interactive 2D Topology Canvas"]
+        ChatInterface["Unify AI Document Assistant"]
+    end
+
+    subgraph API ["Modular Server (Node.js 22 + Express)"]
+        Router["Express Gateway (JSON up to 100MB)"]
+        Logger["Pino Structured Logger & Metrics"]
+        Validator["Zod Schema Validation Middleware"]
+        HealthRoute["GET /healthz"]
+        ReceiptRoute["POST /api/read-receipts"]
+        DuplicateRoute["POST /api/check-duplicates"]
+        PdfRoute["POST /api/parse-pdf-chapters"]
+        ChatRoute["POST /api/chat"]
+    end
+
+    subgraph Engines ["Processing & Intelligence Engines"]
+        GeminiService["Google GenAI Service (Gemini 3.8 Flash + Cascade Fallback)"]
+        PythonExtractor["Local Python Extractor (PyMuPDF / pypdf)"]
+        PdfLibService["Pure JS pdf-lib Engine (Zero-Dependency Fallback)"]
+    end
+
+    subgraph Integrations ["External Services & Data"]
+        GoogleDrive["Google Drive API"]
+        Gmail["Gmail API"]
+        FirebaseAuth["Firebase Auth (OAuth Client)"]
+    end
+
+    UI --> Router
+    AuditView --> Router
+    RoadmapCanvas --> Router
+    ChatInterface --> Router
+
+    Router --> Logger
+    Router --> Validator
+    Validator --> HealthRoute
+    Validator --> ReceiptRoute
+    Validator --> DuplicateRoute
+    Validator --> PdfRoute
+    Validator --> ChatRoute
+
+    ReceiptRoute --> GeminiService
+    DuplicateRoute --> GeminiService
+    ChatRoute --> GeminiService
+
+    PdfRoute --> PythonExtractor
+    PythonExtractor -. fallback .-> GeminiService
+    GeminiService -. fallback .-> PdfLibService
+
+    ReceiptRoute --> Integrations
+```
+
+---
+
+## Monorepo Layout
+
+```text
+.
+├── .changeset/                     # Semantic versioning and changelog automation
+├── .github/
+│   ├── workflows/                  # CI/CD and Security GitHub Actions
+│   │   ├── ci.yml                  # Matrix build, typecheck, lint, test, format:check
+│   │   └── security.yml            # Gitleaks scan, npm audit, CodeQL analysis
+│   ├── CODEOWNERS                  # Component code ownership specifications
+│   ├── dependabot.yml              # Automated dependency update configuration
+│   └── PULL_REQUEST_TEMPLATE.md    # Strict PR checklist and gate enforcement
+├── apps/
+│   └── expense-receipts-analytics/ # Core analytics, UI suite, and API server
+│       ├── e2e/                    # Playwright end-to-end smoke tests
+│       ├── public/                 # Static assets, logos, and icons
+│       ├── server/                 # Decoupled Express modular backend
+│       │   ├── middleware/         # Logging, validation, and error handling
+│       │   ├── routes/             # API endpoints (/healthz, /api/*)
+│       │   ├── schemas/            # Zod & GenAI schema definitions
+│       │   └── services/           # Gemini AI & PDF parsing services
+│       └── src/                    # React 19 client application
+│           ├── components/         # Modular presentation & interactive views
+│           ├── test/               # Vitest unit & component test suites
+│           └── utils/              # Pure financial, chapter, & roadmap algorithms
+├── docs/                           # Architecture decision records & previews
+├── packages/                       # Shared monorepo packages and libraries
+├── pyproject.toml                  # Python packaging & tool configuration (Ruff)
+├── scripts/                        # Standalone Python PDF processing utilities
+│   ├── pdf_chapter_extractor.py    # Native document boundary parser
+│   └── pdf_roadmap_generator.py    # Topical roadmap extractor
+└── package.json                    # Workspace orchestration & root scripts
+```
 
 ---
 
@@ -15,148 +111,80 @@ Enterprise monorepo housing the **Expense & Receipts Analytics** suite, automate
 
 ### Prerequisites
 
-- **Node.js**: `>= 20.0.0` (Recommended: Node 22 LTS via `.nvmrc`)
-- **npm**: `>= 10.0.0`
-- **Python**: `>= 3.11` (for PDF chapter and roadmap extraction scripts)
+- **Node.js**: `v22.14.0+` (LTS recommended, see `.nvmrc`)
+- **npm**: `v10.9.0+`
+- **Python**: `3.9+` (for local standalone PDF chapter extraction)
 
 ### Installation
 
-Clone the repository and install dependencies using deterministic clean install:
+Clone the repository and run deterministic installation:
 
 ```bash
-git clone https://github.com/Charan-Interiors/journal.git
-cd journal
+git clone git@github.com:Lokeshgandreddy81/OpenedUP.git
+cd OpenedUP
 npm ci
 ```
 
-### Local Development
+### Environment Configuration
 
-1. **Configure Environment Variables**:
-   Copy `.env.example` to `.env` in the root and set your Gemini API key:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Launch Development Server**:
-   ```bash
-   npm run dev
-   ```
-   Access the client interface at `http://localhost:5173` and backend API endpoints at `http://localhost:3000`.
-
-### Production Build & Verification
+Copy the example environment configuration into the application directory:
 
 ```bash
-# Verify static TypeScript types
-npm run typecheck
-
-# Check code formatting and linting
-npm run format:check
-npm run lint
-
-# Run unit tests and generate coverage report
-npm run test:coverage
-
-# Compile production bundle for client and server
-npm run build
+cp apps/expense-receipts-analytics/.env.example apps/expense-receipts-analytics/.env
 ```
+
+| Variable           | Required | Default | Description                                                                      |
+| :----------------- | :------- | :------ | :------------------------------------------------------------------------------- |
+| `GEMINI_API_KEY`   | Optional | None    | Gemini API Key. If omitted, PDF extraction runs 100% locally via Python/pdf-lib. |
+| `PORT`             | Optional | `3000`  | HTTP port for the API and static asset server.                                   |
+| `GOOGLE_CLIENT_ID` | Optional | None    | OAuth 2.0 client ID for Google Drive and Gmail live synchronization.             |
 
 ---
 
-## Architecture
-
-The repository is organized as a clean enterprise monorepo using npm workspaces, adhering to strict architectural boundaries between client presentation, backend business logic, shared contracts, and documentation.
-
-```mermaid
-graph TD
-    Client["Frontend Client (React 19 + Vite 8 + Tailwind 4)"] -->|"HTTP / REST API (Zod Contracts)"| API["Backend API (Express + Node.js 22)"]
-    API -->|"Structured Logs (x-request-id)"| Pino["Pino Logger"]
-    API -->|"Health Check"| Health["/healthz Endpoint"]
-    API -->|"Multimodal Extraction"| Gemini["Google Gemini API"]
-    Client -->|"Imports"| Shared["Shared Schemas & Types"]
-    API -->|"Imports"| Shared
-    Python["PDF Roadmap Scripts (Python 3.11)"] -.->|"Generates Assets"| Shared
-```
-
-### Monorepo Structure
-
-```
-.
-├── .github/                 # GitHub Actions CI/CD, security audit, dependabot
-├── apps/                    # Primary application workspaces
-│   └── expense-receipts-analytics/ # Full-stack receipt & benchmark platform
-├── frontend/                # Decoupled React 19 single-page application
-├── backend/                 # Decoupled Express API microservice
-├── packages/                # Reusable domain packages
-│   └── shared/              # Shared TypeScript types and Zod schemas
-├── docs/                    # Architecture documentation & standards
-│   ├── adr/                 # Architecture Decision Records
-│   ├── branch-protection.md # Branch protection and merge policies
-│   └── REPO_STANDARDS_PROMPT.md # Enterprise repository guidelines
-├── scripts/                 # Ingestion tooling & Python extraction helpers
-├── .editorconfig            # Universal editor formatting rules
-├── .nvmrc                   # Target Node.js runtime version (22)
-├── CHANGELOG.md             # Semantic release history (Changesets)
-├── CONTRIBUTING.md          # Developer onboarding & PR standards
-├── LICENSE                  # MIT License
-└── package.json             # Root monorepo workspace manifest
-```
-
----
-
-## Environment Variables
-
-The table below outlines all environment variables utilized across the monorepo:
-
-| Variable                | Scope    | Type      | Default       | Required | Description                                                    |
-| :---------------------- | :------- | :-------- | :------------ | :------- | :------------------------------------------------------------- |
-| `PORT`                  | Backend  | `number`  | `3000`        | No       | Port the Express HTTP server listens on                        |
-| `HOST`                  | Backend  | `string`  | `0.0.0.0`     | No       | Network interface binding                                      |
-| `NODE_ENV`              | Global   | `string`  | `development` | No       | Runtime environment (`development`, `production`, `test`)      |
-| `LOG_LEVEL`             | Backend  | `string`  | `info`        | No       | Pino logging level (`trace`, `debug`, `info`, `warn`, `error`) |
-| `GEMINI_API_KEY`        | Backend  | `string`  | —             | **Yes**  | API key for Google Gemini multimodal LLM inference             |
-| `CORS_ORIGIN`           | Backend  | `string`  | `*`           | No       | Permitted CORS origins (comma-separated domains in production) |
-| `VITE_API_BASE_URL`     | Frontend | `string`  | `/api`        | No       | Base URL for frontend API calls                                |
-| `VITE_ENABLE_MOCK_DATA` | Frontend | `boolean` | `false`       | No       | Toggle offline mock data fallback in frontend views            |
-
----
-
-## Monorepo Scripts
+## Available Scripts
 
 Run all scripts from the repository root:
 
-| Script                  | Command                                                                | Purpose                                                |
-| :---------------------- | :--------------------------------------------------------------------- | :----------------------------------------------------- |
-| `npm run dev`           | `npm run --workspace=@charan-interiors/expense-receipts-analytics dev` | Starts the application in local development mode       |
-| `npm run build`         | `npm run --workspaces --if-present build`                              | Compiles client and server bundles across all packages |
-| `npm test`              | `npm run --workspaces --if-present test`                               | Executes Vitest unit and integration test suites       |
-| `npm run test:coverage` | `npm run --workspaces --if-present test:coverage`                      | Runs tests and generates v8 coverage metrics           |
-| `npm run typecheck`     | `npm run --workspaces --if-present typecheck`                          | Performs strict TypeScript type checks with zero emit  |
-| `npm run lint`          | `npm run --workspaces --if-present lint`                               | Runs ESLint flat configuration across all packages     |
-| `npm run format`        | `prettier --write "**/*.{ts,tsx,js,jsx,json,md,yml,yaml}"`             | Formats all files according to Prettier standards      |
-| `npm run format:check`  | `prettier --check "**/*.{ts,tsx,js,jsx,json,md,yml,yaml}"`             | Enforces formatting compliance in CI pipelines         |
-| `npm run e2e`           | `npm run --workspace=@charan-interiors/expense-receipts-analytics e2e` | Runs Playwright end-to-end browser integration tests   |
+| Command                                                              | Action                                                                      |
+| :------------------------------------------------------------------- | :-------------------------------------------------------------------------- |
+| `npm run dev`                                                        | Boots application in development mode with live Vite HMR.                   |
+| `npm run build`                                                      | Compiles frontend assets with Vite and compiles server bundle with esbuild. |
+| `npm start --workspace=@charan-interiors/expense-receipts-analytics` | Runs production server (`node dist/server.js`).                             |
+| `npm test`                                                           | Executes complete Vitest suite across all unit & API tests.                 |
+| `npm run test:coverage`                                              | Generates detailed V8 code coverage report.                                 |
+| `npm run typecheck`                                                  | Validates strict TypeScript types with 0 emit across all workspaces.        |
+| `npm run lint`                                                       | Runs ESLint flat configuration check with zero allowable errors.            |
+| `npm run format:check`                                               | Verifies code adherence to Prettier formatting standards.                   |
+| `npm run format`                                                     | Auto-formats all code, markdown, YAML, and configuration files.             |
+| `npm run e2e`                                                        | Executes Playwright end-to-end smoke test suite against running server.     |
+| `npm audit`                                                          | Scans dependency tree for vulnerabilities (0 high/critical allowed).        |
 
 ---
 
-## Architectural Decisions & Standards
+## Verification Gates Checklist
 
-We document major structural and infrastructural changes using Architecture Decision Records:
+Prior to merging any pull request into `main`, all 9 verification gates must pass:
 
-- [ADR 0000: Architecture Decision Record Process & Template](docs/adr/0000-adr-template.md)
-- [ADR 0001: Decouple Monolithic Server into Distinct Frontend and Backend](docs/adr/0001-frontend-backend-split.md)
-
-For branch protection, CI requirements, and PR review protocols, review [docs/branch-protection.md](docs/branch-protection.md).
-
----
-
-## Security & Contributions
-
-- **Security**: Review our vulnerability reporting policy in [SECURITY.md](SECURITY.md).
-- **Contributing**: Please read our [CONTRIBUTING.md](CONTRIBUTING.md) guide and adhere to the [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+1. :white_check_mark: **Deterministic Install**: `npm ci` completes with zero dependency warnings.
+2. :white_check_mark: **Strict Typecheck**: `npm run typecheck` passes with 0 errors.
+3. :white_check_mark: **Linter**: `npm run lint` passes with 0 errors.
+4. :white_check_mark: **Formatting**: `npm run format:check` passes without discrepancies.
+5. :white_check_mark: **Tests**: `npm test` passes 100% of test suites.
+6. :white_check_mark: **Build**: `npm run build` generates valid client and server distribution files.
+7. :white_check_mark: **Security Audit**: `npm audit` reports 0 vulnerabilities.
+8. :white_check_mark: **Secret Scanning**: Gitleaks reports 0 leaked tokens or keys.
+9. :white_check_mark: **Clean Tree**: Working tree is clean with zero untracked dev artifacts.
 
 ---
+
+## Security
+
+Please report vulnerabilities directly via GitHub Private Vulnerability Reporting or review our [Security Policy](SECURITY.md).
+
+## Contributing
+
+Review the [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting contributions.
 
 ## License
 
-This repository is licensed under the [MIT License](LICENSE).
+Distributed under the [MIT License](LICENSE). Copyright (c) 2026 Charan Interiors / Openedup Contributors.

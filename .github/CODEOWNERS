@@ -1,0 +1,8 @@
+# Global owners
+* @Lokeshgandreddy81
+
+# Specific path ownership
+/apps/ @Lokeshgandreddy81
+/packages/ @Lokeshgandreddy81
+/scripts/ @Lokeshgandreddy81
+/.github/ @Lokeshgandreddy81
