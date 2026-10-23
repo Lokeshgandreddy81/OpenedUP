@@ -45,9 +45,7 @@ export const InferenceEngineeringPage: React.FC<InferenceEngineeringPageProps> =
         </div>
 
         {/* Empty neat and clean content container */}
-        <div className="mt-12 flex-1 min-h-[50vh]">
-          {/* Roadmap content will be added here */}
-        </div>
+        <div className="mt-12 flex-1 min-h-[50vh]">{/* Roadmap content will be added here */}</div>
       </div>
     </div>
   );

@@ -246,7 +246,14 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     return false;
   });
   const [chatInitialView, setChatInitialView] = useState<
-    "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps"
+    | "chat"
+    | "projects"
+    | "artifacts"
+    | "customize"
+    | "plugins"
+    | "benchmarks"
+    | "chapters"
+    | "roadmaps"
   >(() => {
     if (typeof window !== "undefined") {
       if (window.location.search.includes("tab=plugins")) return "plugins";
@@ -255,7 +262,11 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
       if (window.location.search.includes("tab=projects")) return "projects";
       if (window.location.search.includes("tab=benchmarks")) return "benchmarks";
       if (window.location.search.includes("tab=chapters")) return "chapters";
-      if (window.location.search.includes("tab=roadmaps") || window.location.search.includes("tab=roadmap")) return "roadmaps";
+      if (
+        window.location.search.includes("tab=roadmaps") ||
+        window.location.search.includes("tab=roadmap")
+      )
+        return "roadmaps";
     }
     return "chat";
   });
@@ -442,7 +453,9 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   const isPdfDocument = useMemo(() => {
     const hasOnlyImageReceipts =
       photos.length > 0 &&
-      photos.every((p) => p.mimeType !== "application/pdf" && !p.name.toLowerCase().endsWith(".pdf")) &&
+      photos.every(
+        (p) => p.mimeType !== "application/pdf" && !p.name.toLowerCase().endsWith(".pdf")
+      ) &&
       computedRows.length > 0 &&
       computedRows.every((r) => r.start_page === undefined && r.chapter_number === undefined);
 
@@ -2129,7 +2142,9 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                           <div className="w-10 h-10 flex items-center justify-center mb-3 text-black border border-transparent shadow-none">
                             <Plus size={20} strokeWidth={1.8} />
                           </div>
-                          <p className="m-0 text-[13px] font-medium text-slate-700">No documents yet</p>
+                          <p className="m-0 text-[13px] font-medium text-slate-700">
+                            No documents yet
+                          </p>
                           <p className="m-0 mt-1 text-[11.5px] text-slate-400 leading-relaxed max-w-[200px]">
                             Add a PDF to extract and view chapter outlines.
                           </p>

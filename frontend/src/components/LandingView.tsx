@@ -4,11 +4,7 @@ import type { FailedBatchInfo, UploadedPhoto } from "@charan-interiors/shared";
 import { RisingWord, usePrefersReducedMotion } from "./MotionPrimitives";
 
 export type ReadingPhase =
-  | "idle"
-  | "reading_photos"
-  | "checking_duplicates"
-  | "adding_up"
-  | "transitioning_out";
+  "idle" | "reading_photos" | "checking_duplicates" | "adding_up" | "transitioning_out";
 
 export interface LandingViewProps {
   onGetStarted?: () => void;
@@ -101,14 +97,8 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
           color: "#FFFFFF",
           padding: "clamp(24px, 3.6vw, 56px)",
           transformOrigin: "left top",
-          transform: reducedMotion
-            ? "none"
-            : loadStep >= 1
-              ? "scaleX(1)"
-              : "scaleX(0)",
-          transition: reducedMotion
-            ? "opacity 150ms linear"
-            : "transform 640ms var(--ease-soft)",
+          transform: reducedMotion ? "none" : loadStep >= 1 ? "scaleX(1)" : "scaleX(0)",
+          transition: reducedMotion ? "opacity 150ms linear" : "transform 640ms var(--ease-soft)",
         }}
       >
         {/* Subtle architectural grid guidelines */}
@@ -266,9 +256,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
           transformOrigin: "center bottom",
           transform: reducedMotion ? "none" : loadStep >= 2 ? "scaleY(1)" : "scaleY(0)",
           opacity: 1,
-          transition: reducedMotion
-            ? "opacity 150ms linear"
-            : "transform 540ms var(--ease-soft)",
+          transition: reducedMotion ? "opacity 150ms linear" : "transform 540ms var(--ease-soft)",
         }}
       >
         {/* ── Top: Right-column Provenance Bar ── */}
@@ -289,7 +277,10 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
 
         {/* ── Center: Clean & Neat Get Started Action ── */}
         <div className="relative z-10 w-full flex-1 flex flex-col justify-center my-auto min-h-0 py-6 sm:py-8">
-          <div className="flex-1 flex flex-col items-start justify-center max-w-[420px]" style={fadeIn(5)}>
+          <div
+            className="flex-1 flex flex-col items-start justify-center max-w-[420px]"
+            style={fadeIn(5)}
+          >
             {/* Clean Direct Headline */}
             <h2
               className="font-normal m-0 mb-4 text-[#1F1F1F]"
@@ -323,7 +314,11 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
             </button>
 
             <p className="m-0 mt-3.5 text-[12.5px] text-gray-500 font-normal">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 font-mono text-[11px] text-gray-700">Enter ↵</kbd> or click to open Chat Assistant
+              Press{" "}
+              <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 font-mono text-[11px] text-gray-700">
+                Enter ↵
+              </kbd>{" "}
+              or click to open Chat Assistant
             </p>
           </div>
         </div>

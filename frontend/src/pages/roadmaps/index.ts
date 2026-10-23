@@ -147,7 +147,9 @@ export * from "./skills/CssPage";
 export * from "./skills/DsaPage";
 export * from "./skills/DesignArchitecturePage";
 export * from "./skills/DesignSystemPage";
+export * from "./skills/DesignSystemRoadmapPage";
 export * from "./skills/DjangoPage";
+export * from "./skills/DjangoRoadmapPage";
 export * from "./skills/DockerPage";
 export * from "./skills/ElasticsearchPage";
 export * from "./skills/FlutterPage";
@@ -205,31 +207,31 @@ export interface RoadmapPageMeta {
 }
 
 export const ROADMAP_PAGES: Record<string, React.ComponentType<{ onBack?: () => void }>> = {
-  "frontend": FrontendPage,
-  "backend": BackendPage,
+  frontend: FrontendPage,
+  backend: BackendPage,
   "full-stack": FullStackPage,
-  "android": AndroidPage,
-  "devops": DevOpsPage,
-  "devsecops": DevSecOpsPage,
+  android: AndroidPage,
+  devops: DevOpsPage,
+  devsecops: DevSecOpsPage,
   "data-analyst": DataAnalystPage,
-  "seo": SeoPage,
+  seo: SeoPage,
   "inference-engineering": InferenceEngineeringPage,
   "ai-engineer": AiEngineerPage,
   "ai-and-data-scientist": AiAndDataScientistPage,
   "data-engineer": DataEngineerPage,
   "machine-learning": MachineLearningPage,
   "product-design": ProductDesignPage,
-  "postgresql": PostgreSqlPage,
-  "ios": IosPage,
-  "blockchain": BlockchainPage,
-  "qa": QaPage,
+  postgresql: PostgreSqlPage,
+  ios: IosPage,
+  blockchain: BlockchainPage,
+  qa: QaPage,
   "software-architect": SoftwareArchitectPage,
   "cyber-security": CyberSecurityPage,
   "ux-design": UxDesignPage,
   "technical-writer": TechnicalWriterPage,
   "game-developer": GameDeveloperPage,
   "server-side-game-developer": ServerSideGameDevPage,
-  "mlops": MlOpsPage,
+  mlops: MlOpsPage,
   "product-manager": ProductManagerPage,
   "engineering-manager": EngineeringManagerPage,
   "developer-relations": DeveloperRelationsPage,
@@ -302,6 +304,10 @@ export const ROADMAP_PAGES: Record<string, React.ComponentType<{ onBack?: () => 
   "best-practice-code-review": CodeReviewBestPracticePage,
 };
 
-export function getRoadmapPageById(id: string): React.ComponentType<{ onBack?: () => void }> | undefined {
+export function getRoadmapPageById(
+  id: string
+):
+  | React.ComponentType<{ onBack?: () => void; onSelectRoadmap?: (roadmapId: string) => void }>
+  | undefined {
   return ROADMAP_PAGES[id];
 }

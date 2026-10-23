@@ -79,8 +79,26 @@ interface ChatSidebarProps {
   onRenameConversation?: (id: string, newTitle: string) => void;
   onArchiveConversation?: (id: string) => void;
   onOpenScheduledTasks?: () => void;
-  activeView?: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps";
-  onSelectView?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps") => void;
+  activeView?:
+    | "chat"
+    | "projects"
+    | "artifacts"
+    | "customize"
+    | "plugins"
+    | "benchmarks"
+    | "chapters"
+    | "roadmaps";
+  onSelectView?: (
+    view:
+      | "chat"
+      | "projects"
+      | "artifacts"
+      | "customize"
+      | "plugins"
+      | "benchmarks"
+      | "chapters"
+      | "roadmaps"
+  ) => void;
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({

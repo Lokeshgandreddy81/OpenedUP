@@ -41,8 +41,26 @@ export interface ChatWindowProps {
   docTitle?: string;
   onSelectChapter?: (rowNumber: number) => void;
   onOpenScheduledTasks?: () => void;
-  initialView?: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps";
-  onViewChange?: (view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps") => void;
+  initialView?:
+    | "chat"
+    | "projects"
+    | "artifacts"
+    | "customize"
+    | "plugins"
+    | "benchmarks"
+    | "chapters"
+    | "roadmaps";
+  onViewChange?: (
+    view:
+      | "chat"
+      | "projects"
+      | "artifacts"
+      | "customize"
+      | "plugins"
+      | "benchmarks"
+      | "chapters"
+      | "roadmaps"
+  ) => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -57,7 +75,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 }) => {
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<
-    "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps"
+    | "chat"
+    | "projects"
+    | "artifacts"
+    | "customize"
+    | "plugins"
+    | "benchmarks"
+    | "chapters"
+    | "roadmaps"
   >(initialView);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isScheduledTasksInternalOpen, setIsScheduledTasksInternalOpen] = useState(false);
@@ -88,7 +113,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [projectsNavKey, setProjectsNavKey] = useState(0);
 
   const handleSelectView = (
-    view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps"
+    view:
+      | "chat"
+      | "projects"
+      | "artifacts"
+      | "customize"
+      | "plugins"
+      | "benchmarks"
+      | "chapters"
+      | "roadmaps"
   ) => {
     if (view === "chapters") {
       if (onViewChange) {

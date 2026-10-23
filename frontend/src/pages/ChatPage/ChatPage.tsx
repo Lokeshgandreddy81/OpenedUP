@@ -21,7 +21,15 @@ export const ChatPageContent: React.FC = () => {
   };
 
   const handleViewChange = (
-    view: "chat" | "projects" | "artifacts" | "customize" | "plugins" | "benchmarks" | "chapters" | "roadmaps"
+    view:
+      | "chat"
+      | "projects"
+      | "artifacts"
+      | "customize"
+      | "plugins"
+      | "benchmarks"
+      | "chapters"
+      | "roadmaps"
   ) => {
     if (view === "chapters") {
       navigate("/results");

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Search } from "lucide-react";
 import { RoadmapPage } from "./RoadmapPage";
+import { getRoadmapPageById } from "../../pages/roadmaps";
 
 interface ExploreScreenProps {
   onBack: () => void;
@@ -46,7 +47,7 @@ const ROLE_ROADMAPS: CatalogRoadmap[] = [
   { id: "developer-relations", title: "Developer Relations" },
   { id: "bi-analyst", title: "BI Analyst" },
   { id: "network-engineer", title: "Network Engineer" },
-  { id: "forward-deployed-engineer", title: "Forward Deployed Engineer" },
+  { id: "forward-deployed-engineer", title: "FDE Roadmap" },
 ];
 
 const SKILL_ROADMAPS: CatalogRoadmap[] = [
@@ -119,8 +120,10 @@ const BEST_PRACTICE_ROADMAPS: CatalogRoadmap[] = [
   { id: "best-practice-code-review", title: "Code Review" },
 ];
 
+const ALL_ROADMAPS = [...ROLE_ROADMAPS, ...SKILL_ROADMAPS, ...BEST_PRACTICE_ROADMAPS];
+
 const ROADMAP_GRID_CLASS =
-  "mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6";
+  "mt-6 grid grid-cols-1 gap-x-8 gap-y-1.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
 export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onBack }) => {
   const [query, setQuery] = useState("");
@@ -132,6 +135,13 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onBack }) => {
   const filterRoadmaps = (roadmaps: CatalogRoadmap[]) => {
     if (!needle) return roadmaps;
     return roadmaps.filter((roadmap) => roadmap.title.toLowerCase().includes(needle));
+  };
+
+  const handleSelectRoadmap = (roadmapId: string) => {
+    const roadmap = ALL_ROADMAPS.find((entry) => entry.id === roadmapId);
+    if (roadmap) {
+      setSelectedRoadmap(roadmap);
+    }
   };
 
   const filteredRoles = filterRoadmaps(ROLE_ROADMAPS);
@@ -160,14 +170,27 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onBack }) => {
         key={roadmap.id}
         type="button"
         onClick={() => setSelectedRoadmap(roadmap)}
-        className="flex h-12 items-center justify-start px-0 text-left text-[13px] font-semibold tracking-tight text-[#0F172A]"
+        className="group flex min-h-[38px] items-center justify-start rounded-md px-2.5 -mx-2.5 text-left text-[13.5px] font-medium leading-snug text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 active:bg-slate-200/60 transition-colors duration-150 cursor-pointer"
       >
-        {roadmap.title}
+        <span className="truncate group-hover:translate-x-0.5 transition-transform duration-150">
+          {roadmap.title}
+        </span>
       </button>
     );
   };
 
   if (selectedRoadmap) {
+    const CustomRoadmapPage = getRoadmapPageById(selectedRoadmap.id);
+
+    if (CustomRoadmapPage) {
+      return (
+        <CustomRoadmapPage
+          onBack={() => setSelectedRoadmap(null)}
+          onSelectRoadmap={handleSelectRoadmap}
+        />
+      );
+    }
+
     return <RoadmapPage roadmap={selectedRoadmap} onBack={() => setSelectedRoadmap(null)} />;
   }
 
@@ -176,69 +199,102 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onBack }) => {
       <button
         type="button"
         onClick={onBack}
-        className="fixed left-4 top-4 z-20 inline-flex h-8 items-center gap-1.5 px-3 text-[12px] font-medium text-[#0F172A] cursor-pointer"
+        className="fixed left-5 top-5 z-20 inline-flex h-8 items-center gap-1.5 px-3 rounded-md text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
       >
         <ArrowLeft size={14} />
         Back
       </button>
 
-      <div className="mx-auto w-full max-w-[1440px] px-6 pb-24 pt-12 sm:pt-[4rem]">
-        <div className="flex items-center justify-center">
-          <h1 className="font-serif text-4xl sm:text-5xl font-normal text-[#0F172A] tracking-tight leading-tight">
+      <div className="mx-auto w-full max-w-[1360px] px-6 sm:px-10 pb-28 pt-14 sm:pt-20">
+        <div className="relative flex items-center justify-center">
+          <h1 className="font-serif text-4xl sm:text-5xl font-normal text-slate-900 tracking-tight leading-tight">
             Roadmaps
           </h1>
+
+          {/* Persistent, unobtrusive search control aligned on the right of the header */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            {isSearchOpen && (
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search roadmaps..."
+                aria-label="Search roadmaps"
+                className="h-8 w-48 sm:w-64 border-b border-slate-300 bg-transparent px-2 text-[13px] font-normal text-slate-900 outline-none focus:border-slate-900 placeholder:text-slate-400 transition-colors [&::-webkit-search-cancel-button]:hidden"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (isSearchOpen) {
+                  if (query) setQuery("");
+                  setIsSearchOpen(false);
+                } else {
+                  setIsSearchOpen(true);
+                  requestAnimationFrame(() => searchInputRef.current?.focus());
+                }
+              }}
+              aria-label="Search roadmaps"
+              className="grid h-8 w-8 place-items-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <Search size={16} strokeWidth={2} />
+            </button>
+          </div>
         </div>
 
-        <main className="mt-9 space-y-14">
-          <section aria-label="Role-based roadmaps">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[26px] font-semibold text-[#0F172A]">Roles</h2>
-              <div className="flex items-center gap-3">
-                {isSearchOpen && (
-                  <input
-                    ref={searchInputRef}
-                    type="search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search roadmaps"
-                    aria-label="Search roadmaps"
-                    className="h-9 w-64 rounded-none border border-transparent bg-transparent px-4 text-[14px] font-medium text-[#0F172A] outline-none placeholder:text-[#0F172A]/60 [&::-webkit-search-cancel-button]:hidden"
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isSearchOpen) {
-                      if (query) setQuery("");
-                      setIsSearchOpen(false);
-                    } else {
-                      setIsSearchOpen(true);
-                      requestAnimationFrame(() => searchInputRef.current?.focus());
-                    }
-                  }}
-                  aria-label="Search roadmaps"
-                  className="grid h-9 w-9 place-items-center rounded-none bg-transparent text-[#0F172A] cursor-pointer"
-                >
-                  <Search size={18} strokeWidth={2} />
-                </button>
+        <main className="mt-12 space-y-16">
+          {(!isSearching || filteredRoles.length > 0) && (
+            <section aria-label="Role-based roadmaps">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-xl sm:text-[22px] font-semibold tracking-tight text-slate-900">
+                    Roles
+                  </h2>
+                  {isSearching && (
+                    <span className="text-[12px] font-medium text-slate-400">
+                      ({filteredRoles.length})
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {filteredRoles.length > 0 && (
               <div className={ROADMAP_GRID_CLASS}>{filteredRoles.map(renderRoadmapCard)}</div>
-            )}
-          </section>
+            </section>
+          )}
 
-          {filteredSkills.length > 0 && (
+          {(!isSearching || filteredSkills.length > 0) && (
             <section aria-label="Skills roadmaps">
-              <h2 className="text-[26px] font-semibold text-[#0F172A]">Skills</h2>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-xl sm:text-[22px] font-semibold tracking-tight text-slate-900">
+                    Skills
+                  </h2>
+                  {isSearching && (
+                    <span className="text-[12px] font-medium text-slate-400">
+                      ({filteredSkills.length})
+                    </span>
+                  )}
+                </div>
+              </div>
               <div className={ROADMAP_GRID_CLASS}>{filteredSkills.map(renderRoadmapCard)}</div>
             </section>
           )}
 
-          {filteredBestPractices.length > 0 && (
+          {(!isSearching || filteredBestPractices.length > 0) && (
             <section aria-label="Best practices roadmaps">
-              <h2 className="text-[26px] font-semibold text-[#0F172A]">Best Practices</h2>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-xl sm:text-[22px] font-semibold tracking-tight text-slate-900">
+                    Best Practices
+                  </h2>
+                  {isSearching && (
+                    <span className="text-[12px] font-medium text-slate-400">
+                      ({filteredBestPractices.length})
+                    </span>
+                  )}
+                </div>
+              </div>
               <div className={ROADMAP_GRID_CLASS}>
                 {filteredBestPractices.map(renderRoadmapCard)}
               </div>
@@ -247,13 +303,13 @@ export const ExploreScreen: React.FC<ExploreScreenProps> = ({ onBack }) => {
 
           {isSearching && !hasResults && (
             <div className="flex min-h-[220px] flex-col items-center justify-center px-6 text-center">
-              <p className="text-[14px] font-medium text-[#0F172A]">
+              <p className="text-[14px] font-medium text-slate-600">
                 No roadmaps match “{query.trim()}”
               </p>
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="mt-3 text-[13px] font-medium text-[#0F172A] cursor-pointer"
+                className="mt-3 text-[13px] font-medium text-slate-900 underline underline-offset-4 hover:text-black cursor-pointer"
               >
                 Clear search
               </button>

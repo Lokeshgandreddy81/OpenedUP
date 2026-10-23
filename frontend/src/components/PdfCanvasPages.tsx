@@ -280,17 +280,7 @@ const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({
           tempCanvas.height = trimmedHeight;
           const tempCtx = tempCanvas.getContext("2d");
           if (tempCtx) {
-            tempCtx.drawImage(
-              canvas,
-              0,
-              topBlankRows,
-              w,
-              trimmedHeight,
-              0,
-              0,
-              w,
-              trimmedHeight
-            );
+            tempCtx.drawImage(canvas, 0, topBlankRows, w, trimmedHeight, 0, 0, w, trimmedHeight);
             canvas.height = trimmedHeight;
             ctx.drawImage(tempCanvas, 0, 0);
             setAspect(w / trimmedHeight);
