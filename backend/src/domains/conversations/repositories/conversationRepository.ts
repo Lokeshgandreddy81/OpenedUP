@@ -87,6 +87,7 @@ export class ConversationRepository {
     id: string,
     patch: {
       title?: string | undefined;
+      model?: string | undefined;
       isPinned?: boolean | undefined;
       isArchived?: boolean | undefined;
     }
@@ -97,6 +98,7 @@ export class ConversationRepository {
     if (!current) return false;
     const next = {
       title: patch.title,
+      model: patch.model,
       isPinned: patch.isPinned,
       isArchived: patch.isArchived,
     };
@@ -104,6 +106,7 @@ export class ConversationRepository {
       .prepare(
         `UPDATE conversations SET
           title = COALESCE(?, title),
+          model = COALESCE(?, model),
           is_pinned = COALESCE(?, is_pinned),
           is_archived = COALESCE(?, is_archived),
           updated_at = ?
@@ -111,6 +114,7 @@ export class ConversationRepository {
       )
       .run(
         next.title ?? null,
+        next.model ?? null,
         next.isPinned === undefined ? null : Number(next.isPinned),
         next.isArchived === undefined ? null : Number(next.isArchived),
         Date.now(),
@@ -125,6 +129,19 @@ export class ConversationRepository {
       this.db.prepare("DELETE FROM conversations WHERE user_id = ? AND id = ?").run(userId, id)
         .changes > 0
     );
+  }
+
+  deleteMessagesFrom(userId: string, conversationId: string, messageId: string): boolean {
+    const result = this.db
+      .prepare(
+        `DELETE FROM chat_messages
+         WHERE user_id = ? AND conversation_id = ? AND sequence >= (
+           SELECT sequence FROM chat_messages
+           WHERE user_id = ? AND conversation_id = ? AND id = ?
+         )`
+      )
+      .run(userId, conversationId, userId, conversationId, messageId);
+    return result.changes > 0;
   }
 
   appendMessage(

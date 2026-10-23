@@ -106,6 +106,7 @@ export const CreateConversationRequestSchema = z.object({
 
 export const UpdateConversationRequestSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
+  model: z.string().trim().min(1).max(200).optional(),
   isPinned: z.boolean().optional(),
   isArchived: z.boolean().optional(),
 });

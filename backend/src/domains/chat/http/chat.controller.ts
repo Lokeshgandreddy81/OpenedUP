@@ -54,6 +54,18 @@ function requireServerCredentials(req: Request, res: Response): boolean {
   return false;
 }
 
+function canUseLocalFreeModel(req: Request, payload: ChatRequest): boolean {
+  if (process.env["OPENROUTER_FREE_MODELS_ENABLED"] !== "true" || !isLoopbackRequest(req)) {
+    return false;
+  }
+  const model = payload.model ? getModelMeta(payload.model) : undefined;
+  return (
+    model?.isFree === true &&
+    model.provider === "custom" &&
+    isValidApiKey(process.env["OPENROUTER_API_KEY"])
+  );
+}
+
 function publicProviderError(message: string): string {
   return actionableProviderError(message);
 }
@@ -70,7 +82,12 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
         : undefined;
 
     const credential = requestProviderCredential(req, payload, headerApiKey, headerBaseUrl);
-    if (!isValidApiKey(credential.apiKey) && !requireServerCredentials(req, res)) return;
+    if (
+      !isValidApiKey(credential.apiKey) &&
+      !canUseLocalFreeModel(req, payload) &&
+      !requireServerCredentials(req, res)
+    )
+      return;
 
     const result = await processChat(payload, {
       injectedApiKey: credential.apiKey,
@@ -123,7 +140,12 @@ export async function handleChatStream(
     });
     return;
   }
-  if (!isValidApiKey(credential.apiKey) && !requireServerCredentials(req, res)) return;
+  if (
+    !isValidApiKey(credential.apiKey) &&
+    !canUseLocalFreeModel(req, payload) &&
+    !requireServerCredentials(req, res)
+  )
+    return;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");

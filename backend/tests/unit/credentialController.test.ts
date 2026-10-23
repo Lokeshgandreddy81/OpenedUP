@@ -8,7 +8,7 @@ const vault = vi.hoisted(() => ({
   listProviderCredentials: vi.fn(),
 }));
 
-vi.mock("../../src/services/credentialVault.js", () => vault);
+vi.mock("../../src/domains/credentials/application/credentialVault.js", () => vault);
 
 import { updateCredentialEndpoint } from "../../src/domains/credentials/http/credential.controller.js";
 

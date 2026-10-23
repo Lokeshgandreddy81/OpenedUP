@@ -42,6 +42,20 @@ export function deleteConversation(req: Request, res: Response): void {
   res.status(204).end();
 }
 
+export function deleteMessagesFrom(req: Request, res: Response): void {
+  if (
+    !conversations.deleteMessagesFrom(
+      req.principal!.uid,
+      req.params["id"]!,
+      req.params["messageId"]!
+    )
+  ) {
+    res.status(404).json({ error: "Conversation message not found.", requestId: req.id });
+    return;
+  }
+  res.status(204).end();
+}
+
 export function appendConversationMessage(req: Request, res: Response): void {
   const body = req.body as AppendConversationMessageRequest;
   const message = conversations.appendMessage(req.principal!.uid, req.params["id"]!, {

@@ -9,6 +9,7 @@ import {
   appendConversationMessage,
   createConversation,
   deleteConversation,
+  deleteMessagesFrom,
   getConversation,
   listConversations,
   updateConversation,
@@ -20,6 +21,7 @@ conversationRouter.post("/", validateBody(CreateConversationRequestSchema), crea
 conversationRouter.get("/:id", getConversation);
 conversationRouter.patch("/:id", validateBody(UpdateConversationRequestSchema), updateConversation);
 conversationRouter.delete("/:id", deleteConversation);
+conversationRouter.delete("/:id/messages/:messageId", deleteMessagesFrom);
 conversationRouter.post(
   "/:id/messages",
   validateBody(AppendConversationMessageRequestSchema),

@@ -88,7 +88,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     useState<CustomizeCategory>("Connectors");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isScheduledTasksInternalOpen, setIsScheduledTasksInternalOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<AiModelId>("claude-opus-5.5");
+  const [selectedModel, setSelectedModel] = useState<AiModelId>(
+    "openrouter-nemotron-3.5-lightning-free"
+  );
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const installedPluginIds = useInstalledPluginIds();
   const [isSkillsMenuOpen, setIsSkillsMenuOpen] = useState(false);
@@ -167,9 +169,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [onViewChange]);
 
   const [isThinking, setIsThinking] = useState(false);
-  const [thinkingSeconds, setThinkingSeconds] = useState(7);
   const activeRequestControllerRef = useRef<AbortController | null>(null);
-  const thinkingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const userStoppedRequestRef = useRef(false);
   const [isTemporaryChat, setIsTemporaryChat] = useState(false);
   const [temporaryMessages, setTemporaryMessages] = useState<ChatMessage[]>([]);
 
@@ -230,6 +231,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         if (!cancelled) {
           setConversations(loaded);
           setActiveConversationId((current) => current || loaded[0]?.id || "");
+          if (loaded[0]?.model) setSelectedModel(loaded[0].model);
         }
       } catch {
         /* offline state remains usable as temporary local chat */
@@ -279,6 +281,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     const newChat: ChatConversation = {
       id: newId,
       title: "New chat",
+      model: selectedModel,
       messages: [],
     };
     setConversations((prev) => [newChat, ...prev]);
@@ -330,9 +333,33 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     [user]
   );
 
-  // Handle Send Message with BYOK Key Injection & Progressive Token Streaming
+  const stopGeneration = useCallback(() => {
+    if (!activeRequestControllerRef.current) return;
+    userStoppedRequestRef.current = true;
+    activeRequestControllerRef.current.abort();
+  }, []);
+
+  // Handle BYOK routing and stream each chat turn into the active conversation.
   const handleSendMessage = useCallback(
-    async (text: string, model: AiModelId, effort: EffortLevel = "Medium") => {
+    async (
+      text: string,
+      model: AiModelId,
+      effort: EffortLevel = "Medium",
+      priorMessagesOverride?: ChatMessage[]
+    ) => {
+      if (activeRequestControllerRef.current) return;
+      const controller = new AbortController();
+      activeRequestControllerRef.current = controller;
+      userStoppedRequestRef.current = false;
+      setIsThinking(true);
+      const startMs = Date.now();
+      let requestTimeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
+        () => controller.abort(),
+        90000
+      );
+      let pendingStreamMessageId: string | null = null;
+      let streamedAssistantMessage: ChatMessage | null = null;
+
       const userMessage: ChatMessage = {
         id: `msg-u-${Date.now()}`,
         role: "user",
@@ -351,6 +378,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ title: text.slice(0, 200) || "New chat", model }),
+              signal: controller.signal,
             });
             if (created.ok)
               targetId = ((await created.json()) as { conversation: { id: string } }).conversation
@@ -362,6 +390,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const newConv: ChatConversation = {
           id: targetId,
           title: text.slice(0, 24) + (text.length > 24 ? "..." : ""),
+          model,
           messages: [userMessage],
         };
         setConversations((prev) => [newConv, ...prev]);
@@ -373,6 +402,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               const isFirst = conv.messages.length === 0;
               return {
                 ...conv,
+                model,
                 title: isFirst ? text.slice(0, 24) + (text.length > 24 ? "..." : "") : conv.title,
                 messages: [...conv.messages, userMessage],
               };
@@ -388,6 +418,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ title: text.slice(0, 200) || "New chat" }),
+              signal: controller.signal,
             });
           await authenticatedChatFetch(
             `/api/conversations/${encodeURIComponent(targetId)}/messages`,
@@ -395,6 +426,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ role: "user", content: text }),
+              signal: controller.signal,
             }
           );
         } catch {
@@ -402,23 +434,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         }
       }
 
-      setIsThinking(true);
-      const startMs = Date.now();
-      let requestTimeoutId: ReturnType<typeof setTimeout> | null = null;
-      thinkingTimerRef.current = setInterval(() => {
-        setThinkingSeconds((s) => s + 1);
-      }, 1000);
-      setThinkingSeconds(1);
-      let pendingStreamMessageId: string | null = null;
-
       try {
-        const controller = new AbortController();
-        activeRequestControllerRef.current = controller;
-        requestTimeoutId = setTimeout(() => controller.abort(), 90000);
-
-        const priorMessages = isTemporaryChat
-          ? temporaryMessages
-          : activeConversation?.messages || [];
+        const priorMessages =
+          priorMessagesOverride ??
+          (isTemporaryChat ? temporaryMessages : activeConversation?.messages || []);
 
         // Resolve BYOK credentials for the selected model
         const providerConfig = getProviderChatRequestConfig(model);
@@ -453,9 +472,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const response = user
           ? await authenticatedChatFetch("/api/chat/stream", requestInit)
           : await fetch("/api/chat/stream", requestInit);
-        if (requestTimeoutId) clearTimeout(requestTimeoutId);
-        requestTimeoutId = null;
-
         if (response.ok) {
           const msgId = `msg-a-${Date.now()}`;
           pendingStreamMessageId = msgId;
@@ -463,13 +479,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             id: msgId,
             role: "assistant",
             content: "",
-            thoughtDetails: [`Routed request to ${providerName} (${modelName}).`],
-            stepTitle: "Preparing response",
-            stepDescription: `Connecting to ${providerName} (${modelName}).`,
-            actionChips: ["Refine criteria", "Export findings", "Check document citations"],
+            isStreaming: true,
+            thoughtDetails: [],
           };
+          streamedAssistantMessage = assistantMessage;
           const updateAssistant = (patch: Partial<ChatMessage>) => {
             assistantMessage = { ...assistantMessage, ...patch };
+            streamedAssistantMessage = assistantMessage;
             if (isTemporaryChat)
               setTemporaryMessages((prev) =>
                 prev.map((m) => (m.id === msgId ? assistantMessage : m))
@@ -509,6 +525,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 });
               if (type === "done")
                 updateAssistant({
+                  isStreaming: false,
                   thinkingTime: String(data.thinkingTime || ""),
                   stepTitle: String(data.stepTitle || "Response complete"),
                   stepDescription: String(data.stepDescription || ""),
@@ -518,6 +535,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 });
             }
           );
+          updateAssistant({ isStreaming: false });
           pendingStreamMessageId = null;
           if (
             user &&
@@ -555,11 +573,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             const assistantMessage: ChatMessage = {
               id: `msg-a-${Date.now()}`,
               role: "assistant",
-              content: `**${providerName} API Key Required**\n\nTo run **${modelName}**, connect your ${providerName} API key directly inside the model dropdown (**API key** submenu) or under **Customize → Providers**.`,
+              content: `**${providerName} API key required**\n\nConnect a key in **Customize → Providers** to use **${modelName}**.`,
               thinkingTime: `${elapsedSeconds}s`,
               stepTitle: "BYOK Authentication Required",
               stepDescription: `Waiting for ${providerName} API key configuration.`,
-              actionChips: ["Refine criteria", "Check document citations"],
+              actionChips: ["Connect API Key"],
             };
 
             if (isTemporaryChat) {
@@ -591,6 +609,54 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         }
       } catch (error: unknown) {
         const elapsedSeconds = Math.max(1, Math.round((Date.now() - startMs) / 1000));
+        if (userStoppedRequestRef.current) {
+          if (streamedAssistantMessage) {
+            const stoppedMessage: ChatMessage = {
+              ...streamedAssistantMessage,
+              isStreaming: false,
+              thinkingTime: `${elapsedSeconds}s`,
+              stepTitle: "Response stopped",
+              stepDescription: "Stopped by you.",
+            };
+            if (isTemporaryChat) {
+              setTemporaryMessages((prev) =>
+                prev.map((message) => (message.id === stoppedMessage.id ? stoppedMessage : message))
+              );
+            } else {
+              setConversations((prev) =>
+                prev.map((conversation) =>
+                  conversation.id === targetId
+                    ? {
+                        ...conversation,
+                        messages: conversation.messages.map((message) =>
+                          message.id === stoppedMessage.id ? stoppedMessage : message
+                        ),
+                      }
+                    : conversation
+                )
+              );
+              if (user && !targetId.startsWith("chat-") && stoppedMessage.content) {
+                await authenticatedChatFetch(
+                  `/api/conversations/${encodeURIComponent(targetId)}/messages`,
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      role: "assistant",
+                      content: stoppedMessage.content,
+                      metadata: {
+                        thinkingTime: stoppedMessage.thinkingTime,
+                        stepTitle: stoppedMessage.stepTitle,
+                        stepDescription: stoppedMessage.stepDescription,
+                      },
+                    }),
+                  }
+                ).catch(() => undefined);
+              }
+            }
+          }
+          return;
+        }
         const errorMessage =
           error instanceof Error
             ? error.name === "AbortError"
@@ -640,10 +706,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           );
         }
       } finally {
-        activeRequestControllerRef.current = null;
+        if (activeRequestControllerRef.current === controller)
+          activeRequestControllerRef.current = null;
+        userStoppedRequestRef.current = false;
         if (requestTimeoutId) clearTimeout(requestTimeoutId);
-        if (thinkingTimerRef.current) clearInterval(thinkingTimerRef.current);
-        thinkingTimerRef.current = null;
         setIsThinking(false);
       }
     },
@@ -661,11 +727,60 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     ]
   );
 
-  if (!isOpen) return null;
-
   const currentMessages = isTemporaryChat ? temporaryMessages : activeConversation?.messages || [];
   const isEmptyChat = currentMessages.length === 0 && !isThinking;
+  const handleModelChange = useCallback(
+    (model: AiModelId) => {
+      setSelectedModel(model);
+      if (!isTemporaryChat && activeConversationId) {
+        setConversations((prev) =>
+          prev.map((conversation) =>
+            conversation.id === activeConversationId ? { ...conversation, model } : conversation
+          )
+        );
+        if (user && !activeConversationId.startsWith("chat-")) {
+          void authenticatedChatFetch(
+            `/api/conversations/${encodeURIComponent(activeConversationId)}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ model }),
+            }
+          ).catch(() => undefined);
+        }
+      }
+    },
+    [activeConversationId, isTemporaryChat, user]
+  );
 
+  const handleEditMessage = useCallback(
+    async (messageId: string, newContent: string) => {
+      const messageIndex = currentMessages.findIndex((message) => message.id === messageId);
+      if (messageIndex < 0) return;
+      const priorMessages = currentMessages.slice(0, messageIndex);
+      if (isTemporaryChat) {
+        setTemporaryMessages(priorMessages);
+      } else if (activeConversation) {
+        setConversations((prev) =>
+          prev.map((conversation) =>
+            conversation.id === activeConversation.id
+              ? { ...conversation, messages: priorMessages }
+              : conversation
+          )
+        );
+        if (user && !activeConversation.id.startsWith("chat-")) {
+          await authenticatedChatFetch(
+            `/api/conversations/${encodeURIComponent(activeConversation.id)}/messages/${encodeURIComponent(messageId)}`,
+            { method: "DELETE" }
+          ).catch(() => undefined);
+        }
+      }
+      await handleSendMessage(newContent, selectedModel, "Medium", priorMessages);
+    },
+    [activeConversation, currentMessages, handleSendMessage, isTemporaryChat, selectedModel, user]
+  );
+
+  if (!isOpen) return null;
   return (
     <div
       role="dialog"
@@ -677,7 +792,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       <ChatSidebar
         conversations={conversations}
         activeConversationId={activeConversationId}
-        onSelectConversation={(id) => setActiveConversationId(id)}
+        onSelectConversation={(id) => {
+          setActiveConversationId(id);
+          const conversation = conversations.find((item) => item.id === id);
+          if (conversation?.model) setSelectedModel(conversation.model);
+        }}
         onNewChat={handleNewChat}
         onBack={onClose}
         isOpen={isSidebarOpen}
@@ -719,12 +838,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       {activeView === "chat" ? (
         <main
           aria-label="Chat canvas"
-          className={`flex-1 min-w-0 h-full flex flex-col overflow-hidden bg-white relative transition-[padding] duration-150 ${
+          className={`flex-1 min-w-0 h-full flex flex-col overflow-hidden bg-[#fcfcfb] relative transition-[padding] duration-150 ${
             isEmptyChat ? "justify-between" : "justify-between"
           } ${!isSidebarOpen ? "pr-11" : ""}`}
         >
           {/* Top Header Bar: Incognito / Temporary Chat Icon */}
-          <div className="w-full flex items-center justify-end gap-3 px-4 py-3 z-30 shrink-0 relative">
+          <div className="w-full flex items-center justify-between gap-3 px-5 sm:px-8 py-3 z-30 shrink-0 relative border-b border-slate-100/80 bg-[#fcfcfb]/95">
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-medium text-slate-700">
+                {isTemporaryChat
+                  ? "Temporary chat"
+                  : activeConversation?.messages.find((message) => message.role === "user")
+                      ?.content || activeConversation?.title || "New chat"}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
             {user ? (
               <span className="text-xs text-slate-500">
                 {user.displayName || user.email || "Signed in"}
@@ -815,14 +943,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <GhostIcon size={18} className={isTemporaryChat ? "text-white" : "text-slate-700"} />
             </button>
           </div>
+          </div>
           {isEmptyChat ? (
             <div className="flex-1 w-full flex flex-col items-center justify-center px-4 pb-16 select-none animate-in fade-in duration-200">
-              <div className="w-full max-w-[845px] flex flex-col items-center">
+              <div className="w-full max-w-[880px] flex flex-col items-center">
                 {/* Hero Heading below the incognito bar */}
                 <div className="text-center mb-6">
                   <h2 className="text-[30px] md:text-[34px] font-medium text-slate-800 tracking-tight">
                     Ask anything
                   </h2>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Explore a topic, work through a problem, or make sense of a document.
+                  </p>
                 </div>
 
                 {/* Centered Input Box */}
@@ -830,10 +962,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   <ChatInput
                     onSendMessage={(msg, m, eff) => handleSendMessage(msg, m, eff)}
                     isThinking={isThinking}
-                    onStopThinking={() => activeRequestControllerRef.current?.abort()}
-                    placeholder="Prospect, engage, @ to add context"
+                    onStopThinking={stopGeneration}
+                    placeholder="Message Shoebox…"
                     selectedModel={selectedModel}
-                    onChangeModel={(m) => setSelectedModel(m)}
+                    onChangeModel={handleModelChange}
                     onOpenProjects={() => handleSelectView("projects")}
                     onOpenPlugins={() => handleSelectView("plugins")}
                     onOpenBenchmarks={() => handleSelectView("benchmarks")}
@@ -848,7 +980,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <ChatMessages
                 messages={currentMessages}
                 isThinking={isThinking}
-                thinkingSeconds={thinkingSeconds}
                 onSelectActionChip={(chip) => {
                   if (chip === "Export findings" || chip === "Export sequence") {
                     const lastAssistant = [...currentMessages]
@@ -869,36 +1000,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       return;
                     }
                   }
+                  if (chip === "Connect API Key") {
+                    handleOpenProvidersTab();
+                    return;
+                  }
                   handleSendMessage(chip, selectedModel);
                 }}
-                onEditMessage={(messageId, newContent) => {
-                  if (isTemporaryChat) {
-                    const msgIndex = temporaryMessages.findIndex((m) => m.id === messageId);
-                    if (msgIndex !== -1) {
-                      const updated = temporaryMessages.slice(0, msgIndex);
-                      const editedMsg = { ...temporaryMessages[msgIndex], content: newContent };
-                      updated.push(editedMsg);
-                      setTemporaryMessages(updated);
-                      handleSendMessage(newContent, selectedModel);
-                    }
-                  } else if (activeConversation) {
-                    const msgIndex = activeConversation.messages.findIndex(
-                      (m) => m.id === messageId
-                    );
-                    if (msgIndex !== -1) {
-                      setConversations((prev) =>
-                        prev.map((conv) => {
-                          if (conv.id !== activeConversation.id) return conv;
-                          const updated = conv.messages.slice(0, msgIndex);
-                          const editedMsg = { ...conv.messages[msgIndex], content: newContent };
-                          updated.push(editedMsg);
-                          return { ...conv, messages: updated };
-                        })
-                      );
-                      setTimeout(() => handleSendMessage(newContent, selectedModel), 0);
-                    }
-                  }
-                }}
+                onEditMessage={handleEditMessage}
               />
 
               {/* Centered Floating Bottom Input */}
@@ -908,10 +1016,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     handleSendMessage(msg, m, eff);
                   }}
                   isThinking={isThinking}
-                  onStopThinking={() => activeRequestControllerRef.current?.abort()}
-                  placeholder="Prospect, engage, @ to add context"
+                  onStopThinking={stopGeneration}
+                  placeholder="Message Shoebox…"
                   selectedModel={selectedModel}
-                  onChangeModel={(m) => setSelectedModel(m)}
+                  onChangeModel={handleModelChange}
                   onOpenProjects={() => handleSelectView("projects")}
                   onOpenPlugins={() => handleSelectView("plugins")}
                   onOpenBenchmarks={() => handleSelectView("benchmarks")}

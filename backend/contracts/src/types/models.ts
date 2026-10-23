@@ -20,8 +20,11 @@ export interface ModelMetadata {
   envKeyName: string;
   tag?: string;
   description?: string;
-  isTopModel?: boolean;
+  isFree?: boolean;
   isChatModel?: boolean;
+  contextWindowTokens?: number;
+  inputModalities?: string[];
+  supportsReasoning?: boolean;
 }
 
 export const PROVIDER_CATALOG: Record<ProviderId, ProviderMetadata> = {
@@ -106,7 +109,6 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "ANTHROPIC_API_KEY",
     tag: "Top",
     description: "For complex work and everyday tasks",
-    isTopModel: true,
     isChatModel: true,
   },
   "claude-fable-5.1": {
@@ -116,7 +118,6 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     upstreamModelId: "claude-fable-5-1",
     envKeyName: "ANTHROPIC_API_KEY",
     description: "For your toughest challenges",
-    isTopModel: true,
     isChatModel: true,
   },
   "gpt-6-astra": {
@@ -127,7 +128,6 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "OPENAI_API_KEY",
     tag: "Max",
     description: "Most capable general reasoning",
-    isTopModel: true,
     isChatModel: true,
   },
   "gemini-4-argon": {
@@ -138,7 +138,6 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "GEMINI_API_KEY",
     tag: "High",
     description: "Fastest for quick deep answers",
-    isTopModel: true,
     isChatModel: true,
   },
   "muse-wonder": {
@@ -200,6 +199,34 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "GEMINI_API_KEY",
     tag: "Fast",
     isChatModel: true,
+  },
+  "openrouter-nemotron-3.5-lightning-free": {
+    id: "openrouter-nemotron-3.5-lightning-free",
+    name: "Nemotron 3.5 Lightning (Free)",
+    provider: "custom",
+    upstreamModelId: "nvidia/nemotron-3.5-lightning:free",
+    envKeyName: "OPENROUTER_API_KEY",
+    tag: "Free",
+    description: "Fast, efficient model for coding, reasoning, and agent tasks",
+    isFree: true,
+    isChatModel: true,
+    contextWindowTokens: 1_000_000,
+    inputModalities: ["text"],
+    supportsReasoning: true,
+  },
+  "openrouter-nemotron-3-ultra-free": {
+    id: "openrouter-nemotron-3-ultra-free",
+    name: "Nemotron 3 Ultra (Free)",
+    provider: "custom",
+    upstreamModelId: "nvidia/nemotron-3-ultra-550b-a55b:free",
+    envKeyName: "OPENROUTER_API_KEY",
+    tag: "Free",
+    description: "Deep reasoning for coding, research, and long-running agent workflows",
+    isFree: true,
+    isChatModel: true,
+    contextWindowTokens: 1_000_000,
+    inputModalities: ["text"],
+    supportsReasoning: true,
   },
   "custom-model": {
     id: "custom-model",

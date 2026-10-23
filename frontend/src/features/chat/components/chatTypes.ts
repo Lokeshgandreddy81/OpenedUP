@@ -9,11 +9,13 @@ export interface ChatMessage {
   stepDescription?: string; // e.g. "I can find these, but 'redesigning' can mean different signals..."
   actionChips?: string[];
   isThinking?: boolean;
+  isStreaming?: boolean;
 }
 
 export interface ChatConversation {
   id: string;
   title: string;
+  model?: AiModelId;
   lastUpdated?: string;
   badge?: string; // e.g. "Demo"
   hasDot?: boolean; // small colored dot
@@ -25,6 +27,8 @@ export interface ChatConversation {
 }
 
 export type AiModelId =
+  | "openrouter-nemotron-3.5-lightning-free"
+  | "openrouter-nemotron-3-ultra-free"
   | "claude-opus-5.5"
   | "claude-fable-5.1"
   | "gpt-6-astra"

@@ -27,6 +27,41 @@ describe("chat repositories", () => {
     expect(repository.update("user-b", conversation.id, { isPinned: true })).toBe(false);
     expect(repository.delete("user-b", conversation.id)).toBe(false);
     expect(repository.get("user-a", conversation.id)?.isPinned).toBe(false);
+    expect(
+      repository.update("user-a", conversation.id, {
+        model: "openrouter-nemotron-3.5-lightning-free",
+      })
+    ).toBe(true);
+    expect(repository.get("user-a", conversation.id)?.model).toBe(
+      "openrouter-nemotron-3.5-lightning-free"
+    );
+  });
+
+  it("truncates an edited prompt and every later turn without crossing conversation ownership", () => {
+    const repository = new ConversationRepository(db);
+    const conversation = repository.create("user-a", "Edit", "gemini-3.8-flash");
+    const first = repository.appendMessage("user-a", conversation.id, {
+      role: "user",
+      content: "first",
+      status: "complete",
+      metadata: {},
+    })!;
+    repository.appendMessage("user-a", conversation.id, {
+      role: "assistant",
+      content: "answer",
+      status: "complete",
+      metadata: {},
+    });
+    repository.appendMessage("user-a", conversation.id, {
+      role: "user",
+      content: "second",
+      status: "complete",
+      metadata: {},
+    });
+
+    expect(repository.deleteMessagesFrom("user-b", conversation.id, first.id)).toBe(false);
+    expect(repository.deleteMessagesFrom("user-a", conversation.id, first.id)).toBe(true);
+    expect(repository.get("user-a", conversation.id)?.messages).toEqual([]);
   });
 
   it("shares artifacts only with signed-in viewers and keeps mutations owner-only", () => {
