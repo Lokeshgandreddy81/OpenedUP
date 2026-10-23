@@ -11,8 +11,8 @@ import {
   areDatesWithinOneDay,
   isBoxValid,
   generateReceiptsCsv,
-} from "../utils/engine.ts";
-import type { ComputedRow } from "@charan-interiors/shared";
+} from "../features/chapters/services/engine.ts";
+import type { ComputedRow } from "@charan-interiors/contracts";
 
 describe("engine financial & ledger utils", () => {
   describe("currency calculations", () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { PDFDocument } from "pdf-lib";
-import { parsePdfWithPdfLib } from "../../src/services/pdf.service.js";
+import { parsePdfWithPdfLib } from "../../src/domains/documents/application/pdf.service.js";
 
 describe("pdfService backend unit tests", () => {
   describe("parsePdfWithPdfLib", () => {

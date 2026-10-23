@@ -1,27 +1,29 @@
-import React, { Suspense, lazy } from "react";
+import React, { lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AppProvider, useAppContext } from "./context/AppContext";
-import { WorkspaceSyncModal } from "./components/WorkspaceSyncModal";
+import { AppProvider, useAppContext } from "./features/chapters/state/AppContext";
+import { ChatAuthProvider } from "./app/auth/ChatAuthContext";
+import { WorkspaceSyncModal } from "./features/chapters/components/WorkspaceSyncModal";
+import { PageRoute } from "./app/components/PageRoute";
 
-import { LandingPageSkeleton } from "./pages/LandingPage/LoadingSkeleton";
-import { ResultsPageSkeleton } from "./pages/ResultsPage/LoadingSkeleton";
-import { RoadmapPageSkeleton } from "./pages/RoadmapPage/LoadingSkeleton";
-import { BenchmarksPageSkeleton } from "./pages/BenchmarksPage/LoadingSkeleton";
-import { ChatPageSkeleton } from "./pages/ChatPage/LoadingSkeleton";
-import { ProjectsPageSkeleton } from "./pages/ProjectsPage/LoadingSkeleton";
-import { ScheduledPageSkeleton } from "./pages/ScheduledPage/LoadingSkeleton";
-import { ImageArenaPageSkeleton } from "./pages/ImageArenaPage/LoadingSkeleton";
-import { CodingAgentsPageSkeleton } from "./pages/CodingAgentsPage/LoadingSkeleton";
+import { LandingPageSkeleton } from "./features/chapters/pages/LandingPage/LoadingSkeleton";
+import { ResultsPageSkeleton } from "./features/chapters/pages/ResultsPage/LoadingSkeleton";
+import { RoadmapPageSkeleton } from "./features/roadmaps/pages/RoadmapPage/LoadingSkeleton";
+import { BenchmarksPageSkeleton } from "./features/benchmarks/pages/BenchmarksPage/LoadingSkeleton";
+import { ChatPageSkeleton } from "./features/chat/pages/ChatPage/LoadingSkeleton";
+import { ProjectsPageSkeleton } from "./features/projects/pages/ProjectsPage/LoadingSkeleton";
+import { ScheduledPageSkeleton } from "./features/scheduled/pages/ScheduledPage/LoadingSkeleton";
+import { ImageArenaPageSkeleton } from "./features/benchmarks/pages/ImageArenaPage/LoadingSkeleton";
+import { CodingAgentsPageSkeleton } from "./features/benchmarks/pages/CodingAgentsPage/LoadingSkeleton";
 
-const LandingPage = lazy(() => import("./pages/LandingPage/LandingPage"));
-const ResultsPage = lazy(() => import("./pages/ResultsPage/ResultsPage"));
-const RoadmapPage = lazy(() => import("./pages/RoadmapPage/RoadmapPage"));
-const BenchmarksPage = lazy(() => import("./pages/BenchmarksPage/BenchmarksPage"));
-const ChatPage = lazy(() => import("./pages/ChatPage/ChatPage"));
-const ProjectsPage = lazy(() => import("./pages/ProjectsPage/ProjectsPage"));
-const ScheduledPage = lazy(() => import("./pages/ScheduledPage/ScheduledPage"));
-const ImageArenaPage = lazy(() => import("./pages/ImageArenaPage/ImageArenaPage"));
-const CodingAgentsPage = lazy(() => import("./pages/CodingAgentsPage/CodingAgentsPage"));
+const LandingPage = lazy(() => import("./features/chapters/pages/LandingPage/LandingPage"));
+const ResultsPage = lazy(() => import("./features/chapters/pages/ResultsPage/ResultsPage"));
+const RoadmapPage = lazy(() => import("./features/roadmaps/pages/RoadmapPage/RoadmapPage"));
+const BenchmarksPage = lazy(() => import("./features/benchmarks/pages/BenchmarksPage/BenchmarksPage"));
+const ChatPage = lazy(() => import("./features/chat/pages/ChatPage/ChatPage"));
+const ProjectsPage = lazy(() => import("./features/projects/pages/ProjectsPage/ProjectsPage"));
+const ScheduledPage = lazy(() => import("./features/scheduled/pages/ScheduledPage/ScheduledPage"));
+const ImageArenaPage = lazy(() => import("./features/benchmarks/pages/ImageArenaPage/ImageArenaPage"));
+const CodingAgentsPage = lazy(() => import("./features/benchmarks/pages/CodingAgentsPage/CodingAgentsPage"));
 
 export const AppShell: React.FC = () => {
   const {
@@ -38,73 +40,73 @@ export const AppShell: React.FC = () => {
         <Route
           path="/"
           element={
-            <Suspense fallback={<LandingPageSkeleton />}>
+            <PageRoute name="Home" fallback={<LandingPageSkeleton />}>
               <LandingPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route
           path="/results"
           element={
-            <Suspense fallback={<ResultsPageSkeleton />}>
+            <PageRoute name="Results" fallback={<ResultsPageSkeleton />}>
               <ResultsPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route
           path="/roadmap"
           element={
-            <Suspense fallback={<RoadmapPageSkeleton />}>
+            <PageRoute name="Roadmap" fallback={<RoadmapPageSkeleton />}>
               <RoadmapPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route
           path="/benchmarks"
           element={
-            <Suspense fallback={<BenchmarksPageSkeleton />}>
+            <PageRoute name="Benchmarks" fallback={<BenchmarksPageSkeleton />}>
               <BenchmarksPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route
           path="/chat"
           element={
-            <Suspense fallback={<ChatPageSkeleton />}>
+            <PageRoute name="Chat" fallback={<ChatPageSkeleton />}>
               <ChatPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route
           path="/projects"
           element={
-            <Suspense fallback={<ProjectsPageSkeleton />}>
+            <PageRoute name="Projects" fallback={<ProjectsPageSkeleton />}>
               <ProjectsPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route
           path="/scheduled"
           element={
-            <Suspense fallback={<ScheduledPageSkeleton />}>
+            <PageRoute name="Scheduled tasks" fallback={<ScheduledPageSkeleton />}>
               <ScheduledPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route
           path="/image-arena"
           element={
-            <Suspense fallback={<ImageArenaPageSkeleton />}>
+            <PageRoute name="Image arena" fallback={<ImageArenaPageSkeleton />}>
               <ImageArenaPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route
           path="/coding-agents"
           element={
-            <Suspense fallback={<CodingAgentsPageSkeleton />}>
+            <PageRoute name="Coding agents" fallback={<CodingAgentsPageSkeleton />}>
               <CodingAgentsPage />
-            </Suspense>
+            </PageRoute>
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -125,7 +127,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppProvider>
-        <AppShell />
+        <ChatAuthProvider>
+          <AppShell />
+        </ChatAuthProvider>
       </AppProvider>
     </BrowserRouter>
   );

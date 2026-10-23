@@ -2,14 +2,14 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { ComputerScienceRoadmapPage } from "../pages/roadmaps/skills/ComputerScienceRoadmapPage";
-import { ComputerSciencePage } from "../pages/roadmaps/skills/ComputerSciencePage";
+import { ComputerScienceRoadmapPage } from "../features/roadmaps/pages/catalog/skills/ComputerScienceRoadmapPage";
+import { ComputerSciencePage } from "../features/roadmaps/pages/catalog/skills/ComputerSciencePage";
 import {
   COMPUTER_SCIENCE_CONTINUE_LEARNING,
   COMPUTER_SCIENCE_MARKERS,
   COMPUTER_SCIENCE_RELATED_ROADMAPS,
   COMPUTER_SCIENCE_SECTIONS,
-} from "../pages/roadmaps/skills/computerScienceRoadmapData";
+} from "../features/roadmaps/pages/catalog/skills/computerScienceRoadmapData";
 
 describe("Computer Science Roadmap", () => {
   it("renders ComputerScienceRoadmapPage with page title and markers", () => {

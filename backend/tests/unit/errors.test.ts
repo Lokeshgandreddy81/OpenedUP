@@ -7,7 +7,7 @@ import {
   extractHumanErrorMessage,
   parseJsonSafely,
   withTimeout,
-} from "../../src/utils/errors.js";
+} from "../../src/platform/errors/errors.js";
 
 describe("errors utils", () => {
   describe("AppError", () => {

@@ -2,12 +2,12 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { FlutterRoadmapPage } from "../pages/roadmaps/skills/FlutterRoadmapPage";
-import { FlutterPage } from "../pages/roadmaps/skills/FlutterPage";
-import { GitGithubRoadmapPage } from "../pages/roadmaps/skills/GitGithubRoadmapPage";
-import { GitGithubPage } from "../pages/roadmaps/skills/GitGithubPage";
-import { FLUTTER_SECTIONS } from "../pages/roadmaps/skills/flutterRoadmapData";
-import { GIT_GITHUB_SECTIONS } from "../pages/roadmaps/skills/gitGithubRoadmapData";
+import { FlutterRoadmapPage } from "../features/roadmaps/pages/catalog/skills/FlutterRoadmapPage";
+import { FlutterPage } from "../features/roadmaps/pages/catalog/skills/FlutterPage";
+import { GitGithubRoadmapPage } from "../features/roadmaps/pages/catalog/skills/GitGithubRoadmapPage";
+import { GitGithubPage } from "../features/roadmaps/pages/catalog/skills/GitGithubPage";
+import { FLUTTER_SECTIONS } from "../features/roadmaps/pages/catalog/skills/flutterRoadmapData";
+import { GIT_GITHUB_SECTIONS } from "../features/roadmaps/pages/catalog/skills/gitGithubRoadmapData";
 
 describe("Flutter and Git & GitHub Roadmap Tests", () => {
   describe("FlutterRoadmapPage", () => {

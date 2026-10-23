@@ -3,13 +3,13 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import React from "react";
-import { CloudflareRoadmapPage } from "../pages/roadmaps/skills/CloudflareRoadmapPage";
+import { CloudflareRoadmapPage } from "../features/roadmaps/pages/catalog/skills/CloudflareRoadmapPage";
 import {
   CLOUDFLARE_MARKERS,
   CLOUDFLARE_RELATED_ROADMAPS,
   CLOUDFLARE_CONTINUE_LEARNING,
   CLOUDFLARE_SECTIONS,
-} from "../pages/roadmaps/skills/cloudflareRoadmapData";
+} from "../features/roadmaps/pages/catalog/skills/cloudflareRoadmapData";
 
 describe("CloudflareRoadmapPage", () => {
   it("renders page header and title correctly", () => {

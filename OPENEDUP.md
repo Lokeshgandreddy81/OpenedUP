@@ -1,0 +1,1 @@
+- Always enforce strict TypeScript types and modular separation of concerns.

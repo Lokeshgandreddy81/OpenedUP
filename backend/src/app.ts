@@ -2,15 +2,20 @@ import express, { type Express } from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { requestIdMiddleware } from "./middleware/requestId.js";
-import { requestLogger } from "./middleware/requestLogger.js";
-import { errorHandler } from "./middleware/errorHandler.js";
-import { healthRouter } from "./routes/health.routes.js";
-import { authRouter } from "./routes/auth.routes.js";
-import { analyticsRouter } from "./routes/analytics.routes.js";
-import { pdfRouter } from "./routes/pdf.routes.js";
-import { chatRouter } from "./routes/chat.routes.js";
-import { benchmarksRouter } from "./routes/benchmarks.routes.js";
+import { requestIdMiddleware } from "./platform/http/middleware/requestId.js";
+import { requestLogger } from "./platform/http/middleware/requestLogger.js";
+import { errorHandler } from "./platform/http/middleware/errorHandler.js";
+import { healthRouter } from "./platform/health/http/health.routes.js";
+import { authRouter } from "./domains/identity/http/auth.routes.js";
+import { analyticsRouter } from "./domains/receipts/http/analytics.routes.js";
+import { pdfRouter } from "./domains/documents/http/pdf.routes.js";
+import { chatRouter } from "./domains/chat/http/chat.routes.js";
+import { benchmarksRouter } from "./domains/benchmarks/http/benchmarks.routes.js";
+import { attachOptionalFirebaseUser, requireFirebaseUser } from "./platform/auth/firebaseAuth.js";
+import { conversationRouter } from "./domains/conversations/http/conversation.routes.js";
+import { artifactRouter } from "./domains/artifacts/http/artifact.routes.js";
+import { credentialRouter } from "./domains/credentials/http/credential.routes.js";
+import { projectRouter } from "./domains/projects/http/project.routes.js";
 
 export function createApp(): Express {
   const app = express();
@@ -27,11 +32,16 @@ export function createApp(): Express {
   app.use(healthRouter);
 
   // API domain routes
+  app.use("/api", attachOptionalFirebaseUser);
   app.use("/api", authRouter);
   app.use("/api", analyticsRouter);
   app.use("/api", pdfRouter);
   app.use("/api", chatRouter);
   app.use("/api", benchmarksRouter);
+  app.use("/api/conversations", requireFirebaseUser, conversationRouter);
+  app.use("/api/artifacts", requireFirebaseUser, artifactRouter);
+  app.use("/api/credentials", requireFirebaseUser, credentialRouter);
+  app.use("/api/projects", requireFirebaseUser, projectRouter);
 
   // Serve built frontend (if present) for production/E2E
   const __dirname = path.dirname(fileURLToPath(import.meta.url));

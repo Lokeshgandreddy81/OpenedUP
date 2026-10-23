@@ -37,6 +37,9 @@ jobs:
       - name: Static Typecheck
         run: npm run typecheck
 
+      - name: Check Feature Import Boundaries
+        run: npm run check:feature-boundaries
+
       - name: Linting
         run: npm run lint
 

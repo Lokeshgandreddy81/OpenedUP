@@ -2,11 +2,11 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { AppProvider } from "../context/AppContext";
+import { AppProvider } from "../features/chapters/state/AppContext";
 
-import { CssRoadmapPage } from "../pages/roadmaps/skills/CssRoadmapPage";
-import { CssPage } from "../pages/roadmaps/skills/CssPage";
-import { RoadmapPage } from "../pages/RoadmapPage/RoadmapPage";
+import { CssRoadmapPage } from "../features/roadmaps/pages/catalog/skills/CssRoadmapPage";
+import { CssPage } from "../features/roadmaps/pages/catalog/skills/CssPage";
+import { RoadmapPage } from "../features/roadmaps/pages/RoadmapPage/RoadmapPage";
 
 const renderWithProviders = (ui: React.ReactElement, initialEntries = ["/"]) => {
   return render(

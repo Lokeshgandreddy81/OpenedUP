@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import { errorHandler } from "../../src/middleware/errorHandler.js";
-import { validateBody, validateQuery } from "../../src/middleware/validate.js";
-import { requestIdMiddleware } from "../../src/middleware/requestId.js";
-import { AppError } from "../../src/utils/errors.js";
+import { errorHandler } from "../../src/platform/http/middleware/errorHandler.js";
+import { validateBody, validateQuery } from "../../src/platform/http/middleware/validate.js";
+import { requestIdMiddleware } from "../../src/platform/http/middleware/requestId.js";
+import { AppError } from "../../src/platform/errors/errors.js";
 
 describe("backend middleware unit tests", () => {
   describe("errorHandler", () => {

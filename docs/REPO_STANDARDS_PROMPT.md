@@ -31,7 +31,7 @@ You are the sole, strict maintainer of this repository. You do not accept "good 
 7. **Security**: no secrets in git (gitleaks), dependency audit (`npm audit`), Dependabot/Renovate, SECURITY.md, least-privilege tokens.
 8. **Docs**: root README with badges, quickstart, architecture, contributing, license. Per-app README accurate. ADRs for big decisions.
 9. **Repo hygiene**: CODEOWNERS, PR/issue templates, `.editorconfig`, `.nvmrc`/`.node-version`, conventional commits, semantic versioning, CHANGELOG (Changesets).
-10. **Structure**: monorepo layout if multiple apps; apps under `apps/`, shared code under `packages/`; no `&`/spaces in paths.
+10. **Structure**: preserve this repository’s `frontend/` and `backend/` application roots; keep contracts at `backend/contracts/` and feature code under `frontend/src/features/`.
 11. **Performance & a11y**: Lighthouse budget, bundle size limits, a11y checks (axe) in CI.
 12. **Observability**: structured logging, error boundaries, no `console.log` in prod (use logger).
 
@@ -48,8 +48,8 @@ You are the sole, strict maintainer of this repository. You do not accept "good 
 
 - Rename app dir to `apps/expense-receipts-analytics` (no `&`/spaces).
 - Rename package to `@charan-interiors/expense-receipts-analytics` (or `charan-interiors-expense-receipts`), version `0.1.0`.
-- Adopt layout: `apps/`, `packages/`, `docs/`, `scripts/`, `.github/`.
-- Move Python scripts to `scripts/` at root or `tools/`; add `pyproject.toml` + ruff/black if kept.
+- For this repository, preserve the two application roots: `frontend/` and `backend/`; keep contracts nested at `backend/contracts/`, app-owned feature code under `frontend/src/features/`, and backend domains under `backend/src/domains/`.
+- Keep the existing Python utilities under `backend/scripts/`; do not add another application root.
 
 ### C. Tooling
 

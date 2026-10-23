@@ -7,7 +7,7 @@ import {
   clearSavedWorkspaceSession,
   parseDriveFolderId,
   resolveReceiptMimeType,
-} from "../utils/workspaceLiveSync.ts";
+} from "../app/integrations/workspaceLiveSync.ts";
 
 describe("workspaceLiveSync utils", () => {
   beforeEach(() => {

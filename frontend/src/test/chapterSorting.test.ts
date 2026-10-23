@@ -6,7 +6,7 @@ import {
   sortChapterItems,
   stripChapterNumberPrefix,
   isChapterItem,
-} from "@charan-interiors/shared";
+} from "@charan-interiors/contracts";
 
 describe("chapterSorting utils", () => {
   describe("romanToInteger", () => {

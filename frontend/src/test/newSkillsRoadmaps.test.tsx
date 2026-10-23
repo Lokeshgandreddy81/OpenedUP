@@ -2,23 +2,23 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { PythonRoadmapPage } from "../pages/roadmaps/skills/PythonRoadmapPage";
-import { PythonPage } from "../pages/roadmaps/skills/PythonPage";
-import { ReactSkillRoadmapPage } from "../pages/roadmaps/skills/ReactSkillRoadmapPage";
-import { ReactSkillPage } from "../pages/roadmaps/skills/ReactSkillPage";
-import { RedisRoadmapPage } from "../pages/roadmaps/skills/RedisRoadmapPage";
-import { RedisPage } from "../pages/roadmaps/skills/RedisPage";
-import { RustRoadmapPage } from "../pages/roadmaps/skills/RustRoadmapPage";
-import { RustPage } from "../pages/roadmaps/skills/RustPage";
-import { RProgrammingRoadmapPage } from "../pages/roadmaps/skills/RProgrammingRoadmapPage";
-import { RProgrammingPage } from "../pages/roadmaps/skills/RProgrammingPage";
-import { SystemDesignRoadmapPage } from "../pages/roadmaps/skills/SystemDesignRoadmapPage";
-import { SystemDesignPage } from "../pages/roadmaps/skills/SystemDesignPage";
-import { SqlRoadmapPage } from "../pages/roadmaps/skills/SqlRoadmapPage";
-import { SqlPage } from "../pages/roadmaps/skills/SqlPage";
-import { SwiftRoadmapPage } from "../pages/roadmaps/skills/SwiftRoadmapPage";
-import { SwiftPage } from "../pages/roadmaps/skills/SwiftPage";
-import { ExploreScreen } from "../components/roadmap/ExploreScreen";
+import { PythonRoadmapPage } from "../features/roadmaps/pages/catalog/skills/PythonRoadmapPage";
+import { PythonPage } from "../features/roadmaps/pages/catalog/skills/PythonPage";
+import { ReactSkillRoadmapPage } from "../features/roadmaps/pages/catalog/skills/ReactSkillRoadmapPage";
+import { ReactSkillPage } from "../features/roadmaps/pages/catalog/skills/ReactSkillPage";
+import { RedisRoadmapPage } from "../features/roadmaps/pages/catalog/skills/RedisRoadmapPage";
+import { RedisPage } from "../features/roadmaps/pages/catalog/skills/RedisPage";
+import { RustRoadmapPage } from "../features/roadmaps/pages/catalog/skills/RustRoadmapPage";
+import { RustPage } from "../features/roadmaps/pages/catalog/skills/RustPage";
+import { RProgrammingRoadmapPage } from "../features/roadmaps/pages/catalog/skills/RProgrammingRoadmapPage";
+import { RProgrammingPage } from "../features/roadmaps/pages/catalog/skills/RProgrammingPage";
+import { SystemDesignRoadmapPage } from "../features/roadmaps/pages/catalog/skills/SystemDesignRoadmapPage";
+import { SystemDesignPage } from "../features/roadmaps/pages/catalog/skills/SystemDesignPage";
+import { SqlRoadmapPage } from "../features/roadmaps/pages/catalog/skills/SqlRoadmapPage";
+import { SqlPage } from "../features/roadmaps/pages/catalog/skills/SqlPage";
+import { SwiftRoadmapPage } from "../features/roadmaps/pages/catalog/skills/SwiftRoadmapPage";
+import { SwiftPage } from "../features/roadmaps/pages/catalog/skills/SwiftPage";
+import { RoadmapExplorer } from "../features/roadmaps/components/RoadmapExplorer";
 
 describe("Extended Skill Roadmaps Smoke Tests", () => {
   it("renders Python Roadmap and re-exports correctly", () => {
@@ -104,7 +104,7 @@ describe("Extended Skill Roadmaps Smoke Tests", () => {
   it("navigates to System Design custom roadmap from Explore catalog", () => {
     render(
       <MemoryRouter>
-        <ExploreScreen onBack={vi.fn()} />
+        <RoadmapExplorer onBack={vi.fn()} />
       </MemoryRouter>
     );
     const card = screen.getByRole("button", { name: /^system design$/i });

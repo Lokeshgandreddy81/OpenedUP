@@ -6,8 +6,8 @@ import {
   getStoredRoadmapProgress,
   saveRoadmapProgress,
   exportRoadmapToMarkdown,
-} from "../utils/roadmapEngine.ts";
-import type { ComputedRow } from "@charan-interiors/shared";
+} from "../features/roadmaps/services/roadmapEngine.ts";
+import type { ComputedRow } from "@charan-interiors/contracts";
 
 describe("roadmapEngine utils", () => {
   beforeEach(() => {

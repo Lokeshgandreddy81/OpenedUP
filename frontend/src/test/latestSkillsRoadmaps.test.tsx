@@ -2,16 +2,16 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { TerraformRoadmapPage } from "../pages/roadmaps/skills/TerraformRoadmapPage";
-import { TerraformPage } from "../pages/roadmaps/skills/TerraformPage";
-import { TypeScriptRoadmapPage } from "../pages/roadmaps/skills/TypeScriptRoadmapPage";
-import { TypeScriptPage } from "../pages/roadmaps/skills/TypeScriptPage";
-import { VibeCodingRoadmapPage } from "../pages/roadmaps/skills/VibeCodingRoadmapPage";
-import { VibeCodingPage } from "../pages/roadmaps/skills/VibeCodingPage";
-import { VueRoadmapPage } from "../pages/roadmaps/skills/VueRoadmapPage";
-import { VuePage } from "../pages/roadmaps/skills/VuePage";
-import { WordPressRoadmapPage } from "../pages/roadmaps/skills/WordPressRoadmapPage";
-import { WordPressPage } from "../pages/roadmaps/skills/WordPressPage";
+import { TerraformRoadmapPage } from "../features/roadmaps/pages/catalog/skills/TerraformRoadmapPage";
+import { TerraformPage } from "../features/roadmaps/pages/catalog/skills/TerraformPage";
+import { TypeScriptRoadmapPage } from "../features/roadmaps/pages/catalog/skills/TypeScriptRoadmapPage";
+import { TypeScriptPage } from "../features/roadmaps/pages/catalog/skills/TypeScriptPage";
+import { VibeCodingRoadmapPage } from "../features/roadmaps/pages/catalog/skills/VibeCodingRoadmapPage";
+import { VibeCodingPage } from "../features/roadmaps/pages/catalog/skills/VibeCodingPage";
+import { VueRoadmapPage } from "../features/roadmaps/pages/catalog/skills/VueRoadmapPage";
+import { VuePage } from "../features/roadmaps/pages/catalog/skills/VuePage";
+import { WordPressRoadmapPage } from "../features/roadmaps/pages/catalog/skills/WordPressRoadmapPage";
+import { WordPressPage } from "../features/roadmaps/pages/catalog/skills/WordPressPage";
 
 describe("Newest Batch Skill Roadmaps (Terraform, TypeScript, Vibe Coding, Vue, WordPress)", () => {
   it("renders TerraformRoadmapPage correctly and handles interactions", () => {

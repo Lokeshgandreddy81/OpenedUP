@@ -4,8 +4,16 @@
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "module": "ESNext",
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom/vitest"],
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [
+      "vite/client",
+      "vitest/globals",
+      "@testing-library/jest-dom/vitest"
+    ],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "skipLibCheck": true,
     "strict": true,
     "noImplicitOverride": true,
@@ -16,16 +24,26 @@
     "allowJs": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@charan-interiors/contracts": [
+        "../backend/contracts/src/index.ts"
+      ]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "composite": true
+    "composite": true,
+    "baseUrl": "."
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts"],
+  "include": [
+    "src",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
   "references": [
     {
-      "path": "../shared"
+      "path": "../backend/contracts"
     }
   ]
 }

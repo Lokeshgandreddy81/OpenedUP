@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     exclude: [...configDefaults.exclude, "dist/**"],
     alias: {
-      "@charan-interiors/shared": path.resolve(__dirname, "../shared/src/index.ts"),
+      "@charan-interiors/contracts": path.resolve(__dirname, "../backend/contracts/src/index.ts"),
     },
     coverage: {
       provider: "v8",

@@ -3,7 +3,7 @@ import {
   getActiveModelId,
   getGenAIClient,
   generateWithModelFallback,
-} from "../../src/services/gemini.service.js";
+} from "../../src/domains/chat/providers/gemini.service.js";
 
 describe("gemini.service unit tests", () => {
   beforeEach(() => {

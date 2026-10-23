@@ -1,3 +1,5 @@
+> **Current implementation note (2026-10-23):** This ADR records the original split decision. The current source layout is `frontend/` and `backend/`, with feature modules under `frontend/src/features/` and backend domains under `backend/src/domains/`. The runtime-neutral contracts workspace now lives at `backend/contracts/`; it is not a separately deployable service. See [repository modernization](../../specs/repo-modernization/README.md) for the current target and migration status.
+
 # ADR 0001: Decouple Monolithic Server into Distinct Frontend Client and Backend Service
 
 - **Status**: Accepted

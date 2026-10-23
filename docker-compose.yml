@@ -11,6 +11,11 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
+      - CHAT_DB_PATH=/var/lib/openedup/chat.sqlite
+      - BYOK_ENCRYPTION_KEY=${BYOK_ENCRYPTION_KEY:-}
+    volumes:
+      - openedup-data:/var/lib/openedup
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
       interval: 15s
@@ -43,3 +48,6 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  openedup-data:

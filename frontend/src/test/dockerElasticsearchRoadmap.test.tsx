@@ -2,12 +2,12 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { DockerRoadmapPage } from "../pages/roadmaps/skills/DockerRoadmapPage";
-import { DockerPage } from "../pages/roadmaps/skills/DockerPage";
-import { ElasticsearchRoadmapPage } from "../pages/roadmaps/skills/ElasticsearchRoadmapPage";
-import { ElasticsearchPage } from "../pages/roadmaps/skills/ElasticsearchPage";
-import { DOCKER_SECTIONS } from "../pages/roadmaps/skills/dockerRoadmapData";
-import { ELASTICSEARCH_SECTIONS } from "../pages/roadmaps/skills/elasticsearchRoadmapData";
+import { DockerRoadmapPage } from "../features/roadmaps/pages/catalog/skills/DockerRoadmapPage";
+import { DockerPage } from "../features/roadmaps/pages/catalog/skills/DockerPage";
+import { ElasticsearchRoadmapPage } from "../features/roadmaps/pages/catalog/skills/ElasticsearchRoadmapPage";
+import { ElasticsearchPage } from "../features/roadmaps/pages/catalog/skills/ElasticsearchPage";
+import { DOCKER_SECTIONS } from "../features/roadmaps/pages/catalog/skills/dockerRoadmapData";
+import { ELASTICSEARCH_SECTIONS } from "../features/roadmaps/pages/catalog/skills/elasticsearchRoadmapData";
 
 describe("Docker and Elasticsearch Roadmap Tests", () => {
   describe("DockerRoadmapPage", () => {

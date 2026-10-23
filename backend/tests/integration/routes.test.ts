@@ -54,6 +54,20 @@ vi.mock("../../src/services/gemini.service.js", () => ({
   }),
 }));
 
+vi.mock("@google/genai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@google/genai")>();
+  return {
+    ...actual,
+    GoogleGenAI: class {
+      models = {
+        generateContent: vi.fn().mockResolvedValue({
+          text: "I have analyzed your document context and synthesized the key metrics.",
+        }),
+      };
+    },
+  };
+});
+
 describe("Backend API Integration Tests", () => {
   process.env.GEMINI_API_KEY = "test-mock-gemini-key";
   const app = createApp();
@@ -82,6 +96,11 @@ describe("Backend API Integration Tests", () => {
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("firebaseConfig");
       expect(res.body).toHaveProperty("googleClientId");
+    });
+
+    it("GET /api/projects requires a verified signed-in user", async () => {
+      const res = await request(app).get("/api/projects");
+      expect(res.status).toBe(401);
     });
   });
 
@@ -176,6 +195,23 @@ describe("Backend API Integration Tests", () => {
   });
 
   describe("Chat", () => {
+    it("requires a verified Firebase user for persistent chat resources", async () => {
+      for (const route of ["/api/conversations", "/api/artifacts", "/api/credentials"]) {
+        const response = await request(app).get(route);
+        expect(response.status).toBe(401);
+      }
+    });
+
+    it("exposes only the registered bounded chat skills", async () => {
+      const response = await request(app).get("/api/chat/skills");
+      expect(response.status).toBe(200);
+      expect(response.body.skills.map((skill: { id: string }) => skill.id)).toEqual([
+        "document-grounding",
+        "workspace-context",
+        "executive-directness",
+      ]);
+    });
+
     it("POST /api/chat validates body and rejects empty messages", async () => {
       const res = await request(app).post("/api/chat").send({ messages: [] });
       expect(res.status).toBe(400);
@@ -185,6 +221,7 @@ describe("Backend API Integration Tests", () => {
     it("POST /api/chat returns assistant response for valid message payload", async () => {
       const res = await request(app)
         .post("/api/chat")
+        .set("x-provider-key", "integration-test-provider-key")
         .send({
           messages: [{ role: "user", content: "Summarize this receipt." }],
           context: {
@@ -196,6 +233,20 @@ describe("Backend API Integration Tests", () => {
       expect(res.body).toHaveProperty("content");
       expect(res.body).toHaveProperty("modelUsed");
       expect(res.body.content).toContain("analyzed your document");
+    });
+
+    it("does not expose server provider keys to unauthenticated requests", async () => {
+      const res = await request(app)
+        .post("/api/chat")
+        .send({ messages: [{ role: "user", content: "Use the configured server key" }] });
+      expect(res.status).toBe(401);
+      expect(res.body.error).toContain("Sign in");
+
+      const invalidKeyRes = await request(app)
+        .post("/api/chat")
+        .set("x-provider-key", "undefined")
+        .send({ messages: [{ role: "user", content: "Try a bad client key" }] });
+      expect(invalidKeyRes.status).toBe(401);
     });
   });
 

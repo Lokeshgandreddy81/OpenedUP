@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy root workspace manifests
 COPY package.json package-lock.json ./
-COPY shared/package.json shared/
+COPY backend/contracts/package.json backend/contracts/
 COPY backend/package.json backend/
 COPY frontend/package.json frontend/
 
@@ -14,7 +14,7 @@ COPY frontend/package.json frontend/
 RUN npm ci
 
 # Copy sources
-COPY shared/ shared/
+COPY backend/contracts/ backend/contracts/
 COPY frontend/ frontend/
 
 # Build client production bundle
@@ -25,7 +25,7 @@ RUN npm run build
 FROM nginx:1.27-alpine AS runner
 
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
-COPY infra/docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/infra/docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

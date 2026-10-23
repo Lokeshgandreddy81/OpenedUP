@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Enterprise monorepo for Charan Interiors and Openedup spend analytics",
   "workspaces": [
-    "frontend",
+    "backend/contracts",
     "backend",
-    "shared"
+    "frontend"
   ],
   "scripts": {
     "dev:frontend": "npm run --workspace=@charan-interiors/frontend dev",
@@ -22,7 +22,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "e2e": "npm run --workspace=@charan-interiors/frontend e2e",
-    "start": "npm run build && npm run --workspace=backend start"
+    "start": "npm run build && npm run --workspace=backend start",
+    "check:feature-boundaries": "node frontend/scripts/check-feature-boundaries.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",

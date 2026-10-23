@@ -2,27 +2,27 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { AppProvider } from "../context/AppContext";
+import { AppProvider } from "../features/chapters/state/AppContext";
 
-import { LandingPage } from "../pages/LandingPage/LandingPage";
-import { ResultsPage } from "../pages/ResultsPage/ResultsPage";
-import { RoadmapPage } from "../pages/RoadmapPage/RoadmapPage";
-import { BenchmarksPage } from "../pages/BenchmarksPage/BenchmarksPage";
-import { ChatPage } from "../pages/ChatPage/ChatPage";
-import { ProjectsPage } from "../pages/ProjectsPage/ProjectsPage";
-import { ScheduledPage } from "../pages/ScheduledPage/ScheduledPage";
-import { ImageArenaPage } from "../pages/ImageArenaPage/ImageArenaPage";
-import { CodingAgentsPage } from "../pages/CodingAgentsPage/CodingAgentsPage";
+import { LandingPage } from "../features/chapters/pages/LandingPage/LandingPage";
+import { ResultsPage } from "../features/chapters/pages/ResultsPage/ResultsPage";
+import { RoadmapPage } from "../features/roadmaps/pages/RoadmapPage/RoadmapPage";
+import { BenchmarksPage } from "../features/benchmarks/pages/BenchmarksPage/BenchmarksPage";
+import { ChatPage } from "../features/chat/pages/ChatPage/ChatPage";
+import { ProjectsPage } from "../features/projects/pages/ProjectsPage/ProjectsPage";
+import { ScheduledPage } from "../features/scheduled/pages/ScheduledPage/ScheduledPage";
+import { ImageArenaPage } from "../features/benchmarks/pages/ImageArenaPage/ImageArenaPage";
+import { CodingAgentsPage } from "../features/benchmarks/pages/CodingAgentsPage/CodingAgentsPage";
 
-import { LandingPageSkeleton } from "../pages/LandingPage/LoadingSkeleton";
-import { ResultsPageSkeleton } from "../pages/ResultsPage/LoadingSkeleton";
-import { RoadmapPageSkeleton } from "../pages/RoadmapPage/LoadingSkeleton";
-import { BenchmarksPageSkeleton } from "../pages/BenchmarksPage/LoadingSkeleton";
-import { ChatPageSkeleton } from "../pages/ChatPage/LoadingSkeleton";
-import { ProjectsPageSkeleton } from "../pages/ProjectsPage/LoadingSkeleton";
-import { ScheduledPageSkeleton } from "../pages/ScheduledPage/LoadingSkeleton";
-import { ImageArenaPageSkeleton } from "../pages/ImageArenaPage/LoadingSkeleton";
-import { CodingAgentsPageSkeleton } from "../pages/CodingAgentsPage/LoadingSkeleton";
+import { LandingPageSkeleton } from "../features/chapters/pages/LandingPage/LoadingSkeleton";
+import { ResultsPageSkeleton } from "../features/chapters/pages/ResultsPage/LoadingSkeleton";
+import { RoadmapPageSkeleton } from "../features/roadmaps/pages/RoadmapPage/LoadingSkeleton";
+import { BenchmarksPageSkeleton } from "../features/benchmarks/pages/BenchmarksPage/LoadingSkeleton";
+import { ChatPageSkeleton } from "../features/chat/pages/ChatPage/LoadingSkeleton";
+import { ProjectsPageSkeleton } from "../features/projects/pages/ProjectsPage/LoadingSkeleton";
+import { ScheduledPageSkeleton } from "../features/scheduled/pages/ScheduledPage/LoadingSkeleton";
+import { ImageArenaPageSkeleton } from "../features/benchmarks/pages/ImageArenaPage/LoadingSkeleton";
+import { CodingAgentsPageSkeleton } from "../features/benchmarks/pages/CodingAgentsPage/LoadingSkeleton";
 
 const renderWithProviders = (ui: React.ReactElement, initialEntries = ["/"]) => {
   return render(

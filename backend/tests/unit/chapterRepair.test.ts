@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateAndRepairChapters } from "../../src/utils/chapterRepair.js";
+import { validateAndRepairChapters } from "../../src/domains/receipts/application/chapterRepair.js";
 
 describe("chapterRepair", () => {
   it("creates a single complete document chapter if chapters list is empty", () => {

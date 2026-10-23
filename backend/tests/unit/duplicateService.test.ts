@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { checkDuplicates } from "../../src/services/duplicate.service.js";
+import { checkDuplicates } from "../../src/domains/receipts/application/duplicate.service.js";
 
 describe("duplicate.service unit tests", () => {
   it("returns empty duplicates when less than 2 rows are provided", async () => {

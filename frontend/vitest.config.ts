@@ -7,7 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
-      "@charan-interiors/shared": path.resolve(import.meta.dirname, "../shared/src/index.ts"),
+      "@charan-interiors/contracts": path.resolve(import.meta.dirname, "../backend/contracts/src/index.ts"),
     },
   },
   test: {
@@ -18,7 +18,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      include: ["src/utils/**", "src/components/**"],
+      include: ["src/features/**", "src/features/**"],
     },
   },
 });

@@ -2,10 +2,10 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { AppProvider } from "../context/AppContext";
+import { AppProvider } from "../features/chapters/state/AppContext";
 
-import { CppRoadmapPage } from "../pages/roadmaps/skills/CppRoadmapPage";
-import { CppPage } from "../pages/roadmaps/skills/CppPage";
+import { CppRoadmapPage } from "../features/roadmaps/pages/catalog/skills/CppRoadmapPage";
+import { CppPage } from "../features/roadmaps/pages/catalog/skills/CppPage";
 
 const renderWithProviders = (ui: React.ReactElement, initialEntries = ["/"]) => {
   return render(

@@ -172,8 +172,20 @@ paths:
 
   /api/chat:
     post:
-      summary: Document Chat & Inquiry
-      description: Context-aware interactive Q&A grounded in document chapters.
+      summary: Multi-provider document and project chat
+      description: Routes a conversation to the selected provider using a signed-in account credential, one-request BYOK key, or server configuration.
+      parameters:
+        - in: header
+          name: x-provider-key
+          schema:
+            type: string
+          description: Optional one-request provider key. Saved account credentials are resolved server-side and are never returned to the client.
+        - in: header
+          name: x-provider-base-url
+          schema:
+            type: string
+            format: uri
+          description: Optional custom endpoint for the custom provider. Private endpoints are restricted outside development.
       requestBody:
         required: true
         content:
@@ -185,6 +197,7 @@ paths:
               properties:
                 messages:
                   type: array
+                  maxItems: 100
                   items:
                     type: object
                     required:
@@ -196,10 +209,382 @@ paths:
                         enum: [user, assistant]
                       content:
                         type: string
+                        maxLength: 40000
+                context:
+                  type: object
+                  properties:
+                    docTitle:
+                      type: string
+                    projectInstructions:
+                      type: string
+                      maxLength: 20000
+                    projectFiles:
+                      type: array
+                      maxItems: 100
+                      items:
+                        type: string
+                        maxLength: 500
+                    chapters:
+                      type: array
+                      maxItems: 100
+                      items:
+                        type: object
+                        required: [title]
+                        properties:
+                          title:
+                            type: string
+                            maxLength: 500
+                          summary:
+                            type: string
+                            maxLength: 4000
+                          pageRange:
+                            type: string
+                            maxLength: 100
+                model:
+                  type: string
+                  maxLength: 200
+                customModel:
+                  type: string
+                  maxLength: 200
+                  description: Required when model is custom-model.
+                customProvider:
+                  type: string
+                  enum: [anthropic, openai, google, deepseek, xai, zhipu, custom]
+                  description: Provider whose saved key and endpoint are used for a custom model.
+                effort:
+                  type: string
+                  enum: [Low, Medium, High, Extra, Max]
+      responses:
+        "200":
+          description: Generated assistant response.
+        "401":
+          description: No API key is configured for the selected provider.
+        "403":
+          description: Server-configured credentials are disabled unless explicitly enabled.
+        "400":
+          description: Validation error.
+
+  /api/chat/stream:
+    post:
+      summary: Stream a chat response as server-sent events
+      description: Emits step, token, done, or error events. The current implementation emits tokens after provider generation completes.
+      parameters:
+        - in: header
+          name: x-provider-key
+          schema:
+            type: string
+        - in: header
+          name: x-provider-base-url
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messages]
+              properties:
+                messages:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [role, content]
+                    properties:
+                      role:
+                        type: string
+                        enum: [user, assistant]
+                      content:
+                        type: string
+                        maxLength: 40000
+                model:
+                  type: string
+                customModel:
+                  type: string
+                customProvider:
+                  type: string
+                  enum: [anthropic, openai, google, deepseek, xai, zhipu, custom]
+                effort:
+                  type: string
+                  enum: [Low, Medium, High, Extra, Max]
                 context:
                   type: object
       responses:
         "200":
-          description: Generated assistant response.
+          description: Server-sent event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
         "400":
           description: Validation error.
+        "403":
+          description: Server-configured credentials are available only to local requests.
+
+  /api/chat/providers:
+    get:
+      summary: List provider configuration status
+      description: Returns whether each provider has a server key and its source; never returns key material.
+      responses:
+        "200":
+          description: Provider connection status.
+
+  /api/chat/verify-key:
+    post:
+      summary: Verify a provider key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider]
+              properties:
+                provider:
+                  type: string
+                  enum: [anthropic, openai, google, deepseek, xai, zhipu, custom]
+                apiKey:
+                  type: string
+                baseUrl:
+                  type: string
+                  format: uri
+      responses:
+        "200":
+          description: Verification outcome and request latency.
+
+  /api/chat/rules:
+    get:
+      summary: Read workspace instructions
+      responses:
+        "200":
+          description: Current project and global instruction text.
+    post:
+      summary: Save workspace instructions
+      description: Writes OPENEDUP.md or global AGENTS.md and is restricted to local development requests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+                  enum: [project, global]
+                  default: project
+                content:
+                  type: string
+                  maxLength: 20000
+      responses:
+        "200":
+          description: Saved instructions.
+        "403":
+          description: Workspace rules can only be changed from a local development session.
+
+  /api/chat/skills:
+    get:
+      summary: List server-owned skills
+      responses:
+        "200":
+          description: Versioned skill definitions and bounded tool identifiers.
+
+  /api/conversations:
+    get:
+      summary: List the authenticated user's conversations
+      security: [{ FirebaseBearer: [] }]
+      responses:
+        "200": { description: Owner-scoped conversation summaries. }
+        "401": { description: Firebase ID token is missing or invalid. }
+    post:
+      summary: Create a conversation for the authenticated user
+      security: [{ FirebaseBearer: [] }]
+      responses:
+        "201": { description: Created conversation. }
+
+  /api/conversations/{id}:
+    get:
+      summary: Read an owned conversation and its ordered messages
+      security: [{ FirebaseBearer: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Conversation and messages. }
+        "404": { description: Conversation is not owned by the caller. }
+    patch:
+      summary: Rename, pin, or archive an owned conversation
+      security: [{ FirebaseBearer: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Updated conversation. }
+    delete:
+      summary: Delete an owned conversation
+      security: [{ FirebaseBearer: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted. }
+
+  /api/artifacts:
+    get:
+      summary: List owned and authenticated-shared artifacts
+      security: [{ FirebaseBearer: [] }]
+      responses:
+        "200": { description: Owner artifacts and artifacts shared with signed-in users. }
+    post:
+      summary: Create an owned artifact
+      security: [{ FirebaseBearer: [] }]
+      responses:
+        "201": { description: Created artifact. }
+
+  /api/artifacts/{id}:
+    put:
+      summary: Update an owned artifact's title, category, content, and sharing state
+      security: [{ FirebaseBearer: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Updated artifact. }
+        "404": { description: Artifact is not owned by the caller. }
+    delete:
+      summary: Delete an owned artifact
+      security: [{ FirebaseBearer: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted. }
+
+  /api/artifacts/{id}/versions:
+    get:
+      summary: List the 50 most recent versions of an owned artifact
+      security: [{ FirebaseBearer: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Version history. }
+        "404": { description: Artifact is not owned by the caller. }
+
+  /api/artifacts/import:
+    post:
+      summary: Idempotently import browser artifacts
+      security: [{ FirebaseBearer: [] }]
+      responses:
+        "200": { description: Imported and skipped counts. }
+
+  /api/artifacts/{id}/share:
+    put:
+      summary: Change authenticated sharing on an owned artifact
+      security: [{ FirebaseBearer: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Updated sharing state. }
+        "404": { description: Artifact is not owned by the caller. }
+
+  /api/credentials:
+    get:
+      summary: List saved provider IDs without returning key material
+      security: [{ FirebaseBearer: [] }]
+      responses:
+        "200": { description: Configured providers for the authenticated account. }
+    put:
+      summary: Encrypt and save a provider credential
+      security: [{ FirebaseBearer: [] }]
+      responses:
+        "204": { description: Credential saved. }
+    patch:
+      summary: Update the endpoint for an existing provider credential without returning its key
+      security: [{ FirebaseBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, baseUrl]
+              properties:
+                provider:
+                  type: string
+                  enum: [anthropic, openai, google, deepseek, xai, zhipu, custom]
+                baseUrl:
+                  type: string
+                  minLength: 1
+                  maxLength: 2048
+      responses:
+        "204": { description: Endpoint saved; existing key remains encrypted at rest. }
+        "400": { description: Invalid endpoint request. }
+        "404": { description: No saved credential exists for this provider. }
+
+  /api/projects:
+    get:
+      summary: List the caller's projects with nested sessions and files
+      security: [{ FirebaseBearer: [] }]
+      responses:
+        "200": { description: Account-owned project snapshots. }
+    put:
+      summary: Replace the caller's project snapshot collection
+      description: Replaces only the authenticated user's projects. Project and session history is validated and bounded by the shared project schemas.
+      security: [{ FirebaseBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projects]
+              properties:
+                projects:
+                  type: array
+                  maxItems: 100
+      responses:
+        "200": { description: Saved project snapshots. }
+        "400": { description: Invalid or oversized project snapshot. }
+  /api/projects/import:
+    post:
+      summary: Idempotently import legacy browser projects
+      security: [{ FirebaseBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projects]
+              properties:
+                projects:
+                  type: array
+                  maxItems: 100
+      responses:
+        "200": { description: Imported and skipped project counts. }
+        "400": { description: Invalid or oversized project snapshot. }
+
+components:
+  securitySchemes:
+    FirebaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID token

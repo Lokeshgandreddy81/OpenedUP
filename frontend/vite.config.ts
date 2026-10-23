@@ -10,7 +10,7 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         "@": path.resolve(import.meta.dirname, "./src"),
-        "@charan-interiors/shared": path.resolve(import.meta.dirname, "../shared/src/index.ts"),
+        "@charan-interiors/contracts": path.resolve(import.meta.dirname, "../backend/contracts/src/index.ts"),
       },
     },
     build: {
@@ -20,7 +20,7 @@ export default defineConfig(() => {
             if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
             if (id.includes("node_modules/heic2any")) return "heic2any";
             if (id.includes("node_modules/@xyflow")) return "xyflow";
-            if (id.includes("src/components/benchmarks/data")) return "benchmark-data";
+            if (id.includes("src/features/benchmarks/components/data")) return "benchmark-data";
             if (id.includes("node_modules/react") || id.includes("node_modules/react-dom"))
               return "react-vendor";
           },

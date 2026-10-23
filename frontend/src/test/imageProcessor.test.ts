@@ -5,8 +5,8 @@ import {
   isPdfFile,
   isSupportedImageFile,
   buildPhotoBatches,
-} from "../utils/imageProcessor.ts";
-import type { UploadedPhoto } from "@charan-interiors/shared";
+} from "../features/chapters/services/imageProcessor.ts";
+import type { UploadedPhoto } from "@charan-interiors/contracts";
 
 describe("imageProcessor utils", () => {
   describe("stripFileExtension", () => {

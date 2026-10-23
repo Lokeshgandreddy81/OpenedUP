@@ -1,0 +1,121 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import Database, { type Database as BetterSqliteDatabase } from "better-sqlite3";
+
+export type ChatDatabase = BetterSqliteDatabase;
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS conversations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  model TEXT NOT NULL,
+  is_pinned INTEGER NOT NULL DEFAULT 0,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS conversations_user_updated
+  ON conversations(user_id, is_archived, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+  content TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'complete' CHECK(status IN ('complete', 'interrupted')),
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  sequence INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  UNIQUE(conversation_id, sequence),
+  FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS messages_conversation_sequence
+  ON chat_messages(conversation_id, sequence);
+
+CREATE TABLE IF NOT EXISTS chat_artifacts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  legacy_id TEXT,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL CHECK(category IN ('Code', 'Documents')),
+  content TEXT NOT NULL,
+  language TEXT,
+  model_used TEXT,
+  is_shared INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  UNIQUE(user_id, legacy_id)
+);
+CREATE INDEX IF NOT EXISTS artifacts_shared_updated
+  ON chat_artifacts(is_shared, updated_at DESC);
+CREATE INDEX IF NOT EXISTS artifacts_user_updated
+  ON chat_artifacts(user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS chat_artifact_versions (
+  id TEXT PRIMARY KEY,
+  artifact_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL CHECK(category IN ('Code', 'Documents')),
+  content TEXT NOT NULL,
+  language TEXT,
+  model_used TEXT,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(artifact_id) REFERENCES chat_artifacts(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS artifact_versions_owner_created
+  ON chat_artifact_versions(user_id, artifact_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS provider_credentials (
+  user_id TEXT NOT NULL,
+  provider_id TEXT NOT NULL,
+  nonce BLOB NOT NULL,
+  auth_tag BLOB NOT NULL,
+  ciphertext BLOB NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY(user_id, provider_id)
+);
+
+CREATE TABLE IF NOT EXISTS project_snapshots (
+  user_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY(user_id, project_id)
+);
+CREATE INDEX IF NOT EXISTS project_snapshots_owner_updated
+  ON project_snapshots(user_id, updated_at DESC);
+
+PRAGMA user_version = 2;
+`;
+
+function defaultDatabasePath(): string {
+  return (
+    process.env["CHAT_DB_PATH"]?.trim() ||
+    path.join(os.homedir(), ".local", "share", "openedup", "chat.sqlite")
+  );
+}
+
+export function openChatDatabase(databasePath = defaultDatabasePath()): ChatDatabase {
+  if (databasePath !== ":memory:") fs.mkdirSync(path.dirname(databasePath), { recursive: true });
+  const database = new Database(databasePath);
+  database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+  if (databasePath !== ":memory:") database.exec("PRAGMA journal_mode = WAL;");
+  database.exec(SCHEMA);
+  return database;
+}
+
+let sharedDatabase: ChatDatabase | null = null;
+
+export function getChatDatabase(): ChatDatabase {
+  sharedDatabase ??= openChatDatabase();
+  return sharedDatabase;
+}
+
+export function closeChatDatabase(): void {
+  sharedDatabase?.close();
+  sharedDatabase = null;
+}

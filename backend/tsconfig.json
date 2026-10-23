@@ -12,12 +12,21 @@
     "esModuleInterop": true,
     "declaration": true,
     "outDir": "./dist",
-    "composite": true
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@charan-interiors/contracts": [
+        "./contracts/src/index.ts"
+      ]
+    }
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": [
+    "src/**/*",
+    "tests/**/*"
+  ],
   "references": [
     {
-      "path": "../shared"
+      "path": "./contracts"
     }
   ]
 }

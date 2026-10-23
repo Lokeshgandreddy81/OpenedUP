@@ -2,11 +2,11 @@ import React from "react";
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { AwsBestPracticeRoadmapPage } from "../pages/roadmaps/bestPractices/AwsBestPracticeRoadmapPage";
-import { ApiSecurityBestPracticeRoadmapPage } from "../pages/roadmaps/bestPractices/ApiSecurityBestPracticeRoadmapPage";
-import { BackendPerformanceBestPracticeRoadmapPage } from "../pages/roadmaps/bestPractices/BackendPerformanceBestPracticeRoadmapPage";
-import { FrontendPerformanceBestPracticeRoadmapPage } from "../pages/roadmaps/bestPractices/FrontendPerformanceBestPracticeRoadmapPage";
-import { CodeReviewBestPracticeRoadmapPage } from "../pages/roadmaps/bestPractices/CodeReviewBestPracticeRoadmapPage";
+import { AwsBestPracticeRoadmapPage } from "../features/roadmaps/pages/catalog/bestPractices/AwsBestPracticeRoadmapPage";
+import { ApiSecurityBestPracticeRoadmapPage } from "../features/roadmaps/pages/catalog/bestPractices/ApiSecurityBestPracticeRoadmapPage";
+import { BackendPerformanceBestPracticeRoadmapPage } from "../features/roadmaps/pages/catalog/bestPractices/BackendPerformanceBestPracticeRoadmapPage";
+import { FrontendPerformanceBestPracticeRoadmapPage } from "../features/roadmaps/pages/catalog/bestPractices/FrontendPerformanceBestPracticeRoadmapPage";
+import { CodeReviewBestPracticeRoadmapPage } from "../features/roadmaps/pages/catalog/bestPractices/CodeReviewBestPracticeRoadmapPage";
 
 describe("Best Practices Roadmaps", () => {
   it("renders AWS Best Practice Roadmap Page with metric bar and impact badges", () => {

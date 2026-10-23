@@ -13,6 +13,8 @@ Enterprise document intelligence and spend reconciliation platform designed for 
 
 ## Architecture Overview
 
+For provider selection, BYOK credential storage, and chat session behavior, see [Chat architecture](docs/chat-architecture.md). The current HTTP contract is maintained in [OpenAPI](docs/api/openapi.yaml).
+
 ```mermaid
 graph TD
     subgraph Client ["Frontend Client (React 19 + Vite 8 + Tailwind 4)"]
@@ -73,53 +75,40 @@ graph TD
 
 ## Monorepo Layout
 
+The two application roots are `frontend/` and `backend/`. Product code lives under those roots; runtime-neutral API contracts are a workspace package at `backend/contracts/` so the frontend does not depend on backend runtime modules.
+
 ```text
 .
-├── .changeset/                     # Semantic versioning and changelog automation
-├── .github/
-│   ├── workflows/                  # CI/CD and Security GitHub Actions
-│   │   ├── ci.yml                  # Matrix build, typecheck, lint, test, format:check
-│   │   └── security.yml            # Gitleaks scan, npm audit, CodeQL analysis
-│   ├── CODEOWNERS                  # Component code ownership specifications
-│   ├── dependabot.yml              # Automated dependency update configuration
-│   └── PULL_REQUEST_TEMPLATE.md    # Strict PR checklist and gate enforcement
-├── frontend/                       # React 19 + Vite 8 + Tailwind 4 UI App
-│   ├── public/                     # Static assets, logos, and icons
-│   ├── src/                        # Presentation, state, and client algorithms
-│   │   ├── components/             # React presentation views & controls
-│   │   ├── test/                   # Vitest unit & component test suites
-│   │   └── utils/                  # Pure financial & image processing utilities
-│   ├── tests/e2e/                  # Playwright end-to-end smoke tests
-│   ├── Dockerfile                  # Multi-stage production container with Nginx
-│   └── vite.config.ts              # Vite bundle configuration & reverse proxy
-├── backend/                        # Modular Express Node 22 API
-│   ├── src/
-│   │   ├── config/                 # Secrets & environment resolution
-│   │   ├── controllers/            # HTTP endpoint handlers
-│   │   ├── middleware/             # Request ID, Pino logging, Zod validation
-│   │   ├── models/                 # Domain models
-│   │   ├── routes/                 # Health, analytics, pdf, chat routes
-│   │   ├── services/               # Gemini AI & PDF processing engines
-│   │   └── utils/                  # Structured logger & chapter repair
-│   ├── tests/                      # Unit & integration test suites (supertest)
-│   └── Dockerfile                  # Multi-stage production container
-├── shared/                         # Shared package (@charan-interiors/shared)
-│   ├── src/schemas/                # Canonical Zod request/response validation
-│   ├── src/types/                  # Strict TypeScript interfaces
-│   └── src/utils/                  # Chapter sorting & numeral normalization
-├── docs/                           # Architecture decision records & OpenAPI spec
-│   ├── adr/                        # Architectural Decision Records
-│   └── api/openapi.yaml            # OpenAPI 3.1 specification
-├── infra/                          # Infrastructure & Docker configuration
-│   └── docker/nginx.conf           # Production Nginx reverse proxy configuration
+├── frontend/                       # React + Vite browser application
+│   ├── src/app/                    # Shell, routing, auth and shared integrations
+│   ├── src/features/               # Feature-owned pages, UI, state, services and data
+│   │   ├── chapters/               # Intake, document and results screens
+│   │   ├── artifacts/              # Artifact screen and persistence client
+│   │   ├── benchmarks/             # Benchmarks, image arena and coding-agent screens
+│   │   ├── chat/                   # Chat screen, session UI and chat orchestration
+│   │   ├── customize/              # Provider/model settings and key client
+│   │   ├── plugins/                # Plugin catalog and install state
+│   │   ├── projects/               # Projects, sessions and file context
+│   │   ├── roadmaps/               # Roadmap screens, renderer and catalog data
+│   │   └── scheduled/              # Scheduled task screens and UI
+│   ├── src/test/                   # Frontend tests
+│   ├── tests/e2e/                  # Playwright browser tests
+│   └── infra/docker/               # Frontend Nginx configuration
+├── backend/                        # Single-process modular Express application
+│   ├── contracts/                  # Runtime-neutral schemas, types and helpers
+│   ├── src/app.ts                  # Middleware and domain composition root
+│   ├── src/domains/                # HTTP, application, provider and repository modules
+│   ├── src/platform/               # Auth, config, database, HTTP and observability
+│   ├── tests/                      # Backend unit and integration tests
+│   └── scripts/                    # Standalone PDF utilities
+├── docs/                           # Architecture decisions and OpenAPI contract
+├── specs/                          # Active implementation plans
+├── .github/                        # CI and repository configuration
 ├── docker-compose.yml              # Local multi-container orchestration
-├── pyproject.toml                  # Python packaging & tool configuration (Ruff)
-├── scripts/                        # Standalone Python PDF processing utilities
-│   ├── pdf_chapter_extractor.py    # Native document boundary parser
-│   └── pdf_roadmap_generator.py    # Topical roadmap extractor
-└── package.json                    # Workspace orchestration & root scripts
+└── package.json                    # npm workspace orchestration
 ```
 
+Each route/screen belongs to one feature and has its own `.tsx` page entry. Feature internals should be imported through that feature's public `index.ts` or explicitly named `publicApi.ts` when another feature needs them. Roadmap and benchmark catalogs remain data modules. The backend remains one deployable process with internal domain boundaries; these folders are not microservices.
 ---
 
 ## Quickstart

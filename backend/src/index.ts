@@ -1,6 +1,6 @@
 import { createApp } from "./app.js";
-import { envConfig } from "./config/index.js";
-import { logger } from "./utils/logger.js";
+import { envConfig } from "./platform/config/index.js";
+import { logger } from "./platform/observability/logger.js";
 
 const app = createApp();
 const PORT = envConfig.PORT;

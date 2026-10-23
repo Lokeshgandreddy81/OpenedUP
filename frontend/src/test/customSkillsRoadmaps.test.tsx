@@ -2,15 +2,15 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { AppProvider } from "../context/AppContext";
+import { AppProvider } from "../features/chapters/state/AppContext";
 
-import { GoRoadmapPage } from "../pages/roadmaps/skills/GoRoadmapPage";
-import { GoPage } from "../pages/roadmaps/skills/GoPage";
-import { GraphQlRoadmapPage } from "../pages/roadmaps/skills/GraphQlRoadmapPage";
-import { GraphQlPage } from "../pages/roadmaps/skills/GraphQlPage";
-import { HtmlRoadmapPage } from "../pages/roadmaps/skills/HtmlRoadmapPage";
-import { HtmlPage } from "../pages/roadmaps/skills/HtmlPage";
-import { RoadmapPage } from "../pages/RoadmapPage/RoadmapPage";
+import { GoRoadmapPage } from "../features/roadmaps/pages/catalog/skills/GoRoadmapPage";
+import { GoPage } from "../features/roadmaps/pages/catalog/skills/GoPage";
+import { GraphQlRoadmapPage } from "../features/roadmaps/pages/catalog/skills/GraphQlRoadmapPage";
+import { GraphQlPage } from "../features/roadmaps/pages/catalog/skills/GraphQlPage";
+import { HtmlRoadmapPage } from "../features/roadmaps/pages/catalog/skills/HtmlRoadmapPage";
+import { HtmlPage } from "../features/roadmaps/pages/catalog/skills/HtmlPage";
+import { RoadmapPage } from "../features/roadmaps/pages/RoadmapPage/RoadmapPage";
 
 const renderWithProviders = (ui: React.ReactElement, initialEntries = ["/"]) => {
   return render(

@@ -4,18 +4,24 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+RUN apk --no-cache add python3 make g++
+
 # Copy root workspace manifests
 COPY package.json package-lock.json ./
-COPY shared/package.json shared/
+COPY backend/contracts/package.json backend/contracts/
 COPY backend/package.json backend/
 COPY frontend/package.json frontend/
 
 # Install dependencies deterministically
 RUN npm ci
 
-# Copy sources for shared and backend
-COPY shared/ shared/
+# Copy contract and backend sources
+COPY backend/contracts/ backend/contracts/
 COPY backend/ backend/
+
+# Build runtime-neutral contracts before bundling the backend
+WORKDIR /app
+RUN npm run --workspace=@charan-interiors/contracts build
 
 # Build backend bundle
 WORKDIR /app/backend
@@ -30,11 +36,13 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Install curl for healthchecks
-RUN apk --no-cache add curl
+RUN apk --no-cache add curl libstdc++
+RUN mkdir -p /var/lib/openedup && chown -R node:node /var/lib/openedup
 
 # Copy built artifacts and runtime packages
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/backend/contracts ./backend/contracts
 COPY --from=builder /app/backend/dist ./dist
 COPY --from=builder /app/backend/package.json ./package.json
 
