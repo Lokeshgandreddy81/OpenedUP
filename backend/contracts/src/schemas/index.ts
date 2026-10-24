@@ -87,6 +87,57 @@ export const ChatRequestSchema = z.object({
     .optional(),
 });
 
+export const ChapterChatRequestSchema = z
+  .object({
+    chapterId: z.string().min(1).max(200),
+    startPage: z.number().int().positive(),
+    endPage: z.number().int().positive(),
+    question: z.string().trim().min(1).max(8_000),
+    model: z.string().min(1).max(200),
+    customModel: z.string().trim().min(1).max(200).optional(),
+    customProvider: z.enum(PROVIDER_IDS).optional(),
+    effort: z.enum(["Low", "Medium", "High", "Extra", "Max"]).optional(),
+    history: z.array(ChatMessageSchema).max(12),
+    evidence: z
+      .array(
+        z.object({
+          id: z.string().min(1).max(300),
+          pageNumber: z.number().int().positive(),
+          text: z.string().trim().min(1).max(8_000),
+        })
+      )
+      .min(1)
+      .max(8)
+      .refine((items) => new Set(items.map((item) => item.id)).size === items.length)
+      .refine((items) => items.reduce((size, item) => size + item.text.length, 0) <= 32_000),
+  })
+  .strict()
+  .superRefine((request, context) => {
+    if (request.startPage > request.endPage) {
+      context.addIssue({
+        code: "custom",
+        message: "Chapter page range is reversed.",
+        path: ["endPage"],
+      });
+    }
+    request.evidence.forEach((item, index) => {
+      if (item.pageNumber < request.startPage || item.pageNumber > request.endPage) {
+        context.addIssue({
+          code: "custom",
+          message: "Evidence page is outside the selected chapter.",
+          path: ["evidence", index, "pageNumber"],
+        });
+      }
+    });
+    if (request.history.reduce((total, message) => total + message.content.length, 0) > 24_000) {
+      context.addIssue({
+        code: "custom",
+        message: "Chapter chat history exceeds the context limit.",
+        path: ["history"],
+      });
+    }
+  });
+
 export const WorkspaceRulesRequestSchema = z.object({
   scope: z.enum(["project", "global"]).default("project"),
   content: z.string().max(20_000).default(""),
@@ -268,6 +319,7 @@ export type CheckDuplicatesRequest = z.infer<typeof CheckDuplicatesRequestSchema
 export type ParsePdfChaptersRequest = z.infer<typeof ParsePdfChaptersRequestSchema>;
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
+export type ChapterChatRequest = z.infer<typeof ChapterChatRequestSchema>;
 export type WorkspaceRulesRequest = z.infer<typeof WorkspaceRulesRequestSchema>;
 export type CreateConversationRequest = z.infer<typeof CreateConversationRequestSchema>;
 export type UpdateConversationRequest = z.infer<typeof UpdateConversationRequestSchema>;

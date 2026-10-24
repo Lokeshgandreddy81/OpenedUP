@@ -1,8 +1,13 @@
 import { Router } from "express";
-import { ChatRequestSchema, WorkspaceRulesRequestSchema } from "@charan-interiors/contracts";
+import {
+  ChapterChatRequestSchema,
+  ChatRequestSchema,
+  WorkspaceRulesRequestSchema,
+} from "@charan-interiors/contracts";
 import {
   handleChat,
   handleChatStream,
+  handleChapterChat,
   handleGetSkills,
   handleGetRules,
   handleSaveRules,
@@ -13,6 +18,7 @@ export const chatRouter = Router();
 
 chatRouter.post("/chat", validateBody(ChatRequestSchema), handleChat);
 chatRouter.post("/chat/stream", validateBody(ChatRequestSchema), handleChatStream);
+chatRouter.post("/chat/chapter", validateBody(ChapterChatRequestSchema), handleChapterChat);
 chatRouter.get("/chat/skills", handleGetSkills);
 chatRouter.get("/chat/rules", handleGetRules);
 chatRouter.post("/chat/rules", validateBody(WorkspaceRulesRequestSchema), handleSaveRules);

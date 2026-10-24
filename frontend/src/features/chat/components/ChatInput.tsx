@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Mic,
   X,
+  BookOpenText,
 } from "lucide-react";
 import { getChatModels, getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
 import { useProviderKeys } from "../../customize/publicApi";
@@ -53,6 +54,7 @@ interface ChatInputProps {
     attachments?: ChatAttachmentFile[]
   ) => void;
   isThinking: boolean;
+  isSendDisabled?: boolean;
   onStopThinking?: () => void;
   placeholder?: string;
   selectedModel: AiModelId;
@@ -62,6 +64,7 @@ interface ChatInputProps {
   onOpenBenchmarks?: () => void;
   onOpenProviders?: () => void;
   initialText?: string;
+  chapterContextLabel?: string;
 }
 
 const AVAILABLE_MODELS: AiModelOption[] = getChatModels().map((model) => ({
@@ -104,6 +107,7 @@ function getEffortOptions(provider: string): EffortOption[] {
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   isThinking,
+  isSendDisabled = false,
   onStopThinking,
   placeholder = "Message Shoebox…",
   selectedModel,
@@ -113,6 +117,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onOpenBenchmarks,
   onOpenProviders,
   initialText = "",
+  chapterContextLabel,
 }) => {
   const [text, setText] = useState(initialText);
   const [attachments, setAttachments] = useState<ChatAttachmentFile[]>([]);
@@ -256,6 +261,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   // Support Cmd+U / Ctrl+U keyboard shortcut to attach files
   useEffect(() => {
     const handleShortcut = (e: KeyboardEvent) => {
+      if (chapterContextLabel) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "u") {
         e.preventDefault();
         fileInputRef.current?.click();
@@ -263,7 +269,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, []);
+  }, [chapterContextLabel]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -273,7 +279,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleSubmit = () => {
-    if (isThinking || isReadingFiles) return;
+    if (isThinking || isReadingFiles || isSendDisabled) return;
     const trimmed = text.trim();
     if (!trimmed && attachments.length === 0) return;
     onSendMessage(
@@ -315,11 +321,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <div className="w-full max-w-[880px] mx-auto px-4 sm:px-5 select-none">
         <div
           onDragEnter={(event) => {
+            if (chapterContextLabel) return;
             if (!Array.from(event.dataTransfer.types).includes("Files")) return;
             event.preventDefault();
             setIsFileDragActive(true);
           }}
           onDragOver={(event) => {
+            if (chapterContextLabel) return;
             if (Array.from(event.dataTransfer.types).includes("Files")) event.preventDefault();
           }}
           onDragLeave={(event) => {
@@ -331,12 +339,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
           }}
           onDrop={(event) => {
+            if (chapterContextLabel) return;
             if (!Array.from(event.dataTransfer.types).includes("Files")) return;
             event.preventDefault();
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-2 rounded-[28px] border border-slate-200/60 bg-transparent p-4 shadow-none transition-[border-color,background-color] duration-200 sm:p-5 focus-within:bg-slate-50/40 ${isFileDragActive ? "border-slate-300 bg-slate-50 ring-4 ring-slate-900/5" : ""}`}
+          className={`relative flex flex-col gap-2 rounded-[28px] border p-4 transition-[border-color,background-color,box-shadow] duration-200 sm:p-5 ${chapterContextLabel ? "border-slate-200/70 bg-slate-50/35 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.4)] focus-within:border-slate-300/80 focus-within:bg-white" : "border-slate-200/60 bg-transparent shadow-none focus-within:bg-slate-50/40"} ${isFileDragActive ? "border-slate-300 bg-slate-50 ring-4 ring-slate-900/5" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
           <input
@@ -427,185 +436,194 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
           <div className="flex min-h-10 items-center justify-between select-none">
             {/* Left: Add context / file plus icon with popover menu */}
-            <div className="relative flex items-center">
-              <button
-                ref={plusButtonRef}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isPlusMenuOpen) {
-                    setIsPlusMenuOpen(false);
-                  } else {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const spaceBelow = window.innerHeight - rect.bottom;
-                    setPlusMenuDirection(spaceBelow < 250 ? "up" : "down");
-                    setIsPlusMenuOpen(true);
-                  }
-                }}
-                title="Add context, files, or extensions"
-                aria-label="Add context"
-                aria-expanded={isPlusMenuOpen}
-                disabled={isReadingFiles}
-                className={`h-10 w-10 rounded-xl transition-[background-color,color,transform] duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-50 ${
-                  isPlusMenuOpen
-                    ? "bg-slate-200/80 text-slate-900"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                }`}
-              >
-                <Plus size={18} strokeWidth={1.8} />
-              </button>
-
-              {/* Plus popover menu (matching screenshot) */}
-              {isPlusMenuOpen && (
-                <div
-                  ref={plusMenuRef}
-                  onClick={(e) => e.stopPropagation()}
-                  className={`absolute left-0 ${
-                    plusMenuDirection === "down" ? "top-full mt-2" : "bottom-full mb-2"
-                  } w-[228px] rounded-2xl bg-white border border-slate-200/90 shadow-[0_16px_36px_-6px_rgba(0,0,0,0.12)] p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 select-none text-slate-700`}
+            {chapterContextLabel ? (
+              <div className="flex min-w-0 items-center gap-2 px-2 text-[13px] font-medium text-slate-500">
+                <BookOpenText size={16} strokeWidth={1.8} className="shrink-0" />
+                <span className="truncate">{chapterContextLabel}</span>
+              </div>
+            ) : (
+              <div className="relative flex items-center">
+                <button
+                  ref={plusButtonRef}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isPlusMenuOpen) {
+                      setIsPlusMenuOpen(false);
+                    } else {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const spaceBelow = window.innerHeight - rect.bottom;
+                      setPlusMenuDirection(spaceBelow < 250 ? "up" : "down");
+                      setIsPlusMenuOpen(true);
+                    }
+                  }}
+                  title="Add context, files, or extensions"
+                  aria-label="Add context"
+                  aria-expanded={isPlusMenuOpen}
+                  disabled={isReadingFiles}
+                  className={`h-10 w-10 rounded-xl transition-[background-color,color,transform] duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-50 ${
+                    isPlusMenuOpen
+                      ? "bg-slate-200/80 text-slate-900"
+                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                  }`}
                 >
-                  {/* Add files or photos */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPlusMenuOpen(false);
-                      fileInputRef.current?.click();
-                    }}
-                    className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                  <Plus size={18} strokeWidth={1.8} />
+                </button>
+
+                {/* Plus popover menu (matching screenshot) */}
+                {isPlusMenuOpen && (
+                  <div
+                    ref={plusMenuRef}
+                    onClick={(e) => e.stopPropagation()}
+                    className={`absolute left-0 ${
+                      plusMenuDirection === "down" ? "top-full mt-2" : "bottom-full mb-2"
+                    } w-[228px] rounded-2xl bg-white border border-slate-200/90 shadow-[0_16px_36px_-6px_rgba(0,0,0,0.12)] p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 select-none text-slate-700`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Paperclip
-                        size={15}
-                        strokeWidth={1.8}
-                        className="text-slate-600 group-hover:text-slate-900 shrink-0"
-                      />
-                      <span className="text-[13px] text-slate-800 font-normal">
-                        Add files (PDF or text)
+                    {/* Add files or photos */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        fileInputRef.current?.click();
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Paperclip
+                          size={15}
+                          strokeWidth={1.8}
+                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
+                        />
+                        <span className="text-[13px] text-slate-800 font-normal">
+                          Add files (PDF or text)
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono text-slate-400 shrink-0 tracking-tight">
+                        ⌘ U
                       </span>
-                    </div>
-                    <span className="text-[11px] font-mono text-slate-400 shrink-0 tracking-tight">
-                      ⌘ U
-                    </span>
-                  </button>
+                    </button>
 
-                  <div className="my-1 border-t border-slate-100" />
+                    <div className="my-1 border-t border-slate-100" />
 
-                  {/* Projects */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPlusMenuOpen(false);
-                      onOpenProjects?.();
-                    }}
-                    className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <ProjectsIcon size={15} />
-                      <span className="text-[13px] text-slate-800 font-normal">Projects</span>
-                    </div>
-                    <ChevronRight size={13} className="text-slate-400 shrink-0" />
-                  </button>
+                    {/* Projects */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        onOpenProjects?.();
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <ProjectsIcon size={15} />
+                        <span className="text-[13px] text-slate-800 font-normal">Projects</span>
+                      </div>
+                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
+                    </button>
 
-                  {/* Skills */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPlusMenuOpen(false);
-                    }}
-                    className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Scroll
-                        size={15}
-                        strokeWidth={1.8}
-                        className="text-slate-600 group-hover:text-slate-900 shrink-0"
-                      />
-                      <span className="text-[13px] text-slate-800 font-normal">Skills</span>
-                    </div>
-                    <ChevronRight size={13} className="text-slate-400 shrink-0" />
-                  </button>
+                    {/* Skills */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Scroll
+                          size={15}
+                          strokeWidth={1.8}
+                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
+                        />
+                        <span className="text-[13px] text-slate-800 font-normal">Skills</span>
+                      </div>
+                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
+                    </button>
 
-                  {/* Connectors */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPlusMenuOpen(false);
-                      onOpenProviders?.();
-                    }}
-                    className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Boxes
-                        size={15}
-                        strokeWidth={1.8}
-                        className="text-slate-600 group-hover:text-slate-900 shrink-0"
-                      />
-                      <span className="text-[13px] text-slate-800 font-normal">Connectors</span>
-                    </div>
-                    <ChevronRight size={13} className="text-slate-400 shrink-0" />
-                  </button>
+                    {/* Connectors */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        onOpenProviders?.();
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Boxes
+                          size={15}
+                          strokeWidth={1.8}
+                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
+                        />
+                        <span className="text-[13px] text-slate-800 font-normal">Connectors</span>
+                      </div>
+                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
+                    </button>
 
-                  {/* Design system */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPlusMenuOpen(false);
-                    }}
-                    className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Palette
-                        size={15}
-                        strokeWidth={1.8}
-                        className="text-slate-600 group-hover:text-slate-900 shrink-0"
-                      />
-                      <span className="text-[13px] text-slate-800 font-normal">Design system</span>
-                    </div>
-                    <ChevronRight size={13} className="text-slate-400 shrink-0" />
-                  </button>
+                    {/* Design system */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Palette
+                          size={15}
+                          strokeWidth={1.8}
+                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
+                        />
+                        <span className="text-[13px] text-slate-800 font-normal">
+                          Design system
+                        </span>
+                      </div>
+                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
+                    </button>
 
-                  {/* Plugins */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPlusMenuOpen(false);
-                      onOpenPlugins?.();
-                    }}
-                    className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Plug
-                        size={15}
-                        strokeWidth={1.8}
-                        className="text-slate-600 group-hover:text-slate-900 shrink-0"
-                      />
-                      <span className="text-[13px] text-slate-800 font-normal">Plugins</span>
-                    </div>
-                    <ChevronRight size={13} className="text-slate-400 shrink-0" />
-                  </button>
+                    {/* Plugins */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        onOpenPlugins?.();
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Plug
+                          size={15}
+                          strokeWidth={1.8}
+                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
+                        />
+                        <span className="text-[13px] text-slate-800 font-normal">Plugins</span>
+                      </div>
+                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
+                    </button>
 
-                  {/* Benchmarks */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPlusMenuOpen(false);
-                      onOpenBenchmarks?.();
-                    }}
-                    className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <BarChart3
-                        size={15}
-                        strokeWidth={1.8}
-                        className="text-slate-600 group-hover:text-slate-900 shrink-0"
-                      />
-                      <span className="text-[13px] text-slate-800 font-normal">Benchmarks</span>
-                    </div>
-                    <ChevronRight size={13} className="text-slate-400 shrink-0" />
-                  </button>
-                </div>
-              )}
-            </div>
+                    {/* Benchmarks */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        onOpenBenchmarks?.();
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <BarChart3
+                          size={15}
+                          strokeWidth={1.8}
+                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
+                        />
+                        <span className="text-[13px] text-slate-800 font-normal">Benchmarks</span>
+                      </div>
+                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Right: Model dropdown + Send/Stop button */}
             <div className="flex items-center gap-1 sm:gap-2">
@@ -816,7 +834,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 type="button"
                 onClick={handleSubmit}
                 disabled={
-                  isThinking || isReadingFiles || (!text.trim() && attachments.length === 0)
+                  isThinking ||
+                  isSendDisabled ||
+                  isReadingFiles ||
+                  (!text.trim() && attachments.length === 0)
                 }
                 title="Send message"
                 aria-label="Send message"

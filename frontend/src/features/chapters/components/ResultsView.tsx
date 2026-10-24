@@ -1363,9 +1363,9 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
             style={
               {
                 "--sidebar-w": isPdfDocument
-                  ? "clamp(290px, 22vw, 360px)"
+                  ? "clamp(220px, 16.72vw, 274px)"
                   : `${SIDEBAR_WIDTH_PERCENT}%`,
-                "--sidebar-min-w": isPdfDocument ? "280px" : "200px",
+                "--sidebar-min-w": isPdfDocument ? "213px" : "200px",
                 borderRight: isPdfDocument ? "1px solid transparent" : undefined,
                 visibility:
                   isChaptersDrawerOpen || sidebarAnimPhase !== "closed" ? "visible" : "hidden",
@@ -2028,6 +2028,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                   setActiveNavTab("chapters");
                   setIsSidebarOpen(true);
                 }}
+                onOpenProviders={() => {
+                  setChatInitialView("customize");
+                  setIsChatOpen(true);
+                }}
                 phase={
                   proofPhase === "exiting"
                     ? "exiting"
@@ -2313,6 +2317,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
         <ChatWindow
           isOpen={isChatOpen}
           initialView={chatInitialView}
+          initialCustomizeCategory="Providers"
           onViewChange={(v) => {
             if (v === "chapters") {
               setIsChatOpen(false);

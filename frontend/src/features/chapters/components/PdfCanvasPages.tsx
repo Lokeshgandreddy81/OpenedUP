@@ -1,70 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
+import { GlobalWorkerOptions } from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { loadPdfDocument } from "../../../app/files/pdfDocumentCache";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-
-// One parsed document per URL, shared across every page canvas and chapter switch
-const docCache = new Map<string, Promise<PDFDocumentProxy>>();
-const MAX_CACHED_PDF_DOCS = 8;
-
-export function clearPdfDocumentCache(urlKey?: string): void {
-  if (urlKey) {
-    const key = urlKey.split("#")[0];
-    const cachedPromise = docCache.get(key);
-    if (cachedPromise) {
-      docCache.delete(key);
-      cachedPromise.then(
-        (doc) => {
-          try {
-            doc.destroy?.();
-          } catch {
-            // ignore
-          }
-        },
-        () => {}
-      );
-    }
-  } else {
-    for (const [key, promise] of docCache.entries()) {
-      docCache.delete(key);
-      promise.then(
-        (doc) => {
-          try {
-            doc.destroy?.();
-          } catch {
-            // ignore
-          }
-        },
-        () => {}
-      );
-    }
-  }
-}
-
-function loadPdfDocument(url: string): Promise<PDFDocumentProxy> {
-  const key = url.split("#")[0];
-  let cached = docCache.get(key);
-  if (!cached) {
-    // Evict oldest cached document proxy if limit reached
-    if (docCache.size >= MAX_CACHED_PDF_DOCS) {
-      const oldestKey = docCache.keys().next().value;
-      if (oldestKey) {
-        clearPdfDocumentCache(oldestKey);
-      }
-    }
-    cached = getDocument(key).promise;
-    cached.catch(() => docCache.delete(key));
-    docCache.set(key, cached);
-  }
-  return cached;
-}
 
 interface PdfCanvasPagesProps {
   url: string;
   fromPage?: number;
   toPage?: number;
+  /** Add this offset when the rendered PDF is a chapter-only page slice. */
+  pageNumberOffset?: number;
+  /** Original 1-based PDF page to scroll into view. */
+  scrollToPage?: number;
+  scrollRequestId?: number;
   aspectHint?: number | null;
   className?: string;
   style?: React.CSSProperties;
@@ -79,6 +29,9 @@ export const PdfCanvasPages: React.FC<PdfCanvasPagesProps> = ({
   url,
   fromPage = 1,
   toPage,
+  pageNumberOffset = 0,
+  scrollToPage,
+  scrollRequestId,
   aspectHint,
   className = "w-full flex flex-col",
   style,
@@ -134,6 +87,17 @@ export const PdfCanvasPages: React.FC<PdfCanvasPagesProps> = ({
     return numbers;
   }, [doc, fromPage, toPage]);
 
+  useEffect(() => {
+    if (!scrollToPage || !doc) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = scrollRef.current?.querySelector<HTMLElement>(
+        `[data-original-page="${scrollToPage}"]`
+      );
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [doc, scrollToPage, scrollRequestId, pageNumberOffset]);
+
   const placeholderAspect = aspectHint && aspectHint > 0 ? aspectHint : 8.5 / 11;
 
   if (failed) {
@@ -154,6 +118,7 @@ export const PdfCanvasPages: React.FC<PdfCanvasPagesProps> = ({
             key={`${pageNumber}-${rasterKey}`}
             doc={doc}
             pageNumber={pageNumber}
+            originalPageNumber={pageNumber + pageNumberOffset}
             aspectHint={placeholderAspect}
             separated={index > 0}
           />
@@ -168,6 +133,7 @@ export const PdfCanvasPages: React.FC<PdfCanvasPagesProps> = ({
 interface PdfPageCanvasProps {
   doc: PDFDocumentProxy;
   pageNumber: number;
+  originalPageNumber: number;
   aspectHint: number;
   separated: boolean;
 }
@@ -175,6 +141,7 @@ interface PdfPageCanvasProps {
 const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({
   doc,
   pageNumber,
+  originalPageNumber,
   aspectHint,
   separated,
 }) => {
@@ -308,6 +275,7 @@ const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({
   return (
     <div
       ref={wrapRef}
+      data-original-page={originalPageNumber}
       className={`relative w-full rounded-xl overflow-hidden bg-transparent${separated ? " mt-4 border-t border-transparent" : ""}`}
       style={{ aspectRatio: String(aspect) }}
     >

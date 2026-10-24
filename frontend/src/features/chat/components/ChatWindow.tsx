@@ -49,6 +49,7 @@ export interface ChatWindowProps {
   chapters?: ComputedRow[];
   docTitle?: string;
   onOpenScheduledTasks?: () => void;
+  initialCustomizeCategory?: CustomizeCategory;
   initialView?:
     | "chat"
     | "projects"
@@ -77,6 +78,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   chapters = [],
   docTitle = "Document",
   onOpenScheduledTasks,
+  initialCustomizeCategory = "Connectors",
   initialView = "chat",
   onViewChange,
 }) => {
@@ -93,7 +95,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     | "roadmaps"
   >(initialView);
   const [customizeInitialCategory, setCustomizeInitialCategory] =
-    useState<CustomizeCategory>("Connectors");
+    useState<CustomizeCategory>(initialCustomizeCategory);
   const processedInitialViewRef = useRef<typeof initialView | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isScheduledTasksInternalOpen, setIsScheduledTasksInternalOpen] = useState(false);

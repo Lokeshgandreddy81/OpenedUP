@@ -19,6 +19,7 @@ import {
 } from "../services/engine";
 import { RollingNumber, usePrefersReducedMotion } from "../../../app/components/MotionPrimitives";
 import { PdfCanvasPages } from "./PdfCanvasPages";
+import { ChapterChatPanel, type ChapterChatMessage } from "./ChapterChatPanel";
 import { COST_CENTER_OPTIONS } from "./WorkspaceSyncModal";
 
 interface ProofPanelProps {
@@ -31,6 +32,7 @@ interface ProofPanelProps {
   phase: "entering" | "active" | "exiting";
   isSidebarOpen?: boolean;
   onOpenSidebar?: () => void;
+  onOpenProviders?: () => void;
   onSelectRow: (rowNumber: number) => void;
   onUpdateRow: (rowNumber: number, updater: (prev: ReceiptRow) => ReceiptRow) => void;
   onClose: () => void;
@@ -86,6 +88,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
   phase,
   isSidebarOpen = true,
   onOpenSidebar,
+  onOpenProviders,
   onSelectRow,
   onUpdateRow,
   onClose,
@@ -114,6 +117,12 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
   const [chapterAspect, setChapterAspect] = useState<number | null>(null);
   const [sliceFailed, setSliceFailed] = useState<boolean>(false);
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
+  const [chapterChatHistory, setChapterChatHistory] = useState<
+    Record<string, ChapterChatMessage[]>
+  >({});
+  const [citationPage, setCitationPage] = useState<number | undefined>();
+  const [citationScrollRequestId, setCitationScrollRequestId] = useState(0);
+  const chapterChatKey = `${photo?.id ?? "document"}:${row.row}`;
 
   const effectivePdfUrl =
     chapterPdfUrl ||
@@ -672,70 +681,98 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
 
       {isChapter ? (
         <div className="relative flex-1 min-h-0 w-full overflow-hidden flex flex-col">
-          {/* Apple Books-Style Top Reading Breadcrumb: Context without software UI clutter */}
-          <div
-            aria-label="Reading breadcrumb"
-            className="absolute top-0 inset-x-0 h-16 z-20 pointer-events-none select-none flex items-center justify-center px-6"
-          >
-            <div className="flex items-center gap-2 text-[13px] tracking-normal max-w-[90%] truncate">
-              <span className="truncate max-w-[320px] sm:max-w-[460px] text-slate-500 font-medium">
-                {breadcrumbDoc}
-              </span>
-              <span className="text-slate-400 font-normal select-none px-0.5">›</span>
-              <span className="truncate max-w-[360px] sm:max-w-[540px] text-slate-800 font-semibold">
-                {breadcrumbChapter}
-              </span>
-            </div>
-          </div>
-
-          {/* Scrollable Canvas Viewport */}
-          <div
-            ref={canvasAreaRef}
-            className="study-stage relative flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden flex flex-col items-center pt-8 pb-20 px-4 sm:px-6"
-          >
-            {effectivePdfUrl ? (
+          <div className="flex min-h-0 flex-1 max-lg:flex-col">
+            {/* PDF canvas and its document/chapter context stay together. */}
+            <div className="relative flex min-h-0 min-w-0 flex-1 basis-1/2 flex-col lg:basis-[60.5%]">
               <div
-                key={`page-${row.row}`}
-                className="study-page-enter w-full max-w-[1430px] flex flex-col items-center mx-auto"
+                aria-label="Reading breadcrumb"
+                className="absolute inset-x-0 top-0 z-20 flex h-14 select-none items-center justify-center bg-white px-6 pointer-events-none"
               >
-                <div className="study-page w-full bg-transparent shadow-none border border-transparent rounded-xl overflow-hidden">
-                  <PdfCanvasPages
-                    key={effectivePdfUrl}
-                    url={effectivePdfUrl}
-                    fromPage={chapterViewFromPage}
-                    toPage={chapterViewToPage}
-                    aspectHint={chapterAspect}
-                    className="w-full flex flex-col items-center"
-                  />
+                <div className="flex w-full max-w-[90%] items-center justify-center gap-2 truncate text-center text-[14.3px] tracking-normal">
+                  <span className="max-w-[320px] truncate font-medium text-slate-500 sm:max-w-[460px]">
+                    {breadcrumbDoc}
+                  </span>
+                  <span className="select-none px-0.5 font-normal text-slate-400">›</span>
+                  <span className="max-w-[360px] truncate font-semibold text-slate-800 sm:max-w-[540px]">
+                    {breadcrumbChapter}
+                  </span>
                 </div>
               </div>
-            ) : canSliceChapterPdf && !sliceFailed ? (
               <div
-                key={`skeleton-${row.row}`}
-                className="study-page-enter w-full max-w-[1430px] flex flex-col items-center mx-auto"
+                ref={canvasAreaRef}
+                className="study-stage relative min-h-0 min-w-0 flex-1 basis-1/2 overflow-y-auto overflow-x-hidden flex flex-col items-center pt-14 pb-12 px-3 sm:px-4"
               >
-                <div
-                  className="study-page w-full bg-transparent shadow-none border border-transparent rounded-xl relative overflow-hidden"
-                  style={{ aspectRatio: String(chapterAspect || 8.5 / 11) }}
-                >
-                  <div className="absolute inset-0 bg-gray-100/70" />
-                  <div className="absolute inset-x-0 top-1/3 h-28 overflow-hidden">
-                    <div className="study-shimmer h-full w-1/2 bg-gradient-to-r from-transparent via-white to-transparent" />
+                {effectivePdfUrl ? (
+                  <div
+                    key={`page-${row.row}`}
+                    className="study-page-enter w-full max-w-[1430px] flex flex-col items-center mx-auto"
+                  >
+                    <div className="study-page w-full bg-transparent shadow-none border border-transparent rounded-xl overflow-hidden">
+                      <PdfCanvasPages
+                        key={effectivePdfUrl}
+                        url={effectivePdfUrl}
+                        fromPage={chapterViewFromPage}
+                        toPage={chapterViewToPage}
+                        pageNumberOffset={
+                          isBoundedChapterPdf ? Math.max(0, (row.start_page ?? 1) - 1) : 0
+                        }
+                        scrollToPage={citationPage}
+                        scrollRequestId={citationScrollRequestId}
+                        aspectHint={chapterAspect}
+                        className="w-full flex flex-col items-center"
+                      />
+                    </div>
                   </div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-mono text-[10px] tracking-[0.22em] text-gray-400 uppercase">
-                      Extracting pages {row.start_page ?? 1}–{row.end_page ?? row.start_page ?? 1}
+                ) : canSliceChapterPdf && !sliceFailed ? (
+                  <div
+                    key={`skeleton-${row.row}`}
+                    className="study-page-enter w-full max-w-[1430px] flex flex-col items-center mx-auto"
+                  >
+                    <div
+                      className="study-page w-full bg-transparent shadow-none border border-transparent rounded-xl relative overflow-hidden"
+                      style={{ aspectRatio: String(chapterAspect || 8.5 / 11) }}
+                    >
+                      <div className="absolute inset-0 bg-gray-100/70" />
+                      <div className="absolute inset-x-0 top-1/3 h-28 overflow-hidden">
+                        <div className="study-shimmer h-full w-1/2 bg-gradient-to-r from-transparent via-white to-transparent" />
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="font-mono text-[10px] tracking-[0.22em] text-gray-400 uppercase">
+                          Extracting pages {row.start_page ?? 1}–
+                          {row.end_page ?? row.start_page ?? 1}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center min-h-[300px]">
+                    <span className="font-mono text-[11px] tracking-[0.18em] text-slate-400 uppercase">
+                      PDF preview unavailable
                     </span>
                   </div>
-                </div>
+                )}
               </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center min-h-[300px]">
-                <span className="font-mono text-[11px] tracking-[0.18em] text-slate-400 uppercase">
-                  PDF preview unavailable
-                </span>
-              </div>
-            )}
+            </div>
+            <div className="flex min-h-0 min-w-0 flex-1 basis-1/2 lg:basis-[39.5%]">
+              <ChapterChatPanel
+                key={chapterChatKey}
+                pdfUrl={photo?.objectUrl}
+                documentId={photo?.id ?? "missing-document"}
+                chapterId={chapterChatKey}
+                title={breadcrumbChapter}
+                startPage={row.start_page ?? 1}
+                endPage={row.end_page ?? row.start_page ?? 1}
+                history={chapterChatHistory[chapterChatKey] ?? []}
+                onHistoryChange={(history) =>
+                  setChapterChatHistory((current) => ({ ...current, [chapterChatKey]: history }))
+                }
+                onOpenCitation={(pageNumber) => {
+                  setCitationPage(pageNumber);
+                  setCitationScrollRequestId((id) => id + 1);
+                }}
+                onOpenProviders={() => onOpenProviders?.()}
+              />
+            </div>
           </div>
         </div>
       ) : (

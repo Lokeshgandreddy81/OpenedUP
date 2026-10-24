@@ -1,6 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
-import type { ChatRequest, WorkspaceRulesRequest } from "@charan-interiors/contracts";
+import type {
+  ChapterChatRequest,
+  ChatRequest,
+  WorkspaceRulesRequest,
+} from "@charan-interiors/contracts";
 import { processChat, processChatStream } from "../application/chat.service.js";
+import { answerChapterQuestion } from "../application/chapterChat.service.js";
 import { isValidApiKey } from "../../../platform/config/index.js";
 import {
   runAgenticWorkspaceTools,
@@ -15,7 +20,7 @@ import { actionableProviderError } from "../providers/providerErrors.js";
 
 function requestProviderCredential(
   req: Request,
-  payload: ChatRequest,
+  payload: Pick<ChatRequest, "model" | "customModel" | "customProvider">,
   headerApiKey?: string,
   headerBaseUrl?: string
 ) {
@@ -37,7 +42,7 @@ function isLoopbackRequest(req: Request): boolean {
 function requireUserCredential(
   req: Request,
   res: Response,
-  payload: ChatRequest,
+  payload: Pick<ChatRequest, "model" | "customModel" | "customProvider">,
   apiKey: string | undefined
 ): boolean {
   if (isValidApiKey(apiKey)) return true;
@@ -178,6 +183,50 @@ export async function handleChatStream(
       sendEvent("error", { error: publicProviderError(message), partial: true });
       res.end();
     }
+  }
+}
+
+export async function handleChapterChat(
+  req: Request,
+  res: Response,
+  _next: NextFunction
+): Promise<void> {
+  const request = req.body as ChapterChatRequest;
+  const headerApiKey =
+    typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
+  const headerBaseUrl =
+    typeof req.headers["x-provider-base-url"] === "string"
+      ? req.headers["x-provider-base-url"]
+      : undefined;
+
+  let credential: ReturnType<typeof requestProviderCredential>;
+  try {
+    credential = requestProviderCredential(req, request, headerApiKey, headerBaseUrl);
+  } catch {
+    res.status(400).json({ error: "The selected model is unavailable." });
+    return;
+  }
+  if (!requireUserCredential(req, res, request, credential.apiKey)) return;
+
+  try {
+    const result = await answerChapterQuestion(request, {
+      ...(credential.apiKey ? { apiKey: credential.apiKey } : {}),
+      ...(credential.baseUrl ? { baseUrl: credential.baseUrl } : {}),
+    });
+    res.json(result);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Chapter chat failed.";
+    logEvent("ERROR /api/chat/chapter", {
+      errorType: error instanceof Error ? error.name : "UnknownError",
+      model: request.model,
+    });
+    const status =
+      message.startsWith("UNKNOWN_MODEL:") || message.startsWith("MISSING_CUSTOM_MODEL:")
+        ? 400
+        : 500;
+    res
+      .status(status)
+      .json({ error: status === 500 ? publicProviderError(message) : message, requestId: req.id });
   }
 }
 

@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import type { ReadingPhase } from "../components/LandingView";
 import { usePrefersReducedMotion } from "../../../app/components/MotionPrimitives";
 import { clearDocumentCache } from "../components/ProofPanel";
-import { clearPdfDocumentCache } from "../components/PdfCanvasPages";
+import { clearPdfDocumentCache } from "../../../app/files/pdfDocumentCache";
 import type {
   FailedBatchInfo,
   ParsedPdfResult,

@@ -36,9 +36,11 @@ interface ChatMessagesProps {
   isThinking: boolean;
   isResponding: boolean;
   thinkingElapsedSeconds: number;
+  thinkingLabel?: string;
   onSelectActionChip?: (chipText: string) => void;
   onEditMessage?: (messageId: string, currentContent: string) => void;
   onRetryMessage?: (messageId: string, payload: NonNullable<ChatMessage["retryPayload"]>) => void;
+  renderMessageSupplement?: (message: ChatMessage) => React.ReactNode;
 }
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
@@ -46,9 +48,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   isThinking,
   isResponding,
   thinkingElapsedSeconds,
+  thinkingLabel = "Thinking",
   onSelectActionChip,
   onEditMessage,
   onRetryMessage,
+  renderMessageSupplement,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -308,6 +312,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       isStreaming={Boolean(message.isStreaming)}
                     />
                   </div>
+                  {renderMessageSupplement?.(message)}
 
                   <div
                     className={`mt-2 flex h-8 items-center gap-1 text-[13px] text-slate-500 ${hasCompletedResponse ? "" : "invisible"}`}
@@ -371,10 +376,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             <div
               className="chat-thinking-status flex gap-2 py-1 text-[13px] text-slate-500 animate-in fade-in duration-200"
               role="timer"
-              aria-label={`Thinking for ${thinkingElapsedSeconds} seconds`}
+              aria-label={`${thinkingLabel} for ${thinkingElapsedSeconds} seconds`}
             >
               <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
-              <span>Thinking · {thinkingElapsedSeconds}s</span>
+              <span>
+                {thinkingLabel}
+                {thinkingElapsedSeconds > 0 ? ` · ${thinkingElapsedSeconds}s` : "…"}
+              </span>
             </div>
           )}
         </div>
