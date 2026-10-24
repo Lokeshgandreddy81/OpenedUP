@@ -732,13 +732,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                               onBlur={scheduleModelHoverCardClose}
                               className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center justify-between transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                 isSelected
-                                  ? "bg-slate-900 text-white font-semibold"
-                                  : "text-slate-800 hover:bg-slate-100"
+                                  ? "bg-slate-100/80 text-slate-950 font-semibold ring-1 ring-inset ring-slate-200/80"
+                                  : "text-slate-800 hover:bg-slate-50"
                               }`}
                             >
                               <div className="flex min-w-0 items-center gap-2 pr-2">
                                 <span
-                                  className={`truncate text-[14px] font-semibold leading-snug ${isSelected ? "text-white" : "text-slate-950"}`}
+                                  className="truncate text-[14px] font-semibold leading-snug text-slate-950"
                                 >
                                   {model.name}
                                 </span>
@@ -746,7 +746,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                               {isSelected && (
                                 <Check
                                   size={14}
-                                  className="text-white shrink-0 stroke-[2.5] mt-0.5"
+                                  className="text-slate-700 shrink-0 stroke-[2.25] mt-0.5"
                                 />
                               )}
                             </button>
