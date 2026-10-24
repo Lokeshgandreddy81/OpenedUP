@@ -4,11 +4,7 @@ import {
   ReplaceProjectsRequestSchema,
 } from "@charan-interiors/contracts";
 import { validateBody } from "../../../platform/http/middleware/validate.js";
-import {
-  importProjects,
-  listProjects,
-  replaceProjects,
-} from "./project.controller.js";
+import { importProjects, listProjects, replaceProjects } from "./project.controller.js";
 
 export const projectRouter = Router();
 projectRouter.get("/", listProjects);

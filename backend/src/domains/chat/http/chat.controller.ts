@@ -5,7 +5,7 @@ import type {
   WorkspaceRulesRequest,
 } from "@charan-interiors/contracts";
 import { processChat, processChatStream } from "../application/chat.service.js";
-import { getServerProviderStatuses, verifyProviderKey } from "../providers/llm.service.js";
+import { verifyProviderKey } from "../providers/llm.service.js";
 import { isValidApiKey } from "../../../platform/config/index.js";
 import {
   runAgenticWorkspaceTools,
@@ -13,7 +13,7 @@ import {
   saveWorkspaceRules,
 } from "../application/tools.service.js";
 import { logEvent } from "../../../platform/observability/logger.js";
-import { getModelMeta, type ProviderId } from "@charan-interiors/contracts";
+import { getModelMeta, PROVIDER_CATALOG, type ProviderId } from "@charan-interiors/contracts";
 import { getProviderCredential } from "../../credentials/application/credentialVault.js";
 import { SKILLS } from "../application/skillRegistry.js";
 import { actionableProviderError } from "../providers/providerErrors.js";
@@ -38,32 +38,24 @@ function isLoopbackRequest(req: Request): boolean {
   return address === "127.0.0.1" || address === "::1";
 }
 
-function requireServerCredentials(req: Request, res: Response): boolean {
-  if (!req.principal) {
-    res.setHeader("WWW-Authenticate", "Bearer");
-    res
-      .status(401)
-      .json({ error: "Sign in to use server-configured provider keys.", requestId: req.id });
-    return false;
-  }
-  if (process.env["ALLOW_SERVER_PROVIDER_KEYS"] === "true") return true;
-  res.status(403).json({
-    error: "Server-configured provider keys are disabled. Connect your own provider key.",
+function requireUserCredential(
+  req: Request,
+  res: Response,
+  payload: ChatRequest,
+  apiKey: string | undefined
+): boolean {
+  if (isValidApiKey(apiKey)) return true;
+  const provider =
+    payload.model === "custom-model"
+      ? payload.customProvider || "custom"
+      : (getModelMeta(payload.model || "gemini-3.8-flash").provider as ProviderId);
+  const providerName = PROVIDER_CATALOG[provider].name;
+  if (!req.principal) res.setHeader("WWW-Authenticate", "Bearer");
+  res.status(401).json({
+    error: `MISSING_API_KEY:${provider}:Connect your own ${providerName} API key in Customize → Providers to use this model.`,
     requestId: req.id,
   });
   return false;
-}
-
-function canUseLocalFreeModel(req: Request, payload: ChatRequest): boolean {
-  if (process.env["OPENROUTER_FREE_MODELS_ENABLED"] !== "true" || !isLoopbackRequest(req)) {
-    return false;
-  }
-  const model = payload.model ? getModelMeta(payload.model) : undefined;
-  return (
-    model?.isFree === true &&
-    model.provider === "custom" &&
-    isValidApiKey(process.env["OPENROUTER_API_KEY"])
-  );
 }
 
 function publicProviderError(message: string): string {
@@ -82,12 +74,7 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
         : undefined;
 
     const credential = requestProviderCredential(req, payload, headerApiKey, headerBaseUrl);
-    if (
-      !isValidApiKey(credential.apiKey) &&
-      !canUseLocalFreeModel(req, payload) &&
-      !requireServerCredentials(req, res)
-    )
-      return;
+    if (!requireUserCredential(req, res, payload, credential.apiKey)) return;
 
     const result = await processChat(payload, {
       injectedApiKey: credential.apiKey,
@@ -140,12 +127,7 @@ export async function handleChatStream(
     });
     return;
   }
-  if (
-    !isValidApiKey(credential.apiKey) &&
-    !canUseLocalFreeModel(req, payload) &&
-    !requireServerCredentials(req, res)
-  )
-    return;
+  if (!requireUserCredential(req, res, payload, credential.apiKey)) return;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -203,11 +185,6 @@ export async function handleChatStream(
   }
 }
 
-export function handleGetProviders(_req: Request, res: Response): void {
-  const providers = getServerProviderStatuses();
-  res.json({ providers });
-}
-
 export function handleGetSkills(_req: Request, res: Response): void {
   res.json({ skills: SKILLS });
 }
@@ -216,10 +193,25 @@ export async function handleVerifyKey(req: Request, res: Response): Promise<void
   const body = req.body as VerifyKeyRequest;
   const headerApiKey =
     typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
+  const headerBaseUrl =
+    typeof req.headers["x-provider-base-url"] === "string"
+      ? req.headers["x-provider-base-url"]
+      : undefined;
+  const savedCredential = req.principal
+    ? getProviderCredential(req.principal.uid, body.provider)
+    : null;
+  const apiKey = body.apiKey || headerApiKey || savedCredential?.apiKey;
+  if (!isValidApiKey(apiKey)) {
+    res.status(401).json({
+      error: `MISSING_API_KEY:${body.provider}:Connect your own ${PROVIDER_CATALOG[body.provider].name} API key first.`,
+      requestId: req.id,
+    });
+    return;
+  }
   const result = await verifyProviderKey({
     provider: body.provider,
-    apiKey: body.apiKey || headerApiKey,
-    baseUrl: body.baseUrl,
+    apiKey,
+    baseUrl: body.baseUrl || headerBaseUrl || savedCredential?.baseUrl,
   });
   res.json(result);
 }

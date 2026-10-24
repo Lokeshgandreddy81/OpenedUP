@@ -240,7 +240,7 @@ describe("Backend API Integration Tests", () => {
         .post("/api/chat")
         .send({ messages: [{ role: "user", content: "Use the configured server key" }] });
       expect(res.status).toBe(401);
-      expect(res.body.error).toContain("Sign in");
+      expect(res.body.error).toContain("Connect your own");
 
       const invalidKeyRes = await request(app)
         .post("/api/chat")

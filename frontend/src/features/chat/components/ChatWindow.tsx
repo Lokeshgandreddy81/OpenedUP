@@ -14,7 +14,13 @@ import {
   type ChatAttachmentFile,
 } from "../../../app/files/chatAttachments";
 import type { ChatConversation, ChatMessage, AiModelId, EffortLevel } from "./chatTypes";
-import type { ComputedRow } from "@charan-interiors/contracts";
+import { getModelMeta, type ComputedRow } from "@charan-interiors/contracts";
+
+const DEFAULT_CHAT_MODEL: AiModelId = "openrouter-nemotron-3.5-lightning-free";
+
+function getSelectableChatModel(model?: AiModelId): AiModelId {
+  return model && getModelMeta(model).isChatModel ? model : DEFAULT_CHAT_MODEL;
+}
 
 const GhostIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 18,
@@ -254,7 +260,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         if (!cancelled) {
           setConversations(loaded);
           setActiveConversationId((current) => current || loaded[0]?.id || "");
-          if (loaded[0]?.model) setSelectedModel(loaded[0].model);
+          if (loaded[0]?.model) setSelectedModel(getSelectableChatModel(loaded[0].model));
         }
       } catch {
         /* offline state remains usable as temporary local chat */
@@ -380,7 +386,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       const generationStartMs = Date.now();
       generationStartedAtRef.current = generationStartMs;
       setThinkingElapsedSeconds(1);
-      let requestTimeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
+      const requestTimeoutId: ReturnType<typeof setTimeout> = setTimeout(
         () => controller.abort(),
         90000
       );
@@ -840,7 +846,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         onSelectConversation={(id) => {
           setActiveConversationId(id);
           const conversation = conversations.find((item) => item.id === id);
-          if (conversation?.model) setSelectedModel(conversation.model);
+          if (conversation?.model) setSelectedModel(getSelectableChatModel(conversation.model));
         }}
         onNewChat={handleNewChat}
         onBack={onClose}

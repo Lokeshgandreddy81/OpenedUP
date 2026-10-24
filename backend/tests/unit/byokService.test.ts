@@ -1,9 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ChatRequestSchema } from "@charan-interiors/contracts";
-import {
-  getServerProviderStatuses,
-  resolveProviderCredentials,
-} from "../../src/domains/chat/providers/llm.service.js";
+import { resolveProviderCredentials } from "../../src/domains/chat/providers/llm.service.js";
 import { runAgenticWorkspaceTools } from "../../src/domains/chat/application/tools.service.js";
 
 describe("BYOK Multi-Provider & Agentic Tools Unit Tests", () => {
@@ -68,11 +65,17 @@ describe("BYOK Multi-Provider & Agentic Tools Unit Tests", () => {
     expect("apiKey" in parsed).toBe(false);
   });
 
-  it("returns server provider status list across all 7 catalog providers", () => {
-    const statuses = getServerProviderStatuses();
-    expect(statuses.length).toBe(7);
-    expect(statuses.some((s) => s.provider === "anthropic")).toBe(true);
-    expect(statuses.some((s) => s.provider === "google")).toBe(true);
+  it("does not use server environment keys to resolve a user's chat credentials", () => {
+    const previousKey = process.env["DEEPSEEK_API_KEY"];
+    process.env["DEEPSEEK_API_KEY"] = "server-configured-key";
+    try {
+      expect(() => resolveProviderCredentials("deepseek-v4.1-flash")).toThrow(
+        /MISSING_API_KEY:deepseek:/
+      );
+    } finally {
+      if (previousKey === undefined) delete process.env["DEEPSEEK_API_KEY"];
+      else process.env["DEEPSEEK_API_KEY"] = previousKey;
+    }
   });
 
   it("executes agentic workspace tools and generates thoughtDetails traces", () => {

@@ -4,6 +4,14 @@ export function actionableProviderError(message: string): string {
   if (message.startsWith("UNKNOWN_MODEL:") || message.startsWith("MISSING_CUSTOM_MODEL:"))
     return message;
 
+  if (/only available on agentic harnesses/i.test(message)) {
+    return "This model's free OpenRouter endpoint is limited to supported agentic apps and cannot be used in standard chat. Choose another model.";
+  }
+
+  if (/provider returned error/i.test(message) && /\b404\b|not found/i.test(message)) {
+    return "This model's OpenRouter provider is currently unavailable. Choose another model and try again later.";
+  }
+
   const status =
     message.match(/(?:error\s*\(|HTTP\s+|status(?:\s+code)?\s*[:=]?\s*)(\d{3})\)?/i)?.[1] ||
     message.match(/\b(400|401|403|404|408|429|5\d\d)\b/)?.[1];

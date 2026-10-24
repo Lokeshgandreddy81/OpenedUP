@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-import os from "node:os";
 import { lookup } from "node:dns/promises";
 import { isIP, type LookupFunction } from "node:net";
 import { Agent } from "undici";
@@ -12,7 +9,7 @@ import {
   type ProviderId,
   type ChatMessage,
 } from "@charan-interiors/contracts";
-import { isValidApiKey, readDevEnvJson } from "../../../platform/config/index.js";
+import { isValidApiKey } from "../../../platform/config/index.js";
 import { logEvent } from "../../../platform/observability/logger.js";
 
 export interface LlmGenerateParams {
@@ -196,13 +193,6 @@ export async function generateMultiProviderChatStream(
   return { text: text || "No response content returned.", modelUsed, providerUsed: provider };
 }
 
-export interface ServerProviderStatus {
-  provider: ProviderId;
-  name: string;
-  configuredOnServer: boolean;
-  source: "env" | "config" | "none";
-}
-
 function isPrivateAddress(address: string): boolean {
   const normalized = address.toLowerCase().split("%")[0] || address.toLowerCase();
   if (normalized.startsWith("::ffff:")) {
@@ -305,91 +295,7 @@ function fetchProviderFromSdk(input: RequestInfo | URL, init?: RequestInit): Pro
   return fetchProvider(url, requestOptions);
 }
 
-/**
- * Reads ~/.config/openedup/config.json (OpenCode-style global BYOK config)
- */
-function readOpenedUpGlobalConfig(): Record<string, string> {
-  const candidates = [
-    path.join(os.homedir(), ".config", "openedup", "config.json"),
-    path.join(process.cwd(), "openedup.json"),
-    path.join(process.cwd(), "..", "openedup.json"),
-  ];
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) {
-        const parsed = JSON.parse(fs.readFileSync(candidate, "utf8"));
-        if (parsed && typeof parsed === "object") {
-          return parsed as Record<string, string>;
-        }
-      }
-    } catch {
-      // ignore malformed config
-    }
-  }
-  return {};
-}
-
-/**
- * Inspects which providers have valid keys already present on the server (.env or ~/.config/openedup/config.json)
- */
-export function getServerProviderStatuses(): ServerProviderStatus[] {
-  const enabledForSignedInUsers = process.env["ALLOW_SERVER_PROVIDER_KEYS"] === "true";
-  const globalCfg = readOpenedUpGlobalConfig();
-  const devEnv = readDevEnvJson();
-  const providers = Object.keys(PROVIDER_CATALOG) as ProviderId[];
-
-  return providers.map((providerId) => {
-    const meta = PROVIDER_CATALOG[providerId];
-    if (!enabledForSignedInUsers) {
-      return {
-        provider: providerId,
-        name: meta.name,
-        configuredOnServer: false,
-        source: "none" as const,
-      };
-    }
-    const cfgVal = globalCfg[meta.envKeyName] || globalCfg[providerId];
-    if (isValidApiKey(cfgVal)) {
-      return {
-        provider: providerId,
-        name: meta.name,
-        configuredOnServer: true,
-        source: "config",
-      };
-    }
-
-    const envCandidates = [
-      process.env[meta.envKeyName],
-      devEnv[meta.envKeyName],
-      providerId === "google" ? process.env["API_KEY"] : undefined,
-      providerId === "google" ? devEnv["API_KEY"] : undefined,
-    ];
-    for (const candidate of envCandidates) {
-      if (isValidApiKey(candidate)) {
-        return {
-          provider: providerId,
-          name: meta.name,
-          configuredOnServer: true,
-          source: "env",
-        };
-      }
-    }
-
-    return {
-      provider: providerId,
-      name: meta.name,
-      configuredOnServer: false,
-      source: "none",
-    };
-  });
-}
-
-/**
- * Resolves the API key for a given provider using OpenCode's BYOK resolution hierarchy:
- * 1. Client-injected key from request header / body
- * 2. Local project or ~/.config/openedup/config.json
- * 3. Server environment variable (e.g. ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY)
- */
+/** Chat generation accepts only a key supplied for this user/request. */
 export function resolveProviderCredentials(
   modelId: string,
   injectedApiKey?: string,
@@ -414,7 +320,6 @@ export function resolveProviderCredentials(
       ? {
           ...modelMeta,
           provider: customProvider || modelMeta.provider,
-          envKeyName: PROVIDER_CATALOG[customProvider || modelMeta.provider].envKeyName,
           upstreamModelId: customModel.trim(),
         }
       : modelMeta;
@@ -428,38 +333,6 @@ export function resolveProviderCredentials(
       apiKey: injectedApiKey.trim(),
       baseUrl: injectedBaseUrl?.trim() || providerMeta.defaultBaseUrl,
     };
-  }
-
-  // 2. Check global config (~/.config/openedup/config.json or openedup.json)
-  const globalCfg = readOpenedUpGlobalConfig();
-  const cfgKey = globalCfg[meta.envKeyName] || globalCfg[meta.provider];
-  if (isValidApiKey(cfgKey)) {
-    return {
-      provider: meta.provider,
-      upstreamModelId: meta.upstreamModelId,
-      apiKey: cfgKey.trim(),
-      baseUrl: providerMeta.defaultBaseUrl,
-    };
-  }
-
-  // 3. Check process.env & .dev.env.json
-  const devEnv = readDevEnvJson();
-  const envCandidates = [
-    process.env[meta.envKeyName],
-    devEnv[meta.envKeyName],
-    meta.provider === "google" ? process.env["API_KEY"] : undefined,
-    meta.provider === "google" ? devEnv["API_KEY"] : undefined,
-  ];
-
-  for (const candidate of envCandidates) {
-    if (isValidApiKey(candidate)) {
-      return {
-        provider: meta.provider,
-        upstreamModelId: meta.upstreamModelId,
-        apiKey: candidate.trim(),
-        baseUrl: providerMeta.defaultBaseUrl,
-      };
-    }
   }
 
   throw new Error(

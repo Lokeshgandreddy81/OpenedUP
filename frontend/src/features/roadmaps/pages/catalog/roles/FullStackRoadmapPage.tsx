@@ -70,11 +70,7 @@ const NodeTile: React.FC<{
 
   if (node.roadmapId) {
     return (
-      <button
-        type="button"
-        onClick={() => onSelectRoadmap(node.roadmapId!)}
-        className={className}
-      >
+      <button type="button" onClick={() => onSelectRoadmap(node.roadmapId!)} className={className}>
         {content}
       </button>
     );

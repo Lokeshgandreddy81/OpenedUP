@@ -81,12 +81,14 @@ describe("CSS Skill Roadmap", () => {
   });
 
   describe("RoadmapPage Catalog Navigation", () => {
-    it("navigates to CSS skill roadmap from the main roadmap catalog", () => {
+    it("navigates to CSS skill roadmap from the main roadmap catalog", async () => {
       renderWithProviders(<RoadmapPage />, ["/roadmap"]);
       const cssCard = screen.getByRole("button", { name: /^css$/i });
       expect(cssCard).toBeInTheDocument();
       fireEvent.click(cssCard);
-      expect(screen.getByRole("heading", { level: 1, name: /css roadmap/i })).toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { level: 1, name: /css roadmap/i })
+      ).toBeInTheDocument();
     });
   });
 });

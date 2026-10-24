@@ -1,15 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  X,
-  Sparkles,
-  Zap,
-  Gauge,
-  Coins,
-  Server,
-  Layers,
-  Clock,
-  ArrowUpRight,
-} from "lucide-react";
+import { X, Sparkles, Zap, Gauge, Coins, Server, Layers, Clock, ArrowUpRight } from "lucide-react";
 import type { AIModelBenchmark } from "../types";
 import { getProvidersForModel } from "../data/benchmarkProviders";
 import { CreatorLogo } from "../ui/CreatorLogo";

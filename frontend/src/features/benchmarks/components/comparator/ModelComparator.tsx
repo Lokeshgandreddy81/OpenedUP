@@ -1,14 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import {
-  Plus,
-  X,
-  Zap,
-  Clock,
-  Check,
-  Trophy,
-  ChevronDown,
-  Search,
-} from "lucide-react";
+import { Plus, X, Zap, Clock, Check, Trophy, ChevronDown, Search } from "lucide-react";
 import { AIModelBenchmark } from "../types";
 import { CreatorLogo, getCreatorColor } from "../ui/CreatorLogo";
 

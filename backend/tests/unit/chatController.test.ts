@@ -16,13 +16,17 @@ vi.mock("../../src/domains/chat/application/tools.service.js", () => ({
 import { handleChatStream } from "../../src/domains/chat/http/chat.controller.js";
 import type { Request, Response } from "express";
 
-function request(remoteAddress: string, model = "openrouter-nemotron-3.5-lightning-free") {
+function request(
+  remoteAddress: string,
+  model = "openrouter-nemotron-3.5-lightning-free",
+  headers: Request["headers"] = {}
+) {
   return {
     body: {
       messages: [{ role: "user", content: "hello" }],
       model,
     },
-    headers: {},
+    headers,
     socket: { remoteAddress },
     id: "test-request",
   } as unknown as Request;
@@ -51,9 +55,10 @@ function response() {
   return res;
 }
 
-describe("unauthenticated free OpenRouter streaming", () => {
+describe("BYOK chat streaming", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Legacy server-key settings must not bypass the per-user key requirement.
     process.env["OPENROUTER_FREE_MODELS_ENABLED"] = "true";
     process.env["OPENROUTER_API_KEY"] = "test-openrouter-api-key";
     processChatStream.mockResolvedValue({
@@ -72,23 +77,37 @@ describe("unauthenticated free OpenRouter streaming", () => {
     });
   });
 
-  it("allows enabled free models from localhost without sign-in", async () => {
+  it("requires a user key for free models, even on localhost with legacy server-key settings", async () => {
     const res = response();
     await handleChatStream(request("127.0.0.1"), res as unknown as Response, vi.fn());
 
-    expect(res.status).not.toHaveBeenCalledWith(401);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.stringContaining("Connect your own OpenRouter") })
+    );
+    expect(processChatStream).not.toHaveBeenCalled();
+  });
+
+  it("accepts a request-scoped user key", async () => {
+    const res = response();
+    await handleChatStream(
+      request("127.0.0.1", undefined, { "x-provider-key": "user-openrouter-key" }),
+      res as unknown as Response,
+      vi.fn()
+    );
+
     expect(res.headers.get("Content-Type")).toBe("text/event-stream");
     expect(res.events.join("")).toContain("event: done");
     expect(res.writableEnded).toBe(true);
   });
 
-  it("does not expose the server key to non-local unauthenticated requests", async () => {
+  it("requires a user key for non-local requests too", async () => {
     const res = response();
     await handleChatStream(request("203.0.113.10"), res as unknown as Response, vi.fn());
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ error: "Sign in to use server-configured provider keys." })
+      expect.objectContaining({ error: expect.stringContaining("Connect your own OpenRouter") })
     );
     expect(processChatStream).not.toHaveBeenCalled();
   });
@@ -100,15 +119,6 @@ describe("unauthenticated free OpenRouter streaming", () => {
       res as unknown as Response,
       vi.fn()
     );
-
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(processChatStream).not.toHaveBeenCalled();
-  });
-
-  it("keeps local free-model access disabled unless explicitly enabled", async () => {
-    process.env["OPENROUTER_FREE_MODELS_ENABLED"] = "false";
-    const res = response();
-    await handleChatStream(request("127.0.0.1"), res as unknown as Response, vi.fn());
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(processChatStream).not.toHaveBeenCalled();

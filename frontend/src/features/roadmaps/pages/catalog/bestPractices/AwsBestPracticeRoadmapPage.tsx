@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   AWS_BEST_PRACTICE_CONTINUE_LEARNING,

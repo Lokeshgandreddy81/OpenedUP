@@ -122,7 +122,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [isFileDragActive, setIsFileDragActive] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
 
-  const { customModelId, customModelProvider } = useProviderKeys();
+  const { customModelId, customModelProvider, hasKey } = useProviderKeys();
   const [modelSearch, setModelSearch] = useState("");
   const [modelHoverCard, setModelHoverCard] = useState<ModelHoverCardState | null>(null);
   const {
@@ -407,6 +407,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           {/* Text input area */}
           <textarea
+            data-testid="chat-composer"
             ref={textareaRef}
             value={text}
             onChange={(e) => {
@@ -784,6 +785,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       <div className="px-3 pt-2 pb-1 text-[10px] font-medium tracking-[0.12em] text-slate-400">
                         FREE MODELS
                       </div>
+                      {!hasKey("custom") && (
+                        <div className="mx-2 mb-1 rounded-xl bg-slate-50 px-2.5 py-2">
+                          <p className="text-[11px] leading-4 text-slate-500">
+                            Free OpenRouter models use your own API key.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsModelDropdownOpen(false);
+                              onOpenProviders?.();
+                            }}
+                            className="mt-1 text-[11px] font-medium text-slate-700 hover:text-slate-950 cursor-pointer"
+                          >
+                            Connect OpenRouter key
+                          </button>
+                        </div>
+                      )}
                       <div className="space-y-0.5">
                         {FREE_MODELS.map((model) => {
                           const isSelected = model.id === selectedModel;

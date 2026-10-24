@@ -13,11 +13,7 @@ import {
   Pencil,
   Download,
 } from "lucide-react";
-import {
-  useArtifacts,
-  type ArtifactItem,
-  type ArtifactVersion,
-} from "../services/artifactStore";
+import { useArtifacts, type ArtifactItem, type ArtifactVersion } from "../services/artifactStore";
 import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 
 export type ArtifactCategory = "All" | "Code" | "Documents";

@@ -18,12 +18,18 @@ import { CodingAgentsPageSkeleton } from "./features/benchmarks/pages/CodingAgen
 const LandingPage = lazy(() => import("./features/chapters/pages/LandingPage/LandingPage"));
 const ResultsPage = lazy(() => import("./features/chapters/pages/ResultsPage/ResultsPage"));
 const RoadmapPage = lazy(() => import("./features/roadmaps/pages/RoadmapPage/RoadmapPage"));
-const BenchmarksPage = lazy(() => import("./features/benchmarks/pages/BenchmarksPage/BenchmarksPage"));
+const BenchmarksPage = lazy(
+  () => import("./features/benchmarks/pages/BenchmarksPage/BenchmarksPage")
+);
 const ChatPage = lazy(() => import("./features/chat/pages/ChatPage/ChatPage"));
 const ProjectsPage = lazy(() => import("./features/projects/pages/ProjectsPage/ProjectsPage"));
 const ScheduledPage = lazy(() => import("./features/scheduled/pages/ScheduledPage/ScheduledPage"));
-const ImageArenaPage = lazy(() => import("./features/benchmarks/pages/ImageArenaPage/ImageArenaPage"));
-const CodingAgentsPage = lazy(() => import("./features/benchmarks/pages/CodingAgentsPage/CodingAgentsPage"));
+const ImageArenaPage = lazy(
+  () => import("./features/benchmarks/pages/ImageArenaPage/ImageArenaPage")
+);
+const CodingAgentsPage = lazy(
+  () => import("./features/benchmarks/pages/CodingAgentsPage/CodingAgentsPage")
+);
 
 export const AppShell: React.FC = () => {
   const {

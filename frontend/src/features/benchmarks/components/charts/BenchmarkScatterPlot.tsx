@@ -18,13 +18,7 @@ import {
   Info,
   Filter,
 } from "lucide-react";
-import {
-  AIModelBenchmark,
-  CreatorId,
-  ScatterMetric,
-  WeightsType,
-  ParetoPoint,
-} from "../types";
+import { AIModelBenchmark, CreatorId, ScatterMetric, WeightsType, ParetoPoint } from "../types";
 import {
   calculateParetoFrontier,
   getMetricValue,
@@ -34,11 +28,7 @@ import {
   findKneePoint,
   isHigherBetter,
 } from "../data/paretoEngine";
-import {
-  CreatorLogo,
-  getCreatorColor,
-  getCreatorName,
-} from "../ui/CreatorLogo";
+import { CreatorLogo, getCreatorColor, getCreatorName } from "../ui/CreatorLogo";
 import { WeightsBadge, ReasoningBadge } from "../ui/BenchmarkBadge";
 
 // ==========================================

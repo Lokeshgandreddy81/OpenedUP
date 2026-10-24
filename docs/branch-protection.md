@@ -12,8 +12,7 @@ To maintain high code quality and security, `main` branch protection must be ena
 2. **Require status checks to pass before merging**
    - Require branches to be up to date before merging
    - Required status checks:
-     - `Build, Lint & Test (Node 20)`
-     - `Build, Lint & Test (Node 22)`
+     - `Build, Lint & Test (Node 24.12.0)`
      - `Dependency Audit & Secret Scan`
      - `CodeQL Static Analysis`
 

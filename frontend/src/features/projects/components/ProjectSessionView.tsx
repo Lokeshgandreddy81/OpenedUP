@@ -359,10 +359,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
                   </span>
                 )}
                 <div className="w-full select-text">
-                  <AssistantResponse
-                    content={msg.content}
-                    isStreaming={Boolean(msg.isStreaming)}
-                  />
+                  <AssistantResponse content={msg.content} isStreaming={Boolean(msg.isStreaming)} />
                 </div>
 
                 {/* Assistant response details and actions */}

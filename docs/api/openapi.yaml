@@ -250,7 +250,7 @@ paths:
                 customProvider:
                   type: string
                   enum: [anthropic, openai, google, deepseek, xai, zhipu, custom]
-                  description: Provider whose saved key and endpoint are used for a custom model.
+                  description: Provider whose user-supplied key and endpoint are used for a custom model.
                 effort:
                   type: string
                   enum: [Low, Medium, High, Extra, Max]
@@ -258,9 +258,7 @@ paths:
         "200":
           description: Generated assistant response.
         "401":
-          description: No API key is configured for the selected provider.
-        "403":
-          description: Server-configured credentials are disabled unless explicitly enabled.
+          description: A user-supplied API key is required for the selected provider.
         "400":
           description: Validation error.
 
@@ -321,16 +319,6 @@ paths:
                 type: string
         "400":
           description: Validation error.
-        "403":
-          description: Server-configured credentials are available only to local requests.
-
-  /api/chat/providers:
-    get:
-      summary: List provider configuration status
-      description: Returns whether each provider has a server key and its source; never returns key material.
-      responses:
-        "200":
-          description: Provider connection status.
 
   /api/chat/verify-key:
     post:

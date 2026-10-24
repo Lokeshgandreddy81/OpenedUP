@@ -15,7 +15,11 @@ import {
   FileCode,
   Scroll,
 } from "lucide-react";
-import { PROVIDER_CATALOG, getModelsForProvider, type ProviderId } from "@charan-interiors/contracts";
+import {
+  PROVIDER_CATALOG,
+  getModelsForProvider,
+  type ProviderId,
+} from "@charan-interiors/contracts";
 import { useProviderKeys, maskApiKey, verifyProviderKeyRequest } from "../services/keyStore";
 import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 
@@ -106,7 +110,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     baseUrls,
     customModelId,
     customModelProvider,
-    serverProviders,
     connectedCount,
     setProviderKey,
     setProviderEndpoint,
@@ -192,8 +195,8 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   const handleSaveProvider = async (providerId: ProviderId) => {
     const rawKey = draftKeys[providerId] ?? keys[providerId] ?? "";
     const rawUrl = draftUrls[providerId] ?? baseUrls[providerId];
-    const serverCredentialAvailable = Boolean(serverProviders[providerId]?.configuredOnServer);
-    if (!rawKey.trim() && (!serverCredentialAvailable || !rawUrl)) return;
+    const endpointOnlyUpdate = !rawKey.trim() && hasKey(providerId) && Boolean(rawUrl);
+    if (!rawKey.trim() && !endpointOnlyUpdate) return;
     try {
       if (rawKey.trim()) await setProviderKey(providerId, rawKey.trim(), rawUrl);
       else await setProviderEndpoint(providerId, rawUrl!);
@@ -449,13 +452,9 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                     Bring Your Own Key (BYOK) Architecture
                   </h2>
                   <p className="text-[12.5px] text-neutral-500 mt-0.5 leading-relaxed">
-                    Saved API keys are encrypted in your signed-in account vault. Local server keys
-                    can be configured in{" "}
-                    <span className="font-mono text-neutral-700">
-                      ~/.config/openedup/config.json
-                    </span>{" "}
-                    or through environment variables. Custom provider URLs remain in this browser;
-                    keys are sent only to the selected provider.
+                    Chat uses your own provider API key. Sign in to encrypt and save it to your
+                    account, or keep it in this browser session. Your key is used to send requests
+                    to the selected provider.
                   </p>
                 </div>
               </div>
@@ -475,8 +474,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
               {filteredProviders.map((provider) => {
                 const isConnected = hasKey(provider.id);
                 const savedKey = keys[provider.id] || "";
-                const serverInfo = serverProviders[provider.id];
-                const isServerFallback = !savedKey && Boolean(serverInfo?.configuredOnServer);
                 const currentInput =
                   draftKeys[provider.id] !== undefined ? draftKeys[provider.id]! : savedKey;
                 const currentUrl =
@@ -534,8 +531,8 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                 />
                                 {savedKey
                                   ? maskApiKey(savedKey)
-                                  : isServerFallback
-                                    ? `Server ${serverInfo?.source} (${serverInfo?.maskedKey || "Active"})`
+                                  : isConnected
+                                    ? "Connected"
                                     : "Not connected"}
                               </span>
                             </div>
@@ -589,11 +586,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                 [provider.id]: e.target.value,
                               }))
                             }
-                            placeholder={
-                              isServerFallback
-                                ? `Override server ${provider.envKeyName} (${provider.keyPlaceholder})`
-                                : `${provider.envKeyName} (${provider.keyPlaceholder})`
-                            }
+                            placeholder={`${provider.envKeyName} (${provider.keyPlaceholder})`}
                             className="w-full h-9 pl-3 pr-9 text-[12.5px] font-mono text-neutral-900 placeholder:text-neutral-400 placeholder:font-sans bg-neutral-50 border border-neutral-200/90 rounded-xl outline-none focus:bg-white focus:border-neutral-400 transition-all"
                           />
                           <button
@@ -614,7 +607,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                         <button
                           type="button"
                           onClick={() => handleSaveProvider(provider.id)}
-                          disabled={!currentInput.trim() && !(isServerFallback && endpointChanged)}
+                          disabled={!currentInput.trim() && !(isConnected && endpointChanged)}
                           className={`h-9 px-3.5 rounded-xl text-[12.5px] font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                             isJustSaved
                               ? "bg-emerald-600 text-white"
@@ -630,11 +623,9 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                             </>
                           ) : (
                             <span>
-                              {isServerFallback
-                                ? endpointChanged
-                                  ? "Save endpoint"
-                                  : "Update"
-                                : savedKey
+                              {isConnected && endpointChanged && !currentInput.trim()
+                                ? "Save endpoint"
+                                : isConnected
                                   ? "Update"
                                   : "Connect"}
                             </span>
@@ -654,7 +645,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           </button>
                         )}
 
-                        {savedKey && (
+                        {isConnected && (
                           <button
                             type="button"
                             onClick={() => handleRemoveProvider(provider.id)}

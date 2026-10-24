@@ -10,7 +10,10 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         "@": path.resolve(import.meta.dirname, "./src"),
-        "@charan-interiors/contracts": path.resolve(import.meta.dirname, "../backend/contracts/src/index.ts"),
+        "@charan-interiors/contracts": path.resolve(
+          import.meta.dirname,
+          "../backend/contracts/src/index.ts"
+        ),
       },
     },
     build: {

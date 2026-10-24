@@ -3,7 +3,10 @@ import type { ReceiptRowInput } from "@charan-interiors/contracts";
 import { resolveApiKey } from "../../../platform/config/index.js";
 import { parseJsonSafely } from "../../../platform/errors/errors.js";
 import { logEvent } from "../../../platform/observability/logger.js";
-import { generateWithModelFallback, getActiveModelId } from "../../chat/providers/gemini.service.js";
+import {
+  generateWithModelFallback,
+  getActiveModelId,
+} from "../../chat/providers/gemini.service.js";
 
 const DUPLICATES_RESPONSE_SCHEMA = {
   type: Type.OBJECT,

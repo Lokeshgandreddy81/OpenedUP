@@ -1,6 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { User } from "firebase/auth";
-import { getFirebaseIdToken, signInForChat, subscribeToChatAuth } from "../integrations/workspaceLiveSync";
+import {
+  getFirebaseIdToken,
+  signInForChat,
+  subscribeToChatAuth,
+} from "../integrations/workspaceLiveSync";
 
 export interface ChatIdentity {
   uid: string;

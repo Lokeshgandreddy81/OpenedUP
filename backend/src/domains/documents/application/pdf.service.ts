@@ -7,7 +7,10 @@ import { PDFDocument } from "pdf-lib";
 import { Type } from "@google/genai";
 import type { ParsedPdfResult } from "@charan-interiors/contracts";
 import { resolveApiKey } from "../../../platform/config/index.js";
-import { validateAndRepairChapters, type NormalizedChapter } from "../../receipts/application/chapterRepair.js";
+import {
+  validateAndRepairChapters,
+  type NormalizedChapter,
+} from "../../receipts/application/chapterRepair.js";
 import { AppError, parseJsonSafely } from "../../../platform/errors/errors.js";
 import { logEvent } from "../../../platform/observability/logger.js";
 import { generateWithModelFallback } from "../../chat/providers/gemini.service.js";

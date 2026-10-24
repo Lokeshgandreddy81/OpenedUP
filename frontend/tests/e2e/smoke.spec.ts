@@ -15,6 +15,12 @@ test.describe("Production Smoke Tests", () => {
     await expect(page.locator("body")).toBeVisible();
   });
 
+  test("roadmap catalog loads the selected roadmap on demand", async ({ page }) => {
+    await page.goto("/roadmap");
+    await page.getByRole("button", { name: "Frontend", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Frontend Roadmap" })).toBeVisible();
+  });
+
   test("projects support keyboard search and mobile create/rename/delete", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/projects");
@@ -85,7 +91,7 @@ test.describe("Production Smoke Tests", () => {
   test("chat and provider settings remain usable at mobile width", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/chat");
-    await expect(page.getByPlaceholder("Prospect, engage, @ to add context")).toBeVisible();
+    await expect(page.getByTestId("chat-composer")).toBeVisible();
     await page.getByRole("button", { name: "Customize" }).click();
     await page.getByRole("button", { name: "Providers" }).click();
     await expect(page.getByText("Anthropic", { exact: true }).first()).toBeVisible();
@@ -110,9 +116,7 @@ test.describe("Production Smoke Tests", () => {
     await providerCard.getByRole("button", { name: "Connect" }).click();
 
     await expect(providerCard.getByRole("button", { name: "Connected" })).toBeVisible();
-    await expect(
-      providerCard.getByText(/Available for this browser session/)
-    ).toBeVisible();
+    await expect(providerCard.getByText(/Available for this browser session/)).toBeVisible();
     expect(await popupPromise).toBeNull();
     expect(await page.evaluate(() => localStorage.getItem("openedup_byok_keys_v1"))).toBeNull();
   });
@@ -135,7 +139,7 @@ test.describe("Production Smoke Tests", () => {
     });
 
     await page.goto("/chat");
-    const input = page.getByPlaceholder("Prospect, engage, @ to add context");
+    const input = page.getByTestId("chat-composer");
     await input.fill("hello");
     await page.getByRole("button", { name: "Send message" }).click();
     await expect(page.getByText(/Provider rate limit reached/)).toBeVisible();

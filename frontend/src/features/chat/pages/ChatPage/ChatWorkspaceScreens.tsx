@@ -3,13 +3,21 @@ import { PageRoute } from "../../../../app/components/PageRoute";
 import { ChatScreenLoading } from "./screens/ChatScreenLoading";
 import type { CustomizeCategory } from "../../../customize";
 
-const ProjectsScreen = lazy(() => import("../../../projects").then((feature) => ({ default: feature.ProjectsScreen })));
+const ProjectsScreen = lazy(() =>
+  import("../../../projects").then((feature) => ({ default: feature.ProjectsScreen }))
+);
 const ArtifactsScreen = lazy(() => import("../../../artifacts"));
 const CustomizeScreen = lazy(() => import("../../../customize"));
 const PluginsScreen = lazy(() => import("../../../plugins"));
-const BenchmarksScreen = lazy(() => import("../../../benchmarks").then((feature) => ({ default: feature.ChatBenchmarksScreen })));
-const RoadmapsScreen = lazy(() => import("../../../roadmaps").then((feature) => ({ default: feature.RoadmapsScreen })));
-const ScheduledTasksScreen = lazy(() => import("../../../scheduled").then((feature) => ({ default: feature.ChatScheduledTasksScreen })));
+const BenchmarksScreen = lazy(() =>
+  import("../../../benchmarks").then((feature) => ({ default: feature.ChatBenchmarksScreen }))
+);
+const RoadmapsScreen = lazy(() =>
+  import("../../../roadmaps").then((feature) => ({ default: feature.RoadmapsScreen }))
+);
+const ScheduledTasksScreen = lazy(() =>
+  import("../../../scheduled").then((feature) => ({ default: feature.ChatScheduledTasksScreen }))
+);
 
 export type ChatWorkspaceView =
   | "chat"

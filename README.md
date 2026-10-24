@@ -3,11 +3,10 @@
 [![CI](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/ci.yml/badge.svg)](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/ci.yml)
 [![Security & Audit](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/security.yml/badge.svg)](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/security.yml)
 [![TypeScript Strict](https://img.shields.io/badge/TypeScript-Strict%205.8-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-22%20LTS-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-24.12%2B-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Audit](https://img.shields.io/badge/Audit-0%20Vulnerabilities-brightgreen.svg)](SECURITY.md)
 
-Enterprise document intelligence and spend reconciliation platform designed for multi-source receipt auditing, PDF structural decomposition, and automated B2B expense verification.
+Document intelligence, spend reconciliation, and AI chat platform for receipt auditing, PDF analysis, and conversational workflows.
 
 ---
 
@@ -24,7 +23,7 @@ graph TD
         ChatInterface["Unify AI Document Assistant"]
     end
 
-    subgraph API ["Modular Server (Node.js 22 + Express)"]
+    subgraph API ["Modular Server (Node.js 24 + Express)"]
         Router["Express Gateway (JSON up to 100MB)"]
         Logger["Pino Structured Logger & Metrics"]
         Validator["Zod Schema Validation Middleware"]
@@ -115,7 +114,7 @@ Each route/screen belongs to one feature and has its own `.tsx` page entry. Feat
 
 ### Prerequisites
 
-- **Node.js**: `v22.14.0+` (LTS recommended, see `.nvmrc`)
+- **Node.js**: `v24.12.0+` (see `.nvmrc`)
 - **npm**: `v10.9.0+`
 - **Python**: `3.9+` (for local standalone PDF chapter extraction)
 
@@ -131,18 +130,21 @@ npm ci
 
 ### Environment Configuration
 
-Copy the example environment configuration into the application directory:
+Copy the environment templates used by the frontend and backend:
 
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-| Variable           | Required | Default | Description                                                                      |
-| :----------------- | :------- | :------ | :------------------------------------------------------------------------------- |
-| `GEMINI_API_KEY`   | Optional | None    | Gemini API Key. If omitted, PDF extraction runs 100% locally via Python/pdf-lib. |
-| `PORT`             | Optional | `3000`  | HTTP port for the API and static asset server.                                   |
-| `GOOGLE_CLIENT_ID` | Optional | None    | OAuth 2.0 client ID for Google Drive and Gmail live synchronization.             |
+| Variable              | Required   | Default | Description                                                                                              |
+| :-------------------- | :--------- | :------ | :------------------------------------------------------------------------------------------------------- |
+| `GEMINI_API_KEY`      | Optional   | None    | Server key for Gemini-powered document extraction. Chat uses a personal provider key entered in the app. |
+| `PORT`                | Optional   | `3000`  | HTTP port for the API and static asset server.                                                           |
+| `FIREBASE_PROJECT_ID` | Optional   | None    | Firebase project used to verify signed-in users and protect saved provider keys.                         |
+| `BYOK_ENCRYPTION_KEY` | Production | None    | Base64-encoded 32-byte key used to encrypt saved provider credentials.                                   |
+
+For local development, run `npm run dev`. The frontend uses Vite's default local port and the backend uses `PORT`; chat requests require a key for the selected provider, entered in the app. Do not commit populated `.env` files.
 
 ---
 
@@ -150,35 +152,36 @@ cp frontend/.env.example frontend/.env
 
 Run all scripts from the repository root:
 
-| Command                                                              | Action                                                                      |
-| :------------------------------------------------------------------- | :-------------------------------------------------------------------------- |
-| `npm run dev`                                                        | Boots application in development mode with live Vite HMR.                   |
-| `npm run build`                                                      | Compiles frontend assets with Vite and compiles server bundle with esbuild. |
-| `npm start --workspace=@charan-interiors/expense-receipts-analytics` | Runs production server (`node dist/server.js`).                             |
-| `npm test`                                                           | Executes complete Vitest suite across all unit & API tests.                 |
-| `npm run test:coverage`                                              | Generates detailed V8 code coverage report.                                 |
-| `npm run typecheck`                                                  | Validates strict TypeScript types with 0 emit across all workspaces.        |
-| `npm run lint`                                                       | Runs ESLint flat configuration check with zero allowable errors.            |
-| `npm run format:check`                                               | Verifies code adherence to Prettier formatting standards.                   |
-| `npm run format`                                                     | Auto-formats all code, markdown, YAML, and configuration files.             |
-| `npm run e2e`                                                        | Executes Playwright end-to-end smoke test suite against running server.     |
-| `npm audit`                                                          | Scans dependency tree for vulnerabilities (0 high/critical allowed).        |
+| Command                 | Action                                                                      |
+| :---------------------- | :-------------------------------------------------------------------------- |
+| `npm run dev`           | Boots application in development mode with live Vite HMR.                   |
+| `npm run build`         | Compiles frontend assets with Vite and compiles server bundle with esbuild. |
+| `npm start`             | Builds the workspaces and starts the production API server.                 |
+| `npm test`              | Executes complete Vitest suite across all unit & API tests.                 |
+| `npm run test:coverage` | Generates detailed V8 code coverage report.                                 |
+| `npm run typecheck`     | Validates strict TypeScript types with 0 emit across all workspaces.        |
+| `npm run lint`          | Runs ESLint flat configuration check with zero allowable errors.            |
+| `npm run format:check`  | Verifies code adherence to Prettier formatting standards.                   |
+| `npm run format`        | Auto-formats all code, markdown, YAML, and configuration files.             |
+| `npm run e2e`           | Executes Playwright end-to-end smoke test suite against running server.     |
+| `npm audit`             | Scans dependency tree for vulnerabilities (0 high/critical allowed).        |
 
 ---
 
-## Verification Gates Checklist
+## Verification
 
-Prior to merging any pull request into `main`, all 9 verification gates must pass:
+CI runs formatting, typechecking, feature-boundary checks, lint, coverage tests, builds, and browser smoke tests on the supported Node versions. The security workflow scans for secrets and dependency vulnerabilities. Run the same checks locally before opening a pull request:
 
-1. :white_check_mark: **Deterministic Install**: `npm ci` completes with zero dependency warnings.
-2. :white_check_mark: **Strict Typecheck**: `npm run typecheck` passes with 0 errors.
-3. :white_check_mark: **Linter**: `npm run lint` passes with 0 errors.
-4. :white_check_mark: **Formatting**: `npm run format:check` passes without discrepancies.
-5. :white_check_mark: **Tests**: `npm test` passes 100% of test suites.
-6. :white_check_mark: **Build**: `npm run build` generates valid client and server distribution files.
-7. :white_check_mark: **Security Audit**: `npm audit` reports 0 vulnerabilities.
-8. :white_check_mark: **Secret Scanning**: Gitleaks reports 0 leaked tokens or keys.
-9. :white_check_mark: **Clean Tree**: Working tree is clean with zero untracked dev artifacts.
+```bash
+npm ci
+npm run format:check
+npm run typecheck
+npm run check:feature-boundaries
+npm run lint
+npm run test:coverage
+npm run build
+npm audit --audit-level=high
+```
 
 ---
 

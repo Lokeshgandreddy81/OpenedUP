@@ -45,7 +45,6 @@ import {
 } from "../../../app/integrations/workspaceLiveSync";
 import { sanitizeRawReceipt } from "../services/sanitizeRawReceipt";
 
-
 const MAX_PARALLEL_BATCHES = 4;
 export interface AppContextType {
   photos: UploadedPhoto[];

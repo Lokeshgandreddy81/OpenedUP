@@ -149,15 +149,7 @@ const DEVOPS: FullStackRoadmapSection = {
   stages: [
     stage("Linux Basics"),
     stage("Basic AWS Services", {
-      right: [
-        g([
-          n("Route53"),
-          n("SES"),
-          n("EC2"),
-          n("VPC"),
-          n("S3"),
-        ]),
-      ],
+      right: [g([n("Route53"), n("SES"), n("EC2"), n("VPC"), n("S3")])],
     }),
     stage("Monit", {
       right: [g([n("Checkpoint — Deployment", undefined, undefined, true)])],
@@ -176,8 +168,4 @@ const DEVOPS: FullStackRoadmapSection = {
   ],
 };
 
-export const FULLSTACK_SECTIONS: FullStackRoadmapSection[] = [
-  FOUNDATIONS,
-  BACKEND,
-  DEVOPS,
-];
+export const FULLSTACK_SECTIONS: FullStackRoadmapSection[] = [FOUNDATIONS, BACKEND, DEVOPS];

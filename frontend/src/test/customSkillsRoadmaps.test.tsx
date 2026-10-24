@@ -84,30 +84,34 @@ describe("Go, GraphQL, and HTML Skill Roadmaps", () => {
   });
 
   describe("Roadmap catalog navigation", () => {
-    it("navigates to Go custom roadmap from catalog", () => {
+    it("navigates to Go custom roadmap from catalog", async () => {
       renderWithProviders(<RoadmapPage />, ["/roadmap"]);
       const goCard = screen.getByRole("button", { name: /^go roadmap$/i });
       expect(goCard).toBeInTheDocument();
       fireEvent.click(goCard);
-      expect(screen.getByRole("heading", { level: 1, name: /go roadmap/i })).toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { level: 1, name: /go roadmap/i })
+      ).toBeInTheDocument();
     });
 
-    it("navigates to GraphQL custom roadmap from catalog", () => {
+    it("navigates to GraphQL custom roadmap from catalog", async () => {
       renderWithProviders(<RoadmapPage />, ["/roadmap"]);
       const graphQlCard = screen.getByRole("button", { name: /^graphql$/i });
       expect(graphQlCard).toBeInTheDocument();
       fireEvent.click(graphQlCard);
       expect(
-        screen.getByRole("heading", { level: 1, name: /graphql roadmap/i })
+        await screen.findByRole("heading", { level: 1, name: /graphql roadmap/i })
       ).toBeInTheDocument();
     });
 
-    it("navigates to HTML custom roadmap from catalog", () => {
+    it("navigates to HTML custom roadmap from catalog", async () => {
       renderWithProviders(<RoadmapPage />, ["/roadmap"]);
       const htmlCard = screen.getByRole("button", { name: /^html$/i });
       expect(htmlCard).toBeInTheDocument();
       fireEvent.click(htmlCard);
-      expect(screen.getByRole("heading", { level: 1, name: /html roadmap/i })).toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { level: 1, name: /html roadmap/i })
+      ).toBeInTheDocument();
     });
   });
 });

@@ -24,15 +24,7 @@ if (typeof window !== "undefined") {
   window.localStorage.removeItem(KEYS_STORAGE_KEY);
 }
 
-export interface ServerProviderInfo {
-  provider: ProviderId;
-  name: string;
-  configuredOnServer: boolean;
-  source: "env" | "config" | "none";
-  maskedKey?: string;
-}
-
-let cachedServerStatus: Partial<Record<ProviderId, ServerProviderInfo>> = {};
+let cachedAccountProviders: ProviderId[] = [];
 
 export function getStoredKeys(): StoredKeysMap {
   return { ...memoryKeys };
@@ -120,10 +112,7 @@ export function removeStoredKey(provider: ProviderId): void {
 }
 
 export function hasKeyForProvider(provider: ProviderId): boolean {
-  const keys = getStoredKeys();
-  const val = keys[provider];
-  if (val && val.trim().length > 0) return true;
-  return Boolean(cachedServerStatus[provider]?.configuredOnServer);
+  return Boolean(getStoredKeys()[provider]?.trim()) || cachedAccountProviders.includes(provider);
 }
 
 export function getKeyForModel(modelId: string): {
@@ -220,9 +209,9 @@ export function useProviderKeys() {
   const { user } = useChatAuth();
   const [keys, setKeys] = useState<StoredKeysMap>(() => getKeyDrafts());
   const [baseUrls, setBaseUrls] = useState<StoredUrlsMap>(() => getStoredBaseUrls());
-  const [serverProviders, setServerProviders] = useState<
-    Partial<Record<ProviderId, ServerProviderInfo>>
-  >(() => cachedServerStatus);
+  const [accountProviders, setAccountProviders] = useState<ProviderId[]>(
+    () => cachedAccountProviders
+  );
   const [customModelId, setCustomModelIdState] = useState(() => getCustomModelId());
   const [customModelProvider, setCustomModelProviderState] = useState(() =>
     getCustomModelProvider()
@@ -233,7 +222,7 @@ export function useProviderKeys() {
   const refresh = useCallback(() => {
     setKeys(getKeyDrafts());
     setBaseUrls(getStoredBaseUrls());
-    setServerProviders({ ...cachedServerStatus });
+    setAccountProviders([...cachedAccountProviders]);
     setCustomModelIdState(getCustomModelId());
     setCustomModelProviderState(getCustomModelProvider());
   }, []);
@@ -241,38 +230,31 @@ export function useProviderKeys() {
   useEffect(() => {
     if (lastUserIdRef.current !== currentUserId) {
       if (lastUserIdRef.current) memoryKeys = {};
-      cachedServerStatus = {};
+      cachedAccountProviders = [];
       setKeys(getKeyDrafts());
+      setAccountProviders([]);
     }
     lastUserIdRef.current = currentUserId;
     let cancelled = false;
     void (async () => {
       try {
-        const serverResponse = await fetch("/api/chat/providers");
-        const serverData = serverResponse.ok
-          ? ((await serverResponse.json()) as { providers?: ServerProviderInfo[] })
-          : null;
-        const next: Partial<Record<ProviderId, ServerProviderInfo>> = {};
-        for (const item of serverData?.providers || []) next[item.provider] = item;
+        let nextAccountProviders: ProviderId[] = [];
         if (currentUserId) {
           const accountResponse = await authenticatedChatFetch("/api/credentials");
           if (accountResponse.ok) {
             const accountData = (await accountResponse.json()) as { providers: ProviderId[] };
-            for (const provider of accountData.providers)
-              next[provider] = {
-                provider,
-                name: PROVIDER_CATALOG[provider].name,
-                configuredOnServer: true,
-                source: "config",
-              };
+            nextAccountProviders = accountData.providers;
           }
         }
         if (!cancelled) {
-          cachedServerStatus = next;
-          setServerProviders(next);
+          cachedAccountProviders = nextAccountProviders;
+          setAccountProviders(nextAccountProviders);
         }
       } catch {
-        if (!cancelled) setServerProviders({});
+        if (!cancelled) {
+          cachedAccountProviders = [];
+          setAccountProviders([]);
+        }
       }
     })();
     return () => {
@@ -301,13 +283,8 @@ export function useProviderKeys() {
         });
         if (!response.ok) throw new Error("Could not save provider key to your account.");
         delete memoryKeys[provider];
-        const status = {
-          provider,
-          name: PROVIDER_CATALOG[provider].name,
-          configuredOnServer: true,
-          source: "config" as const,
-        };
-        cachedServerStatus[provider] = status;
+        if (!cachedAccountProviders.includes(provider))
+          cachedAccountProviders = [...cachedAccountProviders, provider];
       }
       if (apiKey.trim()) delete legacyKeysToImport[provider];
       refresh();
@@ -340,12 +317,7 @@ export function useProviderKeys() {
           }
         );
         if (!response.ok) throw new Error("Could not remove provider key from your account.");
-        const serverResponse = await fetch("/api/chat/providers");
-        const data = serverResponse.ok
-          ? ((await serverResponse.json()) as { providers?: ServerProviderInfo[] })
-          : null;
-        const serverProvider = data?.providers?.find((item) => item.provider === provider);
-        if (serverProvider) cachedServerStatus[provider] = serverProvider;
+        cachedAccountProviders = cachedAccountProviders.filter((item) => item !== provider);
       }
       removeStoredKey(provider);
       refresh();
@@ -369,9 +341,9 @@ export function useProviderKeys() {
   const hasKey = useCallback(
     (provider: ProviderId) => {
       if (memoryKeys[provider]?.trim()) return true;
-      return Boolean(serverProviders[provider]?.configuredOnServer);
+      return accountProviders.includes(provider);
     },
-    [serverProviders]
+    [accountProviders]
   );
 
   const allProviderIds = Object.keys(PROVIDER_CATALOG) as ProviderId[];
@@ -380,7 +352,6 @@ export function useProviderKeys() {
   return {
     keys,
     baseUrls,
-    serverProviders,
     customModelId,
     customModelProvider,
     setCustomModel,

@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { ReadReceiptsRequestSchema, CheckDuplicatesRequestSchema } from "@charan-interiors/contracts";
+import {
+  ReadReceiptsRequestSchema,
+  CheckDuplicatesRequestSchema,
+} from "@charan-interiors/contracts";
 import {
   handleReadReceipts,
   handleCheckDuplicates,

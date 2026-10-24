@@ -1,10 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Search, Check, Plus, Trash2 } from "lucide-react";
-import {
-  CHAT_PLUGINS,
-  setPluginInstalled,
-  useInstalledPluginIds,
-} from "../state/pluginStore";
+import { CHAT_PLUGINS, setPluginInstalled, useInstalledPluginIds } from "../state/pluginStore";
 
 export type PluginCategory = "All" | "Featured" | "Installed";
 export type PluginSubTab = "Yours" | "Discover";

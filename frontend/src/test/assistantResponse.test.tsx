@@ -29,16 +29,16 @@ describe("AssistantResponse", () => {
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "Structured JSON" })).toBeInTheDocument();
     expect(screen.getByRole("list")).toHaveTextContent("Add trace IDs.Define an SLO.");
-    expect(screen.getByText("const ok = true;")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_content, element) =>
+          element?.tagName.toLowerCase() === "code" && element.textContent === "const ok = true;"
+      )
+    ).toBeInTheDocument();
   });
 
   it("does not create links for unsafe URL schemes", () => {
-    render(
-      <AssistantResponse
-        isStreaming={false}
-        content="[unsafe](javascript:alert)"
-      />
-    );
+    render(<AssistantResponse isStreaming={false} content="[unsafe](javascript:alert)" />);
 
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.getByText("unsafe")).toBeInTheDocument();

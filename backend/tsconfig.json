@@ -15,15 +15,10 @@
     "composite": true,
     "baseUrl": ".",
     "paths": {
-      "@charan-interiors/contracts": [
-        "./contracts/src/index.ts"
-      ]
+      "@charan-interiors/contracts": ["./contracts/src/index.ts"]
     }
   },
-  "include": [
-    "src/**/*",
-    "tests/**/*"
-  ],
+  "include": ["src/**/*", "tests/**/*"],
   "references": [
     {
       "path": "./contracts"

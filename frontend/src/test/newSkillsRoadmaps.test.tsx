@@ -101,7 +101,7 @@ describe("Extended Skill Roadmaps Smoke Tests", () => {
     expect(screen.getByRole("heading", { name: /swift.*roadmap/i })).toBeInTheDocument();
   });
 
-  it("navigates to System Design custom roadmap from Explore catalog", () => {
+  it("navigates to System Design custom roadmap from Explore catalog", async () => {
     render(
       <MemoryRouter>
         <RoadmapExplorer onBack={vi.fn()} />
@@ -110,6 +110,8 @@ describe("Extended Skill Roadmaps Smoke Tests", () => {
     const card = screen.getByRole("button", { name: /^system design$/i });
     expect(card).toBeInTheDocument();
     fireEvent.click(card);
-    expect(screen.getByRole("heading", { name: /system design roadmap/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /system design roadmap/i })
+    ).toBeInTheDocument();
   });
 });

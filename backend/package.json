@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=dist/server.js",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node24 --format=esm --packages=external --outfile=dist/server.js",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -21,7 +21,7 @@
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
     "undici": "^7.30.1",
-    "zod": "^3.24.2",
+    "zod": "^4.6.7",
     "@charan-interiors/contracts": "*"
   },
   "devDependencies": {

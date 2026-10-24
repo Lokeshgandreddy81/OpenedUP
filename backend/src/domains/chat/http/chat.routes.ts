@@ -7,7 +7,6 @@ import {
 import {
   handleChat,
   handleChatStream,
-  handleGetProviders,
   handleGetSkills,
   handleVerifyKey,
   handleGetRules,
@@ -19,7 +18,6 @@ export const chatRouter = Router();
 
 chatRouter.post("/chat", validateBody(ChatRequestSchema), handleChat);
 chatRouter.post("/chat/stream", validateBody(ChatRequestSchema), handleChatStream);
-chatRouter.get("/chat/providers", handleGetProviders);
 chatRouter.get("/chat/skills", handleGetSkills);
 chatRouter.post("/chat/verify-key", validateBody(VerifyKeyRequestSchema), handleVerifyKey);
 chatRouter.get("/chat/rules", handleGetRules);

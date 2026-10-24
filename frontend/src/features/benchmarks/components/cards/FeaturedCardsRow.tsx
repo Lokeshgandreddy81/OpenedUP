@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  ArrowRight,
-  Sliders,
-  Sparkles,
-  CheckCircle2,
-  ChevronRight,
-} from "lucide-react";
+import { ArrowRight, Sliders, Sparkles, CheckCircle2, ChevronRight } from "lucide-react";
 import { HaloGlow, SquareGlyph } from "../ui/BrandGlyphs";
 
 export interface FeaturedCardsRowProps {

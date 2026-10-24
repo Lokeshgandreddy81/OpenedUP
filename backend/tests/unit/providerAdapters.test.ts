@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { generateMultiProviderChat, verifyProviderKey } from "../../src/domains/chat/providers/llm.service.js";
+import {
+  generateMultiProviderChat,
+  verifyProviderKey,
+} from "../../src/domains/chat/providers/llm.service.js";
 import { PROVIDER_CATALOG, type ProviderId } from "@charan-interiors/contracts";
 
 const googleGenerateContent = vi.fn();

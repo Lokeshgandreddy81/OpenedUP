@@ -3,7 +3,10 @@ import type { PhotoInput } from "@charan-interiors/contracts";
 import { resolveApiKey } from "../../../platform/config/index.js";
 import { AppError, parseJsonSafely } from "../../../platform/errors/errors.js";
 import { logEvent } from "../../../platform/observability/logger.js";
-import { generateWithModelFallback, getActiveModelId } from "../../chat/providers/gemini.service.js";
+import {
+  generateWithModelFallback,
+  getActiveModelId,
+} from "../../chat/providers/gemini.service.js";
 
 const READ_SYSTEM_INSTRUCTION = `You are a careful, meticulous bookkeeper examining photos of physical receipts and business invoices. Your job is to find every receipt in every photo, box each one accurately, and extract its printed and handwritten values.
 

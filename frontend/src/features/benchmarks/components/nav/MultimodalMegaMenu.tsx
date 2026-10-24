@@ -1,14 +1,5 @@
 import React, { useState } from "react";
-import {
-  Search,
-  Trophy,
-  Swords,
-  Wand2,
-  FlaskConical,
-  Scale,
-  Server,
-  Info,
-} from "lucide-react";
+import { Search, Trophy, Swords, Wand2, FlaskConical, Scale, Server, Info } from "lucide-react";
 import { CreatorLogo } from "../ui/CreatorLogo";
 
 export interface MultimodalMegaMenuProps {

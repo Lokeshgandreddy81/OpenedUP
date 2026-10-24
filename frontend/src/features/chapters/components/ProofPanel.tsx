@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  PanelLeftOpen,
-} from "lucide-react";
+import { PanelLeftOpen } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import type {
   ComputedRow,

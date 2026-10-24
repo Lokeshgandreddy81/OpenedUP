@@ -36,6 +36,9 @@ export interface ChatConversation {
 export type AiModelId =
   | "openrouter-nemotron-3.5-lightning-free"
   | "openrouter-nemotron-3-ultra-free"
+  | "openrouter-inkling-small-free"
+  | "openrouter-nemotron-3-super-free"
+  | "openrouter-flint-v1-free"
   | "claude-opus-5.5"
   | "claude-fable-5.1"
   | "gpt-6-astra"

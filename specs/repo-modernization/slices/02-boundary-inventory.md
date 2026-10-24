@@ -6,17 +6,17 @@ Before moving code, every user-facing route and backend endpoint family has an o
 
 ## Frontend route ownership
 
-| Current path | Current entry | Proposed owner | Current shared dependencies / notes |
-|---|---|---|---|
-| `/` | `LandingPage` | Intake | `AppContext` for file ingestion and workspace state |
-| `/results` | `ResultsPage` | Receipts/results | `AppContext`, `ResultsView`; reconciliation, retries, file ingest |
-| `/roadmap` | `RoadmapPage` | Roadmaps | Role/skill/best-practice pages with separate catalog data |
-| `/benchmarks` | `BenchmarksPage` | Benchmarks | Benchmark catalog, charts, providers, leaderboard, comparator |
-| `/chat` | `ChatPage` | Chat | `ChatWindow` contains chat, artifacts, customize, plugins, benchmarks, chapters, roadmaps view state |
-| `/projects` | `ProjectsPage` | Projects | Project/session/files UI and project persistence |
-| `/scheduled` | `ScheduledPage` | Scheduled tasks | Dedicated scheduled task view |
-| `/image-arena` | `ImageArenaPage` | Benchmarks / image arena | Current standalone route; preserve path |
-| `/coding-agents` | `CodingAgentsPage` | Benchmarks / coding agents | Current standalone route; preserve path |
+| Current path     | Current entry      | Proposed owner             | Current shared dependencies / notes                                                                  |
+| ---------------- | ------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/`              | `LandingPage`      | Intake                     | `AppContext` for file ingestion and workspace state                                                  |
+| `/results`       | `ResultsPage`      | Receipts/results           | `AppContext`, `ResultsView`; reconciliation, retries, file ingest                                    |
+| `/roadmap`       | `RoadmapPage`      | Roadmaps                   | Role/skill/best-practice pages with separate catalog data                                            |
+| `/benchmarks`    | `BenchmarksPage`   | Benchmarks                 | Benchmark catalog, charts, providers, leaderboard, comparator                                        |
+| `/chat`          | `ChatPage`         | Chat                       | `ChatWindow` contains chat, artifacts, customize, plugins, benchmarks, chapters, roadmaps view state |
+| `/projects`      | `ProjectsPage`     | Projects                   | Project/session/files UI and project persistence                                                     |
+| `/scheduled`     | `ScheduledPage`    | Scheduled tasks            | Dedicated scheduled task view                                                                        |
+| `/image-arena`   | `ImageArenaPage`   | Benchmarks / image arena   | Current standalone route; preserve path                                                              |
+| `/coding-agents` | `CodingAgentsPage` | Benchmarks / coding agents | Current standalone route; preserve path                                                              |
 
 The `ChatWindow` internal views are not independent browser routes today. Slice 03 must give each user-facing screen an owned TSX entry and preserve existing navigation while adding deep-linkable routes only where needed. Do not claim current deep-link behavior for those internal views.
 
@@ -24,18 +24,18 @@ The `ChatWindow` internal views are not independent browser routes today. Slice 
 
 ## Backend endpoint ownership
 
-| Existing mount and routes | Proposed domain | Current auth / contract source |
-|---|---|---|
-| `/healthz`, `/readyz` | Platform health | Public; health controllers |
-| `/api/workspace-config` | Identity/platform config | Optional Firebase middleware mounted on `/api`; auth controller |
-| `/api/read-receipts`, `/api/check-duplicates`, `/api/logs` | Receipts/analytics | Current route schemas in `backend/contracts`; receipts controller |
-| `/api/parse-pdf-chapters` | Documents/PDF | Current contracts request schema; PDF controller/service |
-| `/api/chat`, `/api/chat/stream`, `/api/chat/providers`, `/api/chat/skills`, `/api/chat/verify-key`, `/api/chat/rules` | Chat/providers/skills | Optional Firebase identity; contract schemas and existing SSE contract |
-| `/api/benchmarks` | Benchmarks | Current benchmark controller |
-| `/api/conversations/*` | Conversations | `requireFirebaseUser`; SQLite repository and contract schemas |
-| `/api/artifacts/*` | Artifacts | `requireFirebaseUser`; owner/share scope and import/version behavior |
-| `/api/credentials/*` | Credentials | `requireFirebaseUser`; encrypted vault; API never returns key material |
-| `/api/projects/*` | Projects | `requireFirebaseUser`; SQLite snapshot and import behavior |
+| Existing mount and routes                                                                                             | Proposed domain          | Current auth / contract source                                         |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------- |
+| `/healthz`, `/readyz`                                                                                                 | Platform health          | Public; health controllers                                             |
+| `/api/workspace-config`                                                                                               | Identity/platform config | Optional Firebase middleware mounted on `/api`; auth controller        |
+| `/api/read-receipts`, `/api/check-duplicates`, `/api/logs`                                                            | Receipts/analytics       | Current route schemas in `backend/contracts`; receipts controller      |
+| `/api/parse-pdf-chapters`                                                                                             | Documents/PDF            | Current contracts request schema; PDF controller/service               |
+| `/api/chat`, `/api/chat/stream`, `/api/chat/providers`, `/api/chat/skills`, `/api/chat/verify-key`, `/api/chat/rules` | Chat/providers/skills    | Optional Firebase identity; contract schemas and existing SSE contract |
+| `/api/benchmarks`                                                                                                     | Benchmarks               | Current benchmark controller                                           |
+| `/api/conversations/*`                                                                                                | Conversations            | `requireFirebaseUser`; SQLite repository and contract schemas          |
+| `/api/artifacts/*`                                                                                                    | Artifacts                | `requireFirebaseUser`; owner/share scope and import/version behavior   |
+| `/api/credentials/*`                                                                                                  | Credentials              | `requireFirebaseUser`; encrypted vault; API never returns key material |
+| `/api/projects/*`                                                                                                     | Projects                 | `requireFirebaseUser`; SQLite snapshot and import behavior             |
 
 `backend/src/app.ts` mounts middleware in this order: body parsing, request ID, logging, health, optional Firebase identity for `/api`, public/optional-identity API routers, then required-identity mounts for conversations/artifacts/credentials/projects, static frontend, 404, and error handler. Preserve ordering and route-level auth coverage while regrouping modules.
 

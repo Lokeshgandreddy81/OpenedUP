@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Search } from "lucide-react";
 import { RoadmapPage } from "./RoadmapPage";
 import { getRoadmapPageById } from "../pages/catalog/index";
+import { RoadmapPageSkeleton } from "../pages/RoadmapPage/LoadingSkeleton";
 
 interface RoadmapExplorerProps {
   onBack: () => void;
@@ -184,10 +185,12 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack }) => {
 
     if (CustomRoadmapPage) {
       return (
-        <CustomRoadmapPage
-          onBack={() => setSelectedRoadmap(null)}
-          onSelectRoadmap={handleSelectRoadmap}
-        />
+        <Suspense fallback={<RoadmapPageSkeleton />}>
+          <CustomRoadmapPage
+            onBack={() => setSelectedRoadmap(null)}
+            onSelectRoadmap={handleSelectRoadmap}
+          />
+        </Suspense>
       );
     }
 

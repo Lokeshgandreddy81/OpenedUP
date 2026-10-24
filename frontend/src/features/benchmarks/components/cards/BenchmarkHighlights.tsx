@@ -1,16 +1,7 @@
 import React, { useMemo } from "react";
-import {
-  Brain,
-  Zap,
-  Clock,
-  Coins,
-  Layers,
-  ArrowUpRight,
-  Sparkles,
-} from "lucide-react";
+import { Brain, Zap, Clock, Coins, Layers, ArrowUpRight, Sparkles } from "lucide-react";
 import { AIModelBenchmark } from "../types";
 import { CreatorLogo } from "../ui/CreatorLogo";
-
 
 export type HighlightCategoryId = "intelligence" | "speed" | "latency" | "price" | "context";
 

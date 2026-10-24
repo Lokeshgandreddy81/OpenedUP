@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 
-
 export interface AAFooterProps {
   onNavigateSection?: (sectionId: string) => void;
 }

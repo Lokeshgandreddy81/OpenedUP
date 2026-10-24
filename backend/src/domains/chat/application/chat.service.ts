@@ -1,5 +1,8 @@
 import type { ChatRequest } from "@charan-interiors/contracts";
-import { generateMultiProviderChat, generateMultiProviderChatStream } from "../providers/llm.service.js";
+import {
+  generateMultiProviderChat,
+  generateMultiProviderChatStream,
+} from "../providers/llm.service.js";
 import { runAgenticWorkspaceTools } from "./tools.service.js";
 import { executeSkills } from "./skillRegistry.js";
 
