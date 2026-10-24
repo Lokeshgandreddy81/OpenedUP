@@ -308,24 +308,25 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     />
                   </div>
 
-                  {hasCompletedResponse && hasFinishedReveal && (
-                    <div className="mt-2 flex min-h-8 items-center gap-1 text-[13px] text-slate-500">
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(message.id, message.content)}
-                        title={copiedId === message.id ? "Copied!" : "Copy response"}
-                        aria-label={copiedId === message.id ? "Copied response" : "Copy response"}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                      >
-                        {copiedId === message.id ? (
-                          <Check size={14} className="text-emerald-600" />
-                        ) : (
-                          <Copy size={14} strokeWidth={1.8} />
-                        )}
-                      </button>
-                      <MessageTimestamp timestamp={message.timestamp} />
-                    </div>
-                  )}
+                  <div
+                    className={`mt-2 flex h-8 items-center gap-1 text-[13px] text-slate-500 ${hasCompletedResponse && hasFinishedReveal ? "" : "invisible"}`}
+                    aria-hidden={!(hasCompletedResponse && hasFinishedReveal)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(message.id, message.content)}
+                      title={copiedId === message.id ? "Copied!" : "Copy response"}
+                      aria-label={copiedId === message.id ? "Copied response" : "Copy response"}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                    >
+                      {copiedId === message.id ? (
+                        <Check size={14} className="text-emerald-600" />
+                      ) : (
+                        <Copy size={14} strokeWidth={1.8} />
+                      )}
+                    </button>
+                    <MessageTimestamp timestamp={message.timestamp} />
+                  </div>
 
                   {/* Action suggestion chips */}
                   {message.actionChips && message.actionChips.length > 0 && (

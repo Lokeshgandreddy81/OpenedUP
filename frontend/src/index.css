@@ -935,6 +935,8 @@ select:focus-visible,
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .assistant-code-block {
+  width: 100%;
+  min-width: 0;
   margin: 0.9rem 0 1.2rem;
   overflow: hidden;
   border: 1px solid #e4e7eb;
@@ -990,6 +992,9 @@ select:focus-visible,
   outline-offset: 2px;
 }
 .assistant-markdown pre {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   margin: 0;
   overflow: auto;
@@ -1004,6 +1009,10 @@ select:focus-visible,
     SFMono-Regular,
     Menlo,
     monospace;
+}
+.assistant-markdown pre:focus-visible {
+  outline: 2px solid #9aacc4;
+  outline-offset: -2px;
 }
 .assistant-markdown pre code {
   display: block;

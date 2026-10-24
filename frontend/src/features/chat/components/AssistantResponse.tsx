@@ -293,7 +293,10 @@ function AssistantCodeBlock({ language, code }: { language: string; code: string
           <span>{copied ? "Copied" : "Copy code"}</span>
         </button>
       </div>
-      <pre>
+      <pre
+        tabIndex={0}
+        aria-label={`${requestedLanguage || "Code"} code. Scroll horizontally to read long lines.`}
+      >
         <code>{renderCodeTokens(tokens)}</code>
       </pre>
     </div>

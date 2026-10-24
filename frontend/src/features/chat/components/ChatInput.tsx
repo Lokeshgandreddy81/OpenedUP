@@ -119,6 +119,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [attachments, setAttachments] = useState<ChatAttachmentFile[]>([]);
   const [isReadingFiles, setIsReadingFiles] = useState(false);
   const [fileError, setFileError] = useState("");
+  const [isFileDragActive, setIsFileDragActive] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
 
   const { customModelId, customModelProvider } = useProviderKeys();
@@ -291,7 +292,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleFilesSelected = async (files: FileList | null) => {
-    if (!files?.length) return;
+    if (!files?.length || isReadingFiles) return;
     setIsReadingFiles(true);
     setFileError("");
     try {
@@ -313,7 +314,31 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <>
       <div className="w-full max-w-[880px] mx-auto px-4 sm:px-5 select-none">
-        <div className="relative flex flex-col gap-2 rounded-[26px] border border-slate-200/90 bg-white/95 p-4 sm:p-[18px] shadow-[0_10px_34px_rgba(15,23,42,0.07)] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-slate-300 focus-within:shadow-[0_12px_40px_rgba(15,23,42,0.10),0_0_0_3px_rgba(148,163,184,0.08)]">
+        <div
+          onDragEnter={(event) => {
+            if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+            event.preventDefault();
+            setIsFileDragActive(true);
+          }}
+          onDragOver={(event) => {
+            if (Array.from(event.dataTransfer.types).includes("Files")) event.preventDefault();
+          }}
+          onDragLeave={(event) => {
+            if (
+              event.relatedTarget instanceof Node &&
+              event.currentTarget.contains(event.relatedTarget)
+            )
+              return;
+            setIsFileDragActive(false);
+          }}
+          onDrop={(event) => {
+            if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+            event.preventDefault();
+            setIsFileDragActive(false);
+            void handleFilesSelected(event.dataTransfer.files);
+          }}
+          className={`relative flex flex-col gap-2 rounded-[26px] border bg-white/95 p-4 shadow-[0_10px_34px_rgba(15,23,42,0.07)] transition-[border-color,box-shadow,background-color] duration-200 sm:p-[18px] focus-within:border-slate-300 focus-within:shadow-[0_12px_40px_rgba(15,23,42,0.10),0_0_0_3px_rgba(148,163,184,0.08)] ${isFileDragActive ? "border-slate-500 bg-slate-50 ring-4 ring-slate-900/5" : "border-slate-200/90"}`}
+        >
           {/* Hidden file input for plus/attachment */}
           <input
             type="file"
@@ -375,6 +400,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </p>
           )}
 
+          {isFileDragActive && (
+            <div
+              className="pointer-events-none absolute inset-2 z-10 flex items-center justify-center rounded-[20px] border-2 border-dashed border-slate-400 bg-white/90 text-sm font-medium text-slate-700"
+              role="status"
+            >
+              Drop files to attach
+            </div>
+          )}
+
           {/* Text input area */}
           <textarea
             ref={textareaRef}
@@ -386,6 +420,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
+            aria-describedby="composer-keyboard-hint"
             rows={1}
             className="chat-composer-input w-full bg-transparent px-1 text-[16px] leading-6 text-slate-800 placeholder:text-slate-500 resize-none outline-none min-h-[40px] max-h-[200px]"
           />
@@ -571,6 +606,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   </button>
                 </div>
               )}
+              <span
+                id="composer-keyboard-hint"
+                className="sr-only ml-2 text-[13px] text-slate-600 lg:not-sr-only"
+              >
+                Enter to send · Shift+Enter for a new line
+              </span>
             </div>
 
             {/* Right: Model dropdown + Send/Stop button */}
