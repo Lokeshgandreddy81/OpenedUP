@@ -288,7 +288,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                   </div>
 
                   {hasCompletedResponse && hasFinishedReveal && (
-                    <div className="mt-2 flex flex-col items-start text-[13px] text-slate-500">
+                    <div className="mt-2 flex min-h-8 items-center gap-1 text-[13px] text-slate-500">
                       <button
                         type="button"
                         onClick={() => handleCopy(message.id, message.content)}

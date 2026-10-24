@@ -363,7 +363,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
 
                 {/* Assistant response details and actions */}
                 {!msg.isStreaming && (
-                  <div className="flex flex-col items-start gap-1 pt-1 text-neutral-400">
+                  <div className="flex items-center gap-1 pt-1 text-neutral-400">
                     <button
                       type="button"
                       onClick={() => handleCopy(msg.content, msg.id)}
