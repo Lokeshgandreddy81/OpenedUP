@@ -3,6 +3,23 @@ import { ArrowDown, Check, Clock3, Copy, LoaderCircle, Pencil } from "lucide-rea
 import type { ChatMessage } from "./chatTypes";
 import { AssistantResponse } from "./AssistantResponse";
 
+const MessageTimestamp: React.FC<{ timestamp?: string }> = ({ timestamp }) => {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  const isValidDate = !Number.isNaN(date.getTime());
+  return (
+    <time
+      dateTime={isValidDate ? timestamp : undefined}
+      title={isValidDate ? date.toLocaleString() : undefined}
+      className="ml-1 text-[11px] leading-none text-slate-400"
+    >
+      {isValidDate
+        ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        : timestamp}
+    </time>
+  );
+};
+
 interface ChatMessagesProps {
   messages: ChatMessage[];
   isThinking: boolean;
@@ -177,9 +194,12 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         <div className="max-w-full rounded-[24px] bg-[#f2f2f0] px-5 py-3 text-[16px] font-normal leading-[1.6] text-slate-800 select-text break-words">
                           {message.content}
                         </div>
+                        <div className="mt-1.5">
+                          <MessageTimestamp timestamp={message.timestamp} />
+                        </div>
 
                         {/* Action buttons down below the input text: edit & copy */}
-                        <div className="mt-1.5 flex h-7 items-center gap-1 select-none text-slate-500 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/user-msg:opacity-100 sm:group-focus-within/user-msg:opacity-100">
+                        <div className="mt-0.5 flex h-7 items-center gap-1 select-none text-slate-500 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/user-msg:opacity-100 sm:group-focus-within/user-msg:opacity-100">
                           <button
                             type="button"
                             onClick={() => {
@@ -268,7 +288,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                   </div>
 
                   {hasCompletedResponse && hasFinishedReveal && (
-                    <div className="mt-2 flex min-h-8 items-center gap-3 text-[13px] text-slate-500">
+                    <div className="mt-2 flex flex-col items-start text-[13px] text-slate-500">
                       <button
                         type="button"
                         onClick={() => handleCopy(message.id, message.content)}
@@ -282,6 +302,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           <Copy size={14} strokeWidth={1.8} />
                         )}
                       </button>
+                      <MessageTimestamp timestamp={message.timestamp} />
                     </div>
                   )}
 

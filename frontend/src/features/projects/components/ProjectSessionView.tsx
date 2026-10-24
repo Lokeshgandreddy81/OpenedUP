@@ -20,6 +20,23 @@ import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
 import { projectFilesForChat } from "./projectFiles";
 import type { ProjectItem, ProjectSession, ProjectSessionMessage } from "./projectTypes";
 
+const MessageTimestamp: React.FC<{ timestamp?: string }> = ({ timestamp }) => {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  const isValidDate = !Number.isNaN(date.getTime());
+  return (
+    <time
+      dateTime={isValidDate ? timestamp : undefined}
+      title={isValidDate ? date.toLocaleString() : undefined}
+      className="text-[11px] leading-none text-neutral-400"
+    >
+      {isValidDate
+        ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        : timestamp}
+    </time>
+  );
+};
+
 export interface ProjectSessionViewProps {
   project: ProjectItem;
   session: ProjectSession;
@@ -99,7 +116,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
       id: `msg-u-${Date.now()}`,
       role: "user",
       content: trimmed,
-      timestamp: "Just now",
+      timestamp: new Date().toISOString(),
     };
 
     const newMessages = [...session.messages, userMsg];
@@ -165,7 +182,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
               id: assistantId,
               role: "assistant",
               content,
-              timestamp: "Just now",
+              timestamp: new Date().toISOString(),
               isStreaming: true,
             },
           ],
@@ -182,7 +199,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         id: assistantId,
         role: "assistant",
         content: replyContent,
-        timestamp: "Just now",
+        timestamp: new Date().toISOString(),
         thinkingTime: `${Math.max(1, Math.ceil((Date.now() - startMs) / 1000))}s`,
         isStreaming: false,
       };
@@ -204,7 +221,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         id: `msg-a-${Date.now()}`,
         role: "assistant",
         content: `I couldn’t get a response from the model. ${error instanceof Error ? error.message : "Chat service unavailable."}`,
-        timestamp: "Just now",
+        timestamp: new Date().toISOString(),
       };
       onUpdateSession({
         ...session,
@@ -305,8 +322,11 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
             if (msg.role === "user") {
               return (
                 <div key={msg.id} className="flex justify-end">
-                  <div className="bg-neutral-100 text-neutral-900 px-4 py-2 rounded-2xl text-[14px] max-w-md break-words">
-                    {msg.content}
+                  <div className="flex flex-col items-end gap-1.5">
+                    <div className="bg-neutral-100 text-neutral-900 px-4 py-2 rounded-2xl text-[14px] max-w-md break-words">
+                      {msg.content}
+                    </div>
+                    <MessageTimestamp timestamp={msg.timestamp} />
                   </div>
                 </div>
               );
@@ -343,7 +363,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
 
                 {/* Assistant response details and actions */}
                 {!msg.isStreaming && (
-                  <div className="flex items-center gap-2 pt-1 text-neutral-400">
+                  <div className="flex flex-col items-start gap-1 pt-1 text-neutral-400">
                     <button
                       type="button"
                       onClick={() => handleCopy(msg.content, msg.id)}
@@ -357,6 +377,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
                         <Copy size={14} strokeWidth={1.75} />
                       )}
                     </button>
+                    <MessageTimestamp timestamp={msg.timestamp} />
                   </div>
                 )}
               </div>

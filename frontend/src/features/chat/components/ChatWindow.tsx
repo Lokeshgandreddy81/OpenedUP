@@ -226,6 +226,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   id: string;
                   role: "user" | "assistant";
                   content: string;
+                  createdAt: number;
                   metadata: Record<string, unknown>;
                 }>;
               };
@@ -239,6 +240,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     id: message.id,
                     role: message.role,
                     content: message.content,
+                    timestamp: new Date(message.createdAt).toISOString(),
                   }) as ChatMessage
               ),
             };
@@ -382,7 +384,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         id: `msg-u-${Date.now()}`,
         role: "user",
         content: text,
-        timestamp: "Just now",
+        timestamp: new Date().toISOString(),
       };
 
       let targetId = activeConversationId;
@@ -500,6 +502,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             id: msgId,
             role: "assistant",
             content: "",
+            timestamp: new Date().toISOString(),
             isStreaming: true,
           };
           streamedAssistantMessage = assistantMessage;
@@ -536,6 +539,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           );
           updateAssistant({
             isStreaming: false,
+            timestamp: new Date().toISOString(),
             thinkingTime: `${Math.max(1, Math.ceil((Date.now() - generationStartMs) / 1000))}s`,
           });
           pendingStreamMessageId = null;
@@ -572,6 +576,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               id: `msg-a-${Date.now()}`,
               role: "assistant",
               content: `**${providerName} API key required**\n\nConnect a key in **Customize → Providers** to use **${modelName}**.`,
+              timestamp: new Date().toISOString(),
               actionChips: ["Connect API Key"],
             };
 
@@ -609,6 +614,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             const stoppedMessage: ChatMessage = {
               ...streamedAssistantMessage,
               isStreaming: false,
+              timestamp: new Date().toISOString(),
               thinkingTime: `${elapsedSeconds}s`,
             };
             if (isTemporaryChat) {
@@ -659,6 +665,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           id: `msg-a-${Date.now()}`,
           role: "assistant",
           content: `I couldn’t get a response from the model. ${errorMessage}`,
+          timestamp: new Date().toISOString(),
         };
 
         if (pendingStreamMessageId) {
