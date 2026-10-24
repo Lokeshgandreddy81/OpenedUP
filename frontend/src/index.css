@@ -854,6 +854,13 @@ select:focus-visible,
   flex: none;
   transform: translateY(-1px);
 }
+.chat-composer-input {
+  max-height: min(200px, 30dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
 .assistant-markdown > :first-child {
   margin-top: 0;
 }
@@ -956,13 +963,13 @@ select:focus-visible,
 }
 .assistant-code-copy {
   display: inline-flex;
-  width: 1.8rem;
-  min-height: 1.8rem;
+  min-height: 2.25rem;
   align-items: center;
   justify-content: center;
+  gap: 0.45rem;
   border: 0;
   border-radius: 0.45rem;
-  padding: 0.25rem 0.45rem;
+  padding: 0.35rem 0.65rem;
   background: transparent;
   color: #687386;
   font:
@@ -986,6 +993,9 @@ select:focus-visible,
   max-width: 100%;
   margin: 0;
   overflow: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
   padding: 0.95rem 1rem 1.05rem;
   background: #fff;
   color: #303846;

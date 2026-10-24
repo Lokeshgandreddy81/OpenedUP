@@ -46,6 +46,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   const lastUserMessageId = [...messages].reverse().find((message) => message.role === "user")?.id;
   const lastUserMessageIdRef = React.useRef(lastUserMessageId);
   const latestMessage = messages[messages.length - 1];
+  const hasStreamingAssistant = messages.some(
+    (message) => message.role === "assistant" && message.isStreaming
+  );
 
   const markMessageRevealed = React.useCallback((messageId: string) => {
     setRevealedMessageIds((current) => {
@@ -323,7 +326,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             );
           })}
 
-          {isThinking && latestMessage?.role === "user" && (
+          {isThinking && latestMessage?.role === "user" && !hasStreamingAssistant && (
             <div
               className="chat-thinking-status flex gap-2 py-1 text-[13px] text-slate-500 animate-in fade-in duration-200"
               role="timer"

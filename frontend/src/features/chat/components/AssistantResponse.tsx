@@ -290,6 +290,7 @@ function AssistantCodeBlock({ language, code }: { language: string; code: string
           className="assistant-code-copy"
         >
           {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+          <span>{copied ? "Copied" : "Copy code"}</span>
         </button>
       </div>
       <pre>

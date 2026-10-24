@@ -307,7 +307,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={1}
-            className="w-full bg-transparent px-1 text-[16px] leading-6 text-slate-800 placeholder:text-slate-500 resize-none outline-none min-h-[40px] max-h-[200px]"
+            className="chat-composer-input w-full bg-transparent px-1 text-[16px] leading-6 text-slate-800 placeholder:text-slate-500 resize-none outline-none min-h-[40px] max-h-[200px]"
           />
 
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
@@ -493,7 +493,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </div>
 
             {/* Right: Model dropdown + Send/Stop button */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               {/* Model selector dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -514,7 +514,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   }}
                   aria-haspopup="menu"
                   aria-expanded={isModelDropdownOpen}
-                  className={`flex max-w-[min(52vw,360px)] items-center gap-2 rounded-xl px-3 py-2 text-[13px] transition-[background-color,color] duration-150 cursor-pointer font-medium ${
+                  className={`flex max-w-[min(44vw,360px)] items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3 py-2 text-[13px] transition-[background-color,color] duration-150 cursor-pointer font-medium ${
                     isModelDropdownOpen
                       ? "bg-slate-100 text-slate-900"
                       : "bg-slate-50/80 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
@@ -795,22 +795,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 {isDictating && <span className="text-[11px]">Listening</span>}
               </button>
 
-              {/* Send / Stop button: smoothly appears when text is entered or generating */}
-              {(text.trim().length > 0 || isThinking) && (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  title={isThinking ? "Stop generation" : "Send message"}
-                  aria-label={isThinking ? "Stop generation" : "Send message"}
-                  className="h-9 w-9 rounded-full flex items-center justify-center transition-[background-color,transform,box-shadow] duration-150 cursor-pointer bg-slate-900 text-white shadow-[0_2px_5px_rgba(15,23,42,0.2)] hover:bg-slate-700 hover:shadow-[0_4px_10px_rgba(15,23,42,0.24)] active:scale-95 animate-in fade-in zoom-in-95 duration-150"
-                >
-                  {isThinking ? (
-                    <Square size={12} fill="currentColor" strokeWidth={0} />
-                  ) : (
-                    <ArrowUp size={17} strokeWidth={2} />
-                  )}
-                </button>
-              )}
+              {/* Keep send/stop in a stable position so the composer never shifts. */}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!isThinking && !text.trim()}
+                title={isThinking ? "Stop generation" : "Send message"}
+                aria-label={isThinking ? "Stop generation" : "Send message"}
+                className="h-9 w-9 rounded-full flex items-center justify-center transition-[background-color,color,transform,box-shadow] duration-150 cursor-pointer bg-slate-900 text-white shadow-[0_2px_5px_rgba(15,23,42,0.16)] hover:bg-slate-700 hover:shadow-[0_4px_10px_rgba(15,23,42,0.2)] active:scale-95 disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
+              >
+                {isThinking ? (
+                  <Square size={12} fill="currentColor" strokeWidth={0} />
+                ) : (
+                  <ArrowUp size={17} strokeWidth={2} />
+                )}
+              </button>
             </div>
           </div>
           {dictationError && (
