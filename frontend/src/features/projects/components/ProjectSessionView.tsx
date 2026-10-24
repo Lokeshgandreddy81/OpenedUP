@@ -17,6 +17,7 @@ import { getProviderChatRequestConfig, useProviderKeys } from "../../customize";
 import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
+import { AssistantResponse } from "../../chat";
 import { projectFilesForChat } from "./projectFiles";
 import type { ProjectItem, ProjectSession, ProjectSessionMessage } from "./projectTypes";
 
@@ -357,8 +358,12 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
                       : `Thought for ${thinkingDuration}`}
                   </span>
                 )}
-                <div className="font-sans text-[16px] leading-[1.72] font-normal text-neutral-900 tracking-normal break-words whitespace-pre-wrap">
-                  {msg.content}
+                <div className="w-full select-text">
+                  <AssistantResponse
+                    messageId={msg.id}
+                    content={msg.content}
+                    isStreaming={Boolean(msg.isStreaming)}
+                  />
                 </div>
 
                 {/* Assistant response details and actions */}

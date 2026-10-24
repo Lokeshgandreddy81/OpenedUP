@@ -1,4 +1,22 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Check, Copy } from "lucide-react";
+import Prism from "prismjs";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-sql";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-markup";
+import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-c";
+import "prismjs/components/prism-cpp";
+import "prismjs/components/prism-go";
+import "prismjs/components/prism-rust";
 
 interface AssistantResponseProps {
   messageId: string;
@@ -90,6 +108,7 @@ function MarkdownBlocks({ content }: { content: string }) {
     }
 
     if (line.startsWith("```")) {
+      const startIndex = index;
       const language = line.slice(3).trim();
       index += 1;
       const code: string[] = [];
@@ -99,10 +118,7 @@ function MarkdownBlocks({ content }: { content: string }) {
       }
       if (index < lines.length) index += 1;
       blocks.push(
-        <pre key={`code-${index}`} className="assistant-code-block">
-          {language && <span className="assistant-code-language">{language}</span>}
-          <code>{code.join("\n")}</code>
-        </pre>
+        <AssistantCodeBlock key={`code-${startIndex}`} language={language} code={code.join("\n")} />
       );
       continue;
     }
@@ -226,6 +242,77 @@ function MarkdownBlocks({ content }: { content: string }) {
   }
 
   return <>{blocks}</>;
+}
+
+const codeLanguageAliases: Record<string, string> = {
+  py: "python",
+  python3: "python",
+  js: "javascript",
+  jsx: "jsx",
+  ts: "typescript",
+  tsx: "tsx",
+  sh: "bash",
+  shell: "bash",
+  zsh: "bash",
+  html: "markup",
+  xml: "markup",
+  yml: "yaml",
+  "c++": "cpp",
+  golang: "go",
+};
+
+function AssistantCodeBlock({ language, code }: { language: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+  const requestedLanguage = language.trim().split(/\s+/, 1)[0]?.toLowerCase() ?? "";
+  const prismLanguage = codeLanguageAliases[requestedLanguage] ?? requestedLanguage;
+  const grammar = Prism.languages[prismLanguage] as Prism.Grammar | undefined;
+  const tokens = grammar ? Prism.tokenize(code, grammar) : [code];
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard access can be unavailable outside a secure browser context.
+    }
+  };
+
+  return (
+    <div className="assistant-code-block">
+      <div className="assistant-code-toolbar">
+        <span className="assistant-code-language">{requestedLanguage || "code"}</span>
+        <button
+          type="button"
+          onClick={copyCode}
+          aria-label={copied ? "Code copied" : "Copy code"}
+          title={copied ? "Copied" : "Copy code"}
+          className="assistant-code-copy"
+        >
+          {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+        </button>
+      </div>
+      <pre>
+        <code>{renderCodeTokens(tokens)}</code>
+      </pre>
+    </div>
+  );
+}
+
+function renderCodeTokens(tokens: Prism.TokenStream): React.ReactNode {
+  if (!Array.isArray(tokens)) {
+    if (typeof tokens === "string") return tokens;
+    const aliases = Array.isArray(tokens.alias) ? tokens.alias : tokens.alias ? [tokens.alias] : [];
+    return (
+      <span className={["token", tokens.type, ...aliases].join(" ")}>
+        {renderCodeTokens(tokens.content)}
+      </span>
+    );
+  }
+
+  return tokens.map((token, index) => (
+    <React.Fragment key={index}>{renderCodeTokens(token)}</React.Fragment>
+  ));
 }
 
 function startsBlock(lines: string[], index: number): boolean {

@@ -927,15 +927,68 @@ select:focus-visible,
   font-size: 0.88em;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
-.assistant-markdown pre {
-  position: relative;
-  overflow: auto;
+.assistant-code-block {
   margin: 0.9rem 0 1.2rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid #e6e8eb;
-  border-radius: 0.9rem;
-  background: #f8f9fa;
-  color: #242a33;
+  overflow: hidden;
+  border: 1px solid #e4e7eb;
+  border-radius: 0.85rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 3%);
+}
+.assistant-code-toolbar {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0.8rem 0.45rem 1rem;
+  border-bottom: 1px solid #eceef1;
+  background: #fafafa;
+}
+.assistant-code-language {
+  color: #697384;
+  font:
+    500 11px/1.4 "Figtree",
+    "DM Sans",
+    sans-serif;
+  letter-spacing: 0.025em;
+  text-transform: lowercase;
+}
+.assistant-code-copy {
+  display: inline-flex;
+  width: 1.8rem;
+  min-height: 1.8rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.45rem;
+  padding: 0.25rem 0.45rem;
+  background: transparent;
+  color: #687386;
+  font:
+    500 11px/1 "Figtree",
+    "DM Sans",
+    sans-serif;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+.assistant-code-copy:hover {
+  background: #eef1f5;
+  color: #303948;
+}
+.assistant-code-copy:focus-visible {
+  outline: 2px solid #9aacc4;
+  outline-offset: 2px;
+}
+.assistant-markdown pre {
+  max-width: 100%;
+  margin: 0;
+  overflow: auto;
+  padding: 0.95rem 1rem 1.05rem;
+  background: #fff;
+  color: #303846;
   font:
     13px/1.65 ui-monospace,
     SFMono-Regular,
@@ -943,18 +996,58 @@ select:focus-visible,
     monospace;
 }
 .assistant-markdown pre code {
-  white-space: pre;
-}
-.assistant-code-language {
   display: block;
-  margin: -0.15rem 0 0.65rem;
-  color: #8b929c;
-  font:
-    10px/1.4 ui-sans-serif,
-    system-ui,
-    sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font: inherit;
+  white-space: pre;
+  tab-size: 2;
+}
+.assistant-markdown pre code .token {
+  font: inherit;
+}
+.assistant-markdown .token.comment,
+.assistant-markdown .token.prolog,
+.assistant-markdown .token.doctype,
+.assistant-markdown .token.cdata {
+  color: #8a93a1;
+  font-style: italic;
+}
+.assistant-markdown .token.punctuation,
+.assistant-markdown .token.operator {
+  color: #5f6877;
+}
+.assistant-markdown .token.keyword,
+.assistant-markdown .token.atrule {
+  color: #a126c4;
+}
+.assistant-markdown .token.boolean,
+.assistant-markdown .token.number,
+.assistant-markdown .token.constant {
+  color: #07858b;
+}
+.assistant-markdown .token.string,
+.assistant-markdown .token.char,
+.assistant-markdown .token.inserted {
+  color: #25813f;
+}
+.assistant-markdown .token.function {
+  color: #2864d7;
+}
+.assistant-markdown .token.class-name,
+.assistant-markdown .token.builtin {
+  color: #087c87;
+}
+.assistant-markdown .token.property,
+.assistant-markdown .token.parameter {
+  color: #46546a;
+}
+.assistant-markdown .token.tag,
+.assistant-markdown .token.selector,
+.assistant-markdown .token.deleted {
+  color: #c13e66;
+}
+.assistant-markdown .token.important {
+  color: #a126c4;
+  font-weight: 600;
 }
 .assistant-table-scroll {
   width: 100%;
