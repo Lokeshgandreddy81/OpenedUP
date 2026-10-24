@@ -416,7 +416,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            aria-describedby="composer-keyboard-hint"
             rows={1}
             className="chat-composer-input w-full bg-transparent px-1 text-[16px] leading-6 text-slate-800 placeholder:text-slate-500 resize-none outline-none min-h-[40px] max-h-[200px]"
           />
@@ -602,14 +601,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   </button>
                 </div>
               )}
-              <span
-                id="composer-keyboard-hint"
-                className="sr-only ml-2 text-[13px] text-slate-600 lg:not-sr-only"
-              >
-                {isThinking
-                  ? "Response in progress · draft stays in composer"
-                  : "Enter to send · Shift+Enter for a new line"}
-              </span>
             </div>
 
             {/* Right: Model dropdown + Send/Stop button */}
