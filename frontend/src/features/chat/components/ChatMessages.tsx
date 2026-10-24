@@ -50,7 +50,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   onRetryMessage,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [revealedMessageIds, setRevealedMessageIds] = useState<Set<string>>(() => new Set());
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>("");
   const editTextareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -63,15 +62,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   const hasStreamingAssistant = messages.some(
     (message) => message.role === "assistant" && message.isStreaming
   );
-
-  const markMessageRevealed = React.useCallback((messageId: string) => {
-    setRevealedMessageIds((current) => {
-      if (current.has(messageId)) return current;
-      const next = new Set(current);
-      next.add(messageId);
-      return next;
-    });
-  }, []);
 
   React.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -112,15 +102,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior: "smooth" });
     setShowJumpToLatest(false);
   };
-
-  const followLatestDuringReveal = React.useCallback(() => {
-    requestAnimationFrame(() => {
-      const scrollContainer = scrollContainerRef.current;
-      if (scrollContainer && shouldFollowLatestRef.current) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
-    });
-  }, []);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -281,7 +262,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
             // Assistant responses use readable prose and structured Markdown.
             const hasCompletedResponse = !message.isStreaming && message.content.trim().length > 0;
-            const hasFinishedReveal = revealedMessageIds.has(message.id);
             const thinkingDuration = message.thinkingTime?.replace(/^thinking\s*/i, "").trim();
             const isThinkingOnThisResponse = isThinking && message.isStreaming;
             const isRespondingOnThisResponse = isResponding && isThinkingOnThisResponse;
@@ -323,17 +303,14 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                   {/* Assistant prose and structured Markdown */}
                   <div className="w-full select-text">
                     <AssistantResponse
-                      messageId={message.id}
                       content={message.content}
                       isStreaming={Boolean(message.isStreaming)}
-                      onReveal={followLatestDuringReveal}
-                      onComplete={() => markMessageRevealed(message.id)}
                     />
                   </div>
 
                   <div
-                    className={`mt-2 flex h-8 items-center gap-1 text-[13px] text-slate-500 ${hasCompletedResponse && hasFinishedReveal ? "" : "invisible"}`}
-                    aria-hidden={!(hasCompletedResponse && hasFinishedReveal)}
+                    className={`mt-2 flex h-8 items-center gap-1 text-[13px] text-slate-500 ${hasCompletedResponse ? "" : "invisible"}`}
+                    aria-hidden={!hasCompletedResponse}
                   >
                     {message.retryPayload && (
                       <button

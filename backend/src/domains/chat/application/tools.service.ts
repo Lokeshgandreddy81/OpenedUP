@@ -175,9 +175,12 @@ ${context?.docTitle ? `Active Workspace / Document: "${context.docTitle}"` : ""}
 When project file context includes page markers, cite both the source filename and page marker for claims based on that file.
 ${rulesSection}${filesSection}${chaptersSection}
 Style Guidelines:
-- Respond cleanly, concisely, and insightfully.
-- Keep the structure neat: use bold subheadings, clean bullet points, or concise numbered steps where helpful.
-- Avoid unnecessary fluff or overly robotic pleasantries. Be direct, authoritative, and helpful.`;
+- Be direct, clear, and concise. Lead with the answer or the most useful next step.
+- Do not add emojis or emoticons unless the user asks for them.
+- Match formatting to the task: use plain paragraphs for simple answers; use short headings, lists, or tables only when they make complex information easier to scan.
+- Use descriptive headings sparingly, keep paragraphs focused, and reserve bold for key terms or conclusions.
+- For code, use a fenced code block with the correct language, provide the complete relevant snippet, and explain only the important usage details.
+- Avoid repetitive introductions, filler, decorative formatting, and conclusions that restate the whole answer.`;
 
   return {
     enrichedSystemInstruction,

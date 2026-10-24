@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import Prism from "prismjs";
 import "prismjs/components/prism-python";
@@ -19,84 +19,19 @@ import "prismjs/components/prism-go";
 import "prismjs/components/prism-rust";
 
 interface AssistantResponseProps {
-  messageId: string;
   content: string;
   isStreaming: boolean;
-  onReveal?: () => void;
-  onComplete?: () => void;
 }
 
-export const AssistantResponse: React.FC<AssistantResponseProps> = ({
-  messageId,
-  content,
-  isStreaming,
-  onReveal,
-  onComplete,
-}) => {
-  const [visibleContent, setVisibleContent] = useState(() => (isStreaming ? "" : content));
-  const visibleRef = useRef(visibleContent);
-  const contentRef = useRef(content);
-  const streamingRef = useRef(isStreaming);
-  const onRevealRef = useRef(onReveal);
-  const onCompleteRef = useRef(onComplete);
-  contentRef.current = content;
-  streamingRef.current = isStreaming;
-  onRevealRef.current = onReveal;
-  onCompleteRef.current = onComplete;
-
-  useEffect(() => {
-    if (!streamingRef.current && visibleRef.current.length >= contentRef.current.length) {
-      onCompleteRef.current?.();
-      return;
-    }
-
-    let frame = 0;
-    let lastTime = performance.now();
-    let characterCredit = 0;
-    let pauseUntil = 0;
-    const reveal = (now: number) => {
-      if (now < pauseUntil) {
-        frame = requestAnimationFrame(reveal);
-        return;
-      }
-
-      characterCredit += (now - lastTime) * 0.028;
-      lastTime = now;
-      const available = contentRef.current.length - visibleRef.current.length;
-      const budget = Math.floor(characterCredit);
-      if (available > 0 && budget > 0) {
-        let nextIndex = Math.min(contentRef.current.length, visibleRef.current.length + budget);
-        const wordEnd = contentRef.current.indexOf(" ", nextIndex);
-        if (wordEnd >= nextIndex && wordEnd - visibleRef.current.length < 18) {
-          nextIndex = wordEnd + 1;
-        }
-        characterCredit = Math.max(0, characterCredit - (nextIndex - visibleRef.current.length));
-        const next = contentRef.current.slice(0, nextIndex);
-        const addedText = next.slice(visibleRef.current.length);
-        visibleRef.current = next;
-        setVisibleContent(next);
-        onRevealRef.current?.();
-        if (/\n\s*$/.test(addedText)) pauseUntil = now + 220;
-        else if (/[.!?]$/.test(addedText)) pauseUntil = now + 150;
-      }
-      if (streamingRef.current || visibleRef.current.length < contentRef.current.length) {
-        frame = requestAnimationFrame(reveal);
-      } else {
-        onCompleteRef.current?.();
-      }
-    };
-    frame = requestAnimationFrame(reveal);
-    return () => cancelAnimationFrame(frame);
-  }, [messageId]);
-
+export const AssistantResponse: React.FC<AssistantResponseProps> = ({ content, isStreaming }) => {
   return (
     <div className="assistant-markdown min-w-0 w-full" aria-live={isStreaming ? "off" : undefined}>
-      <MarkdownBlocks content={visibleContent} />
+      <MarkdownBlocks content={content} isStreaming={isStreaming} />
     </div>
   );
 };
 
-function MarkdownBlocks({ content }: { content: string }) {
+function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming: boolean }) {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const blocks: React.ReactNode[] = [];
   let index = 0;
@@ -118,7 +53,12 @@ function MarkdownBlocks({ content }: { content: string }) {
       }
       if (index < lines.length) index += 1;
       blocks.push(
-        <AssistantCodeBlock key={`code-${startIndex}`} language={language} code={code.join("\n")} />
+        <AssistantCodeBlock
+          key={`code-${startIndex}`}
+          language={language}
+          code={code.join("\n")}
+          isStreaming={isStreaming}
+        />
       );
       continue;
     }
@@ -261,7 +201,15 @@ const codeLanguageAliases: Record<string, string> = {
   golang: "go",
 };
 
-function AssistantCodeBlock({ language, code }: { language: string; code: string }) {
+function AssistantCodeBlock({
+  language,
+  code,
+  isStreaming,
+}: {
+  language: string;
+  code: string;
+  isStreaming: boolean;
+}) {
   const [copied, setCopied] = useState(false);
   const requestedLanguage = language.trim().split(/\s+/, 1)[0]?.toLowerCase() ?? "";
   const prismLanguage = codeLanguageAliases[requestedLanguage] ?? requestedLanguage;
@@ -282,16 +230,22 @@ function AssistantCodeBlock({ language, code }: { language: string; code: string
     <div className="assistant-code-block">
       <div className="assistant-code-toolbar">
         <span className="assistant-code-language">{requestedLanguage || "code"}</span>
-        <button
-          type="button"
-          onClick={copyCode}
-          aria-label={copied ? "Code copied" : "Copy code"}
-          title={copied ? "Copied" : "Copy code"}
-          className="assistant-code-copy"
-        >
-          {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-          <span>{copied ? "Copied" : "Copy code"}</span>
-        </button>
+        {!isStreaming && (
+          <button
+            type="button"
+            onClick={copyCode}
+            aria-label={copied ? "Code copied" : "Copy code"}
+            title={copied ? "Copied" : "Copy code"}
+            className="assistant-code-copy"
+          >
+            {copied ? (
+              <Check size={14} aria-hidden="true" />
+            ) : (
+              <Copy size={14} aria-hidden="true" />
+            )}
+            <span>{copied ? "Copied" : "Copy code"}</span>
+          </button>
+        )}
       </div>
       <pre
         tabIndex={0}

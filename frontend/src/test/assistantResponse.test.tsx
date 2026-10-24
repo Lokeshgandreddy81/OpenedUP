@@ -7,7 +7,6 @@ describe("AssistantResponse", () => {
   it("renders headings, lists, tables, and code blocks as readable structures", () => {
     render(
       <AssistantResponse
-        messageId="answer-1"
         isStreaming={false}
         content={[
           "## Observability",
@@ -36,7 +35,6 @@ describe("AssistantResponse", () => {
   it("does not create links for unsafe URL schemes", () => {
     render(
       <AssistantResponse
-        messageId="answer-2"
         isStreaming={false}
         content="[unsafe](javascript:alert)"
       />
