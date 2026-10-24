@@ -194,12 +194,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         <div className="max-w-full rounded-[24px] bg-[#f2f2f0] px-5 py-3 text-[16px] font-normal leading-[1.6] text-slate-800 select-text break-words">
                           {message.content}
                         </div>
-                        <div className="mt-1.5">
-                          <MessageTimestamp timestamp={message.timestamp} />
-                        </div>
-
                         {/* Action buttons down below the input text: edit & copy */}
-                        <div className="mt-0.5 flex h-7 items-center gap-1 select-none text-slate-500 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/user-msg:opacity-100 sm:group-focus-within/user-msg:opacity-100">
+                        <div className="mt-1.5 flex h-7 items-center gap-1 select-none text-slate-500 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/user-msg:opacity-100 sm:group-focus-within/user-msg:opacity-100">
                           <button
                             type="button"
                             onClick={() => {
@@ -236,6 +232,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                               <Copy size={13} strokeWidth={1.8} />
                             )}
                           </button>
+                          <MessageTimestamp timestamp={message.timestamp} />
                         </div>
                       </>
                     )}
