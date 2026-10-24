@@ -330,7 +330,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
                     {isThinkingOnThisResponse ? (
                       <LoaderCircle size={13} className="animate-spin" aria-hidden="true" />
                     ) : (
-                      <Clock3 size={13} strokeWidth={1.8} />
+                      <Clock3 size={13} strokeWidth={1.8} className="shrink-0 translate-y-px" />
                     )}
                     {isThinkingOnThisResponse
                       ? `Thinking · ${thinkingElapsedSeconds}s`

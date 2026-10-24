@@ -240,7 +240,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       {isThinkingOnThisResponse ? (
                         <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
                       ) : (
-                        <Clock3 size={14} strokeWidth={1.8} />
+                        <Clock3 size={14} strokeWidth={1.8} className="shrink-0 translate-y-px" />
                       )}
                       {isThinkingOnThisResponse ? (
                         <span
