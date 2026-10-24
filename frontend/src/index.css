@@ -845,6 +845,15 @@ select:focus-visible,
   line-height: 1.72;
   overflow-wrap: anywhere;
 }
+.chat-thinking-status {
+  align-items: center;
+  line-height: 1;
+}
+.chat-thinking-status > svg {
+  display: block;
+  flex: none;
+  transform: translateY(-1px);
+}
 .assistant-markdown > :first-child {
   margin-top: 0;
 }

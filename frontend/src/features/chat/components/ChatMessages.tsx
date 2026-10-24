@@ -256,11 +256,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
               >
                 <div className="min-w-0 flex-1">
                   {(isThinkingOnThisResponse || (hasCompletedResponse && thinkingDuration)) && (
-                    <div className="mb-2 flex min-h-7 items-center gap-2 text-[13px] text-slate-500">
+                    <div className="chat-thinking-status mb-2 flex min-h-7 gap-2 text-[13px] text-slate-500">
                       {isThinkingOnThisResponse ? (
                         <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
                       ) : (
-                        <Clock3 size={14} strokeWidth={1.8} className="shrink-0 translate-y-px" />
+                        <Clock3 size={14} strokeWidth={1.8} />
                       )}
                       {isThinkingOnThisResponse ? (
                         <span
@@ -328,7 +328,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
           {isThinking && latestMessage?.role === "user" && (
             <div
-              className="flex items-center gap-2 py-1 text-[13px] text-slate-500 animate-in fade-in duration-200"
+              className="chat-thinking-status flex gap-2 py-1 text-[13px] text-slate-500 animate-in fade-in duration-200"
               role="timer"
               aria-label={`Thinking for ${thinkingElapsedSeconds} seconds`}
             >

@@ -345,12 +345,12 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
                         ? `Thinking for ${thinkingElapsedSeconds} seconds`
                         : undefined
                     }
-                    className="inline-flex items-center gap-1.5 text-[12px] text-neutral-500"
+                    className="chat-thinking-status inline-flex gap-1.5 text-[12px] text-neutral-500"
                   >
                     {isThinkingOnThisResponse ? (
                       <LoaderCircle size={13} className="animate-spin" aria-hidden="true" />
                     ) : (
-                      <Clock3 size={13} strokeWidth={1.8} className="shrink-0 translate-y-px" />
+                      <Clock3 size={13} strokeWidth={1.8} />
                     )}
                     {isThinkingOnThisResponse
                       ? `Thinking · ${thinkingElapsedSeconds}s`
@@ -385,7 +385,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
           })}
           {isGenerating && session.messages.at(-1)?.role === "user" && (
             <div
-              className="inline-flex items-center gap-1.5 text-[12px] text-neutral-500"
+              className="chat-thinking-status inline-flex gap-1.5 text-[12px] text-neutral-500"
               role="timer"
               aria-label={`Thinking for ${thinkingElapsedSeconds} seconds`}
             >
