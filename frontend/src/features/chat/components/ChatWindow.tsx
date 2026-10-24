@@ -169,10 +169,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [onViewChange]);
 
   const [isThinking, setIsThinking] = useState(false);
+  const [thinkingElapsedSeconds, setThinkingElapsedSeconds] = useState(0);
   const activeRequestControllerRef = useRef<AbortController | null>(null);
+  const generationStartedAtRef = useRef<number | null>(null);
   const userStoppedRequestRef = useRef(false);
   const [isTemporaryChat, setIsTemporaryChat] = useState(false);
   const [temporaryMessages, setTemporaryMessages] = useState<ChatMessage[]>([]);
+
+  useEffect(() => {
+    if (!isThinking || generationStartedAtRef.current === null) return;
+
+    const updateElapsedTime = () => {
+      const startedAt = generationStartedAtRef.current;
+      if (startedAt !== null) {
+        setThinkingElapsedSeconds(Math.max(1, Math.ceil((Date.now() - startedAt) / 1000)));
+      }
+    };
+    updateElapsedTime();
+    const timer = window.setInterval(updateElapsedTime, 1000);
+    return () => window.clearInterval(timer);
+  }, [isThinking]);
 
   // Cleared all dummy chats: Start fresh with an empty list
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -353,6 +369,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       userStoppedRequestRef.current = false;
       setIsThinking(true);
       let generationStartMs = Date.now();
+      generationStartedAtRef.current = generationStartMs;
+      setThinkingElapsedSeconds(1);
       let requestTimeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
         () => controller.abort(),
         90000
@@ -470,6 +488,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           body,
         };
         generationStartMs = Date.now();
+        generationStartedAtRef.current = generationStartMs;
+        setThinkingElapsedSeconds(1);
         const response = user
           ? await authenticatedChatFetch("/api/chat/stream", requestInit)
           : await fetch("/api/chat/stream", requestInit);
@@ -516,7 +536,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           );
           updateAssistant({
             isStreaming: false,
-            thinkingTime: `${Math.max(1, Math.round((Date.now() - generationStartMs) / 1000))}s`,
+            thinkingTime: `${Math.max(1, Math.ceil((Date.now() - generationStartMs) / 1000))}s`,
           });
           pendingStreamMessageId = null;
           if (
@@ -583,7 +603,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           );
         }
       } catch (error: unknown) {
-        const elapsedSeconds = Math.max(1, Math.round((Date.now() - generationStartMs) / 1000));
+        const elapsedSeconds = Math.max(1, Math.ceil((Date.now() - generationStartMs) / 1000));
         if (userStoppedRequestRef.current) {
           if (streamedAssistantMessage) {
             const stoppedMessage: ChatMessage = {
@@ -678,6 +698,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           activeRequestControllerRef.current = null;
         userStoppedRequestRef.current = false;
         if (requestTimeoutId) clearTimeout(requestTimeoutId);
+        generationStartedAtRef.current = null;
         setIsThinking(false);
       }
     },
@@ -953,6 +974,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <ChatMessages
                 messages={currentMessages}
                 isThinking={isThinking}
+                thinkingElapsedSeconds={thinkingElapsedSeconds}
                 onSelectActionChip={(chip) => {
                   if (chip === "Export findings" || chip === "Export sequence") {
                     const lastAssistant = [...currentMessages]

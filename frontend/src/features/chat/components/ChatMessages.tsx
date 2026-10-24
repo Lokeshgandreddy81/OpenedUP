@@ -6,6 +6,7 @@ import { AssistantResponse } from "./AssistantResponse";
 interface ChatMessagesProps {
   messages: ChatMessage[];
   isThinking: boolean;
+  thinkingElapsedSeconds: number;
   onSelectActionChip?: (chipText: string) => void;
   onEditMessage?: (messageId: string, currentContent: string) => void;
 }
@@ -13,6 +14,7 @@ interface ChatMessagesProps {
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
   messages,
   isThinking,
+  thinkingElapsedSeconds,
   onSelectActionChip,
   onEditMessage,
 }) => {
@@ -215,12 +217,34 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             // Assistant responses use readable prose and structured Markdown.
             const hasCompletedResponse = !message.isStreaming && message.content.trim().length > 0;
             const thinkingDuration = message.thinkingTime?.replace(/^thinking\s*/i, "").trim();
+            const isThinkingOnThisResponse = isThinking && message.isStreaming;
             return (
               <div
                 key={message.id}
                 className="group/assistant flex items-start w-full max-w-[800px]"
               >
                 <div className="min-w-0 flex-1">
+                  {(isThinkingOnThisResponse || (hasCompletedResponse && thinkingDuration)) && (
+                    <div className="mb-2 flex min-h-7 items-center gap-2 text-[13px] text-slate-500">
+                      {isThinkingOnThisResponse ? (
+                        <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
+                      ) : (
+                        <Clock3 size={14} strokeWidth={1.8} />
+                      )}
+                      {isThinkingOnThisResponse ? (
+                        <span
+                          role="timer"
+                          aria-label={`Thinking for ${thinkingElapsedSeconds} seconds`}
+                        >
+                          Thinking · {thinkingElapsedSeconds}s
+                        </span>
+                      ) : (
+                        <span aria-label={`Thought for ${thinkingDuration}`}>
+                          Thought for {thinkingDuration}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {/* Assistant prose and structured Markdown */}
                   <div className="w-full select-text">
                     <AssistantResponse
@@ -233,15 +257,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
                   {hasCompletedResponse && (
                     <div className="mt-2 flex min-h-8 items-center gap-3 text-[13px] text-slate-500">
-                      {thinkingDuration && (
-                        <span
-                          className="inline-flex items-center gap-1.5"
-                          aria-label={`Thought for ${thinkingDuration}`}
-                        >
-                          <Clock3 size={13} strokeWidth={1.8} />
-                          Thought for {thinkingDuration}
-                        </span>
-                      )}
                       <button
                         type="button"
                         onClick={() => handleCopy(message.id, message.content)}
@@ -279,9 +294,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
           })}
 
           {isThinking && latestMessage?.role === "user" && (
-            <div className="flex items-center gap-2 py-1 text-[13px] text-slate-500 animate-in fade-in duration-200">
+            <div
+              className="flex items-center gap-2 py-1 text-[13px] text-slate-500 animate-in fade-in duration-200"
+              role="timer"
+              aria-label={`Thinking for ${thinkingElapsedSeconds} seconds`}
+            >
               <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
-              <span>Thinking…</span>
+              <span>Thinking · {thinkingElapsedSeconds}s</span>
             </div>
           )}
         </div>
