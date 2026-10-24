@@ -173,6 +173,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [onViewChange]);
 
   const [isThinking, setIsThinking] = useState(false);
+  const [isResponding, setIsResponding] = useState(false);
   const [thinkingElapsedSeconds, setThinkingElapsedSeconds] = useState(0);
   const activeRequestControllerRef = useRef<AbortController | null>(null);
   const generationStartedAtRef = useRef<number | null>(null);
@@ -375,7 +376,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       activeRequestControllerRef.current = controller;
       userStoppedRequestRef.current = false;
       setIsThinking(true);
-      let generationStartMs = Date.now();
+      setIsResponding(false);
+      const generationStartMs = Date.now();
       generationStartedAtRef.current = generationStartMs;
       setThinkingElapsedSeconds(1);
       let requestTimeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
@@ -519,9 +521,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           signal: controller.signal,
           body,
         };
-        generationStartMs = Date.now();
-        generationStartedAtRef.current = generationStartMs;
-        setThinkingElapsedSeconds(1);
         const response = user
           ? await authenticatedChatFetch("/api/chat/stream", requestInit)
           : await fetch("/api/chat/stream", requestInit);
@@ -564,13 +563,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   : conv
               )
             );
-          await consumeChatStream(response, (delta) =>
-            updateAssistant({ content: assistantMessage.content + delta })
-          );
+          let firstTokenAt: number | null = null;
+          await consumeChatStream(response, (delta) => {
+            if (!delta) return;
+            if (firstTokenAt === null) {
+              firstTokenAt = Date.now();
+              const elapsedThinking = Math.max(
+                1,
+                Math.ceil((firstTokenAt - generationStartMs) / 1000)
+              );
+              generationStartedAtRef.current = firstTokenAt;
+              setThinkingElapsedSeconds(1);
+              setIsResponding(true);
+              updateAssistant({ thinkingTime: `${elapsedThinking}s` });
+            }
+            updateAssistant({ content: assistantMessage.content + delta });
+          });
+          const elapsedThinking = firstTokenAt
+            ? Math.max(1, Math.ceil((firstTokenAt - generationStartMs) / 1000))
+            : Math.max(1, Math.ceil((Date.now() - generationStartMs) / 1000));
           updateAssistant({
             isStreaming: false,
             timestamp: new Date().toISOString(),
-            thinkingTime: `${Math.max(1, Math.ceil((Date.now() - generationStartMs) / 1000))}s`,
+            thinkingTime: `${elapsedThinking}s`,
           });
           pendingStreamMessageId = null;
           if (
@@ -645,7 +660,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               ...streamedAssistantMessage,
               isStreaming: false,
               timestamp: new Date().toISOString(),
-              thinkingTime: `${elapsedSeconds}s`,
+              generationStatus: "stopped",
+              thinkingTime: streamedAssistantMessage.thinkingTime ?? `${elapsedSeconds}s`,
             };
             if (isTemporaryChat) {
               setTemporaryMessages((prev) =>
@@ -696,6 +712,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           role: "assistant",
           content: `I couldn’t get a response from the model. ${errorMessage}`,
           timestamp: new Date().toISOString(),
+          generationStatus: "error",
+          retryPayload: { prompt: text, model, effort, attachments },
         };
 
         if (pendingStreamMessageId) {
@@ -737,6 +755,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         if (requestTimeoutId) clearTimeout(requestTimeoutId);
         generationStartedAtRef.current = null;
         setIsThinking(false);
+        setIsResponding(false);
       }
     },
     [
@@ -1013,6 +1032,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <ChatMessages
                 messages={currentMessages}
                 isThinking={isThinking}
+                isResponding={isResponding}
                 thinkingElapsedSeconds={thinkingElapsedSeconds}
                 onSelectActionChip={(chip) => {
                   if (chip === "Export findings" || chip === "Export sequence") {
@@ -1041,6 +1061,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   handleSendMessage(chip, selectedModel);
                 }}
                 onEditMessage={handleEditMessage}
+                onRetryMessage={(messageId, retryPayload) => {
+                  const failedIndex = currentMessages.findIndex(
+                    (message) => message.id === messageId
+                  );
+                  if (failedIndex < 0) return;
+                  let previousUserIndex = -1;
+                  for (let index = 0; index < failedIndex; index += 1) {
+                    if (currentMessages[index]?.role === "user") previousUserIndex = index;
+                  }
+                  const priorMessages = currentMessages.slice(0, Math.max(0, previousUserIndex));
+                  void handleSendMessage(
+                    retryPayload.prompt,
+                    retryPayload.model,
+                    retryPayload.effort,
+                    priorMessages,
+                    retryPayload.attachments
+                  );
+                }}
               />
 
               {/* Centered Floating Bottom Input */}

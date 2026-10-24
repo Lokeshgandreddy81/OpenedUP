@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { ArrowDown, Check, Clock3, Copy, FileText, LoaderCircle, Pencil } from "lucide-react";
+import {
+  ArrowDown,
+  Check,
+  Clock3,
+  Copy,
+  FileText,
+  LoaderCircle,
+  Pencil,
+  RotateCcw,
+  Square,
+} from "lucide-react";
 import type { ChatMessage } from "./chatTypes";
 import { AssistantResponse } from "./AssistantResponse";
 
@@ -23,17 +33,21 @@ const MessageTimestamp: React.FC<{ timestamp?: string }> = ({ timestamp }) => {
 interface ChatMessagesProps {
   messages: ChatMessage[];
   isThinking: boolean;
+  isResponding: boolean;
   thinkingElapsedSeconds: number;
   onSelectActionChip?: (chipText: string) => void;
   onEditMessage?: (messageId: string, currentContent: string) => void;
+  onRetryMessage?: (messageId: string, payload: NonNullable<ChatMessage["retryPayload"]>) => void;
 }
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
   messages,
   isThinking,
+  isResponding,
   thinkingElapsedSeconds,
   onSelectActionChip,
   onEditMessage,
+  onRetryMessage,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [revealedMessageIds, setRevealedMessageIds] = useState<Set<string>>(() => new Set());
@@ -270,25 +284,34 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             const hasFinishedReveal = revealedMessageIds.has(message.id);
             const thinkingDuration = message.thinkingTime?.replace(/^thinking\s*/i, "").trim();
             const isThinkingOnThisResponse = isThinking && message.isStreaming;
+            const isRespondingOnThisResponse = isResponding && isThinkingOnThisResponse;
+            const isStopped = message.generationStatus === "stopped";
             return (
               <div
                 key={message.id}
                 className="group/assistant flex items-start w-full max-w-[800px]"
               >
                 <div className="min-w-0 flex-1">
-                  {(isThinkingOnThisResponse || (hasCompletedResponse && thinkingDuration)) && (
+                  {(isThinkingOnThisResponse ||
+                    (hasCompletedResponse && thinkingDuration) ||
+                    isStopped) && (
                     <div className="chat-thinking-status mb-2 flex min-h-7 gap-2 text-[13px] text-slate-500">
                       {isThinkingOnThisResponse ? (
                         <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
+                      ) : isStopped ? (
+                        <Square size={12} aria-hidden="true" />
                       ) : (
                         <Clock3 size={14} strokeWidth={1.8} />
                       )}
-                      {isThinkingOnThisResponse ? (
+                      {isStopped ? (
+                        <span>Response stopped</span>
+                      ) : isThinkingOnThisResponse ? (
                         <span
                           role="timer"
-                          aria-label={`Thinking for ${thinkingElapsedSeconds} seconds`}
+                          aria-label={`${isRespondingOnThisResponse ? "Responding" : "Thinking"} for ${thinkingElapsedSeconds} seconds`}
                         >
-                          Thinking · {thinkingElapsedSeconds}s
+                          {isRespondingOnThisResponse ? "Responding" : "Thinking"} ·{" "}
+                          {thinkingElapsedSeconds}s
                         </span>
                       ) : (
                         <span aria-label={`Thought for ${thinkingDuration}`}>
@@ -312,6 +335,19 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     className={`mt-2 flex h-8 items-center gap-1 text-[13px] text-slate-500 ${hasCompletedResponse && hasFinishedReveal ? "" : "invisible"}`}
                     aria-hidden={!(hasCompletedResponse && hasFinishedReveal)}
                   >
+                    {message.retryPayload && (
+                      <button
+                        type="button"
+                        onClick={() => onRetryMessage?.(message.id, message.retryPayload!)}
+                        disabled={isThinking}
+                        title="Retry response"
+                        aria-label="Retry response"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-slate-600 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <RotateCcw size={13} strokeWidth={1.8} />
+                        <span className="text-xs">Retry</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleCopy(message.id, message.content)}

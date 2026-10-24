@@ -1,3 +1,5 @@
+import type { ChatAttachmentFile } from "../../../app/files/chatAttachments";
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -8,6 +10,13 @@ export interface ChatMessage {
   isThinking?: boolean;
   isStreaming?: boolean;
   attachments?: Array<{ id?: string; name: string; size: number; type?: string }>;
+  generationStatus?: "stopped" | "error";
+  retryPayload?: {
+    prompt: string;
+    model: AiModelId;
+    effort: EffortLevel;
+    attachments: ChatAttachmentFile[];
+  };
 }
 
 export interface ChatConversation {

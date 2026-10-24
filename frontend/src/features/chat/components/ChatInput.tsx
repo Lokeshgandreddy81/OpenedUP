@@ -265,16 +265,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (!isThinking) handleSubmit();
     }
   };
 
   const handleSubmit = () => {
-    if (isThinking) {
-      onStopThinking?.();
-      return;
-    }
-    if (isReadingFiles) return;
+    if (isThinking || isReadingFiles) return;
     const trimmed = text.trim();
     if (!trimmed && attachments.length === 0) return;
     onSendMessage(
@@ -610,7 +606,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 id="composer-keyboard-hint"
                 className="sr-only ml-2 text-[13px] text-slate-600 lg:not-sr-only"
               >
-                Enter to send · Shift+Enter for a new line
+                {isThinking
+                  ? "Response in progress · draft stays in composer"
+                  : "Enter to send · Shift+Enter for a new line"}
               </span>
             </div>
 
@@ -917,23 +915,30 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 {isDictating && <span className="text-[11px]">Listening</span>}
               </button>
 
-              {/* Keep send/stop in a stable position so the composer never shifts. */}
+              {/* Keep the send action in place while Stop remains a separate control. */}
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={
-                  !isThinking && (isReadingFiles || (!text.trim() && attachments.length === 0))
+                  isThinking || isReadingFiles || (!text.trim() && attachments.length === 0)
                 }
-                title={isThinking ? "Stop generation" : "Send message"}
-                aria-label={isThinking ? "Stop generation" : "Send message"}
+                title="Send message"
+                aria-label="Send message"
                 className="h-9 w-9 rounded-full flex items-center justify-center transition-[background-color,color,transform,box-shadow] duration-150 cursor-pointer bg-slate-900 text-white shadow-[0_2px_5px_rgba(15,23,42,0.16)] hover:bg-slate-700 hover:shadow-[0_4px_10px_rgba(15,23,42,0.2)] active:scale-95 disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
               >
-                {isThinking ? (
-                  <Square size={12} fill="currentColor" strokeWidth={0} />
-                ) : (
-                  <ArrowUp size={17} strokeWidth={2} />
-                )}
+                <ArrowUp size={17} strokeWidth={2} />
               </button>
+              {isThinking && (
+                <button
+                  type="button"
+                  onClick={() => onStopThinking?.()}
+                  title="Stop response"
+                  aria-label="Stop response"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white shadow-[0_2px_5px_rgba(15,23,42,0.16)] transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+                >
+                  <Square size={12} fill="currentColor" strokeWidth={0} />
+                </button>
+              )}
             </div>
           </div>
           {dictationError && (
