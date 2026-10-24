@@ -5,6 +5,7 @@ import {
   Clock3,
   Copy,
   FileText,
+  KeyRound,
   LoaderCircle,
   Pencil,
   RotateCcw,
@@ -349,8 +350,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           key={cIdx}
                           type="button"
                           onClick={() => onSelectActionChip?.(chip)}
-                          className="text-[12px] text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100/90 border border-slate-200/80 px-2.5 py-1 rounded-full transition-colors cursor-pointer"
+                          className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-[background-color,color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 ${
+                            chip === "Connect API Key"
+                              ? "bg-slate-950 text-white shadow-[0_2px_6px_rgba(15,23,42,0.16)] hover:-translate-y-px hover:bg-slate-800 hover:shadow-[0_5px_12px_rgba(15,23,42,0.18)]"
+                              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950"
+                          }`}
                         >
+                          {chip === "Connect API Key" && <KeyRound size={14} strokeWidth={2} />}
                           {chip}
                         </button>
                       ))}

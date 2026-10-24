@@ -16,7 +16,6 @@ import {
   BarChart3,
   ChevronRight,
   Mic,
-  Search,
   X,
 } from "lucide-react";
 import { getChatModels, getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
@@ -121,9 +120,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [fileError, setFileError] = useState("");
   const [isFileDragActive, setIsFileDragActive] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isModelCatalogOpen, setIsModelCatalogOpen] = useState(false);
 
-  const { customModelId, customModelProvider, hasKey } = useProviderKeys();
-  const [modelSearch, setModelSearch] = useState("");
+  const { customModelId, customModelProvider } = useProviderKeys();
   const [modelHoverCard, setModelHoverCard] = useState<ModelHoverCardState | null>(null);
   const {
     isListening: isDictating,
@@ -146,7 +145,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const [modelMenuDirection, setModelMenuDirection] = useState<"up" | "down">("down");
   const [selectedEffort, setSelectedEffort] = useState<EffortLevel>("Medium");
-  const [activeSubmenu, setActiveSubmenu] = useState<"effort" | "moreModels" | null>(null);
+  const [activeSubmenu, setActiveSubmenu] = useState<"effort" | null>(null);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   const [plusMenuDirection, setPlusMenuDirection] = useState<"up" | "down">("down");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -197,11 +196,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     selectedModel === "custom-model" ? customModelProvider : getModelMeta(selectedModel).provider;
   const effortOptions = getEffortOptions(activeProviderId);
   const supportsEffort = effortOptions.length > 0;
-  const filteredMoreModels = MORE_MODELS.filter((model) =>
-    `${model.name} ${model.description ?? ""}`
-      .toLowerCase()
-      .includes(modelSearch.trim().toLowerCase())
-  );
 
   useEffect(() => {
     if (supportsEffort && !effortOptions.some((option) => option.level === selectedEffort)) {
@@ -209,6 +203,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
     if (!supportsEffort && activeSubmenu === "effort") setActiveSubmenu(null);
   }, [supportsEffort, effortOptions, selectedEffort, activeSubmenu]);
+
+  useEffect(() => {
+    if (!isModelCatalogOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsModelCatalogOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [isModelCatalogOpen]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -333,7 +336,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-2 rounded-[26px] border bg-white/95 p-4 shadow-[0_10px_34px_rgba(15,23,42,0.07)] transition-[border-color,box-shadow,background-color] duration-200 sm:p-[18px] focus-within:border-slate-300 focus-within:shadow-[0_12px_40px_rgba(15,23,42,0.10),0_0_0_3px_rgba(148,163,184,0.08)] ${isFileDragActive ? "border-slate-500 bg-slate-50 ring-4 ring-slate-900/5" : "border-slate-200/90"}`}
+          className={`relative flex flex-col gap-2 rounded-[28px] border border-slate-200/60 bg-transparent p-4 shadow-none transition-[border-color,background-color] duration-200 sm:p-5 focus-within:bg-slate-50/40 ${isFileDragActive ? "border-slate-300 bg-slate-50 ring-4 ring-slate-900/5" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
           <input
@@ -418,11 +421,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={1}
-            className="chat-composer-input w-full bg-transparent px-1 text-[16px] leading-6 text-slate-800 placeholder:text-slate-500 resize-none outline-none min-h-[40px] max-h-[200px]"
+            className="chat-composer-input w-full bg-transparent px-1 text-[16px] leading-7 text-slate-900 placeholder:text-slate-500 resize-none outline-none min-h-[40px] max-h-[200px]"
           />
 
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
-          <div className="flex min-h-9 items-center justify-between select-none">
+          <div className="flex min-h-10 items-center justify-between select-none">
             {/* Left: Add context / file plus icon with popover menu */}
             <div className="relative flex items-center">
               <button
@@ -443,7 +446,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 aria-label="Add context"
                 aria-expanded={isPlusMenuOpen}
                 disabled={isReadingFiles}
-                className={`h-9 w-9 rounded-xl transition-[background-color,color,transform] duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-50 ${
+                className={`h-10 w-10 rounded-xl transition-[background-color,color,transform] duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-50 ${
                   isPlusMenuOpen
                     ? "bg-slate-200/80 text-slate-900"
                     : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
@@ -620,25 +623,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       const spaceBelow = window.innerHeight - rect.bottom;
                       setModelMenuDirection(spaceBelow < 280 ? "up" : "down");
                       setIsModelDropdownOpen(true);
-                      setModelSearch("");
                       setActiveSubmenu(null);
                     }
                   }}
                   aria-haspopup="menu"
                   aria-expanded={isModelDropdownOpen}
-                  className={`flex max-w-[min(44vw,360px)] items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3 py-2 text-[13px] transition-[background-color,color] duration-150 cursor-pointer font-medium ${
-                    isModelDropdownOpen
-                      ? "bg-slate-100 text-slate-900"
-                      : "bg-slate-50/80 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-                  }`}
+                  className="flex max-w-[min(44vw,360px)] items-center gap-1.5 sm:gap-2 rounded-md px-2 py-1 text-[14px] font-semibold text-slate-950 transition-colors duration-150 cursor-pointer hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                 >
-                  <span className="truncate">{currentModelName}</span>
+                  <span className="truncate font-semibold">{currentModelName}</span>
                   {supportsEffort && (
-                    <span className="text-[12px] text-slate-400 font-normal">{selectedEffort}</span>
+                    <span className="text-[12px] text-slate-600 font-medium">{selectedEffort}</span>
                   )}
                   <ChevronDown
                     size={13}
-                    className={`text-slate-400 transition-transform duration-150 ${
+                    className={`text-slate-500 transition-transform duration-150 ${
                       isModelDropdownOpen ? "rotate-180" : ""
                     }`}
                   />
@@ -701,108 +699,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       </div>
                     )}
 
-                    {/* More Models Submenu Flyout (opens to the left side) */}
-                    {activeSubmenu === "moreModels" && (
-                      <div
-                        onMouseEnter={() => setActiveSubmenu("moreModels")}
-                        className="w-64 rounded-2xl bg-white border border-slate-200/90 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.12)] p-1.5 text-[13px] text-slate-700 animate-in fade-in slide-in-from-right-1 duration-100 shrink-0 max-h-80 flex flex-col"
-                      >
-                        <div className="px-2.5 pt-2 pb-2 border-b border-slate-100">
-                          <div className="mb-2 text-[11px] font-medium tracking-wide text-slate-400">
-                            MORE MODELS
-                          </div>
-                          <label className="relative block">
-                            <Search
-                              size={14}
-                              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
-                            />
-                            <input
-                              type="search"
-                              value={modelSearch}
-                              onChange={(event) => setModelSearch(event.target.value)}
-                              placeholder="Search models"
-                              aria-label="Search models"
-                              className="h-9 w-full rounded-xl bg-slate-50 pl-8 pr-3 text-[13px] text-slate-800 placeholder:text-slate-400 outline-none transition-colors focus:bg-white focus:ring-1 focus:ring-slate-200"
-                            />
-                          </label>
-                        </div>
-                        <div className="overflow-y-auto cool-scrollbar p-1 space-y-0.5 max-h-64">
-                          {filteredMoreModels.length === 0 && (
-                            <p className="px-3 py-4 text-center text-xs text-slate-400">
-                              No models found
-                            </p>
-                          )}
-                          {filteredMoreModels.map((model) => {
-                            const isModelActive = model.id === selectedModel;
-                            return (
-                              <button
-                                key={model.id}
-                                type="button"
-                                aria-describedby={
-                                  modelHoverCard?.model.id === model.id
-                                    ? "model-hover-details"
-                                    : undefined
-                                }
-                                onMouseEnter={(event) =>
-                                  showModelHoverCard(model, event.currentTarget)
-                                }
-                                onMouseLeave={scheduleModelHoverCardClose}
-                                onFocus={(event) => showModelHoverCard(model, event.currentTarget)}
-                                onBlur={scheduleModelHoverCardClose}
-                                onClick={() => {
-                                  onChangeModel(model.id);
-                                  setModelSearch("");
-                                  setIsModelDropdownOpen(false);
-                                  setActiveSubmenu(null);
-                                  setModelHoverCard(null);
-                                }}
-                                className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer group ${
-                                  isModelActive
-                                    ? "bg-slate-100/90 text-slate-900 font-medium"
-                                    : "text-slate-700 hover:bg-slate-50"
-                                }`}
-                              >
-                                <span className="min-w-0 truncate pr-2">{model.name}</span>
-                                <div className="flex items-center gap-1.5">
-                                  {model.tag && (
-                                    <span className="text-[10px] px-1.5 py-0.2 rounded font-medium bg-slate-100 text-slate-600">
-                                      {model.tag}
-                                    </span>
-                                  )}
-                                  {isModelActive && (
-                                    <Check size={14} className="text-[#0047FF] stroke-[2.5]" />
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Main Model Card */}
-                    <div className="w-72 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.12)] p-1.5 text-[13px] text-slate-700 shrink-0 select-none">
-                      <div className="px-3 pt-2 pb-1 text-[10px] font-medium tracking-[0.12em] text-slate-400">
-                        FREE MODELS
+                    <div className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)] p-2.5 text-[14px] text-slate-800 shrink-0 select-none">
+                      <div className="px-2.5 pt-2 pb-2.5">
+                        <span className="text-[14px] font-bold tracking-wide text-slate-950">
+                          Free
+                        </span>
                       </div>
-                      {!hasKey("custom") && (
-                        <div className="mx-2 mb-1 rounded-xl bg-slate-50 px-2.5 py-2">
-                          <p className="text-[11px] leading-4 text-slate-500">
-                            Free OpenRouter models use your own API key.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsModelDropdownOpen(false);
-                              onOpenProviders?.();
-                            }}
-                            className="mt-1 text-[11px] font-medium text-slate-700 hover:text-slate-950 cursor-pointer"
-                          >
-                            Connect OpenRouter key
-                          </button>
-                        </div>
-                      )}
-                      <div className="space-y-0.5">
+                      <div className="space-y-1">
                         {FREE_MODELS.map((model) => {
                           const isSelected = model.id === selectedModel;
                           return (
@@ -826,26 +730,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                               onMouseLeave={scheduleModelHoverCardClose}
                               onFocus={(event) => showModelHoverCard(model, event.currentTarget)}
                               onBlur={scheduleModelHoverCardClose}
-                              className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between transition-colors cursor-pointer group ${
+                              className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center justify-between transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                 isSelected
-                                  ? "bg-slate-100/90 text-slate-900 font-medium"
-                                  : "text-slate-700 hover:bg-slate-50"
+                                  ? "bg-slate-900 text-white font-semibold"
+                                  : "text-slate-800 hover:bg-slate-100"
                               }`}
                             >
                               <div className="flex min-w-0 items-center gap-2 pr-2">
-                                <span className="truncate text-[13.5px] font-medium leading-tight text-slate-800">
+                                <span
+                                  className={`truncate text-[14px] font-semibold leading-snug ${isSelected ? "text-white" : "text-slate-950"}`}
+                                >
                                   {model.name}
                                 </span>
-                                {model.tag && (
-                                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
-                                    {model.tag}
-                                  </span>
-                                )}
                               </div>
                               {isSelected && (
                                 <Check
                                   size={14}
-                                  className="text-[#0047FF] shrink-0 stroke-[2.5] mt-0.5"
+                                  className="text-white shrink-0 stroke-[2.5] mt-0.5"
                                 />
                               )}
                             </button>
@@ -853,7 +754,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         })}
                       </div>
 
-                      <div className="my-1 border-t border-slate-100" />
+                      <div className="my-2 border-t border-slate-200" />
 
                       {/* Effort Option */}
                       {supportsEffort && (
@@ -863,7 +764,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                             onClick={() =>
                               setActiveSubmenu((cur) => (cur === "effort" ? null : "effort"))
                             }
-                            className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
+                            className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center justify-between transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                               activeSubmenu === "effort"
                                 ? "bg-slate-100 text-slate-900"
                                 : "text-slate-700 hover:bg-slate-50"
@@ -880,32 +781,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         </div>
                       )}
 
-                      {/* More models Option */}
-                      <div onMouseEnter={() => setActiveSubmenu("moreModels")}>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setActiveSubmenu((cur) => (cur === "moreModels" ? null : "moreModels"))
-                          }
-                          className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
-                            activeSubmenu === "moreModels"
-                              ? "bg-slate-100 text-slate-900"
-                              : "text-slate-700 hover:bg-slate-50"
-                          }`}
-                        >
-                          <span className="text-[13px] font-medium text-slate-800">
-                            More models
-                          </span>
-                          <div className="flex items-center gap-1.5 text-slate-400">
-                            {MORE_MODELS.some((m) => m.id === selectedModel) && (
-                              <span className="text-[11.5px] text-slate-500 truncate max-w-[90px]">
-                                {currentModelName}
-                              </span>
-                            )}
-                            <ChevronRight size={13} />
-                          </div>
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsModelDropdownOpen(false);
+                          setActiveSubmenu(null);
+                          setIsModelCatalogOpen(true);
+                        }}
+                        className="w-full text-left px-3.5 py-3 rounded-xl flex items-center justify-between text-slate-800 transition-colors cursor-pointer hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                      >
+                        <span className="text-[14px] font-semibold text-slate-950">
+                          More models
+                        </span>
+                        <ChevronRight size={16} className="text-slate-500" />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -918,7 +807,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 aria-label={isDictating ? "Stop dictation" : "Dictate"}
                 aria-pressed={isDictating}
                 onClick={toggleDictation}
-                className={`h-9 w-9 flex items-center justify-center rounded-full transition-[background-color,color,transform] duration-150 cursor-pointer active:scale-95 ${isDictating ? "text-rose-600 bg-rose-50" : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"}`}
+                className={`h-10 w-10 flex items-center justify-center rounded-full transition-[background-color,color,transform] duration-150 cursor-pointer active:scale-95 ${isDictating ? "text-rose-600 bg-rose-50" : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"}`}
               >
                 <Mic size={18} strokeWidth={1.8} />
                 {isDictating && <span className="text-[11px]">Listening</span>}
@@ -933,7 +822,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 }
                 title="Send message"
                 aria-label="Send message"
-                className="h-9 w-9 rounded-full flex items-center justify-center transition-[background-color,color,transform,box-shadow] duration-150 cursor-pointer bg-slate-900 text-white shadow-[0_2px_5px_rgba(15,23,42,0.16)] hover:bg-slate-700 hover:shadow-[0_4px_10px_rgba(15,23,42,0.2)] active:scale-95 disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
+                className="h-10 w-10 rounded-full flex items-center justify-center transition-[background-color,color,transform,box-shadow] duration-150 cursor-pointer bg-slate-950 text-white shadow-[0_3px_8px_rgba(15,23,42,0.2)] hover:bg-slate-800 hover:shadow-[0_5px_14px_rgba(15,23,42,0.24)] active:scale-95 disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
               >
                 <ArrowUp size={17} strokeWidth={2} />
               </button>
@@ -965,6 +854,67 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onMouseEnter={keepModelHoverCardOpen}
             onMouseLeave={scheduleModelHoverCardClose}
           />,
+          document.body
+        )}
+      {isModelCatalogOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[3px] animate-in fade-in duration-150"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setIsModelCatalogOpen(false);
+            }}
+          >
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="model-catalog-title"
+              className="flex max-h-[min(78vh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_32px_96px_-24px_rgba(15,23,42,0.45)] animate-in zoom-in-95 duration-150"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <header className="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4 sm:px-7">
+                <h2 id="model-catalog-title" className="text-lg font-semibold text-slate-950">
+                  Models
+                </h2>
+                <button
+                  type="button"
+                  aria-label="Close model catalog"
+                  onClick={() => setIsModelCatalogOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                >
+                  <X size={18} />
+                </button>
+              </header>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 cool-scrollbar sm:px-7">
+                <div className="divide-y divide-slate-100">
+                  {MORE_MODELS.map((model) => {
+                    const isSelected = model.id === selectedModel;
+                    return (
+                      <button
+                        key={model.id}
+                        type="button"
+                        onClick={() => {
+                          onChangeModel(model.id);
+                          setIsModelCatalogOpen(false);
+                          setModelHoverCard(null);
+                        }}
+                        className={`flex w-full items-center justify-between gap-4 rounded-xl px-3.5 py-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                          isSelected
+                            ? "bg-slate-100 text-slate-950"
+                            : "text-slate-800 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span className="block min-w-0 truncate text-sm font-semibold text-slate-950">
+                          {model.name}
+                        </span>
+                        {isSelected && <Check size={17} className="shrink-0 text-slate-950" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          </div>,
           document.body
         )}
     </>
