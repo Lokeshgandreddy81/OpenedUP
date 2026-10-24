@@ -19,6 +19,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   onEditMessage,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [revealedMessageIds, setRevealedMessageIds] = useState<Set<string>>(() => new Set());
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>("");
   const editTextareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -28,6 +29,15 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   const lastUserMessageId = [...messages].reverse().find((message) => message.role === "user")?.id;
   const lastUserMessageIdRef = React.useRef(lastUserMessageId);
   const latestMessage = messages[messages.length - 1];
+
+  const markMessageRevealed = React.useCallback((messageId: string) => {
+    setRevealedMessageIds((current) => {
+      if (current.has(messageId)) return current;
+      const next = new Set(current);
+      next.add(messageId);
+      return next;
+    });
+  }, []);
 
   React.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -216,6 +226,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
             // Assistant responses use readable prose and structured Markdown.
             const hasCompletedResponse = !message.isStreaming && message.content.trim().length > 0;
+            const hasFinishedReveal = revealedMessageIds.has(message.id);
             const thinkingDuration = message.thinkingTime?.replace(/^thinking\s*/i, "").trim();
             const isThinkingOnThisResponse = isThinking && message.isStreaming;
             return (
@@ -252,10 +263,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       content={message.content}
                       isStreaming={Boolean(message.isStreaming)}
                       onReveal={followLatestDuringReveal}
+                      onComplete={() => markMessageRevealed(message.id)}
                     />
                   </div>
 
-                  {hasCompletedResponse && (
+                  {hasCompletedResponse && hasFinishedReveal && (
                     <div className="mt-2 flex min-h-8 items-center gap-3 text-[13px] text-slate-500">
                       <button
                         type="button"

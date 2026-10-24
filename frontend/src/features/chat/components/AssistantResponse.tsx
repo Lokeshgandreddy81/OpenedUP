@@ -5,6 +5,7 @@ interface AssistantResponseProps {
   content: string;
   isStreaming: boolean;
   onReveal?: () => void;
+  onComplete?: () => void;
 }
 
 export const AssistantResponse: React.FC<AssistantResponseProps> = ({
@@ -12,17 +13,25 @@ export const AssistantResponse: React.FC<AssistantResponseProps> = ({
   content,
   isStreaming,
   onReveal,
+  onComplete,
 }) => {
   const [visibleContent, setVisibleContent] = useState(() => (isStreaming ? "" : content));
   const visibleRef = useRef(visibleContent);
   const contentRef = useRef(content);
   const streamingRef = useRef(isStreaming);
   const onRevealRef = useRef(onReveal);
+  const onCompleteRef = useRef(onComplete);
   contentRef.current = content;
   streamingRef.current = isStreaming;
   onRevealRef.current = onReveal;
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
+    if (!streamingRef.current && visibleRef.current.length >= contentRef.current.length) {
+      onCompleteRef.current?.();
+      return;
+    }
+
     let frame = 0;
     let lastTime = performance.now();
     let characterCredit = 0;
@@ -54,6 +63,8 @@ export const AssistantResponse: React.FC<AssistantResponseProps> = ({
       }
       if (streamingRef.current || visibleRef.current.length < contentRef.current.length) {
         frame = requestAnimationFrame(reveal);
+      } else {
+        onCompleteRef.current?.();
       }
     };
     frame = requestAnimationFrame(reveal);
