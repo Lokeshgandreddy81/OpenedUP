@@ -1,42 +1,25 @@
 import React, { useState, useRef, useEffect } from "react";
+import { ChevronDown, Trash2 } from "lucide-react";
+import { getModelMeta } from "@charan-interiors/contracts";
 import {
-  ChevronDown,
-  FileText,
-  Copy,
-  Check,
-  Clock3,
-  LoaderCircle,
-  CornerDownLeft,
-  Plus,
-  Mic,
-  Square,
-  Trash2,
-} from "lucide-react";
-import { getChatModels, MODEL_REGISTRY } from "@charan-interiors/contracts";
-import { getProviderChatRequestConfig, useProviderKeys } from "../../customize/publicApi";
+  getKeyForModel,
+  getProviderChatRequestConfig,
+  useProviderKeys,
+} from "../../customize/publicApi";
 import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
-import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
-import { AssistantResponse } from "../../chat";
-import { chatAttachmentsForContext } from "../../../app/files/chatAttachments";
+import {
+  ChatInput,
+  ChatMessages,
+  type AiModelId,
+  type ChatMessage,
+  type EffortLevel,
+} from "../../chat";
+import {
+  chatAttachmentsForContext,
+  type ChatAttachmentFile,
+} from "../../../app/files/chatAttachments";
 import type { ProjectItem, ProjectSession, ProjectSessionMessage } from "./projectTypes";
-
-const MessageTimestamp: React.FC<{ timestamp?: string }> = ({ timestamp }) => {
-  if (!timestamp) return null;
-  const date = new Date(timestamp);
-  const isValidDate = !Number.isNaN(date.getTime());
-  return (
-    <time
-      dateTime={isValidDate ? timestamp : undefined}
-      title={isValidDate ? date.toLocaleString() : undefined}
-      className="text-[11px] leading-none text-neutral-400"
-    >
-      {isValidDate
-        ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-        : timestamp}
-    </time>
-  );
-};
 
 export interface ProjectSessionViewProps {
   project: ProjectItem;
@@ -44,9 +27,14 @@ export interface ProjectSessionViewProps {
   onBackToWorkspace: () => void;
   onUpdateSession: (updatedSession: ProjectSession) => void;
   onDeleteSession: (sessionId: string) => void;
+  onOpenProviders: () => void;
+  onOpenProjects: () => void;
+  onOpenPlugins: () => void;
+  onOpenBenchmarks: () => void;
+  onOpenArtifacts: () => void;
+  isInitialGenerating: boolean;
+  onStopInitialGeneration: () => void;
 }
-
-const SESSION_MODELS = getChatModels().map((model) => model.id);
 
 export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
   project,
@@ -54,35 +42,41 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
   onBackToWorkspace,
   onUpdateSession,
   onDeleteSession,
+  onOpenProviders,
+  onOpenProjects,
+  onOpenPlugins,
+  onOpenBenchmarks,
+  onOpenArtifacts,
+  isInitialGenerating,
+  onStopInitialGeneration,
 }) => {
-  const [replyText, setReplyText] = useState("");
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
-  const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
-  const [selectedModelId, setSelectedModelId] = useState<string>("claude-opus-5.5");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<AiModelId>(
+    (session.modelId as AiModelId | undefined) || "openrouter-nemotron-3.5-lightning-free"
+  );
+  const [isGeneratingLocal, setIsGeneratingLocal] = useState(false);
+  const isGenerating = isGeneratingLocal || isInitialGenerating;
   const [thinkingElapsedSeconds, setThinkingElapsedSeconds] = useState(0);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [isShareCopied, setIsShareCopied] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
   const thinkingStartedAtRef = useRef<number | null>(null);
 
   const { hasKey } = useProviderKeys();
   const { user } = useChatAuth();
-  const {
-    isListening,
-    error: dictationError,
-    toggle: toggleSpeechInput,
-  } = useSpeechInput((transcript) =>
-    setReplyText((current) => `${current}${current ? " " : ""}${transcript}`)
-  );
-  const activeMeta = MODEL_REGISTRY[selectedModelId] || MODEL_REGISTRY["claude-opus-5.5"];
-  const isModelConnected = hasKey(activeMeta.provider);
+  const currentMessages: ChatMessage[] = session.messages;
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [session.messages]);
+    setSelectedModelId(
+      (session.modelId as AiModelId | undefined) || "openrouter-nemotron-3.5-lightning-free"
+    );
+  }, [session.id, session.modelId]);
+
+  useEffect(() => {
+    if (isInitialGenerating && thinkingStartedAtRef.current === null) {
+      thinkingStartedAtRef.current = Date.now();
+      setThinkingElapsedSeconds(1);
+    }
+    if (!isInitialGenerating && !isGeneratingLocal) thinkingStartedAtRef.current = null;
+  }, [isInitialGenerating, isGeneratingLocal]);
 
   useEffect(() => {
     const startedAt = thinkingStartedAtRef.current;
@@ -96,55 +90,65 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
     return () => window.clearInterval(timer);
   }, [isGenerating]);
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard?.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 1500);
-  };
-
-  const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href);
-    setIsShareCopied(true);
-    setTimeout(() => setIsShareCopied(false), 2000);
-  };
-
-  const handleSendReply = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = replyText.trim();
-    if (!trimmed || isGenerating) return;
+  const handleSendMessage = async (
+    text: string,
+    model: AiModelId,
+    effort: EffortLevel = "Medium",
+    attachments: ChatAttachmentFile[] = [],
+    priorMessages: ProjectSessionMessage[] = session.messages
+  ) => {
+    const trimmed = text.trim();
+    if ((!trimmed && attachments.length === 0) || isGenerating) return;
 
     const userMsg: ProjectSessionMessage = {
       id: `msg-u-${Date.now()}`,
       role: "user",
-      content: trimmed,
+      content: trimmed || "Please review the attached file(s).",
       timestamp: new Date().toISOString(),
+      ...(attachments.length > 0
+        ? {
+            attachments: attachments.map(({ id, name, size, type }) => ({
+              id,
+              name,
+              size,
+              type,
+            })),
+          }
+        : {}),
     };
 
-    const newMessages = [...session.messages, userMsg];
+    const newMessages = [...priorMessages, userMsg];
     const startMs = Date.now();
     thinkingStartedAtRef.current = startMs;
     setThinkingElapsedSeconds(1);
-    setReplyText("");
-    setIsGenerating(true);
+    setIsGeneratingLocal(true);
+    setSelectedModelId(model);
 
     onUpdateSession({
       ...session,
+      modelId: model,
       messages: newMessages,
       updatedAt: Date.now(),
     });
 
+    let replyContent = "";
+    const assistantId = `msg-a-${Date.now()}`;
     try {
-      const providerConfig = getProviderChatRequestConfig(selectedModelId);
+      const providerConfig = getProviderChatRequestConfig(model);
       const controller = new AbortController();
       activeRequestRef.current = controller;
       const requestBody = JSON.stringify({
         messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
-        model: selectedModelId,
+        model,
         ...providerConfig.customModelFields,
+        effort,
         context: {
           docTitle: project.name,
           projectInstructions: project.customInstructions,
-          projectFiles: chatAttachmentsForContext(project.files),
+          projectFiles: [
+            ...chatAttachmentsForContext(project.files),
+            ...chatAttachmentsForContext(attachments),
+          ],
         },
       });
       const requestInit = {
@@ -172,8 +176,6 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         }
       }
 
-      let replyContent = "";
-      const assistantId = `msg-a-${Date.now()}`;
       const updateStreamedReply = (content: string) => {
         onUpdateSession({
           ...session,
@@ -207,22 +209,43 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
 
       onUpdateSession({
         ...session,
+        modelId: model,
         messages: [...newMessages, assistantMsg],
         updatedAt: Date.now(),
       });
     } catch (error: unknown) {
       activeRequestRef.current = null;
       if (error instanceof DOMException && error.name === "AbortError") {
-        if (session.messages.length < newMessages.length) {
-          onUpdateSession({ ...session, messages: newMessages, updatedAt: Date.now() });
-        }
+        onUpdateSession({
+          ...session,
+          modelId: model,
+          messages: [
+            ...newMessages,
+            {
+              id: assistantId,
+              role: "assistant",
+              content: replyContent,
+              timestamp: new Date().toISOString(),
+              thinkingTime: `${Math.max(1, Math.ceil((Date.now() - startMs) / 1000))}s`,
+              generationStatus: "stopped",
+              ...(attachments.length === 0 && trimmed
+                ? { retryPayload: { prompt: trimmed, model, effort, attachments: [] } }
+                : {}),
+            },
+          ],
+          updatedAt: Date.now(),
+        });
         return;
       }
       const errorMsg: ProjectSessionMessage = {
-        id: `msg-a-${Date.now()}`,
+        id: assistantId,
         role: "assistant",
         content: `I couldn’t get a response from the model. ${error instanceof Error ? error.message : "Chat service unavailable."}`,
         timestamp: new Date().toISOString(),
+        generationStatus: "error",
+        ...(attachments.length === 0 && trimmed
+          ? { retryPayload: { prompt: trimmed, model, effort, attachments: [] } }
+          : {}),
       };
       onUpdateSession({
         ...session,
@@ -232,26 +255,55 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
     } finally {
       activeRequestRef.current = null;
       thinkingStartedAtRef.current = null;
-      setIsGenerating(false);
+      setIsGeneratingLocal(false);
     }
   };
 
+  const handleModelChange = (model: AiModelId) => {
+    const metadata = getModelMeta(model);
+    if (!metadata.isFree && !hasKey(metadata.provider)) {
+      onOpenProviders();
+      return;
+    }
+    setSelectedModelId(model);
+    onUpdateSession({ ...session, modelId: model, updatedAt: Date.now() });
+  };
+
+  const handleSaveArtifact = async (message: ChatMessage) => {
+    const messageIndex = currentMessages.findIndex((item) => item.id === message.id);
+    const prompt = currentMessages
+      .slice(0, messageIndex)
+      .reverse()
+      .find((item) => item.role === "user")?.content;
+    const codeBlocks = [...message.content.matchAll(/```([\w+-]*)\s*\n([\s\S]*?)```/g)];
+    const isCode = codeBlocks.length === 1;
+    const category = isCode ? "Code" : "Documents";
+    const { persistArtifactItem } = await import("../../artifacts");
+    await persistArtifactItem({
+      title: (
+        message.content.match(/^#{1,2}\s+(.+)$/m)?.[1]?.trim() ||
+        prompt ||
+        `${category} from chat`
+      ).slice(0, 100),
+      category,
+      content: isCode ? (codeBlocks[0]?.[2] || "").trim() : message.content,
+      language: isCode ? codeBlocks[0]?.[1]?.toLowerCase() || "text" : "markdown",
+      modelUsed: getKeyForModel(selectedModelId).modelName,
+      isShared: false,
+    });
+  };
+
   return (
-    <div className="flex-1 w-full h-full bg-white flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-150">
-      {dictationError && (
-        <p role="alert" className="mx-6 mt-2 text-xs text-rose-600">
-          {dictationError}
-        </p>
-      )}
-      {/* ── Top Bar: Breadcrumbs + Document Icon + Share ── */}
-      <header className="w-full shrink-0 border-b border-transparent">
-        <div className="w-full px-6 sm:px-7 md:px-8 pt-7 pb-4 flex items-center justify-between">
+    <div className="flex-1 w-full h-full bg-[#fcfbf9] flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-150">
+      {/* Session navigation */}
+      <header className="w-full shrink-0 bg-white">
+        <div className="flex h-14 w-full items-center justify-start gap-4 px-4 sm:px-5">
           {/* Left: Breadcrumbs */}
-          <div className="flex items-center gap-2 text-[14px]">
+          <div className="flex items-center gap-2 text-[14px] min-w-0">
             <button
               type="button"
               onClick={onBackToWorkspace}
-              className="text-neutral-700 hover:text-neutral-950 font-normal transition-colors cursor-pointer"
+              className="text-neutral-500 hover:text-neutral-950 font-normal transition-colors cursor-pointer shrink-0"
             >
               {project.name}
             </button>
@@ -260,9 +312,9 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsHeaderMenuOpen((v) => !v)}
-                className="flex items-center gap-1 text-neutral-900 font-medium hover:text-black transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-neutral-900 font-medium hover:text-neutral-700 transition-colors cursor-pointer max-w-[min(42vw,520px)]"
               >
-                <span>{session.title || "Greeting"}</span>
+                <span className="truncate">{session.title || "New session"}</span>
                 <ChevronDown size={14} className="text-neutral-500 mt-0.5" />
               </button>
 
@@ -287,237 +339,74 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
               )}
             </div>
           </div>
-
-          {/* Right: Document Icon + Share Button */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              title="Project documents"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
-            >
-              <FileText size={17} strokeWidth={1.8} />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleShare}
-              className="px-3 py-1 rounded-xl border border-neutral-200/90 bg-white hover:bg-neutral-50 text-[13px] font-medium text-neutral-800 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              {isShareCopied ? (
-                <>
-                  <Check size={13} className="text-emerald-600" />
-                  <span className="text-emerald-600">Copied</span>
-                </>
-              ) : (
-                <span>Share</span>
-              )}
-            </button>
-          </div>
         </div>
       </header>
 
-      {/* ── Main Chat Thread ── */}
-      <div className="flex-1 w-full overflow-y-auto px-6 py-6 flex flex-col">
-        <div className="w-full max-w-[840px] mx-auto flex flex-col gap-6">
-          {session.messages.map((msg) => {
-            if (msg.role === "user") {
-              return (
-                <div key={msg.id} className="flex justify-end">
-                  <div className="flex flex-col items-end gap-1.5">
-                    <div className="bg-neutral-100 text-neutral-900 px-4 py-2 rounded-2xl text-[14px] max-w-md break-words">
-                      {msg.content}
-                    </div>
-                    <MessageTimestamp timestamp={msg.timestamp} />
-                  </div>
-                </div>
-              );
-            }
-
-            // Assistant Message (Editorial Serif)
-            const thinkingDuration = msg.thinkingTime?.replace(/^thinking\s*/i, "").trim();
-            const isThinkingOnThisResponse = isGenerating && msg.isStreaming;
-            return (
-              <div key={msg.id} className="flex flex-col items-start gap-2.5">
-                {(isThinkingOnThisResponse || (!msg.isStreaming && thinkingDuration)) && (
-                  <span
-                    role={isThinkingOnThisResponse ? "timer" : undefined}
-                    aria-label={
-                      isThinkingOnThisResponse
-                        ? `Thinking for ${thinkingElapsedSeconds} seconds`
-                        : undefined
-                    }
-                    className="chat-thinking-status inline-flex gap-1.5 text-[12px] text-neutral-500"
-                  >
-                    {isThinkingOnThisResponse ? (
-                      <LoaderCircle size={13} className="animate-spin" aria-hidden="true" />
-                    ) : (
-                      <Clock3 size={13} strokeWidth={1.8} />
-                    )}
-                    {isThinkingOnThisResponse
-                      ? `Thinking · ${thinkingElapsedSeconds}s`
-                      : `Thought for ${thinkingDuration}`}
-                  </span>
-                )}
-                <div className="w-full select-text">
-                  <AssistantResponse content={msg.content} isStreaming={Boolean(msg.isStreaming)} />
-                </div>
-
-                {/* Assistant response details and actions */}
-                {!msg.isStreaming && (
-                  <div className="flex items-center gap-1 pt-1 text-neutral-400">
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(msg.content, msg.id)}
-                      title="Copy response"
-                      aria-label={copiedId === msg.id ? "Copied response" : "Copy response"}
-                      className="p-1 rounded hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-                    >
-                      {copiedId === msg.id ? (
-                        <Check size={14} className="text-emerald-600" />
-                      ) : (
-                        <Copy size={14} strokeWidth={1.75} />
-                      )}
-                    </button>
-                    <MessageTimestamp timestamp={msg.timestamp} />
-                  </div>
-                )}
-              </div>
+      <main className="flex-1 min-h-0 flex flex-col bg-white">
+        <ChatMessages
+          messages={currentMessages}
+          isThinking={isGenerating}
+          isResponding={false}
+          thinkingElapsedSeconds={thinkingElapsedSeconds}
+          onEditMessage={(messageId, content) => {
+            const messageIndex = session.messages.findIndex((message) => message.id === messageId);
+            if (messageIndex < 0) return;
+            void handleSendMessage(
+              content,
+              selectedModelId,
+              "Medium",
+              [],
+              session.messages.slice(0, messageIndex)
             );
-          })}
-          {isGenerating && session.messages.at(-1)?.role === "user" && (
-            <div
-              className="chat-thinking-status inline-flex gap-1.5 text-[12px] text-neutral-500"
-              role="timer"
-              aria-label={`Thinking for ${thinkingElapsedSeconds} seconds`}
-            >
-              <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
-              Thinking · {thinkingElapsedSeconds}s
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* ── Bottom Floating Input Bar & Controls ── */}
-      <footer className="w-full px-6 pb-6 pt-2 shrink-0 flex flex-col items-center">
-        <div className="w-full max-w-[840px] flex flex-col">
-          {/* Main Floating Input Box */}
-          <form
-            onSubmit={handleSendReply}
-            className="w-full bg-white border border-neutral-200/90 rounded-2xl shadow-xs px-4 py-3 flex items-center justify-between focus-within:border-neutral-400 transition-all"
-          >
-            <input
-              type="text"
-              autoFocus
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder={`Reply in ${project.name}...`}
-              className="flex-1 bg-transparent text-[14px] text-neutral-900 placeholder-neutral-400 outline-none pr-3"
-            />
-            {isGenerating ? (
-              <button
-                type="button"
-                onClick={() => activeRequestRef.current?.abort()}
-                aria-label="Stop generating"
-                className="text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer p-1"
-              >
-                <Square size={15} />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!replyText.trim() || isGenerating}
-                className="text-neutral-400 hover:text-neutral-900 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer p-1"
-              >
-                <CornerDownLeft size={16} strokeWidth={2} />
-              </button>
-            )}
-          </form>
-
-          {/* Sub-bar below input */}
-          <div className="w-full flex items-center justify-between text-[11.5px] pt-2 px-1 text-neutral-500">
-            {/* Left: Voice dictation */}
-            <div className="flex items-center gap-1.5 text-neutral-500">
-              <button
-                type="button"
-                className="w-6 h-6 rounded flex items-center justify-center hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
-              >
-                <Plus size={14} strokeWidth={2} />
-              </button>
-              <button
-                type="button"
-                title={isListening ? "Stop dictation" : "Dictate"}
-                aria-label={isListening ? "Stop dictation" : "Dictate"}
-                aria-pressed={isListening}
-                onClick={toggleSpeechInput}
-                className="w-6 h-6 rounded flex items-center justify-center hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
-              >
-                <Mic size={14} strokeWidth={1.8} />
-                {isListening && <span className="sr-only">Listening</span>}
-              </button>
-            </div>
-
-            {/* Center: Disclaimer */}
-            <span className="text-neutral-400 font-normal hidden sm:inline">
-              OpenedUp BYOK · Grounded in project instructions
-            </span>
-
-            {/* Right: Interactive BYOK Model Picker */}
-            <div className="relative flex items-center gap-1.5 font-normal">
-              <button
-                type="button"
-                onClick={() => setIsModelPickerOpen((v) => !v)}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-neutral-100 transition-colors cursor-pointer"
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isModelConnected ? "bg-emerald-500" : "bg-neutral-300"
-                  }`}
-                />
-                <span className="text-neutral-800 font-medium">{activeMeta.name}</span>
-                <span className="text-neutral-400">Medium</span>
-                <ChevronDown size={11} className="text-neutral-400" />
-              </button>
-
-              {isModelPickerOpen && (
-                <div className="absolute right-0 bottom-full mb-2 w-52 bg-white rounded-xl shadow-lg border border-neutral-200/90 p-1 z-50">
-                  {SESSION_MODELS.map((mId) => {
-                    const meta = MODEL_REGISTRY[mId];
-                    if (!meta) return null;
-                    const connected = hasKey(meta.provider);
-                    const isSelected = mId === selectedModelId;
-                    return (
-                      <button
-                        key={mId}
-                        type="button"
-                        onClick={() => {
-                          setSelectedModelId(mId);
-                          setIsModelPickerOpen(false);
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[12px] cursor-pointer ${
-                          isSelected
-                            ? "bg-neutral-100 text-neutral-900 font-medium"
-                            : "text-neutral-700 hover:bg-neutral-50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              connected ? "bg-emerald-500" : "bg-neutral-300"
-                            }`}
-                          />
-                          <span>{meta.name}</span>
-                        </div>
-                        {isSelected && <Check size={12} className="text-blue-600" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </footer>
+          }}
+          onRetryMessage={(messageId, payload) => {
+            const messageIndex = session.messages.findIndex((message) => message.id === messageId);
+            if (messageIndex < 0) return;
+            const priorMessages = session.messages.slice(0, messageIndex);
+            const userMessageIndex = priorMessages
+              .map((message) => message.role)
+              .lastIndexOf("user");
+            void handleSendMessage(
+              payload.prompt,
+              payload.model,
+              payload.effort,
+              payload.attachments,
+              userMessageIndex < 0 ? priorMessages : priorMessages.slice(0, userMessageIndex)
+            );
+          }}
+          onSaveArtifact={handleSaveArtifact}
+          onSelectActionChip={(chip, messageId) => {
+            if (chip === "Connect API Key") onOpenProviders();
+            if (chip === "Export findings" || chip === "Export sequence") {
+              const message = session.messages.find((item) => item.id === messageId);
+              if (message?.role === "assistant") {
+                void handleSaveArtifact(message)
+                  .then(onOpenArtifacts)
+                  .catch(() => undefined);
+              }
+            }
+          }}
+        />
+        <footer className="w-full shrink-0 bg-white pb-3 pt-2 sm:pb-5">
+          <ChatInput
+            onSendMessage={(message, model, effort, files) => {
+              void handleSendMessage(message, model, effort, files);
+            }}
+            isThinking={isGenerating}
+            onStopThinking={() => {
+              if (activeRequestRef.current) activeRequestRef.current.abort();
+              else onStopInitialGeneration();
+            }}
+            placeholder={`Message in ${project.name}…`}
+            selectedModel={selectedModelId}
+            onChangeModel={handleModelChange}
+            onOpenProjects={onOpenProjects}
+            onOpenPlugins={onOpenPlugins}
+            onOpenBenchmarks={onOpenBenchmarks}
+            onOpenProviders={onOpenProviders}
+          />
+        </footer>
+      </main>
     </div>
   );
 };

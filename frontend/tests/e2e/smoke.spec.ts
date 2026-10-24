@@ -23,8 +23,9 @@ test.describe("Production Smoke Tests", () => {
 
   test("projects support keyboard search and mobile create/rename/delete", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => localStorage.clear());
     await page.goto("/projects");
-    await expect(page.getByRole("heading", { name: "Project s" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
 
     await page.keyboard.press("Control+k");
     const search = page.getByPlaceholder("Search projects...");
@@ -49,8 +50,41 @@ test.describe("Production Smoke Tests", () => {
 
     await page.getByRole("button", { name: "Renamed project" }).click();
     await page.getByRole("button", { name: "Delete project" }).click();
-    await expect(page.getByRole("heading", { name: "Project s" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
     await expect(page.getByText("Renamed project")).toHaveCount(0);
+  });
+
+  test("projects start a session, save the response, and restore it after navigation", async ({
+    page,
+  }) => {
+    await page.route("**/api/chat/stream", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: 'event: token\ndata: {"delta":"Project response saved."}\n\nevent: done\ndata: {"content":"Project response saved."}\n\n',
+      });
+    });
+
+    await page.goto("/projects");
+    await page.evaluate(() => localStorage.clear());
+    await page.getByRole("button", { name: "New project" }).first().click();
+    await page.getByPlaceholder("Name your project").fill("Session persistence");
+    await page.getByRole("button", { name: "Create project" }).click();
+
+    await page.getByPlaceholder("New session in Session persistence").fill("Summarize this work");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await expect(page.getByText("Project response saved.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Session persistence" }).first().click();
+    await expect(page.getByText("Summarize this work").first()).toBeVisible();
+    await page.getByRole("button", { name: /Summarize this work/ }).click();
+    await expect(page.getByText("Project response saved.").first()).toBeVisible();
+
+    await page.reload();
+    await page.getByRole("button", { name: "Session persistence" }).first().click();
+    await expect(page.getByText("Summarize this work").first()).toBeVisible();
+    await page.getByRole("button", { name: /Summarize this work/ }).click();
+    await expect(page.getByText("Project response saved.").first()).toBeVisible();
   });
 
   test("artifacts support edit history restore and export on a narrow viewport", async ({
@@ -60,7 +94,6 @@ test.describe("Production Smoke Tests", () => {
     await page.addInitScript(() => localStorage.clear());
     await page.goto("/chat");
     await page.getByRole("button", { name: "Artifacts" }).click();
-    await page.getByRole("button", { name: "Add" }).click();
     await page.getByRole("button", { name: "New document" }).click();
     await page.getByPlaceholder("Artifact title...").fill("First draft");
     await page.getByPlaceholder("Write markdown or notes...").fill("Original artifact text");
@@ -72,11 +105,13 @@ test.describe("Production Smoke Tests", () => {
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("heading", { name: "Renamed draft" }).first()).toBeVisible();
 
-    await page.getByRole("button", { name: "History" }).click();
+    await page.getByRole("button", { name: "More", exact: true }).click();
+    await page.getByRole("button", { name: "Version history" }).click();
     await page.getByRole("button", { name: "Restore" }).click();
     await expect(page.getByRole("heading", { name: "First draft" }).first()).toBeVisible();
     await expect(page.getByText("Original artifact text").first()).toBeVisible();
 
+    await page.getByRole("button", { name: "More", exact: true }).click();
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: /Export/ }).click();
     const download = await downloadPromise;

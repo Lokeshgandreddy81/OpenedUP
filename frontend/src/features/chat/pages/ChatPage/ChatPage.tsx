@@ -10,6 +10,10 @@ interface ChatPageProps {
 
 export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
   const navigate = useNavigate();
+  const params = new URLSearchParams(window.location.search);
+  const initialView = params.get("view") === "customize" ? "customize" : "chat";
+  const initialCustomizeCategory =
+    params.get("category") === "Providers" ? "Providers" : "Connectors";
 
   const handleClose = () => {
     if (window.history.length > 1) {
@@ -48,6 +52,8 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
         onClose={handleClose}
         chapters={chapters}
         docTitle="Chat Assistant"
+        initialView={initialView}
+        initialCustomizeCategory={initialCustomizeCategory}
         onOpenScheduledTasks={handleOpenScheduledTasks}
         onViewChange={handleViewChange}
       />

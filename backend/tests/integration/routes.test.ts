@@ -195,8 +195,13 @@ describe("Backend API Integration Tests", () => {
   });
 
   describe("Chat", () => {
-    it("requires a verified Firebase user for persistent chat resources", async () => {
-      for (const route of ["/api/conversations", "/api/artifacts", "/api/credentials"]) {
+    it("requires a verified Firebase user for persistent resources", async () => {
+      for (const route of [
+        "/api/conversations",
+        "/api/artifacts",
+        "/api/credentials",
+        "/api/projects",
+      ]) {
         const response = await request(app).get(route);
         expect(response.status).toBe(401);
       }

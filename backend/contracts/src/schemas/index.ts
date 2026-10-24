@@ -266,12 +266,33 @@ const ProjectSessionMessageSchema = z.object({
   content: z.string().max(40_000),
   timestamp: z.string().max(100),
   thinkingTime: z.string().max(30).optional(),
+  generationStatus: z.enum(["stopped", "error"]).optional(),
+  attachments: z
+    .array(
+      z.object({
+        id: z.string().max(200).optional(),
+        name: z.string().min(1).max(500),
+        size: z.number().int().nonnegative(),
+        type: z.string().max(200).optional(),
+      })
+    )
+    .max(50)
+    .optional(),
+  retryPayload: z
+    .object({
+      prompt: z.string().max(40_000),
+      model: z.string().min(1).max(120),
+      effort: z.enum(["Low", "Medium", "High", "Extra", "Max"]),
+      attachments: z.array(z.never()).max(0),
+    })
+    .optional(),
 });
 
 const ProjectSessionSchema = z.object({
   id: z.string().min(1).max(200),
   projectId: z.string().min(1).max(200),
   title: z.string().max(300),
+  modelId: z.string().min(1).max(120).optional(),
   createdAt: z.number().int().nonnegative(),
   updatedAt: z.number().int().nonnegative(),
   messages: z.array(ProjectSessionMessageSchema).max(500),

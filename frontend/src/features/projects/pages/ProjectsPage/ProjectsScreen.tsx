@@ -24,7 +24,9 @@ import { ProjectSessionView } from "../../components/ProjectSessionView";
 import {
   chatAttachmentsForContext,
   readChatAttachments,
+  type ChatAttachmentFile,
 } from "../../../../app/files/chatAttachments";
+import type { EffortLevel } from "../../../chat";
 import {
   getLocalProjects,
   loadAccountProjects,
@@ -32,7 +34,7 @@ import {
   saveLocalProjects,
 } from "../../components/projectStore";
 
-export const DEFAULT_DEMO_PROJECT: ProjectItem = {
+const DEFAULT_DEMO_PROJECT: ProjectItem = {
   id: "proj-demo-yes",
   name: "Yes",
   description: "Job",
@@ -66,7 +68,13 @@ export const DEFAULT_DEMO_PROJECT: ProjectItem = {
   files: [],
 };
 
-export const ProjectsScreen: React.FC = () => {
+export const ProjectsScreen: React.FC<{
+  onOpenProviders: () => void;
+  onOpenProjects: () => void;
+  onOpenPlugins: () => void;
+  onOpenBenchmarks: () => void;
+  onOpenArtifacts: () => void;
+}> = ({ onOpenProviders, onOpenProjects, onOpenPlugins, onOpenBenchmarks, onOpenArtifacts }) => {
   const { user, loading: authLoading } = useChatAuth();
   // Load projects from localStorage (defaults to demo project "Yes" if empty)
   const [projects, setProjects] = useState<ProjectItem[]>(() => {
@@ -107,9 +115,11 @@ export const ProjectsScreen: React.FC = () => {
     setProjectSyncError("");
     setLoadedAccountUid(null);
     void loadAccountProjects(user.uid)
-      .then(({ projects: accountProjects, importWarning }) => {
+      .then(({ projects: accountProjects, importWarning, hasPendingSnapshot }) => {
         if (cancelled) return;
-        lastSavedProjectsRef.current = JSON.stringify(accountProjects);
+        // A recovered snapshot is intentionally different from the server copy;
+        // leave it dirty so the save queue retries it after loading completes.
+        lastSavedProjectsRef.current = hasPendingSnapshot ? null : JSON.stringify(accountProjects);
         setProjectImportWarning(importWarning);
         setProjects(accountProjects);
         setLoadedAccountUid(user.uid);
@@ -179,33 +189,9 @@ export const ProjectsScreen: React.FC = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
-  const cardMenuRef = useRef<HTMLDivElement>(null);
+  const [generatingSessionId, setGeneratingSessionId] = useState<string | null>(null);
+  const initialRequestControllerRef = useRef<AbortController | null>(null);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
-  const sLetterRef = useRef<HTMLSpanElement>(null);
-  const mainRef = useRef<HTMLElement>(null);
-  const [sOffset, setSOffset] = useState<number | null>(null);
-
-  // Measure exact position of letter 's' relative to main container
-  useEffect(() => {
-    const updateSOffset = () => {
-      if (sLetterRef.current && mainRef.current) {
-        const sRect = sLetterRef.current.getBoundingClientRect();
-        const mainRect = mainRef.current.getBoundingClientRect();
-        const offset = Math.round(sRect.left - mainRect.left);
-        if (offset > 0) {
-          setSOffset(offset);
-        }
-      }
-    };
-
-    updateSOffset();
-    if (typeof document !== "undefined" && document.fonts) {
-      document.fonts.ready.then(updateSOffset);
-    }
-    window.addEventListener("resize", updateSOffset);
-    return () => window.removeEventListener("resize", updateSOffset);
-  }, [viewState]);
-
   // Keep anonymous projects local; account projects are saved as ordered server snapshots.
   useEffect(() => {
     if (authLoading) return;
@@ -228,7 +214,7 @@ export const ProjectsScreen: React.FC = () => {
         .catch(() => undefined)
         .then(async () => {
           if (cancelled || currentUidRef.current !== userId) return;
-          await saveAccountProjects(projects);
+          await saveAccountProjects(userId, projects);
           if (currentUidRef.current === userId) {
             lastSavedProjectsRef.current = snapshot;
             setProjectSyncError("");
@@ -261,13 +247,16 @@ export const ProjectsScreen: React.FC = () => {
       if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
         setIsSortMenuOpen(false);
       }
-      if (cardMenuRef.current && !cardMenuRef.current.contains(e.target as Node)) {
+      if (
+        cardMenuOpenId &&
+        !(e.target as HTMLElement).closest(`[data-project-menu="${cardMenuOpenId}"]`)
+      ) {
         setCardMenuOpenId(null);
       }
     };
     window.addEventListener("mousedown", handleClickOutside);
     return () => window.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [cardMenuOpenId]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -395,21 +384,37 @@ export const ProjectsScreen: React.FC = () => {
     setIsCreateModalOpen(false);
   };
 
-  const handleStartSession = async (initialPrompt: string, modelId = "claude-opus-5.5") => {
+  const handleStartSession = async (
+    initialPrompt: string,
+    modelId = "openrouter-nemotron-3.5-lightning-free",
+    effort: EffortLevel = "Medium",
+    attachments: ChatAttachmentFile[] = []
+  ) => {
     if (!activeProject) return;
     const targetProject = activeProject;
     const newSessionId = `sess-${Date.now()}`;
-    const userMessage = {
+    const userMessage: ProjectSession["messages"][number] = {
       id: `msg-u-${Date.now()}`,
-      role: "user" as const,
+      role: "user",
       content: initialPrompt,
-      timestamp: "Just now",
+      timestamp: new Date().toISOString(),
+      ...(attachments.length > 0
+        ? {
+            attachments: attachments.map(({ id, name, size, type }) => ({
+              id,
+              name,
+              size,
+              type,
+            })),
+          }
+        : {}),
     };
 
     const newSession: ProjectSession = {
       id: newSessionId,
       projectId: targetProject.id,
-      title: initialPrompt.slice(0, 24) || "Greeting",
+      title: initialPrompt.slice(0, 24) || "New session",
+      modelId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       messages: [userMessage],
@@ -424,22 +429,78 @@ export const ProjectsScreen: React.FC = () => {
 
     setProjects((prev) => prev.map((p) => (p.id === updatedProject.id ? updatedProject : p)));
     setActiveSessionId(newSessionId);
+    setGeneratingSessionId(newSessionId);
     setViewState("session");
+
+    const controller = new AbortController();
+    initialRequestControllerRef.current = controller;
+    const assistantId = `msg-a-${Date.now()}`;
+    const startedAt = Date.now();
+    let replyContent = "";
+    const updateAssistant = (
+      content: string,
+      isStreaming: boolean,
+      generationStatus?: "stopped" | "error"
+    ) => {
+      const assistantMessage: ProjectSession["messages"][number] = {
+        id: assistantId,
+        role: "assistant",
+        content,
+        timestamp: new Date().toISOString(),
+        ...(isStreaming
+          ? { isStreaming: true }
+          : { thinkingTime: `${Math.max(1, Math.ceil((Date.now() - startedAt) / 1000))}s` }),
+        ...(generationStatus ? { generationStatus } : {}),
+        ...(generationStatus && attachments.length === 0
+          ? {
+              retryPayload: {
+                prompt: initialPrompt,
+                model: modelId,
+                effort,
+                attachments: [],
+              },
+            }
+          : {}),
+      };
+      setProjects((prev) =>
+        prev.map((project) =>
+          project.id !== targetProject.id
+            ? project
+            : {
+                ...project,
+                sessions: (project.sessions || []).map((session) =>
+                  session.id === newSessionId
+                    ? {
+                        ...session,
+                        messages: [userMessage, assistantMessage],
+                        updatedAt: Date.now(),
+                      }
+                    : session
+                ),
+                updatedAt: Date.now(),
+              }
+        )
+      );
+    };
 
     try {
       const providerConfig = getProviderChatRequestConfig(modelId);
-
       const requestInit = {
         method: "POST",
         headers: providerConfig.headers,
+        signal: controller.signal,
         body: JSON.stringify({
           messages: [{ role: "user", content: initialPrompt }],
           model: modelId,
           ...providerConfig.customModelFields,
+          effort,
           context: {
             docTitle: targetProject.name,
             projectInstructions: targetProject.customInstructions,
-            projectFiles: chatAttachmentsForContext(targetProject.files),
+            projectFiles: [
+              ...chatAttachmentsForContext(targetProject.files),
+              ...chatAttachmentsForContext(attachments),
+            ],
           },
         }),
       };
@@ -447,57 +508,35 @@ export const ProjectsScreen: React.FC = () => {
         ? authenticatedChatFetch("/api/chat/stream", requestInit)
         : fetch("/api/chat/stream", requestInit));
 
-      let replyContent = "";
-      if (response.ok) {
-        replyContent = await consumeChatStream(response, () => undefined);
-      } else if (response.status === 401) {
-        replyContent = `${providerConfig.providerName} API Key Required: Connect your ${providerConfig.providerName} key in Customize → Providers to run ${providerConfig.modelName}.`;
-      } else {
+      if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        replyContent = `I couldn’t get a response from the model. ${typeof errData.error === "string" ? errData.error : `Chat request failed (${response.status}).`}`;
+        const errorMessage =
+          response.status === 401
+            ? `${providerConfig.providerName} API Key Required: Connect your ${providerConfig.providerName} key in Customize → Providers to run ${providerConfig.modelName}.`
+            : typeof errData.error === "string"
+              ? errData.error
+              : `Chat request failed (${response.status}).`;
+        throw new Error(errorMessage);
       }
 
-      const assistantMsg = {
-        id: `msg-a-${Date.now()}`,
-        role: "assistant" as const,
-        content: replyContent,
-        timestamp: "Just now",
-      };
-
-      setProjects((prev) =>
-        prev.map((p) => {
-          if (p.id !== targetProject.id) return p;
-          return {
-            ...p,
-            sessions: (p.sessions || []).map((s) =>
-              s.id === newSessionId
-                ? { ...s, messages: [userMessage, assistantMsg], updatedAt: Date.now() }
-                : s
-            ),
-            updatedAt: Date.now(),
-          };
-        })
-      );
+      replyContent = await consumeChatStream(response, (delta) => {
+        replyContent += delta;
+        updateAssistant(replyContent, true);
+      });
+      updateAssistant(replyContent, false);
     } catch (error: unknown) {
-      const errorMsg = {
-        id: `msg-a-${Date.now()}`,
-        role: "assistant" as const,
-        content: `I couldn’t get a response from the model. ${error instanceof Error ? error.message : "Chat service unavailable."}`,
-        timestamp: "Just now",
-      };
-      setProjects((prev) =>
-        prev.map((p) => {
-          if (p.id !== targetProject.id) return p;
-          return {
-            ...p,
-            sessions: (p.sessions || []).map((s) =>
-              s.id === newSessionId
-                ? { ...s, messages: [userMessage, errorMsg], updatedAt: Date.now() }
-                : s
-            ),
-          };
-        })
-      );
+      if (error instanceof DOMException && error.name === "AbortError") {
+        updateAssistant(replyContent, false, "stopped");
+      } else {
+        updateAssistant(
+          `I couldn’t get a response from the model. ${error instanceof Error ? error.message : "Chat service unavailable."}`,
+          false,
+          "error"
+        );
+      }
+    } finally {
+      initialRequestControllerRef.current = null;
+      setGeneratingSessionId((current) => (current === newSessionId ? null : current));
     }
   };
 
@@ -580,6 +619,10 @@ export const ProjectsScreen: React.FC = () => {
             setViewState("list");
           }}
           onStartSession={handleStartSession}
+          onOpenProviders={onOpenProviders}
+          onOpenProjects={onOpenProjects}
+          onOpenPlugins={onOpenPlugins}
+          onOpenBenchmarks={onOpenBenchmarks}
           onOpenSession={(sess) => {
             setActiveSessionId(sess.id);
             setViewState("session");
@@ -605,6 +648,16 @@ export const ProjectsScreen: React.FC = () => {
         <ProjectSessionView
           project={activeProject}
           session={activeSession}
+          onOpenProviders={onOpenProviders}
+          onOpenProjects={onOpenProjects}
+          onOpenPlugins={onOpenPlugins}
+          onOpenBenchmarks={onOpenBenchmarks}
+          onOpenArtifacts={onOpenArtifacts}
+          isInitialGenerating={generatingSessionId === activeSession.id}
+          onStopInitialGeneration={() => {
+            if (generatingSessionId === activeSession.id)
+              initialRequestControllerRef.current?.abort();
+          }}
           onBackToWorkspace={() => {
             setViewState("workspace");
           }}
@@ -641,17 +694,21 @@ export const ProjectsScreen: React.FC = () => {
 
   // ── Render Projects List / Empty State View ──
   return (
-    <div className="flex-1 w-full h-full bg-white flex flex-col items-center font-sans select-none overflow-y-auto">
+    <div className="flex-1 w-full h-full bg-[#fcfbf9] flex flex-col items-center font-sans select-none overflow-y-auto">
       {projectSyncNotice}
-      <div className="w-full px-6 sm:px-7 md:px-8 flex flex-col min-h-full">
+      <div className="w-full max-w-[1440px] px-5 sm:px-8 lg:px-12 flex flex-col min-h-full">
         {/* ── Top Header Bar ── */}
-        <header className="w-full pt-7 pb-4 flex items-center justify-between shrink-0">
+        <header className="w-full pt-8 pb-5 flex items-center justify-between gap-4 shrink-0 border-b border-[#eeece8]">
           {/* Left: Projects Title in Editorial Serif */}
           <div className="flex items-center gap-3">
-            <h1 className="text-[26px] md:text-[28px] font-serif text-neutral-900 tracking-tight font-normal inline-flex items-baseline">
-              <span>Project</span>
-              <span ref={sLetterRef}>s</span>
-            </h1>
+            <div>
+              <h1 className="text-[27px] md:text-[30px] font-serif text-neutral-900 tracking-tight font-normal">
+                Projects
+              </h1>
+              <p className="mt-1 text-[13px] text-neutral-500">
+                A focused space for your work and conversations
+              </p>
+            </div>
           </div>
 
           {/* Right: Search, Sort, New project button */}
@@ -659,7 +716,7 @@ export const ProjectsScreen: React.FC = () => {
             {/* Search Toggle / Input */}
             <div className="relative flex items-center">
               {isSearchOpen ? (
-                <div className="flex items-center gap-2 bg-neutral-100 rounded-full px-3 py-1.5 border border-neutral-200/80 transition-all duration-150 animate-in fade-in zoom-in-95">
+                <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-[#e9e6e1] transition-all duration-150 animate-in fade-in zoom-in-95 shadow-sm">
                   <Search size={14} className="text-neutral-500 shrink-0" />
                   <input
                     ref={searchInputRef}
@@ -667,13 +724,14 @@ export const ProjectsScreen: React.FC = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search projects..."
-                    className="bg-transparent text-[13px] text-neutral-800 placeholder-neutral-400 outline-none w-36 md:w-52"
+                    className="bg-transparent text-[13px] text-neutral-800 placeholder-neutral-400 outline-none w-36 md:w-56"
                   />
                   {searchQuery ? (
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                      aria-label="Clear project search"
+                      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/30"
                     >
                       <X size={13} />
                     </button>
@@ -681,7 +739,8 @@ export const ProjectsScreen: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setIsSearchOpen(false)}
-                      className="text-neutral-400 hover:text-neutral-700 cursor-pointer text-[11px] font-mono"
+                      aria-label="Close project search"
+                      className="cursor-pointer rounded-md px-1.5 py-1 text-[11px] font-medium text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/30"
                     >
                       esc
                     </button>
@@ -693,7 +752,7 @@ export const ProjectsScreen: React.FC = () => {
                   onClick={() => setIsSearchOpen(true)}
                   title="Search projects (⌘K)"
                   aria-label="Search projects"
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80 transition-colors cursor-pointer"
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-neutral-600 transition-colors hover:bg-[#f2f0ec] hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/30"
                 >
                   <Search size={17} strokeWidth={1.8} />
                 </button>
@@ -701,13 +760,15 @@ export const ProjectsScreen: React.FC = () => {
             </div>
 
             {/* Sort Menu Button */}
-            <div className="relative" ref={sortMenuRef}>
+            <div className="relative z-30" ref={sortMenuRef}>
               <button
                 type="button"
                 onClick={() => setIsSortMenuOpen((v) => !v)}
                 title="Sort projects"
                 aria-label="Sort projects"
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                aria-expanded={isSortMenuOpen}
+                aria-controls="project-sort-options"
+                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/30 ${
                   isSortMenuOpen
                     ? "bg-neutral-100 text-neutral-950"
                     : "text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80"
@@ -718,39 +779,47 @@ export const ProjectsScreen: React.FC = () => {
 
               {/* Sort Popover Dropdown */}
               {isSortMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-neutral-200/80 py-1.5 z-40 animate-in fade-in duration-100 text-[13px]">
+                <div
+                  id="project-sort-options"
+                  role="group"
+                  aria-label="Sort projects by"
+                  className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-[#e8e3da] bg-white py-1.5 text-[13px] shadow-[0_18px_42px_-22px_rgba(35,28,18,0.24)] animate-in fade-in duration-100"
+                >
                   <div className="px-3 py-1 text-[11px] font-medium text-neutral-400 uppercase tracking-wider">
                     Sort by
                   </div>
                   <button
                     type="button"
+                    aria-pressed={sortBy === "updated"}
                     onClick={() => {
                       setSortBy("updated");
                       setIsSortMenuOpen(false);
                     }}
-                    className="w-full text-left px-3 py-1.5 flex items-center justify-between text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950 cursor-pointer"
+                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-[#f8f6f3] hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-[#f8f6f3]"
                   >
                     <span>Recently updated</span>
                     {sortBy === "updated" && <Check size={14} className="text-neutral-900" />}
                   </button>
                   <button
                     type="button"
+                    aria-pressed={sortBy === "created"}
                     onClick={() => {
                       setSortBy("created");
                       setIsSortMenuOpen(false);
                     }}
-                    className="w-full text-left px-3 py-1.5 flex items-center justify-between text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950 cursor-pointer"
+                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-[#f8f6f3] hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-[#f8f6f3]"
                   >
                     <span>Date created</span>
                     {sortBy === "created" && <Check size={14} className="text-neutral-900" />}
                   </button>
                   <button
                     type="button"
+                    aria-pressed={sortBy === "name"}
                     onClick={() => {
                       setSortBy("name");
                       setIsSortMenuOpen(false);
                     }}
-                    className="w-full text-left px-3 py-1.5 flex items-center justify-between text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950 cursor-pointer"
+                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-[#f8f6f3] hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-[#f8f6f3]"
                   >
                     <span>Name (A to Z)</span>
                     {sortBy === "name" && <Check size={14} className="text-neutral-900" />}
@@ -759,13 +828,13 @@ export const ProjectsScreen: React.FC = () => {
               )}
             </div>
 
-            {/* New Project Black Pill Button */}
+            {/* Create project */}
             <button
               type="button"
               onClick={handleOpenCreateModal}
               title="Create new project"
               aria-label="New project"
-              className="bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-3.5 py-1.5 rounded-full transition-all duration-150 cursor-pointer shadow-xs active:scale-95 flex items-center justify-center shrink-0"
+              className="bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-4 py-2.5 rounded-xl transition-colors duration-150 cursor-pointer shadow-sm flex items-center justify-center shrink-0"
             >
               New project
             </button>
@@ -773,9 +842,9 @@ export const ProjectsScreen: React.FC = () => {
         </header>
 
         {/* ── Main Body Canvas ── */}
-        <main ref={mainRef} className="flex-1 w-full flex flex-col pb-12">
+        <main className="flex-1 w-full flex flex-col pb-12">
           {projects.length === 0 ? (
-            /* ── Pristine Empty State (Matches design screenshot exactly) ── */
+            /* Empty state */
             <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto select-none animate-in fade-in duration-200 my-auto py-16">
               {/* The 4-blocks + hand illustration */}
               <div className="w-16 h-16 flex items-center justify-center mb-1">
@@ -788,7 +857,7 @@ export const ProjectsScreen: React.FC = () => {
               </div>
 
               {/* Heading */}
-              <h2 className="text-[17px] md:text-[18px] font-medium text-neutral-800 tracking-tight mt-3 mb-1.5">
+              <h2 className="mt-3 mb-1.5 font-serif text-[22px] font-normal tracking-tight text-neutral-900">
                 Looking to start a project?
               </h2>
 
@@ -803,7 +872,7 @@ export const ProjectsScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={handleOpenCreateModal}
-                className="mt-4 px-4 py-1.5 rounded-xl border border-neutral-200/90 bg-white hover:bg-neutral-50/80 text-neutral-800 text-[13.5px] font-medium shadow-xs transition-all duration-150 cursor-pointer active:scale-98"
+                className="mt-4 px-4 py-1.5 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 text-[13.5px] font-medium shadow-sm transition-all duration-150 cursor-pointer active:scale-98"
               >
                 New project
               </button>
@@ -825,33 +894,49 @@ export const ProjectsScreen: React.FC = () => {
               </button>
             </div>
           ) : (
-            /* ── Populated Grid of Projects: Starts directly down from the 's' letter of Projects ── */
-            <div
-              style={sOffset != null ? { paddingLeft: `${sOffset}px` } : undefined}
-              className="w-full pl-0 sm:pl-[84px] flex flex-col flex-1 pt-3 animate-in fade-in duration-200"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-12 max-w-6xl">
+            /* Project cards */
+            <div className="w-full flex flex-col flex-1 pt-6 animate-in fade-in duration-200">
+              <div
+                className={`mx-auto grid w-full max-w-5xl grid-cols-1 gap-4 pb-12 ${filteredProjects.length > 1 ? "lg:grid-cols-2" : ""}`}
+              >
                 {filteredProjects.map((project) => {
                   return (
-                    <div
+                    <article
                       key={project.id}
-                      onClick={() => {
-                        setActiveProjectId(project.id);
-                        setViewState("workspace");
-                      }}
-                      className="group relative bg-white border border-neutral-200/80 hover:border-neutral-300/90 rounded-2xl p-4.5 flex flex-col justify-between transition-all duration-150 hover:shadow-md cursor-pointer select-none"
+                      className="relative flex min-h-[156px] cursor-pointer select-none flex-col justify-between gap-4 rounded-2xl border border-[#e8e3da] bg-white p-5 shadow-[0_1px_3px_rgba(38,32,23,0.035)] sm:p-6"
                     >
-                      <div>
-                        {/* Card Header: Title + More menu */}
-                        <div className="flex items-start justify-between gap-2 mb-2">
+                      <button
+                        type="button"
+                        aria-label={project.name}
+                        onClick={() => {
+                          setActiveProjectId(project.id);
+                          setViewState("workspace");
+                        }}
+                        className="absolute inset-0 z-0 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#806b4f]"
+                      />
+                      <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between gap-4 pointer-events-none">
+                        <div className="flex min-w-0 items-start justify-between gap-4">
                           <div className="min-w-0">
-                            <h3 className="text-[15px] font-medium text-neutral-900 truncate group-hover:text-black">
+                            <h3 className="truncate font-serif text-[20px] leading-tight text-neutral-900">
                               {project.name}
                             </h3>
+                            {project.description && (
+                              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-neutral-500">
+                                {project.description}
+                              </p>
+                            )}
+                            {project.customInstructions && (
+                              <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
+                                <Sparkles size={12} className="text-[#8a765c]" />
+                                <span>Custom instructions</span>
+                              </div>
+                            )}
                           </div>
 
-                          {/* 3-dots actions menu */}
-                          <div className="relative">
+                          <div
+                            className="relative pointer-events-auto"
+                            data-project-menu={project.id}
+                          >
                             <button
                               type="button"
                               onClick={(e) => {
@@ -860,21 +945,23 @@ export const ProjectsScreen: React.FC = () => {
                                   cardMenuOpenId === project.id ? null : project.id
                                 );
                               }}
-                              className="w-7 h-7 -mr-1 -mt-1 rounded-lg flex items-center justify-center text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors opacity-0 group-hover:opacity-100"
+                              onKeyDown={(event) => event.stopPropagation()}
+                              aria-label={`Actions for ${project.name}`}
+                              className="-mr-2 -mt-2 flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 transition-colors hover:bg-[#f5f3ef] hover:text-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-neutral-400"
                             >
-                              <MoreVertical size={14} />
+                              <MoreVertical size={16} />
                             </button>
 
                             {cardMenuOpenId === project.id && (
                               <div
-                                ref={cardMenuRef}
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full mt-1 w-36 bg-white rounded-xl shadow-lg border border-neutral-200/80 py-1 z-30 text-xs animate-in fade-in duration-100"
+                                className="absolute right-0 top-full z-30 mt-1 w-40 rounded-xl border border-neutral-200/80 bg-white py-1.5 text-xs shadow-lg animate-in fade-in duration-100"
                               >
                                 <button
                                   type="button"
                                   onClick={(e) => handleDeleteProject(project.id, e)}
-                                  className="w-full text-left px-3 py-1.5 text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
+                                  onKeyDown={(event) => event.stopPropagation()}
+                                  className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-left text-rose-600 hover:bg-rose-50"
                                 >
                                   <Trash2 size={13} />
                                   <span>Delete project</span>
@@ -884,31 +971,15 @@ export const ProjectsScreen: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Description */}
-                        {project.description ? (
-                          <p className="text-[12.5px] text-neutral-500 line-clamp-2 leading-relaxed mb-3">
-                            {project.description}
-                          </p>
-                        ) : (
-                          <p className="text-[12px] text-neutral-400 italic mb-3">
-                            No project description
-                          </p>
-                        )}
-
-                        {/* Custom instructions indicator badge */}
-                        {project.customInstructions && (
-                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-neutral-100/80 text-[11px] text-neutral-600 font-mono mb-3">
-                            <Sparkles size={11} className="text-amber-600" />
-                            <span className="truncate max-w-[180px]">Custom instructions</span>
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between border-t border-[#f0eeea] pt-3 text-[12px] text-neutral-500">
+                          <span className="font-medium text-neutral-600">
+                            {project.sessions?.length ?? 0}{" "}
+                            {(project.sessions?.length ?? 0) === 1 ? "session" : "sessions"}
+                          </span>
+                          <span>{formatRelativeTime(project.updatedAt)}</span>
+                        </div>
                       </div>
-
-                      {/* Card Footer: Relative Time */}
-                      <div className="pt-3 border-t border-neutral-100 flex items-center justify-end text-[11.5px] text-neutral-400">
-                        <span>{formatRelativeTime(project.updatedAt)}</span>
-                      </div>
-                    </div>
+                    </article>
                   );
                 })}
               </div>
@@ -917,21 +988,21 @@ export const ProjectsScreen: React.FC = () => {
         </main>
       </div>
 
-      {/* ── Create a Project Dialog Modal (Matches User Design Screenshot Exactly) ── */}
+      {/* Create project dialog */}
       {isCreateModalOpen && (
         <div
           role="dialog"
           aria-modal="true"
           onClick={() => setIsCreateModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 bg-neutral-900/35 backdrop-blur-[3px] flex items-center justify-center p-4 animate-in fade-in duration-150"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[570px] bg-white rounded-3xl shadow-2xl border border-neutral-200/80 p-7 md:p-8 flex flex-col animate-in zoom-in-95 duration-150 select-none"
+            className="w-full max-w-[570px] rounded-[24px] border border-[#e8e3da] bg-white p-6 shadow-[0_28px_80px_-36px_rgba(25,20,12,0.38)] flex flex-col animate-in zoom-in-95 duration-150 select-none sm:p-7"
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[23px] md:text-[25px] font-semibold text-neutral-900 tracking-tight">
+              <h2 className="font-serif text-[24px] font-normal tracking-tight text-neutral-900">
                 Create a project
               </h2>
               <button
@@ -957,7 +1028,7 @@ export const ProjectsScreen: React.FC = () => {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Name your project"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-blue-500 ring-1 ring-blue-500 text-[14px] text-neutral-900 placeholder-neutral-400 outline-none transition-all bg-white"
+                  className="w-full rounded-xl border border-[#e6e2dc] bg-white px-3.5 py-2.5 text-[14px] text-neutral-900 placeholder-neutral-400 outline-none transition-[border-color,box-shadow] focus:border-[#b9aa95] focus:ring-2 focus:ring-[#806b4f]/10"
                 />
               </div>
 
@@ -971,7 +1042,7 @@ export const ProjectsScreen: React.FC = () => {
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="Describe your project, goals, subject, etc..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200/90 hover:border-neutral-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-[14px] text-neutral-900 placeholder-neutral-400 outline-none transition-all resize-y min-h-[96px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#e6e2dc] hover:border-[#d7d0c6] focus:border-[#b9aa95] focus:ring-2 focus:ring-[#806b4f]/10 text-[14px] text-neutral-900 placeholder-neutral-400 outline-none transition-all resize-y min-h-[96px]"
                 />
               </div>
 
@@ -988,7 +1059,7 @@ export const ProjectsScreen: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => modalFileInputRef.current?.click()}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
+                      className="text-xs text-[#806b4f] hover:text-[#705c43] font-medium cursor-pointer"
                     >
                       + Add more files
                     </button>
@@ -1059,7 +1130,7 @@ export const ProjectsScreen: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!newName.trim()}
-                  className="px-4.5 py-2 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 disabled:opacity-40 disabled:pointer-events-none text-[13.5px] font-medium transition-all cursor-pointer shadow-2xs active:scale-98"
+                  className="px-4.5 py-2 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 disabled:bg-neutral-300 disabled:text-neutral-500 disabled:pointer-events-none text-[13.5px] font-medium transition-colors cursor-pointer shadow-sm"
                 >
                   Create project
                 </button>

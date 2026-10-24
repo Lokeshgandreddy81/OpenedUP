@@ -65,6 +65,7 @@ interface ChatInputProps {
   initialText?: string;
   chapterContextLabel?: string;
   starterPrompts?: Array<{ label: string; prompt: string }>;
+  stableFrame?: boolean;
 }
 
 const AVAILABLE_MODELS: AiModelOption[] = getChatModels().map((model) => ({
@@ -119,6 +120,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   initialText = "",
   chapterContextLabel,
   starterPrompts = [],
+  stableFrame = false,
 }) => {
   const [text, setText] = useState(initialText);
   const [attachments, setAttachments] = useState<ChatAttachmentFile[]>([]);
@@ -349,7 +351,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-2 rounded-[28px] border p-4 transition-[border-color,background-color,box-shadow] duration-200 sm:p-5 ${chapterContextLabel ? "border-slate-200/70 bg-slate-50/35 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.4)] focus-within:border-slate-300/80 focus-within:bg-white" : "border-slate-200/80 bg-white shadow-[0_14px_36px_-30px_rgba(15,23,42,0.42)] focus-within:border-slate-300 focus-within:shadow-[0_18px_42px_-30px_rgba(15,23,42,0.5)]"} ${isFileDragActive ? "border-slate-300 bg-slate-50 ring-4 ring-slate-900/5" : ""}`}
+          className={`relative flex flex-col gap-2 rounded-[28px] border p-4 sm:p-5 ${stableFrame ? "border-slate-300/80 bg-white shadow-[0_14px_36px_-30px_rgba(15,23,42,0.42)]" : `transition-[border-color,background-color,box-shadow] duration-200 ${chapterContextLabel ? "border-slate-200/70 bg-slate-50/35 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.4)] focus-within:border-slate-300/80 focus-within:bg-white" : "border-slate-200/80 bg-white shadow-[0_14px_36px_-30px_rgba(15,23,42,0.42)] focus-within:border-slate-300 focus-within:shadow-[0_18px_42px_-30px_rgba(15,23,42,0.5)]"}`} ${isFileDragActive ? "border-slate-300 bg-slate-50 ring-4 ring-slate-900/5" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
           <input

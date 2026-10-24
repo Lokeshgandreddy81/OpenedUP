@@ -930,6 +930,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           handleSelectView("chat");
         }}
         onCloseScheduledTasks={() => setIsScheduledTasksInternalOpen(false)}
+        onOpenProviders={handleOpenProvidersTab}
+        onOpenProjects={() => handleSelectView("projects")}
+        onOpenPlugins={() => handleSelectView("plugins")}
+        onOpenBenchmarks={() => handleSelectView("benchmarks")}
+        onOpenArtifacts={() => handleSelectView("artifacts")}
       />
 
       {isSidebarOpen && (

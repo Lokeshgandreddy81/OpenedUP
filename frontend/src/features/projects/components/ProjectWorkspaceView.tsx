@@ -1,33 +1,29 @@
 import React, { useState, useRef } from "react";
-import {
-  ChevronDown,
-  Search,
-  Pin,
-  Plus,
-  Mic,
-  FileText,
-  Files,
-  Trash2,
-  Edit2,
-  X,
-  Check,
-} from "lucide-react";
-import { getChatModels, MODEL_REGISTRY } from "@charan-interiors/contracts";
+import { ChevronDown, Search, FileText, Files, Trash2, Edit2, X } from "lucide-react";
+import { getModelMeta } from "@charan-interiors/contracts";
 import { useProviderKeys } from "../../customize/publicApi";
 import type { ProjectItem, ProjectSession } from "./projectTypes";
 import { readChatAttachments } from "../../../app/files/chatAttachments";
-import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
+import { ChatInput, type AiModelId, type EffortLevel } from "../../chat";
+import type { ChatAttachmentFile } from "../../../app/files/chatAttachments";
 
 export interface ProjectWorkspaceViewProps {
   project: ProjectItem;
   onBackToProjects: () => void;
-  onStartSession: (initialPrompt: string, modelId?: string) => void;
+  onStartSession: (
+    initialPrompt: string,
+    modelId?: AiModelId,
+    effort?: EffortLevel,
+    attachments?: ChatAttachmentFile[]
+  ) => void;
   onOpenSession: (session: ProjectSession) => void;
   onUpdateProject: (updated: ProjectItem) => void;
   onDeleteProject: (projectId: string) => void;
+  onOpenProviders: () => void;
+  onOpenProjects: () => void;
+  onOpenPlugins: () => void;
+  onOpenBenchmarks: () => void;
 }
-
-const WORKSPACE_MODELS = getChatModels().map((model) => model.id);
 
 export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   project,
@@ -36,38 +32,36 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   onOpenSession,
   onUpdateProject,
   onDeleteProject,
+  onOpenProviders,
+  onOpenProjects,
+  onOpenPlugins,
+  onOpenBenchmarks,
 }) => {
-  const [promptText, setPromptText] = useState("");
-  const [selectedModelId, setSelectedModelId] = useState<string>("claude-opus-5.5");
-  const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<AiModelId>(
+    "openrouter-nemotron-3.5-lightning-free"
+  );
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const [isInstructionsModalOpen, setIsInstructionsModalOpen] = useState(false);
+  const [isSessionSearchOpen, setIsSessionSearchOpen] = useState(false);
+  const [sessionSearch, setSessionSearch] = useState("");
   const [instructionsText, setInstructionsText] = useState(project.customInstructions || "");
   const [projectName, setProjectName] = useState(project.name);
   const [projectDescription, setProjectDescription] = useState(project.description || "");
-  const [isPinned, setIsPinned] = useState(Boolean(project.isPinned));
   const [fileError, setFileError] = useState("");
-  const {
-    isListening,
-    error: speechError,
-    toggle: toggleSpeechInput,
-  } = useSpeechInput((transcript) =>
-    setPromptText((current) => `${current}${current ? " " : ""}${transcript}`)
-  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { hasKey } = useProviderKeys();
-  const activeMeta = MODEL_REGISTRY[selectedModelId] || MODEL_REGISTRY["claude-opus-5.5"];
-  const isModelConnected = hasKey(activeMeta.provider);
+  const filteredSessions = (project.sessions || []).filter((session) =>
+    session.title.toLocaleLowerCase().includes(sessionSearch.trim().toLocaleLowerCase())
+  );
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (promptText.trim()) {
-        onStartSession(promptText.trim(), selectedModelId);
-        setPromptText("");
-      }
+  const handleModelChange = (model: AiModelId) => {
+    const metadata = getModelMeta(model);
+    if (!metadata.isFree && !hasKey(metadata.provider)) {
+      onOpenProviders();
+      return;
     }
+    setSelectedModelId(model);
   };
 
   const handleSaveInstructions = () => {
@@ -106,16 +100,6 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
     });
   };
 
-  const togglePin = () => {
-    const nextPin = !isPinned;
-    setIsPinned(nextPin);
-    onUpdateProject({
-      ...project,
-      isPinned: nextPin,
-      updatedAt: Date.now(),
-    });
-  };
-
   const formatRelativeTime = (timestamp?: number): string => {
     if (!timestamp) return "Recently";
     const diff = Date.now() - timestamp;
@@ -132,9 +116,9 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
 
   return (
     <div className="flex-1 w-full h-full bg-white flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-150">
-      {/* ── Top Bar / Breadcrumb Aligned with Content (Left to Left, Right to Right) ── */}
-      <header className="w-full shrink-0 border-b border-transparent">
-        <div className="w-full px-6 sm:px-7 md:px-8 pt-7 pb-4 flex items-center justify-between">
+      {/* Compact project breadcrumb bar */}
+      <header className="w-full shrink-0 bg-white">
+        <div className="w-full px-4 sm:px-5 h-14 flex items-center justify-start gap-3">
           {/* Left: Breadcrumbs */}
           <div className="flex items-center gap-2 text-[14px]">
             <button
@@ -149,7 +133,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsHeaderMenuOpen((v) => !v)}
-                className="flex items-center gap-1.5 text-neutral-900 font-medium hover:text-black transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-neutral-900 font-medium hover:text-neutral-700 transition-colors cursor-pointer"
               >
                 <span>{project.name}</span>
                 <ChevronDown size={14} className="text-neutral-400 mt-0.5" />
@@ -190,173 +174,132 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               )}
             </div>
           </div>
-
-          {/* Right: Search & Pin Icons */}
-          <div className="flex items-center gap-1 text-neutral-600 -mr-1">
-            <button
-              type="button"
-              title="Search"
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 transition-colors cursor-pointer"
-            >
-              <Search size={18} strokeWidth={1.8} />
-            </button>
-            <button
-              type="button"
-              onClick={togglePin}
-              title={isPinned ? "Unpin project" : "Pin project"}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer hover:bg-neutral-100 ${
-                isPinned
-                  ? "text-amber-600 bg-amber-50/60"
-                  : "text-neutral-600 hover:text-neutral-950"
-              }`}
-            >
-              <Pin size={18} strokeWidth={1.8} className={isPinned ? "fill-amber-500" : ""} />
-            </button>
-          </div>
         </div>
       </header>
 
       {/* ── Main Workspace Body ── */}
       <div className="flex-1 w-full overflow-y-auto">
-        <div className="w-full px-6 sm:px-7 md:px-8 pt-4 pb-20 flex flex-col md:flex-row justify-between gap-8 lg:gap-12">
+        <div className="w-full max-w-[1600px] mx-auto px-5 sm:px-8 lg:px-10 pt-7 pb-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 xl:gap-10">
           {/* Left Column: Title, Subtitle, Large Input Box, Recents */}
-          <div className="flex-1 md:pl-20 min-w-0 max-w-4xl lg:max-w-[1000px] xl:max-w-[1080px] flex flex-col">
-            {/* Project Title (Serif, commanding & elegant) */}
-            <h1 className="text-[36px] md:text-[40px] font-serif text-neutral-900 tracking-tight font-normal leading-tight mb-1.5">
+          <div className="min-w-0 flex flex-col">
+            <p className="text-[11px] uppercase tracking-[0.12em] font-medium text-[#8a765c] mb-1.5">
+              Project workspace
+            </p>
+            <h1 className="text-[30px] md:text-[34px] font-serif text-neutral-900 tracking-tight font-normal leading-tight mb-1.5">
               {project.name}
             </h1>
 
             {/* Project Subtitle / Description */}
-            <p className="text-[15px] text-neutral-500 mb-7 font-normal">
-              {project.description || "Job"}
-            </p>
+            {project.description && (
+              <p className="text-[14px] text-neutral-500 mb-6 font-normal leading-relaxed">
+                {project.description}
+              </p>
+            )}
+            {!project.description && <div className="mb-6" />}
 
-            {/* New Session Input Card */}
-            <div className="w-full bg-white border border-neutral-200/90 rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:border-neutral-300 focus-within:border-neutral-400 focus-within:shadow-[0_2px_12px_rgba(0,0,0,0.05)] transition-all flex flex-col">
-              <textarea
-                rows={2}
-                value={promptText}
-                onChange={(e) => setPromptText(e.target.value)}
-                onKeyDown={handleKeyDown}
+            <div className="mb-5 w-full">
+              <ChatInput
+                onSendMessage={(message, model, effort, attachments) =>
+                  onStartSession(message, model, effort, attachments)
+                }
+                isThinking={false}
+                stableFrame
                 placeholder={`New session in ${project.name}`}
-                className="w-full bg-transparent outline-none resize-none text-[15.5px] text-neutral-900 placeholder:text-neutral-400 min-h-[72px] leading-relaxed"
+                selectedModel={selectedModelId}
+                onChangeModel={handleModelChange}
+                onOpenProjects={onOpenProjects}
+                onOpenPlugins={onOpenPlugins}
+                onOpenBenchmarks={onOpenBenchmarks}
+                onOpenProviders={onOpenProviders}
               />
-
-              {/* Bottom Actions Row Inside Input Card */}
-              <div className="flex items-center justify-between pt-2 border-t border-transparent">
-                {/* Plus Button */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Add files or content"
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
-                >
-                  <Plus size={17} strokeWidth={2} />
-                </button>
-
-                {/* Voice dictation */}
-                <div className="flex items-center gap-1.5 text-neutral-500">
-                  <button
-                    type="button"
-                    title={isListening ? "Stop dictation" : "Dictate"}
-                    aria-label={isListening ? "Stop dictation" : "Dictate"}
-                    aria-pressed={isListening}
-                    onClick={toggleSpeechInput}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer ${isListening ? "text-rose-600 bg-rose-50" : ""}`}
-                  >
-                    <Mic size={16} strokeWidth={1.8} />
-                    {isListening && <span className="text-[11px]">Listening</span>}
-                  </button>
-                </div>
-              </div>
-              {speechError && (
-                <p role="alert" className="mt-2 text-xs text-rose-600">
-                  {speechError}
-                </p>
-              )}
-            </div>
-
-            {/* Interactive BYOK Model Picker below card on the right */}
-            <div className="relative flex items-center gap-2 justify-end text-[12px] text-neutral-400 mt-2.5 font-normal pr-1">
-              <button
-                type="button"
-                onClick={() => setIsModelPickerOpen((v) => !v)}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-neutral-100 transition-colors cursor-pointer"
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isModelConnected ? "bg-emerald-500" : "bg-neutral-300"
-                  }`}
-                />
-                <span className="text-neutral-700 font-medium">{activeMeta.name}</span>
-                <span className="text-neutral-400">Medium</span>
-                <span className="text-neutral-500">BYOK</span>
-                <ChevronDown size={11} className="text-neutral-400" />
-              </button>
-
-              {isModelPickerOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-lg border border-neutral-200/90 p-1 z-40">
-                  {WORKSPACE_MODELS.map((mId) => {
-                    const meta = MODEL_REGISTRY[mId];
-                    if (!meta) return null;
-                    const connected = hasKey(meta.provider);
-                    const isSelected = mId === selectedModelId;
-                    return (
-                      <button
-                        key={mId}
-                        type="button"
-                        onClick={() => {
-                          setSelectedModelId(mId);
-                          setIsModelPickerOpen(false);
-                        }}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[12px] cursor-pointer ${
-                          isSelected
-                            ? "bg-neutral-100 text-neutral-900 font-medium"
-                            : "text-neutral-700 hover:bg-neutral-50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              connected ? "bg-emerald-500" : "bg-neutral-300"
-                            }`}
-                          />
-                          <span>{meta.name}</span>
-                        </div>
-                        {isSelected && <Check size={12} className="text-blue-600" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
 
             {/* Recents Section directly under input card */}
-            {project.sessions && project.sessions.length > 0 && (
-              <div className="mt-10">
-                <h2 className="text-[13.5px] text-neutral-500 font-medium mb-3">Recents</h2>
-                <div className="flex flex-col gap-0.5">
-                  {project.sessions.map((sess) => (
+            <div className="mt-7">
+              <div className="flex items-center justify-between border-b border-[#eeece8] pb-2.5 mb-1">
+                <div>
+                  <h2 className="text-[16px] text-neutral-900 font-medium">Recent sessions</h2>
+                </div>
+                {isSessionSearchOpen ? (
+                  <div className="relative w-56 sm:w-64">
+                    <Search
+                      size={15}
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                    />
+                    <input
+                      autoFocus
+                      type="text"
+                      aria-label="Search recent sessions"
+                      value={sessionSearch}
+                      onChange={(event) => setSessionSearch(event.target.value)}
+                      placeholder="Search sessions"
+                      className="h-9 w-full rounded-lg border border-[#e9e6e1] bg-white pl-9 pr-9 text-[13px] text-neutral-800 placeholder:text-neutral-400 outline-none transition-colors focus:border-[#b9aa95] focus:ring-2 focus:ring-[#806b4f]/10"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Close session search"
+                      onClick={() => {
+                        setIsSessionSearchOpen(false);
+                        setSessionSearch("");
+                      }}
+                      className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label="Search sessions"
+                    onClick={() => setIsSessionSearchOpen(true)}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-500 hover:bg-[#f2f0ec] hover:text-neutral-900"
+                  >
+                    <Search size={16} />
+                  </button>
+                )}
+              </div>
+              {filteredSessions.length > 0 ? (
+                <div className="divide-y divide-[#f1efeb]">
+                  {filteredSessions.map((sess) => (
                     <div
                       key={sess.id}
                       onClick={() => onOpenSession(sess)}
-                      className="flex items-center justify-between py-2.5 -mx-3 px-3 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer group"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onOpenSession(sess);
+                        }
+                      }}
+                      className="flex items-center justify-between gap-4 py-3 px-1 rounded-lg hover:bg-[#f8f6f3] transition-colors cursor-pointer group"
                     >
-                      <span className="text-[15px] text-neutral-800 group-hover:text-black font-normal">
+                      <span className="text-[14px] text-neutral-800 group-hover:text-neutral-950 font-medium truncate">
                         {sess.title}
                       </span>
-                      <span className="text-[13px] text-neutral-400 font-normal">
+                      <span className="text-[12px] text-neutral-500 font-normal shrink-0">
                         {formatRelativeTime(sess.updatedAt)}
                       </span>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="py-5 text-[13px] text-neutral-500">
+                  {project.sessions?.length
+                    ? "No sessions match your search."
+                    : "Your sessions will appear here."}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Right Column: Instructions, Files, Private Label */}
-          <div className="w-full md:w-72 lg:w-80 shrink-0 pt-2 flex flex-col">
+          <div className="w-full shrink-0 self-start rounded-2xl bg-[#faf9f7] p-5">
+            <h2 className="text-[15px] font-medium text-neutral-900 mb-1">Project context</h2>
+            <p className="text-[12px] text-neutral-500 mb-4">
+              Details and files are available in every session.
+            </p>
             {/* Instructions Row */}
             <div className="flex items-center justify-between py-2.5">
               <div className="flex items-center gap-2.5 text-neutral-800">
@@ -366,7 +309,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsInstructionsModalOpen(true)}
-                className="text-[13.5px] text-neutral-600 hover:text-black font-normal cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-neutral-100"
+                className="text-[13.5px] text-neutral-600 hover:text-neutral-900 font-normal cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-[#f2f0ec]"
               >
                 {project.customInstructions ? "Edit" : "Add"}
               </button>
@@ -380,7 +323,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             )}
 
             {/* Divider Line */}
-            <div className="h-px bg-neutral-200/50 my-2" />
+            <div className="h-px bg-[#eeece8] my-2" />
 
             {/* Files Row */}
             <div className="flex items-center justify-between py-2.5">
@@ -391,7 +334,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-[13.5px] text-neutral-600 hover:text-black font-normal cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-neutral-100"
+                className="text-[13.5px] text-neutral-600 hover:text-neutral-900 font-normal cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-[#f2f0ec]"
               >
                 Add
               </button>
@@ -408,7 +351,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
 
             {/* Uploaded Files List */}
             {project.files && project.files.length > 0 && (
-              <div className="flex flex-col gap-1.5 mt-1.5 mb-2">
+              <div className="flex flex-col gap-1.5 mt-1.5 mb-2 max-h-64 overflow-y-auto">
                 {project.files.map((file) => (
                   <div
                     key={file.id}
@@ -435,9 +378,9 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             )}
 
             {/* Private Tag */}
-            <span className="text-[13px] text-neutral-400 mt-6 block font-normal px-0.5">
-              Private
-            </span>
+            <div className="mt-4 pt-3 border-t border-[#eeece8] text-[12px] text-neutral-500">
+              Private to your workspace
+            </div>
           </div>
         </div>
       </div>
@@ -448,7 +391,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
           role="dialog"
           aria-modal="true"
           onClick={() => setIsInstructionsModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 bg-neutral-900/35 backdrop-blur-[3px] flex items-center justify-center p-4 animate-in fade-in duration-150"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -473,7 +416,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 maxLength={200}
-                className="mt-1.5 w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-[13.5px] font-normal text-neutral-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="mt-1.5 w-full rounded-xl border border-[#e6e2dc] px-3.5 py-2.5 text-[13.5px] font-normal text-neutral-900 outline-none focus:border-[#b9aa95] focus:ring-2 focus:ring-[#806b4f]/10"
               />
             </label>
             <label className="mb-3 block text-[13px] font-medium text-neutral-700">
@@ -483,7 +426,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                 value={projectDescription}
                 onChange={(e) => setProjectDescription(e.target.value)}
                 maxLength={4000}
-                className="mt-1.5 w-full resize-y rounded-xl border border-neutral-200 px-3.5 py-2.5 text-[13.5px] font-normal text-neutral-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="mt-1.5 w-full resize-y rounded-xl border border-[#e6e2dc] px-3.5 py-2.5 text-[13.5px] font-normal text-neutral-900 outline-none focus:border-[#b9aa95] focus:ring-2 focus:ring-[#806b4f]/10"
               />
             </label>
             <label className="mb-1 block text-[13px] font-medium text-neutral-700">
@@ -495,7 +438,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               value={instructionsText}
               onChange={(e) => setInstructionsText(e.target.value)}
               placeholder="e.g. Always reference financial formulas, cite specific document chapters, summarize key totals..."
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200/90 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-[13.5px] text-neutral-900 outline-none transition-all resize-y"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#e6e2dc] focus:border-[#b9aa95] focus:ring-2 focus:ring-[#806b4f]/10 text-[13.5px] text-neutral-900 outline-none transition-all resize-y"
             />
 
             <div className="flex items-center justify-end gap-2.5 mt-5">
@@ -509,7 +452,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               <button
                 type="button"
                 onClick={handleSaveInstructions}
-                className="px-4 py-2 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium transition-colors cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-xl bg-[#806b4f] text-white hover:bg-[#705c43] text-[13px] font-medium transition-colors cursor-pointer shadow-sm"
               >
                 Save project
               </button>

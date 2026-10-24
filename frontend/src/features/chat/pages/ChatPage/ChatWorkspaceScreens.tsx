@@ -37,6 +37,11 @@ export interface ChatWorkspaceScreensProps {
   onSelectView: (view: "chat") => void;
   onNavigateToChat: (prompt?: string) => void;
   onCloseScheduledTasks: () => void;
+  onOpenProviders: () => void;
+  onOpenProjects: () => void;
+  onOpenPlugins: () => void;
+  onOpenBenchmarks: () => void;
+  onOpenArtifacts: () => void;
 }
 
 export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
@@ -47,6 +52,11 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
   onSelectView,
   onNavigateToChat,
   onCloseScheduledTasks,
+  onOpenProviders,
+  onOpenProjects,
+  onOpenPlugins,
+  onOpenBenchmarks,
+  onOpenArtifacts,
 }) => {
   let screen: React.ReactNode = null;
 
@@ -58,7 +68,14 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
           name="Projects"
           fallback={<ChatScreenLoading name="Projects" />}
         >
-          <ProjectsScreen key={projectsNavKey} />
+          <ProjectsScreen
+            key={projectsNavKey}
+            onOpenProviders={onOpenProviders}
+            onOpenProjects={onOpenProjects}
+            onOpenPlugins={onOpenPlugins}
+            onOpenBenchmarks={onOpenBenchmarks}
+            onOpenArtifacts={onOpenArtifacts}
+          />
         </PageRoute>
       );
       break;
