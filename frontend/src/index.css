@@ -1023,6 +1023,14 @@ select:focus-visible,
 .assistant-markdown pre code .token {
   font: inherit;
 }
+.assistant-code-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: -0.12em;
+  background: #64748b;
+}
 .assistant-markdown .token.comment,
 .assistant-markdown .token.prolog,
 .assistant-markdown .token.doctype,

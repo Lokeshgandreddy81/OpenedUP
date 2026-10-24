@@ -51,12 +51,14 @@ function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming
         code.push(lines[index] ?? "");
         index += 1;
       }
+      const isCodeComplete = index < lines.length || !isStreaming;
       if (index < lines.length) index += 1;
       blocks.push(
         <AssistantCodeBlock
           key={`code-${startIndex}`}
           language={language}
           code={code.join("\n")}
+          isCodeComplete={isCodeComplete}
           isStreaming={isStreaming}
         />
       );
@@ -201,19 +203,23 @@ const codeLanguageAliases: Record<string, string> = {
   golang: "go",
 };
 
-function AssistantCodeBlock({
+const AssistantCodeBlock = React.memo(function AssistantCodeBlock({
   language,
   code,
+  isCodeComplete,
   isStreaming,
 }: {
   language: string;
   code: string;
+  isCodeComplete: boolean;
   isStreaming: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const requestedLanguage = language.trim().split(/\s+/, 1)[0]?.toLowerCase() ?? "";
   const prismLanguage = codeLanguageAliases[requestedLanguage] ?? requestedLanguage;
-  const grammar = Prism.languages[prismLanguage] as Prism.Grammar | undefined;
+  const grammar = isCodeComplete
+    ? (Prism.languages[prismLanguage] as Prism.Grammar | undefined)
+    : undefined;
   const tokens = grammar ? Prism.tokenize(code, grammar) : [code];
 
   const copyCode = async () => {
@@ -251,11 +257,16 @@ function AssistantCodeBlock({
         tabIndex={0}
         aria-label={`${requestedLanguage || "Code"} code. Scroll horizontally to read long lines.`}
       >
-        <code>{renderCodeTokens(tokens)}</code>
+        <code>
+          {renderCodeTokens(tokens)}
+          {isStreaming && !isCodeComplete && (
+            <span className="assistant-code-caret" aria-hidden="true" />
+          )}
+        </code>
       </pre>
     </div>
   );
-}
+});
 
 function renderCodeTokens(tokens: Prism.TokenStream): React.ReactNode {
   if (!Array.isArray(tokens)) {
