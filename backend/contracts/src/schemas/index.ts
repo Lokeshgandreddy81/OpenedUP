@@ -164,6 +164,7 @@ const ProjectSessionMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().max(40_000),
   timestamp: z.string().max(100),
+  thinkingTime: z.string().max(30).optional(),
 });
 
 const ProjectSessionSchema = z.object({

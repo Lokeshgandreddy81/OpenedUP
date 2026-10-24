@@ -4,10 +4,8 @@ import {
   FileText,
   Copy,
   Check,
-  Volume2,
-  ThumbsUp,
-  ThumbsDown,
-  RotateCw,
+  Clock3,
+  LoaderCircle,
   CornerDownLeft,
   Plus,
   Mic,
@@ -45,19 +43,18 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
   const [selectedModelId, setSelectedModelId] = useState<string>("claude-opus-5.5");
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [isShareCopied, setIsShareCopied] = useState(false);
-  const [playbackError, setPlaybackError] = useState("");
-  const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
-  const [dislikedMap, setDislikedMap] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const { hasKey } = useProviderKeys();
   const { user } = useChatAuth();
-  const { isListening, error: dictationError, toggle: toggleSpeechInput } = useSpeechInput(
-    (transcript) => setReplyText((current) => `${current}${current ? " " : ""}${transcript}`)
+  const {
+    isListening,
+    error: dictationError,
+    toggle: toggleSpeechInput,
+  } = useSpeechInput((transcript) =>
+    setReplyText((current) => `${current}${current ? " " : ""}${transcript}`)
   );
   const activeMeta = MODEL_REGISTRY[selectedModelId] || MODEL_REGISTRY["claude-opus-5.5"];
   const isModelConnected = hasKey(activeMeta.provider);
@@ -78,50 +75,6 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
     setIsShareCopied(true);
     setTimeout(() => setIsShareCopied(false), 2000);
   };
-
-  const toggleReadAloud = (message: ProjectSessionMessage) => {
-    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
-      setPlaybackError("Read aloud is not supported in this browser.");
-      return;
-    }
-    if (speakingId === message.id) {
-      window.speechSynthesis.cancel();
-      utteranceRef.current = null;
-      setSpeakingId(null);
-      return;
-    }
-    window.speechSynthesis.cancel();
-    setPlaybackError("");
-    const utterance = new SpeechSynthesisUtterance(message.content);
-    utterance.onend = () => {
-      utteranceRef.current = null;
-      setSpeakingId(null);
-    };
-    utterance.onerror = (event) => {
-      utteranceRef.current = null;
-      setSpeakingId(null);
-      if (event.error !== "canceled" && event.error !== "interrupted") {
-        setPlaybackError("Speech playback failed. Try reading the response aloud again.");
-      }
-    };
-    utteranceRef.current = utterance;
-    setSpeakingId(message.id);
-    try {
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      utteranceRef.current = null;
-      setSpeakingId(null);
-      setPlaybackError("Speech playback failed. Try reading the response aloud again.");
-    }
-  };
-
-  useEffect(
-    () => () => {
-      window.speechSynthesis?.cancel();
-      utteranceRef.current = null;
-    },
-    []
-  );
 
   const handleSendReply = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -165,6 +118,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         body: requestBody,
         signal: controller.signal,
       };
+      const startMs = Date.now();
       const response = await (user
         ? authenticatedChatFetch("/api/chat/stream", requestInit)
         : fetch("/api/chat/stream", requestInit));
@@ -191,7 +145,13 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
           ...session,
           messages: [
             ...newMessages,
-            { id: assistantId, role: "assistant", content, timestamp: "Just now" },
+            {
+              id: assistantId,
+              role: "assistant",
+              content,
+              timestamp: "Just now",
+              isStreaming: true,
+            },
           ],
           updatedAt: Date.now(),
         });
@@ -207,6 +167,8 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         role: "assistant",
         content: replyContent,
         timestamp: "Just now",
+        thinkingTime: `${Math.max(1, Math.round((Date.now() - startMs) / 1000))}s`,
+        isStreaming: false,
       };
 
       onUpdateSession({
@@ -241,9 +203,9 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
 
   return (
     <div className="flex-1 w-full h-full bg-white flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-150">
-      {(dictationError || playbackError) && (
+      {dictationError && (
         <p role="alert" className="mx-6 mt-2 text-xs text-rose-600">
-          {dictationError || playbackError}
+          {dictationError}
         </p>
       )}
       {/* ── Top Bar: Breadcrumbs + Document Icon + Share ── */}
@@ -334,74 +296,43 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
             }
 
             // Assistant Message (Editorial Serif)
+            const thinkingDuration = msg.thinkingTime?.replace(/^thinking\s*/i, "").trim();
             return (
               <div key={msg.id} className="flex flex-col items-start gap-2.5">
                 <div className="font-serif text-[17px] md:text-[17.5px] leading-relaxed text-neutral-900 tracking-normal break-words whitespace-pre-wrap">
                   {msg.content}
                 </div>
 
-                {/* Assistant Action Buttons Bar */}
-                <div className="flex items-center gap-2 pt-1 text-neutral-400">
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(msg.content, msg.id)}
-                    title="Copy response"
-                    className="p-1 rounded hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-                  >
-                    {copiedId === msg.id ? (
-                      <Check size={14} className="text-emerald-600" />
-                    ) : (
-                      <Copy size={14} strokeWidth={1.75} />
+                {/* Assistant response details and actions */}
+                {!msg.isStreaming && (
+                  <div className="flex items-center gap-2 pt-1 text-neutral-400">
+                    {thinkingDuration && (
+                      <span className="inline-flex items-center gap-1.5 text-[12px] text-neutral-500">
+                        <Clock3 size={13} strokeWidth={1.8} /> Thought for {thinkingDuration}
+                      </span>
                     )}
-                  </button>
-                  <button
-                    type="button"
-                    title={speakingId === msg.id ? "Stop reading aloud" : "Read aloud"}
-                    aria-label={speakingId === msg.id ? "Stop reading aloud" : "Read aloud"}
-                    aria-pressed={speakingId === msg.id}
-                    onClick={() => toggleReadAloud(msg)}
-                    className="p-1 rounded hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-                  >
-                    {speakingId === msg.id ? (
-                      <Square size={14} />
-                    ) : (
-                      <Volume2 size={14} strokeWidth={1.75} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLikedMap((prev) => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                    title="Good response"
-                    className={`p-1 rounded hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer ${
-                      likedMap[msg.id] ? "text-neutral-900" : ""
-                    }`}
-                  >
-                    <ThumbsUp size={14} strokeWidth={1.75} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDislikedMap((prev) => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                    title="Bad response"
-                    className={`p-1 rounded hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer ${
-                      dislikedMap[msg.id] ? "text-neutral-900" : ""
-                    }`}
-                  >
-                    <ThumbsDown size={14} strokeWidth={1.75} />
-                  </button>
-                  <button
-                    type="button"
-                    title="Regenerate"
-                    className="p-1 rounded hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-                  >
-                    <RotateCw size={14} strokeWidth={1.75} />
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(msg.content, msg.id)}
+                      title="Copy response"
+                      aria-label={copiedId === msg.id ? "Copied response" : "Copy response"}
+                      className="p-1 rounded hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                    >
+                      {copiedId === msg.id ? (
+                        <Check size={14} className="text-emerald-600" />
+                      ) : (
+                        <Copy size={14} strokeWidth={1.75} />
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
-          {isGenerating && (
-            <div className="text-[13px] text-neutral-400 italic animate-pulse">
-              Synthesizing with {activeMeta.name}...
+          {isGenerating && session.messages.at(-1)?.role === "user" && (
+            <div className="inline-flex items-center gap-2 text-[13px] text-neutral-400 animate-pulse">
+              <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
+              Thinking…
             </div>
           )}
           <div ref={messagesEndRef} />

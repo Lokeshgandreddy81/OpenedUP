@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { ArrowDown, Check, Copy, Pencil, Volume2, Square } from "lucide-react";
+import { ArrowDown, Check, Clock3, Copy, LoaderCircle, Pencil } from "lucide-react";
 import type { ChatMessage } from "./chatTypes";
-import { AssistantResponse, CrocodileMark } from "./AssistantResponse";
+import { AssistantResponse } from "./AssistantResponse";
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
@@ -19,9 +19,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>("");
-  const [speakingId, setSpeakingId] = useState<string | null>(null);
-  const [speechError, setSpeechError] = useState("");
-  const utteranceRef = React.useRef<SpeechSynthesisUtterance | null>(null);
   const editTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const shouldFollowLatestRef = React.useRef(true);
@@ -85,50 +82,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const toggleReadAloud = (id: string, text: string) => {
-    if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
-      setSpeechError("Read aloud is not supported in this browser.");
-      return;
-    }
-    if (speakingId === id) {
-      window.speechSynthesis.cancel();
-      utteranceRef.current = null;
-      setSpeakingId(null);
-      return;
-    }
-    window.speechSynthesis.cancel();
-    setSpeechError("");
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.onend = () => {
-      utteranceRef.current = null;
-      setSpeakingId(null);
-    };
-    utterance.onerror = (event) => {
-      utteranceRef.current = null;
-      setSpeakingId(null);
-      if (event.error !== "canceled" && event.error !== "interrupted") {
-        setSpeechError("Speech playback failed. Try reading the response aloud again.");
-      }
-    };
-    utteranceRef.current = utterance;
-    setSpeakingId(id);
-    try {
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      utteranceRef.current = null;
-      setSpeakingId(null);
-      setSpeechError("Speech playback failed. Try reading the response aloud again.");
-    }
-  };
-
-  React.useEffect(
-    () => () => {
-      window.speechSynthesis?.cancel();
-      utteranceRef.current = null;
-    },
-    []
-  );
-
   return (
     <div className="relative flex-1 min-h-0">
       <div
@@ -139,11 +92,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         aria-label="Chat messages"
         className="absolute inset-0 overflow-y-auto px-5 sm:px-8 lg:px-10 pt-10 pb-8 md:pt-14 select-text flex flex-col justify-start no-native-scrollbar no-scrollbar"
       >
-        {speechError && (
-          <p role="alert" className="mx-auto mb-3 w-full max-w-[800px] text-xs text-rose-600">
-            {speechError}
-          </p>
-        )}
         <div className="w-full max-w-[800px] mx-auto flex flex-col gap-6 pb-10 flex-1">
           {messages.map((message) => {
             if (message.role === "user") {
@@ -265,15 +213,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             }
 
             // Assistant responses use readable prose and structured Markdown.
-            const canReadAloud = !message.isStreaming && message.content.trim().length > 0;
+            const hasCompletedResponse = !message.isStreaming && message.content.trim().length > 0;
+            const thinkingDuration = message.thinkingTime?.replace(/^thinking\s*/i, "").trim();
             return (
               <div
                 key={message.id}
-                className="group/assistant flex items-start gap-3 w-full max-w-[800px]"
+                className="group/assistant flex items-start w-full max-w-[800px]"
               >
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white shadow-sm">
-                  <CrocodileMark className="h-[18px] w-[18px]" />
-                </div>
                 <div className="min-w-0 flex-1">
                   {/* Assistant prose and structured Markdown */}
                   <div className="w-full select-text">
@@ -285,28 +231,23 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     />
                   </div>
 
-                  {canReadAloud && (
-                    <div className="mt-1 flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => toggleReadAloud(message.id, message.content)}
-                        aria-label={
-                          speakingId === message.id
-                            ? "Stop reading response"
-                            : "Read response aloud"
-                        }
-                        aria-pressed={speakingId === message.id}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[14px] text-slate-600 hover:bg-white hover:text-slate-900"
-                      >
-                        {speakingId === message.id ? <Square size={13} /> : <Volume2 size={14} />}
-                        {speakingId === message.id ? "Stop" : "Read aloud"}
-                      </button>
+                  {hasCompletedResponse && (
+                    <div className="mt-2 flex min-h-8 items-center gap-3 text-[13px] text-slate-500">
+                      {thinkingDuration && (
+                        <span
+                          className="inline-flex items-center gap-1.5"
+                          aria-label={`Thought for ${thinkingDuration}`}
+                        >
+                          <Clock3 size={13} strokeWidth={1.8} />
+                          Thought for {thinkingDuration}
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleCopy(message.id, message.content)}
                         title={copiedId === message.id ? "Copied!" : "Copy response"}
                         aria-label={copiedId === message.id ? "Copied response" : "Copy response"}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 opacity-70 transition-opacity hover:bg-white hover:text-slate-900 hover:opacity-100 focus-visible:opacity-100 sm:group-hover/assistant:opacity-100 sm:group-focus-within/assistant:opacity-100"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                       >
                         {copiedId === message.id ? (
                           <Check size={14} className="text-emerald-600" />
@@ -337,10 +278,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             );
           })}
 
-          {/* Keep the brand mark in the response flow while the first token is pending. */}
-          {isThinking && !(latestMessage?.role === "assistant" && latestMessage.isStreaming) && (
-            <div className="flex items-center py-1 animate-in fade-in duration-200">
-              <CrocodileMark className="chat-stream-wait" />
+          {isThinking && latestMessage?.role === "user" && (
+            <div className="flex items-center gap-2 py-1 text-[13px] text-slate-500 animate-in fade-in duration-200">
+              <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
+              <span>Thinking…</span>
             </div>
           )}
         </div>

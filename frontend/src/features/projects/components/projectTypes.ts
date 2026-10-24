@@ -13,6 +13,8 @@ export interface ProjectSessionMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  thinkingTime?: string;
+  isStreaming?: boolean;
 }
 
 export interface ProjectSession {

@@ -89,7 +89,7 @@ Review with two Firebase-authenticated accounts in separate browser profiles: cr
 - Provider error details are sanitized before SSE. Partial stream failures emit `error` with `partial: true`; they are never persisted as completed assistant turns.
 - Failed streams remove their empty or partial assistant placeholder before the next request is assembled, keeping every submitted conversation message schema-valid.
 - Project-file content enters chat only after browser-side extraction from an allowed text format and within the shared context limit; treat it as untrusted prompt data.
-- Dictation and read-aloud are browser features; typed chat remains available when browser speech APIs or microphone permission are unavailable.
+- Dictation is a browser feature; typed chat remains available when speech recognition or microphone permission is unavailable.
 
 ## Feedback that changes the plan
 

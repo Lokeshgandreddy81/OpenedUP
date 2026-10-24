@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { LoaderCircle } from "lucide-react";
 
 interface AssistantResponseProps {
   messageId: string;
@@ -62,36 +63,16 @@ export const AssistantResponse: React.FC<AssistantResponseProps> = ({
 
   return (
     <div className="assistant-markdown min-w-0 w-full" aria-live={isStreaming ? "off" : undefined}>
+      {isStreaming && !visibleContent.trim() && (
+        <p className="inline-flex items-center gap-2 text-[14px] text-slate-500">
+          <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
+          Thinking…
+        </p>
+      )}
       <MarkdownBlocks content={visibleContent} />
-      {isStreaming && <CrocodileMark className="chat-stream-tail" />}
     </div>
   );
 };
-
-export const CrocodileMark: React.FC<{ className?: string }> = ({ className = "" }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    aria-hidden="true"
-  >
-    <path
-      className="croc-upper"
-      d="M5 8C5 5.23858 7.23858 3 10 3C12.7614 3 15 5.23858 15 8V16C15 18.7614 17.2386 21 20 21"
-      stroke="#D9532F"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-    />
-    <path
-      className="croc-lower"
-      d="M9 8V16C9 18.7614 11.2386 21 14 21"
-      stroke="#D9532F"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-    />
-  </svg>
-);
 
 function MarkdownBlocks({ content }: { content: string }) {
   const lines = content.replace(/\r\n/g, "\n").split("\n");

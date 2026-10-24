@@ -14,7 +14,7 @@ Firebase ID tokens are verified against the configured Firebase project; the ver
 
 The plugin catalog currently installs only bundled, allowlisted chat capabilities backed by the three server-owned skills. Install state is browser-local and installed capabilities appear in the chat skill picker. Permission labels state the supplied context each capability reads; the system has no third-party plugin code execution or remote connector installation.
 
-The SSE endpoint forwards provider deltas from Gemini, Anthropic, and OpenAI-compatible APIs as they arrive. Main chat and both project-session entry points consume that endpoint; project sessions expose cancellation. Disconnects abort upstream generation. Provider failures are sanitized at the API boundary; interrupted partial output is not stored as a completed turn. Main-chat dictation uses browser speech recognition where supported and lets the user review the transcript before sending; read-aloud uses browser speech synthesis. These browser APIs vary by browser and require live permission/device testing.
+The SSE endpoint forwards provider deltas from Gemini, Anthropic, and OpenAI-compatible APIs as they arrive. Main chat and both project-session entry points consume that endpoint; project sessions expose cancellation. Disconnects abort upstream generation. Provider failures are sanitized at the API boundary; interrupted partial output is not stored as a completed turn. Main-chat and project-session dictation use browser speech recognition where supported and let users review the transcript before sending. Dictation availability varies by browser and requires live permission/device testing.
 
 ## API surface
 

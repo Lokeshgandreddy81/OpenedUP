@@ -352,7 +352,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       activeRequestControllerRef.current = controller;
       userStoppedRequestRef.current = false;
       setIsThinking(true);
-      const startMs = Date.now();
+      let generationStartMs = Date.now();
       let requestTimeoutId: ReturnType<typeof setTimeout> | null = setTimeout(
         () => controller.abort(),
         90000
@@ -469,6 +469,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           signal: controller.signal,
           body,
         };
+        generationStartMs = Date.now();
         const response = user
           ? await authenticatedChatFetch("/api/chat/stream", requestInit)
           : await fetch("/api/chat/stream", requestInit);
@@ -480,7 +481,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             role: "assistant",
             content: "",
             isStreaming: true,
-            thoughtDetails: [],
           };
           streamedAssistantMessage = assistantMessage;
           const updateAssistant = (patch: Partial<ChatMessage>) => {
@@ -511,31 +511,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   : conv
               )
             );
-          await consumeChatStream(
-            response,
-            (delta) => updateAssistant({ content: assistantMessage.content + delta }),
-            ({ type, data }) => {
-              if (type === "step")
-                updateAssistant({
-                  stepTitle: String(data.stepTitle || "Preparing response"),
-                  stepDescription: String(data.stepDescription || ""),
-                  thoughtDetails: Array.isArray(data.thoughtDetails)
-                    ? (data.thoughtDetails as string[])
-                    : assistantMessage.thoughtDetails,
-                });
-              if (type === "done")
-                updateAssistant({
-                  isStreaming: false,
-                  thinkingTime: String(data.thinkingTime || ""),
-                  stepTitle: String(data.stepTitle || "Response complete"),
-                  stepDescription: String(data.stepDescription || ""),
-                  thoughtDetails: Array.isArray(data.thoughtDetails)
-                    ? (data.thoughtDetails as string[])
-                    : assistantMessage.thoughtDetails,
-                });
-            }
+          await consumeChatStream(response, (delta) =>
+            updateAssistant({ content: assistantMessage.content + delta })
           );
-          updateAssistant({ isStreaming: false });
+          updateAssistant({
+            isStreaming: false,
+            thinkingTime: `${Math.max(1, Math.round((Date.now() - generationStartMs) / 1000))}s`,
+          });
           pendingStreamMessageId = null;
           if (
             user &&
@@ -553,9 +535,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   content: assistantMessage.content,
                   metadata: {
                     thinkingTime: assistantMessage.thinkingTime,
-                    thoughtDetails: assistantMessage.thoughtDetails,
-                    stepTitle: assistantMessage.stepTitle,
-                    stepDescription: assistantMessage.stepDescription,
                     actionChips: assistantMessage.actionChips,
                   },
                 }),
@@ -563,7 +542,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             );
           }
         } else {
-          const elapsedSeconds = Math.max(1, Math.round((Date.now() - startMs) / 1000));
           const errData = await response.json().catch(() => ({}));
           if (
             response.status === 401 &&
@@ -574,9 +552,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               id: `msg-a-${Date.now()}`,
               role: "assistant",
               content: `**${providerName} API key required**\n\nConnect a key in **Customize → Providers** to use **${modelName}**.`,
-              thinkingTime: `${elapsedSeconds}s`,
-              stepTitle: "BYOK Authentication Required",
-              stepDescription: `Waiting for ${providerName} API key configuration.`,
               actionChips: ["Connect API Key"],
             };
 
@@ -608,15 +583,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           );
         }
       } catch (error: unknown) {
-        const elapsedSeconds = Math.max(1, Math.round((Date.now() - startMs) / 1000));
+        const elapsedSeconds = Math.max(1, Math.round((Date.now() - generationStartMs) / 1000));
         if (userStoppedRequestRef.current) {
           if (streamedAssistantMessage) {
             const stoppedMessage: ChatMessage = {
               ...streamedAssistantMessage,
               isStreaming: false,
               thinkingTime: `${elapsedSeconds}s`,
-              stepTitle: "Response stopped",
-              stepDescription: "Stopped by you.",
             };
             if (isTemporaryChat) {
               setTemporaryMessages((prev) =>
@@ -646,8 +619,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       content: stoppedMessage.content,
                       metadata: {
                         thinkingTime: stoppedMessage.thinkingTime,
-                        stepTitle: stoppedMessage.stepTitle,
-                        stepDescription: stoppedMessage.stepDescription,
                       },
                     }),
                   }
@@ -668,9 +639,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           id: `msg-a-${Date.now()}`,
           role: "assistant",
           content: `I couldn’t get a response from the model. ${errorMessage}`,
-          thinkingTime: `${elapsedSeconds}s`,
-          stepTitle: "Chat request failed",
-          stepDescription: "No generated answer was received.",
         };
 
         if (pendingStreamMessageId) {
@@ -849,100 +817,105 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 {isTemporaryChat
                   ? "Temporary chat"
                   : activeConversation?.messages.find((message) => message.role === "user")
-                      ?.content || activeConversation?.title || "New chat"}
+                      ?.content ||
+                    activeConversation?.title ||
+                    "New chat"}
               </p>
             </div>
             <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
-            {user ? (
-              <span className="text-xs text-slate-500">
-                {user.displayName || user.email || "Signed in"}
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void signIn()}
-                className="text-xs font-medium text-slate-700 hover:text-slate-950"
-              >
-                Sign in to save chats
-              </button>
-            )}
-            {signInError && (
-              <span
-                role="alert"
-                className="max-w-64 truncate text-[11px] text-rose-600"
-                title={signInError}
-              >
-                {signInError}
-              </span>
-            )}
-            <div className="relative">
-              <button
-                type="button"
-                aria-expanded={isSkillsMenuOpen}
-                onClick={() => setIsSkillsMenuOpen((open) => !open)}
-                className="h-8 px-2.5 rounded-lg text-xs text-slate-600 hover:bg-slate-100"
-              >
-                Skills{selectedSkillIds.length ? ` · ${selectedSkillIds.length}` : ""}
-              </button>
-              {isSkillsMenuOpen && (
-                <div className="absolute right-0 top-10 z-50 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
-                  <p className="mb-2 text-xs font-semibold text-slate-800">
-                    Run skills with this chat
-                  </p>
-                  {CHAT_PLUGINS.filter((plugin) => installedPluginIds.includes(plugin.id)).map(
-                    (plugin) => (
-                      <label key={plugin.id} className="flex gap-2.5 py-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedSkillIds.includes(plugin.id)}
-                          onChange={() =>
-                            setSelectedSkillIds((current) =>
-                              current.includes(plugin.id)
-                                ? current.filter((item) => item !== plugin.id)
-                                : [...current, plugin.id]
-                            )
-                          }
-                        />
-                        <span>
-                          <span className="block text-xs font-medium text-slate-800">
-                            {plugin.name}
-                          </span>
-                          <span className="block text-[11px] leading-4 text-slate-500">
-                            {plugin.description}
-                          </span>
-                        </span>
-                      </label>
-                    )
-                  )}
-                  {installedPluginIds.length === 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSkillsMenuOpen(false);
-                        handleSelectView("plugins");
-                      }}
-                      className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white"
-                    >
-                      Install a plugin to enable a chat skill
-                    </button>
-                  )}
-                </div>
+              {user ? (
+                <span className="text-xs text-slate-500">
+                  {user.displayName || user.email || "Signed in"}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void signIn()}
+                  className="text-xs font-medium text-slate-700 hover:text-slate-950"
+                >
+                  Sign in to save chats
+                </button>
               )}
+              {signInError && (
+                <span
+                  role="alert"
+                  className="max-w-64 truncate text-[11px] text-rose-600"
+                  title={signInError}
+                >
+                  {signInError}
+                </span>
+              )}
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-expanded={isSkillsMenuOpen}
+                  onClick={() => setIsSkillsMenuOpen((open) => !open)}
+                  className="h-8 px-2.5 rounded-lg text-xs text-slate-600 hover:bg-slate-100"
+                >
+                  Skills{selectedSkillIds.length ? ` · ${selectedSkillIds.length}` : ""}
+                </button>
+                {isSkillsMenuOpen && (
+                  <div className="absolute right-0 top-10 z-50 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+                    <p className="mb-2 text-xs font-semibold text-slate-800">
+                      Run skills with this chat
+                    </p>
+                    {CHAT_PLUGINS.filter((plugin) => installedPluginIds.includes(plugin.id)).map(
+                      (plugin) => (
+                        <label key={plugin.id} className="flex gap-2.5 py-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedSkillIds.includes(plugin.id)}
+                            onChange={() =>
+                              setSelectedSkillIds((current) =>
+                                current.includes(plugin.id)
+                                  ? current.filter((item) => item !== plugin.id)
+                                  : [...current, plugin.id]
+                              )
+                            }
+                          />
+                          <span>
+                            <span className="block text-xs font-medium text-slate-800">
+                              {plugin.name}
+                            </span>
+                            <span className="block text-[11px] leading-4 text-slate-500">
+                              {plugin.description}
+                            </span>
+                          </span>
+                        </label>
+                      )
+                    )}
+                    {installedPluginIds.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSkillsMenuOpen(false);
+                          handleSelectView("plugins");
+                        }}
+                        className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white"
+                      >
+                        Install a plugin to enable a chat skill
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTemporaryChat((v) => !v)}
+                title={isTemporaryChat ? "Temporary chat (Active)" : "Temporary chat"}
+                aria-label="Temporary chat"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                  isTemporaryChat
+                    ? "bg-slate-900 text-white hover:bg-slate-800"
+                    : "text-slate-700 hover:text-slate-950 hover:bg-slate-100"
+                }`}
+              >
+                <GhostIcon
+                  size={18}
+                  className={isTemporaryChat ? "text-white" : "text-slate-700"}
+                />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsTemporaryChat((v) => !v)}
-              title={isTemporaryChat ? "Temporary chat (Active)" : "Temporary chat"}
-              aria-label="Temporary chat"
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
-                isTemporaryChat
-                  ? "bg-slate-900 text-white hover:bg-slate-800"
-                  : "text-slate-700 hover:text-slate-950 hover:bg-slate-100"
-              }`}
-            >
-              <GhostIcon size={18} className={isTemporaryChat ? "text-white" : "text-slate-700"} />
-            </button>
-          </div>
           </div>
           {isEmptyChat ? (
             <div className="flex-1 w-full flex flex-col items-center justify-center px-4 pb-16 select-none animate-in fade-in duration-200">

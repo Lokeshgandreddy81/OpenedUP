@@ -3,10 +3,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp?: string;
-  thinkingTime?: string; // e.g. "Thinking 7s"
-  thoughtDetails?: string[]; // Collapsible thought steps
-  stepTitle?: string; // e.g. "Narrowing target criteria"
-  stepDescription?: string; // e.g. "I can find these, but 'redesigning' can mean different signals..."
+  thinkingTime?: string; // elapsed generation time, e.g. "7s"
   actionChips?: string[];
   isThinking?: boolean;
   isStreaming?: boolean;
