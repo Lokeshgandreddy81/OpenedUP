@@ -16,6 +16,7 @@ export interface LlmGenerateParams {
   modelId: string;
   customModel?: string | undefined;
   messages: ChatMessage[];
+  imagePages?: Array<{ pageNumber: number; mimeType: string; base64Data: string }> | undefined;
   systemInstruction: string;
   effort?: string | undefined;
   injectedApiKey?: string | undefined;
@@ -98,16 +99,24 @@ export async function generateMultiProviderChatStream(
   let text: string;
   const modelUsed = upstreamModelId;
   if (provider === "google") {
-    const contents = params.messages
-      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
-      .join("\n\n");
+    const contents = params.messages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [
+        { text: m.content },
+        ...(m.role === "user" && m === params.messages.at(-1)
+          ? (params.imagePages || []).map((image) => ({
+              inlineData: { mimeType: image.mimeType, data: image.base64Data },
+            }))
+          : []),
+      ],
+    }));
     const ai = new GoogleGenAI({
       apiKey,
       httpOptions: { baseUrl, apiVersion: "", fetch: fetchProviderFromSdk },
     });
     const stream = await ai.models.generateContentStream({
       model: upstreamModelId,
-      contents: `${contents}\n\nAssistant:`,
+      contents,
       config: {
         ...(params.signal ? { abortSignal: params.signal } : {}),
         maxOutputTokens: maxTokens,
@@ -144,7 +153,23 @@ export async function generateMultiProviderChatStream(
         max_tokens: maxTokens,
         stream: true,
         system: params.systemInstruction,
-        messages: params.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: params.messages.map((m) => ({
+          role: m.role,
+          content:
+            m.role === "user" && m === params.messages.at(-1)
+              ? [
+                  { type: "text", text: m.content },
+                  ...(params.imagePages || []).map((image) => ({
+                    type: "image",
+                    source: {
+                      type: "base64",
+                      media_type: image.mimeType,
+                      data: image.base64Data,
+                    },
+                  })),
+                ]
+              : m.content,
+        })),
       }),
     });
     text = await consumeSseResponse(
@@ -170,7 +195,22 @@ export async function generateMultiProviderChatStream(
           : { temperature: 0.2, max_tokens: maxTokens }),
         messages: [
           { role: "system", content: params.systemInstruction },
-          ...params.messages.map((m) => ({ role: m.role, content: m.content })),
+          ...params.messages.map((m) => ({
+            role: m.role,
+            content:
+              m.role === "user" && m === params.messages.at(-1) && params.imagePages?.length
+                ? [
+                    { type: "text", text: m.content },
+                    ...params.imagePages.map((image) => ({
+                      type: "image_url",
+                      image_url: {
+                        url: `data:${image.mimeType};base64,${image.base64Data}`,
+                        detail: "high",
+                      },
+                    })),
+                  ]
+                : m.content,
+          })),
         ],
       }),
     });

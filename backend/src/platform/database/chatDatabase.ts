@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS chat_artifacts (
   language TEXT,
   model_used TEXT,
   is_shared INTEGER NOT NULL DEFAULT 0,
+  is_favorite INTEGER NOT NULL DEFAULT 0,
+  collection TEXT,
+  tags_json TEXT NOT NULL DEFAULT '[]',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   UNIQUE(user_id, legacy_id)
@@ -89,8 +92,22 @@ CREATE TABLE IF NOT EXISTS project_snapshots (
 CREATE INDEX IF NOT EXISTS project_snapshots_owner_updated
   ON project_snapshots(user_id, updated_at DESC);
 
-PRAGMA user_version = 2;
 `;
+
+function migrateArtifactOrganization(database: ChatDatabase): void {
+  const columns = database.pragma("table_info(chat_artifacts)") as Array<{ name: string }>;
+  const names = new Set(columns.map((column) => column.name));
+  if (!names.has("is_favorite")) {
+    database.exec("ALTER TABLE chat_artifacts ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!names.has("collection")) {
+    database.exec("ALTER TABLE chat_artifacts ADD COLUMN collection TEXT");
+  }
+  if (!names.has("tags_json")) {
+    database.exec("ALTER TABLE chat_artifacts ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'");
+  }
+  database.exec("PRAGMA user_version = 3;");
+}
 
 function defaultDatabasePath(): string {
   return (
@@ -105,6 +122,7 @@ export function openChatDatabase(databasePath = defaultDatabasePath()): ChatData
   database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
   if (databasePath !== ":memory:") database.exec("PRAGMA journal_mode = WAL;");
   database.exec(SCHEMA);
+  migrateArtifactOrganization(database);
   return database;
 }
 

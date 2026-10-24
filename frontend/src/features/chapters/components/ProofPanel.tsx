@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeftOpen } from "lucide-react";
+import { Minus, PanelLeftOpen, Plus } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import type {
   ComputedRow,
@@ -115,14 +115,28 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
     Boolean(row.extracted_text);
   const [chapterPdfUrl, setChapterPdfUrl] = useState<string | null>(null);
   const [chapterAspect, setChapterAspect] = useState<number | null>(null);
+  const [chapterZoom, setChapterZoom] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches ? 1.2 : 1
+  );
+  const hasManualChapterZoomRef = useRef(false);
   const [sliceFailed, setSliceFailed] = useState<boolean>(false);
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
   const [chapterChatHistory, setChapterChatHistory] = useState<
     Record<string, ChapterChatMessage[]>
   >({});
   const [citationPage, setCitationPage] = useState<number | undefined>();
-  const [citationScrollRequestId, setCitationScrollRequestId] = useState(0);
+  const [citationRequestId, setCitationRequestId] = useState(0);
   const chapterChatKey = `${photo?.id ?? "document"}:${row.row}`;
+
+  useEffect(() => {
+    const compactViewport = window.matchMedia("(max-width: 1023px)");
+    const syncDefaultZoom = (event: MediaQueryListEvent | MediaQueryList) => {
+      if (!hasManualChapterZoomRef.current) setChapterZoom(event.matches ? 1.2 : 1);
+    };
+    syncDefaultZoom(compactViewport);
+    compactViewport.addEventListener("change", syncDefaultZoom);
+    return () => compactViewport.removeEventListener("change", syncDefaultZoom);
+  }, []);
 
   const effectivePdfUrl =
     chapterPdfUrl ||
@@ -683,31 +697,77 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
         <div className="relative flex-1 min-h-0 w-full overflow-hidden flex flex-col">
           <div className="flex min-h-0 flex-1 max-lg:flex-col">
             {/* PDF canvas and its document/chapter context stay together. */}
-            <div className="relative flex min-h-0 min-w-0 flex-1 basis-1/2 flex-col lg:basis-[60.5%]">
+            <div className="relative flex min-h-0 min-w-0 flex-1 basis-[46%] flex-col lg:basis-[60.5%]">
               <div
                 aria-label="Reading breadcrumb"
-                className="absolute inset-x-0 top-0 z-20 flex h-14 select-none items-center justify-center bg-white px-6 pointer-events-none"
+                className="absolute inset-x-0 top-0 z-20 flex h-14 select-none items-center justify-center bg-white px-3 sm:px-6"
               >
-                <div className="flex w-full max-w-[90%] items-center justify-center gap-2 truncate text-center text-[14.3px] tracking-normal">
-                  <span className="max-w-[320px] truncate font-medium text-slate-500 sm:max-w-[460px]">
+                <div className="pointer-events-none flex w-full max-w-[90%] items-center justify-center gap-2 truncate pr-24 text-center text-[14.3px] tracking-normal sm:pr-0">
+                  <span className="hidden max-w-[320px] truncate font-medium text-slate-500 sm:inline sm:max-w-[460px]">
                     {breadcrumbDoc}
                   </span>
-                  <span className="select-none px-0.5 font-normal text-slate-400">›</span>
+                  <span className="hidden select-none px-0.5 font-normal text-slate-400 sm:inline">
+                    ›
+                  </span>
                   <span className="max-w-[360px] truncate font-semibold text-slate-800 sm:max-w-[540px]">
                     {breadcrumbChapter}
                   </span>
                 </div>
+                <div
+                  role="group"
+                  aria-label="PDF zoom controls"
+                  className="absolute right-2 top-2 inline-flex h-10 items-center gap-0.5 rounded-full border border-slate-200/80 bg-white/95 px-1 shadow-sm backdrop-blur sm:right-3"
+                >
+                  <button
+                    type="button"
+                    aria-label="Zoom out"
+                    title="Zoom out"
+                    disabled={chapterZoom <= 0.8}
+                    onClick={() => {
+                      hasManualChapterZoomRef.current = true;
+                      setChapterZoom((zoom) => Math.max(0.8, Number((zoom - 0.1).toFixed(1))));
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 disabled:text-slate-300"
+                  >
+                    <Minus size={15} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Reset PDF zoom"
+                    title="Reset zoom"
+                    onClick={() => {
+                      hasManualChapterZoomRef.current = true;
+                      setChapterZoom(1);
+                    }}
+                    className="min-w-10 rounded-full px-1 text-center text-[11px] font-medium tabular-nums text-slate-600 hover:bg-slate-100"
+                  >
+                    {Math.round(chapterZoom * 100)}%
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Zoom in"
+                    title="Zoom in"
+                    disabled={chapterZoom >= 1.8}
+                    onClick={() => {
+                      hasManualChapterZoomRef.current = true;
+                      setChapterZoom((zoom) => Math.min(1.8, Number((zoom + 0.1).toFixed(1))));
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 disabled:text-slate-300"
+                  >
+                    <Plus size={15} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
               <div
                 ref={canvasAreaRef}
-                className="study-stage relative min-h-0 min-w-0 flex-1 basis-1/2 overflow-y-auto overflow-x-hidden flex flex-col items-center pt-14 pb-12 px-3 sm:px-4"
+                className="study-stage relative min-h-0 min-w-0 flex-1 basis-full scroll-pt-16 overflow-y-auto overflow-x-hidden flex flex-col items-center pt-14 pb-12 px-2 sm:px-4"
               >
                 {effectivePdfUrl ? (
                   <div
                     key={`page-${row.row}`}
                     className="study-page-enter w-full max-w-[1430px] flex flex-col items-center mx-auto"
                   >
-                    <div className="study-page w-full bg-transparent shadow-none border border-transparent rounded-xl overflow-hidden">
+                    <div className="study-page w-full overflow-visible">
                       <PdfCanvasPages
                         key={effectivePdfUrl}
                         url={effectivePdfUrl}
@@ -717,8 +777,9 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                           isBoundedChapterPdf ? Math.max(0, (row.start_page ?? 1) - 1) : 0
                         }
                         scrollToPage={citationPage}
-                        scrollRequestId={citationScrollRequestId}
+                        scrollRequestId={citationRequestId}
                         aspectHint={chapterAspect}
+                        zoom={chapterZoom}
                         className="w-full flex flex-col items-center"
                       />
                     </div>
@@ -729,7 +790,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                     className="study-page-enter w-full max-w-[1430px] flex flex-col items-center mx-auto"
                   >
                     <div
-                      className="study-page w-full bg-transparent shadow-none border border-transparent rounded-xl relative overflow-hidden"
+                      className="study-page relative w-full overflow-hidden"
                       style={{ aspectRatio: String(chapterAspect || 8.5 / 11) }}
                     >
                       <div className="absolute inset-0 bg-gray-100/70" />
@@ -753,7 +814,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                 )}
               </div>
             </div>
-            <div className="flex min-h-0 min-w-0 flex-1 basis-1/2 lg:basis-[39.5%]">
+            <div className="flex min-h-0 min-w-0 flex-1 basis-[54%] border-l border-slate-200/70 max-lg:border-l-0 max-lg:border-t lg:basis-[39.5%]">
               <ChapterChatPanel
                 key={chapterChatKey}
                 pdfUrl={photo?.objectUrl}
@@ -766,11 +827,11 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                 onHistoryChange={(history) =>
                   setChapterChatHistory((current) => ({ ...current, [chapterChatKey]: history }))
                 }
+                onOpenProviders={() => onOpenProviders?.()}
                 onOpenCitation={(pageNumber) => {
                   setCitationPage(pageNumber);
-                  setCitationScrollRequestId((id) => id + 1);
+                  setCitationRequestId((current) => current + 1);
                 }}
-                onOpenProviders={() => onOpenProviders?.()}
               />
             </div>
           </div>

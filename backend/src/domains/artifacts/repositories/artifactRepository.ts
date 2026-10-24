@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { ArtifactRequest, ImportArtifactsRequest } from "@charan-interiors/contracts";
+import type {
+  ArtifactOrganizationRequest,
+  ArtifactRequest,
+  ImportArtifactsRequest,
+} from "@charan-interiors/contracts";
 import { getChatDatabase, type ChatDatabase } from "../../../platform/database/chatDatabase.js";
 
 export interface StoredArtifact {
@@ -11,6 +15,9 @@ export interface StoredArtifact {
   language?: string;
   modelUsed?: string;
   isShared: boolean;
+  isFavorite: boolean;
+  collection?: string;
+  tags: string[];
   isOwner: boolean;
   createdAt: number;
   updatedAt: number;
@@ -26,13 +33,39 @@ export interface StoredArtifactVersion {
   createdAt: number;
 }
 
+function normalizeTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  return tags
+    .map((tag) => tag.trim())
+    .filter((tag) => {
+      const key = tag.toLocaleLowerCase();
+      if (!tag || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12);
+}
+
+function readTags(raw: unknown): string[] {
+  if (typeof raw !== "string") return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.every((tag) => typeof tag === "string")
+      ? normalizeTags(parsed)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export class ArtifactRepository {
   constructor(private readonly db: ChatDatabase = getChatDatabase()) {}
 
   list(userId: string): StoredArtifact[] {
     const rows = this.db
       .prepare(
-        `SELECT id, user_id, legacy_id, title, category, content, language, model_used, is_shared, created_at, updated_at
+        `SELECT id, user_id, legacy_id, title, category, content, language, model_used, is_shared,
+                is_favorite, collection, tags_json, created_at, updated_at
          FROM chat_artifacts WHERE user_id = ? OR is_shared = 1 ORDER BY updated_at DESC`
       )
       .all(userId) as Array<Record<string, unknown>>;
@@ -48,8 +81,9 @@ export class ArtifactRepository {
     const id = randomUUID();
     this.db
       .prepare(
-        `INSERT INTO chat_artifacts(id, user_id, legacy_id, title, category, content, language, model_used, is_shared, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO chat_artifacts(id, user_id, legacy_id, title, category, content, language, model_used,
+                                    is_shared, is_favorite, collection, tags_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
@@ -61,6 +95,9 @@ export class ArtifactRepository {
         input.language ?? null,
         input.modelUsed ?? null,
         Number(Boolean(input.isShared)),
+        Number(Boolean(input.isFavorite)),
+        input.collection ?? null,
+        JSON.stringify(normalizeTags(input.tags ?? [])),
         legacy?.createdAt ?? now,
         legacy?.updatedAt ?? now
       );
@@ -73,6 +110,9 @@ export class ArtifactRepository {
       ...(input.language ? { language: input.language } : {}),
       ...(input.modelUsed ? { modelUsed: input.modelUsed } : {}),
       isShared: Boolean(input.isShared),
+      isFavorite: Boolean(input.isFavorite),
+      ...(input.collection ? { collection: input.collection } : {}),
+      tags: normalizeTags(input.tags ?? []),
       isOwner: true,
       createdAt: legacy?.createdAt ?? now,
       updatedAt: legacy?.updatedAt ?? now,
@@ -81,8 +121,9 @@ export class ArtifactRepository {
 
   import(userId: string, request: ImportArtifactsRequest): { imported: number; skipped: number } {
     const insert = this.db.prepare(
-      `INSERT INTO chat_artifacts(id, user_id, legacy_id, title, category, content, language, model_used, is_shared, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, legacy_id) DO NOTHING`
+      `INSERT INTO chat_artifacts(id, user_id, legacy_id, title, category, content, language, model_used,
+                                  is_shared, is_favorite, collection, tags_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, legacy_id) DO NOTHING`
     );
     let imported = 0;
     this.db.exec("BEGIN IMMEDIATE");
@@ -98,6 +139,9 @@ export class ArtifactRepository {
           artifact.language ?? null,
           artifact.modelUsed ?? null,
           Number(Boolean(artifact.isShared)),
+          Number(Boolean(artifact.isFavorite)),
+          artifact.collection ?? null,
+          JSON.stringify(normalizeTags(artifact.tags ?? [])),
           artifact.createdAt,
           artifact.updatedAt
         );
@@ -125,7 +169,7 @@ export class ArtifactRepository {
     const update = this.db.transaction(() => {
       const current = this.db
         .prepare(
-          `SELECT title, category, content, language, model_used
+          `SELECT title, category, content, language, model_used, is_favorite, collection, tags_json
            FROM chat_artifacts WHERE user_id = ? AND id = ?`
         )
         .get(userId, id) as Record<string, unknown> | undefined;
@@ -158,7 +202,8 @@ export class ArtifactRepository {
       this.db
         .prepare(
           `UPDATE chat_artifacts
-           SET title = ?, category = ?, content = ?, language = ?, model_used = ?, is_shared = ?, updated_at = ?
+           SET title = ?, category = ?, content = ?, language = ?, model_used = ?, is_shared = ?,
+               is_favorite = ?, collection = ?, tags_json = ?, updated_at = ?
            WHERE user_id = ? AND id = ?`
         )
         .run(
@@ -168,6 +213,11 @@ export class ArtifactRepository {
           input.language ?? null,
           input.modelUsed ?? null,
           Number(Boolean(input.isShared)),
+          Number(input.isFavorite ?? Boolean(current["is_favorite"])),
+          input.collection === undefined ? current["collection"] : input.collection,
+          JSON.stringify(
+            input.tags === undefined ? readTags(current["tags_json"]) : normalizeTags(input.tags)
+          ),
           Date.now(),
           userId,
           id
@@ -175,6 +225,36 @@ export class ArtifactRepository {
       return true;
     });
     if (!update()) return null;
+    return this.list(userId).find((artifact) => artifact.id === id) || null;
+  }
+
+  updateOrganization(
+    userId: string,
+    id: string,
+    input: ArtifactOrganizationRequest
+  ): StoredArtifact | null {
+    const current = this.db
+      .prepare(
+        `SELECT is_favorite, collection, tags_json
+         FROM chat_artifacts WHERE user_id = ? AND id = ?`
+      )
+      .get(userId, id) as Record<string, unknown> | undefined;
+    if (!current) return null;
+
+    this.db
+      .prepare(
+        `UPDATE chat_artifacts SET is_favorite = ?, collection = ?, tags_json = ?
+         WHERE user_id = ? AND id = ?`
+      )
+      .run(
+        Number(input.isFavorite ?? Boolean(current["is_favorite"])),
+        input.collection === undefined ? current["collection"] : input.collection,
+        JSON.stringify(
+          input.tags === undefined ? readTags(current["tags_json"]) : normalizeTags(input.tags)
+        ),
+        userId,
+        id
+      );
     return this.list(userId).find((artifact) => artifact.id === id) || null;
   }
 
@@ -218,6 +298,11 @@ export class ArtifactRepository {
       ...(typeof row["language"] === "string" ? { language: row["language"] } : {}),
       ...(typeof row["model_used"] === "string" ? { modelUsed: row["model_used"] } : {}),
       isShared: Boolean(row["is_shared"]),
+      isFavorite: Boolean(row["is_favorite"]),
+      ...(typeof row["collection"] === "string" && row["collection"]
+        ? { collection: row["collection"] }
+        : {}),
+      tags: readTags(row["tags_json"]),
       isOwner,
       createdAt: Number(row["created_at"]),
       updatedAt: Number(row["updated_at"]),

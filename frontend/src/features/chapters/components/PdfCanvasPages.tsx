@@ -16,6 +16,7 @@ interface PdfCanvasPagesProps {
   scrollToPage?: number;
   scrollRequestId?: number;
   aspectHint?: number | null;
+  zoom?: number;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -33,6 +34,7 @@ export const PdfCanvasPages: React.FC<PdfCanvasPagesProps> = ({
   scrollToPage,
   scrollRequestId,
   aspectHint,
+  zoom = 1,
   className = "w-full flex flex-col",
   style,
 }) => {
@@ -111,7 +113,11 @@ export const PdfCanvasPages: React.FC<PdfCanvasPagesProps> = ({
   }
 
   return (
-    <div ref={scrollRef} className={className} style={style}>
+    <div
+      ref={scrollRef}
+      className={`${className} ${zoom > 1 ? "chapter-page-zoom overflow-x-auto items-start" : ""}`}
+      style={style}
+    >
       {doc ? (
         pageNumbers.map((pageNumber, index) => (
           <PdfPageCanvas
@@ -121,10 +127,14 @@ export const PdfCanvasPages: React.FC<PdfCanvasPagesProps> = ({
             originalPageNumber={pageNumber + pageNumberOffset}
             aspectHint={placeholderAspect}
             separated={index > 0}
+            zoom={zoom}
           />
         ))
       ) : (
-        <div className="w-full" style={{ aspectRatio: String(placeholderAspect) }} />
+        <div
+          className="shrink-0"
+          style={{ width: `${zoom * 100}%`, aspectRatio: String(placeholderAspect) }}
+        />
       )}
     </div>
   );
@@ -136,6 +146,7 @@ interface PdfPageCanvasProps {
   originalPageNumber: number;
   aspectHint: number;
   separated: boolean;
+  zoom: number;
 }
 
 const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({
@@ -144,6 +155,7 @@ const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({
   originalPageNumber,
   aspectHint,
   separated,
+  zoom,
 }) => {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -207,56 +219,6 @@ const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({
       await renderTask.promise;
       if (cancelled) return;
 
-      // Auto-detect and trim excessive blank top whitespace (common on section divider pages)
-      // so content starts flush at the top, perfectly matching the first cover node's height.
-      try {
-        const w = canvas.width;
-        const h = canvas.height;
-        const imgData = ctx.getImageData(0, 0, w, h);
-        const pixels = imgData.data;
-        let topBlankRows = 0;
-        const sampleStepX = Math.max(1, Math.floor(w / 40));
-
-        for (let y = 0; y < Math.floor(h * 0.35); y++) {
-          let isRowBlank = true;
-          const rowOffset = y * w * 4;
-          for (let x = 0; x < w; x += sampleStepX) {
-            const idx = rowOffset + x * 4;
-            const r = pixels[idx];
-            const g = pixels[idx + 1];
-            const b = pixels[idx + 2];
-            const a = pixels[idx + 3];
-            // Non-white or non-transparent pixel
-            if (a > 20 && (r < 240 || g < 240 || b < 240)) {
-              isRowBlank = false;
-              break;
-            }
-          }
-          if (isRowBlank) {
-            topBlankRows++;
-          } else {
-            break;
-          }
-        }
-
-        // If top blank margin is significant (> 5% of height), trim it
-        if (topBlankRows > h * 0.05 && topBlankRows < h * 0.5) {
-          const trimmedHeight = h - topBlankRows;
-          const tempCanvas = document.createElement("canvas");
-          tempCanvas.width = w;
-          tempCanvas.height = trimmedHeight;
-          const tempCtx = tempCanvas.getContext("2d");
-          if (tempCtx) {
-            tempCtx.drawImage(canvas, 0, topBlankRows, w, trimmedHeight, 0, 0, w, trimmedHeight);
-            canvas.height = trimmedHeight;
-            ctx.drawImage(tempCanvas, 0, 0);
-            setAspect(w / trimmedHeight);
-          }
-        }
-      } catch {
-        // Tainted canvas or reading failure: keep normal viewport
-      }
-
       page.cleanup();
     })().catch(() => {
       // aborted or failed render; the sheet stays blank
@@ -270,14 +232,14 @@ const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({
         // already finished
       }
     };
-  }, [doc, pageNumber, visible]);
+  }, [doc, pageNumber, visible, zoom]);
 
   return (
     <div
       ref={wrapRef}
       data-original-page={originalPageNumber}
-      className={`relative w-full rounded-xl overflow-hidden bg-transparent${separated ? " mt-4 border-t border-transparent" : ""}`}
-      style={{ aspectRatio: String(aspect) }}
+      className={`relative shrink-0 rounded-xl overflow-hidden bg-transparent${separated ? " mt-4 border-t border-transparent" : ""}`}
+      style={{ width: `${zoom * 100}%`, aspectRatio: String(aspect) }}
     >
       <canvas ref={canvasRef} className="block w-full h-full rounded-xl" />
     </div>

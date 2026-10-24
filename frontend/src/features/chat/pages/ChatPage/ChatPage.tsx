@@ -1,12 +1,15 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import type { AppContextType } from "../../../chapters";
 import { ChatWindow } from "../../components/ChatWindow";
-import { useAppContext } from "../../../chapters";
 import { ChatPageErrorBoundary } from "./ErrorBoundary";
 
-export const ChatPageContent: React.FC = () => {
+interface ChatPageProps {
+  chapters?: AppContextType["engineOutput"]["computedRows"];
+}
+
+export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
   const navigate = useNavigate();
-  const { engineOutput } = useAppContext();
 
   const handleClose = () => {
     if (window.history.length > 1) {
@@ -43,7 +46,7 @@ export const ChatPageContent: React.FC = () => {
       <ChatWindow
         isOpen={true}
         onClose={handleClose}
-        chapters={engineOutput.computedRows}
+        chapters={chapters}
         docTitle="Chat Assistant"
         onOpenScheduledTasks={handleOpenScheduledTasks}
         onViewChange={handleViewChange}
@@ -52,10 +55,10 @@ export const ChatPageContent: React.FC = () => {
   );
 };
 
-export const ChatPage: React.FC = () => {
+export const ChatPage: React.FC<ChatPageProps> = ({ chapters = [] }) => {
   return (
     <ChatPageErrorBoundary>
-      <ChatPageContent />
+      <ChatPageContent chapters={chapters} />
     </ChatPageErrorBoundary>
   );
 };

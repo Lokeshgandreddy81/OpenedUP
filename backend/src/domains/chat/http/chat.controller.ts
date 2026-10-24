@@ -230,6 +230,72 @@ export async function handleChapterChat(
   }
 }
 
+export async function handleChapterChatStream(
+  req: Request,
+  res: Response,
+  _next: NextFunction
+): Promise<void> {
+  const request = req.body as ChapterChatRequest;
+  const headerApiKey =
+    typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
+  const headerBaseUrl =
+    typeof req.headers["x-provider-base-url"] === "string"
+      ? req.headers["x-provider-base-url"]
+      : undefined;
+
+  let credential: ReturnType<typeof requestProviderCredential>;
+  try {
+    credential = requestProviderCredential(req, request, headerApiKey, headerBaseUrl);
+  } catch {
+    res.status(400).json({ error: "The selected model is unavailable." });
+    return;
+  }
+  if (!requireUserCredential(req, res, request, credential.apiKey)) return;
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  const abortController = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(90_000);
+  const requestSignal = AbortSignal.any([abortController.signal, timeoutSignal]);
+  res.on("close", () => {
+    if (!res.writableEnded) abortController.abort();
+  });
+  const sendEvent = (event: string, data: unknown) => {
+    if (!res.destroyed && !res.writableEnded) {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    }
+  };
+
+  sendEvent("phase", { phase: "thinking" });
+  try {
+    const result = await answerChapterQuestion(request, {
+      ...(credential.apiKey ? { apiKey: credential.apiKey } : {}),
+      ...(credential.baseUrl ? { baseUrl: credential.baseUrl } : {}),
+      signal: requestSignal,
+      onGenerationStarted: () => sendEvent("phase", { phase: "responding" }),
+    });
+    sendEvent("done", result);
+    if (!res.destroyed && !res.writableEnded) res.end();
+  } catch (error: unknown) {
+    if (abortController.signal.aborted) return;
+    const message = error instanceof Error ? error.message : "Chapter chat failed.";
+    logEvent("ERROR /api/chat/chapter/stream", {
+      errorType: error instanceof Error ? error.name : "UnknownError",
+      model: request.model,
+    });
+    sendEvent("error", {
+      error: timeoutSignal.aborted
+        ? "This model took too long to respond. Try again or choose another model."
+        : publicProviderError(message),
+    });
+    if (!res.destroyed && !res.writableEnded) res.end();
+  }
+}
+
 export function handleGetSkills(_req: Request, res: Response): void {
   res.json({ skills: SKILLS });
 }

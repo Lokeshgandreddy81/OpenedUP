@@ -7,12 +7,12 @@ Integrate cited chapter chat into the current reader and prove the user-selected
 ## UX constraints
 
 - Preserve the existing sidebar, top-level navigation, chapter selection, reader controls, and current visual design.
-- Within the existing chapter reader workspace, give the PDF canvas and chat comfortable, roughly equal space on desktop. Do not replace the chapter list or move the feature into a new global screen.
+- Within the existing chapter reader workspace, give the PDF canvas 60.5% and chat 39.5% of usable desktop width. Do not replace the chapter list or move the feature into a new global screen.
 - When the available reader width is too narrow for usable side-by-side panes, stack them while retaining clear access to the PDF and chat.
-- Keep the existing selected chapter title and page context visible. On chapter switch, use that chapter’s isolated in-memory transcript and evidence; never display a previous chapter’s retrieved passages.
+- Keep the current chat header compact (the user asked to remove the repeated chapter/page subtitle). The selected chapter remains indicated by the composer context. On chapter switch, use that chapter’s isolated in-memory transcript and evidence; never display a previous chapter’s retrieved passages.
 - Provide clear no-selection, extracting, no-searchable-text, ready, sending, error, and empty-answer states.
 - Chat uses the user’s selected model and current provider setup. Do not add generic attachments/plugins to chapter chat.
-- Render citations as compact page + short exact excerpt controls. Activating one navigates the existing PDF canvas to the original 1-based page and gives it visible focus.
+- Render compact page-only citation controls; do not repeat source excerpts beneath the answer because the PDF itself is visible beside chat. Activating one navigates the existing PDF canvas to the original 1-based page.
 
 ## Implementation seams
 
@@ -23,11 +23,11 @@ Integrate cited chapter chat into the current reader and prove the user-selected
 
 ## Acceptance criteria
 
-- At normal desktop width, PDF and chat are simultaneously usable at approximately equal width; the global shell is visually stable.
+- At normal desktop width, PDF and chat are simultaneously usable at the chosen 60.5% / 39.5% split; the global shell is visually stable.
 - A searchable selected chapter can be queried and answers are grounded only in its retrieved pages.
-- Citation controls expose the cited page and exact short excerpt and navigate the PDF to the corresponding original page.
+- Citation controls expose the cited page and navigate the PDF to the corresponding original page without duplicating the chapter text in the response.
 - An unsupported question clearly says the selected chapter does not contain the answer.
-- Switching chapter creates/loads a separate transcript and removes prior chapter evidence from active context.
+- Switching chapter creates/loads a separate transcript, cancels any in-flight answer for the previous chapter, and removes prior chapter evidence from active context.
 - Generic chat remains behaviorally unchanged.
 
 ## Visual verification

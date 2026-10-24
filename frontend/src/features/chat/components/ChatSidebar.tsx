@@ -14,35 +14,10 @@ import {
   MoreHorizontal,
   Pin,
   Pencil,
-  Upload,
   Archive,
-  Folder,
-  ChevronRight,
-  ChevronDown,
 } from "lucide-react";
 import type { ChatConversation } from "./chatTypes";
-
-const WorkspacesIcon: React.FC<{ size?: number; className?: string }> = ({
-  size = 15,
-  className = "text-slate-500 shrink-0",
-}) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.6"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <circle cx="4" cy="4" r="2.2" />
-    <circle cx="12" cy="4" r="2.2" />
-    <circle cx="4" cy="12" r="2.2" />
-    <path d="M12 9.5v5m-2.5-2.5h5" />
-  </svg>
-);
+import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 
 const ProjectsIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 14,
@@ -120,10 +95,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>("");
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const { user } = useChatAuth();
+  const accountLabel = user?.displayName || user?.email?.split("@")[0] || "Guest";
+  const accountInitial = accountLabel.slice(0, 1).toUpperCase();
 
   // Close options menu on outside click or window resize/scroll
   useEffect(() => {
@@ -149,22 +125,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     }
   }, [menuOpenId]);
 
-  // Close profile menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
-        setIsProfileMenuOpen(false);
-      }
-    };
-    if (isProfileMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isProfileMenuOpen]);
-
   if (!isOpen) {
     return (
-      <div className="shrink-0 w-11 h-full border-r border-slate-200/60 bg-[#fcfcfb] flex flex-col items-center py-3 select-none gap-2">
+      <div className="flex h-full w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/60 bg-[#fcfcfb] py-3 select-none">
         <button
           type="button"
           onClick={onBack}
@@ -288,11 +251,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <button
             type="button"
             onClick={onToggleOpen}
-            title="Kumar · Free plan"
-            aria-label="Kumar (Free plan)"
+            title={`${accountLabel} · Free plan`}
+            aria-label={`${accountLabel} (Free plan)`}
             className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[11px] font-medium hover:ring-2 hover:ring-slate-300 transition-all cursor-pointer"
           >
-            K
+            {accountInitial}
           </button>
         </div>
       </div>
@@ -305,7 +268,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     <aside
       ref={sidebarRef}
       aria-label="Chat history"
-      className="w-56 md:w-60 h-full shrink-0 border-r border-slate-200/60 bg-[#fcfcfb] flex flex-col py-3 select-none transition-all duration-150"
+      className="absolute inset-y-0 left-0 z-40 flex h-full w-[min(84vw,280px)] shrink-0 flex-col border-r border-slate-200/70 bg-[#fcfcfb] py-3 select-none shadow-[12px_0_36px_-28px_rgba(15,23,42,0.36)] transition-all duration-150 sm:static sm:w-56 sm:shadow-none md:w-60"
     >
       {/* Top action row: Back to main sidebar + Collapse sidebar */}
       <div className="flex items-center justify-between px-3 pb-3 mb-1 border-b border-slate-100">
@@ -458,11 +421,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 return (
                   <div
                     key={conv.id}
-                    onClick={() => {
-                      onSelectView?.("chat");
-                      onSelectConversation(conv.id);
-                    }}
-                    className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer select-none ${
+                    role="group"
+                    aria-label={`Conversation: ${conv.title}`}
+                    className={`group relative flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[13px] transition-colors select-none ${
                       isActive
                         ? "bg-slate-100/90 text-slate-900 font-normal"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
@@ -491,11 +452,20 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                             }
                             setEditingId(null);
                           }}
-                          onClick={(e) => e.stopPropagation()}
                           className="w-full bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[13px] text-slate-900 outline-none"
                         />
                       ) : (
-                        <span className="truncate text-[13px]">{conv.title}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectView?.("chat");
+                            onSelectConversation(conv.id);
+                          }}
+                          aria-current={isActive ? "true" : undefined}
+                          className="min-w-0 flex-1 truncate rounded-sm text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
+                        >
+                          {conv.title}
+                        </button>
                       )}
                     </div>
 
@@ -519,7 +489,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         className={`flex items-center gap-0.5 ${
                           isActive || isMenuOpen || conv.isPinned
                             ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-100"
+                            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                         } transition-opacity`}
                       >
                         {/* Three dots button */}
@@ -579,76 +549,17 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </div>
       </div>
 
-      {/* Bottom user profile & workspace row (matching Image 1) */}
-      <div className="mt-auto pt-2 pb-0.5 border-t border-slate-200/70 px-2 flex items-center justify-between relative select-none">
-        <button
-          type="button"
-          onClick={() => setIsProfileMenuOpen((v) => !v)}
-          className="flex items-center gap-2 hover:bg-slate-100/80 px-1.5 py-1.5 rounded-xl transition-colors cursor-pointer group flex-1 min-w-0 text-left"
-        >
-          {/* Avatar initial circle */}
-          <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[11px] font-medium shrink-0">
-            K
-          </div>
-          <div className="flex items-center gap-1.5 min-w-0 text-[13px]">
-            <span className="font-normal text-slate-800 truncate">Kumar</span>
-            <span className="text-slate-400 font-normal">·</span>
-            <span className="text-slate-400 font-normal">Free</span>
-            <ChevronDown
-              size={12}
-              className="text-slate-400 group-hover:text-slate-600 shrink-0 ml-0.5"
-            />
-          </div>
-        </button>
-
-        {/* Workspaces icon button on right */}
-        <button
-          type="button"
-          title="Workspaces & organizations"
-          aria-label="Workspaces & organizations"
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
-        >
-          <WorkspacesIcon size={15} />
-        </button>
-
-        {/* User Account Popover */}
-        {isProfileMenuOpen && (
-          <div
-            ref={profileMenuRef}
-            onClick={(e) => e.stopPropagation()}
-            className="absolute left-2 right-2 bottom-full mb-2 rounded-2xl bg-white border border-slate-200/90 shadow-2xl p-2 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 select-none text-slate-700"
-          >
-            <div className="px-2.5 py-1.5 border-b border-slate-100 mb-1">
-              <div className="font-medium text-slate-900">Kumar</div>
-              <div className="text-[11.5px] text-slate-400">kumar@example.com · Free Plan</div>
-            </div>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-colors cursor-pointer text-[12.5px]"
-            >
-              Upgrade to Pro
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-colors cursor-pointer text-[12.5px]"
-            >
-              Settings
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-colors cursor-pointer text-[12.5px]"
-            >
-              Help & Support
-            </button>
-            <div className="my-1 border-t border-slate-100" />
-            <button
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer text-[12.5px]"
-            >
-              Log out
-            </button>
-          </div>
-        )}
+      {/* Account identity */}
+      <div className="mt-auto flex min-w-0 items-center gap-2 border-t border-slate-200/70 px-3 pt-2.5 pb-1 select-none">
+        {/* Avatar initial circle */}
+        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[11px] font-medium shrink-0">
+          {accountInitial}
+        </div>
+        <div className="flex min-w-0 items-center gap-1.5 text-[13px]">
+          <span className="truncate font-normal text-slate-800">{accountLabel}</span>
+          <span className="text-slate-400 font-normal">·</span>
+          <span className="text-slate-400 font-normal">Free</span>
+        </div>
       </div>
 
       {/* Floating Options Menu on the Right Side of the Sidebar */}
@@ -694,22 +605,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
           <div className="my-1 border-t border-slate-100" />
 
-          {/* Share */}
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard?.writeText(window.location.href);
-              setMenuOpenId(null);
-              setMenuPosition(null);
-            }}
-            className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <Upload size={14} strokeWidth={1.8} className="text-slate-600 shrink-0" />
-            <span>Share</span>
-          </button>
-
-          <div className="my-1 border-t border-slate-100" />
-
           {/* Archive */}
           <button
             type="button"
@@ -736,24 +631,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           >
             <Trash2 size={14} strokeWidth={1.8} className="text-rose-600 shrink-0" />
             <span>Delete</span>
-          </button>
-
-          <div className="my-1 border-t border-slate-100" />
-
-          {/* Move to project */}
-          <button
-            type="button"
-            onClick={() => {
-              setMenuOpenId(null);
-              setMenuPosition(null);
-            }}
-            className="w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Folder size={14} strokeWidth={1.8} className="text-slate-600 shrink-0" />
-              <span className="truncate">Move to project</span>
-            </div>
-            <ChevronRight size={13} className="text-slate-400 shrink-0" />
           </button>
         </div>
       )}

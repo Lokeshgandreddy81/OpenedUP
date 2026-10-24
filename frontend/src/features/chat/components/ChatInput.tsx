@@ -9,15 +9,14 @@ import {
   FileText,
   LoaderCircle,
   Paperclip,
-  Scroll,
   Boxes,
-  Palette,
   Plug,
   BarChart3,
   ChevronRight,
   Mic,
   X,
   BookOpenText,
+  ArrowUpRight,
 } from "lucide-react";
 import { getChatModels, getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
 import { useProviderKeys } from "../../customize/publicApi";
@@ -65,6 +64,7 @@ interface ChatInputProps {
   onOpenProviders?: () => void;
   initialText?: string;
   chapterContextLabel?: string;
+  starterPrompts?: Array<{ label: string; prompt: string }>;
 }
 
 const AVAILABLE_MODELS: AiModelOption[] = getChatModels().map((model) => ({
@@ -118,6 +118,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onOpenProviders,
   initialText = "",
   chapterContextLabel,
+  starterPrompts = [],
 }) => {
   const [text, setText] = useState(initialText);
   const [attachments, setAttachments] = useState<ChatAttachmentFile[]>([]);
@@ -318,7 +319,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <>
-      <div className="w-full max-w-[880px] mx-auto px-4 sm:px-5 select-none">
+      <div
+        className="w-full max-w-[880px] mx-auto px-4 sm:px-5 select-none"
+        data-testid={chapterContextLabel ? "chapter-composer" : undefined}
+      >
         <div
           onDragEnter={(event) => {
             if (chapterContextLabel) return;
@@ -345,7 +349,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-2 rounded-[28px] border p-4 transition-[border-color,background-color,box-shadow] duration-200 sm:p-5 ${chapterContextLabel ? "border-slate-200/70 bg-slate-50/35 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.4)] focus-within:border-slate-300/80 focus-within:bg-white" : "border-slate-200/60 bg-transparent shadow-none focus-within:bg-slate-50/40"} ${isFileDragActive ? "border-slate-300 bg-slate-50 ring-4 ring-slate-900/5" : ""}`}
+          className={`relative flex flex-col gap-2 rounded-[28px] border p-4 transition-[border-color,background-color,box-shadow] duration-200 sm:p-5 ${chapterContextLabel ? "border-slate-200/70 bg-slate-50/35 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.4)] focus-within:border-slate-300/80 focus-within:bg-white" : "border-slate-200/80 bg-white shadow-[0_14px_36px_-30px_rgba(15,23,42,0.42)] focus-within:border-slate-300 focus-within:shadow-[0_18px_42px_-30px_rgba(15,23,42,0.5)]"} ${isFileDragActive ? "border-slate-300 bg-slate-50 ring-4 ring-slate-900/5" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
           <input
@@ -437,9 +441,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <div className="flex min-h-10 items-center justify-between select-none">
             {/* Left: Add context / file plus icon with popover menu */}
             {chapterContextLabel ? (
-              <div className="flex min-w-0 items-center gap-2 px-2 text-[13px] font-medium text-slate-500">
+              <div
+                className="flex min-w-0 items-center gap-2 px-2 text-[13px] font-medium text-slate-500"
+                aria-label={`${chapterContextLabel} context`}
+                title={chapterContextLabel}
+              >
                 <BookOpenText size={16} strokeWidth={1.8} className="shrink-0" />
-                <span className="truncate">{chapterContextLabel}</span>
+                <span className="hidden truncate sm:inline">{chapterContextLabel}</span>
               </div>
             ) : (
               <div className="relative flex items-center">
@@ -521,25 +529,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       <ChevronRight size={13} className="text-slate-400 shrink-0" />
                     </button>
 
-                    {/* Skills */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsPlusMenuOpen(false);
-                      }}
-                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Scroll
-                          size={15}
-                          strokeWidth={1.8}
-                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
-                        />
-                        <span className="text-[13px] text-slate-800 font-normal">Skills</span>
-                      </div>
-                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
-                    </button>
-
                     {/* Connectors */}
                     <button
                       type="button"
@@ -556,27 +545,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                           className="text-slate-600 group-hover:text-slate-900 shrink-0"
                         />
                         <span className="text-[13px] text-slate-800 font-normal">Connectors</span>
-                      </div>
-                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
-                    </button>
-
-                    {/* Design system */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsPlusMenuOpen(false);
-                      }}
-                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Palette
-                          size={15}
-                          strokeWidth={1.8}
-                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
-                        />
-                        <span className="text-[13px] text-slate-800 font-normal">
-                          Design system
-                        </span>
                       </div>
                       <ChevronRight size={13} className="text-slate-400 shrink-0" />
                     </button>
@@ -646,7 +614,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   }}
                   aria-haspopup="menu"
                   aria-expanded={isModelDropdownOpen}
-                  className="flex max-w-[min(44vw,360px)] items-center gap-1.5 sm:gap-2 rounded-md px-2 py-1 text-[14px] font-semibold text-slate-950 transition-colors duration-150 cursor-pointer hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                  title={currentModelName}
+                  className={`flex items-center gap-1.5 rounded-md px-2 py-1 font-semibold text-slate-950 transition-colors duration-150 cursor-pointer hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:gap-2 sm:text-[14px] ${chapterContextLabel ? "max-w-[min(56vw,360px)] text-[13px]" : "max-w-[min(44vw,360px)] text-[14px]"}`}
                 >
                   <span className="truncate font-semibold">{currentModelName}</span>
                   {supportsEffort && (
@@ -865,6 +834,32 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           )}
         </div>
       </div>
+      {starterPrompts.length > 0 && (
+        <div className="mx-auto flex w-full max-w-[880px] flex-wrap items-center justify-center gap-x-5 gap-y-1 px-5 pt-3 sm:gap-x-7">
+          {starterPrompts.map(({ label, prompt }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                setText(prompt);
+                textareaRef.current?.focus();
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = "auto";
+                  textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+                }
+              }}
+              className="group inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 text-[13px] text-slate-600 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+            >
+              <span>{label}</span>
+              <ArrowUpRight
+                size={13}
+                className="text-slate-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-slate-700"
+                aria-hidden="true"
+              />
+            </button>
+          ))}
+        </div>
+      )}
       {modelHoverCard &&
         createPortal(
           <ModelDetailsCard

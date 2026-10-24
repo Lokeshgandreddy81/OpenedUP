@@ -14,7 +14,7 @@ The chapter feature owns extraction, chunking, and initial lexical retrieval. Th
 - Include opaque chapter/session identity, selected model, user question, and a bounded list of retrieved passage IDs, absolute page numbers, and text. Reject malformed or out-of-range citations.
 - Start with deterministic page-aware chunks and lexical/BM25-style ranking, scoped strictly to the selected chapter. Do not silently search neighboring chapters or fallback to arbitrary content.
 - Return an explicit abstention when no relevant evidence is found or the model cannot support an answer. The assistant instruction must say to answer only from supplied evidence and state when it is absent.
-- Model output citations are references to supplied passage IDs; resolve page number and short excerpt from source data, never trust model-invented page numbers/quotes.
+- Model output citations are references to supplied passage IDs; resolve page number from source data and never trust model-invented page numbers. Return page-only citations because the student can already see the source in the PDF.
 - Reuse the existing selected model and BYOK provider credential resolution through a narrow shared service seam. Do not store or copy API keys into chapter data.
 - Treat passage text as untrusted quoted source; it cannot authorize tools or override the system instruction. Chapter mode has no generic attachments, plugins, or other-chapter context.
 - Bound number of passages, text bytes/tokens, and prompt size. Surface validation/provider errors without exposing credentials.
@@ -23,7 +23,7 @@ The chapter feature owns extraction, chunking, and initial lexical retrieval. Th
 
 - Retrieval results only identify passages from the selected chapter.
 - No-match produces a clear not-in-chapter answer rather than a fabricated citation.
-- Every citation resolves to a passage supplied in the request and exact source excerpt/page.
+- Every citation resolves to a passage supplied in the request and its original page number; do not repeat source excerpts in the answer.
 - Provider/model selection works through the existing credential owner; generic endpoints remain unchanged.
 - Request validation prevents caller-supplied unrelated chapter or invalid page references.
 

@@ -32,6 +32,7 @@ graph TD
         DuplicateRoute["POST /api/check-duplicates"]
         PdfRoute["POST /api/parse-pdf-chapters"]
         ChatRoute["POST /api/chat"]
+        ChapterChatRoute["POST /api/chat/chapter/stream"]
     end
 
     subgraph Engines ["Processing & Intelligence Engines"]
@@ -58,10 +59,12 @@ graph TD
     Validator --> DuplicateRoute
     Validator --> PdfRoute
     Validator --> ChatRoute
+    Validator --> ChapterChatRoute
 
     ReceiptRoute --> GeminiService
     DuplicateRoute --> GeminiService
     ChatRoute --> GeminiService
+    ChapterChatRoute --> GeminiService
 
     PdfRoute --> PythonExtractor
     PythonExtractor -. fallback .-> GeminiService

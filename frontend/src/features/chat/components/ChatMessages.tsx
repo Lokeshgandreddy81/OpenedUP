@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import {
   ArrowDown,
+  BookmarkPlus,
+  CircleAlert,
   Check,
   Clock3,
   Copy,
@@ -37,9 +39,10 @@ interface ChatMessagesProps {
   isResponding: boolean;
   thinkingElapsedSeconds: number;
   thinkingLabel?: string;
-  onSelectActionChip?: (chipText: string) => void;
+  onSelectActionChip?: (chipText: string, messageId: string) => void;
   onEditMessage?: (messageId: string, currentContent: string) => void;
   onRetryMessage?: (messageId: string, payload: NonNullable<ChatMessage["retryPayload"]>) => void;
+  onSaveArtifact?: (message: ChatMessage) => Promise<void>;
   renderMessageSupplement?: (message: ChatMessage) => React.ReactNode;
 }
 
@@ -52,15 +55,21 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   onSelectActionChip,
   onEditMessage,
   onRetryMessage,
+  onSaveArtifact,
   renderMessageSupplement,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copyFailedId, setCopyFailedId] = useState<string | null>(null);
+  const copyFeedbackTimerRef = React.useRef<number | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>("");
   const editTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const shouldFollowLatestRef = React.useRef(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [savingArtifactId, setSavingArtifactId] = useState<string | null>(null);
+  const [savedArtifactIds, setSavedArtifactIds] = useState<Set<string>>(() => new Set());
+  const [artifactSaveErrorId, setArtifactSaveErrorId] = useState<string | null>(null);
   const lastUserMessageId = [...messages].reverse().find((message) => message.role === "user")?.id;
   const lastUserMessageIdRef = React.useRef(lastUserMessageId);
   const latestMessage = messages[messages.length - 1];
@@ -108,10 +117,49 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     setShowJumpToLatest(false);
   };
 
-  const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  React.useEffect(
+    () => () => {
+      if (copyFeedbackTimerRef.current !== null) {
+        window.clearTimeout(copyFeedbackTimerRef.current);
+      }
+    },
+    []
+  );
+
+  const handleCopy = async (id: string, text: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const fallback = document.createElement("textarea");
+        fallback.value = text;
+        fallback.setAttribute("readonly", "");
+        fallback.style.position = "fixed";
+        fallback.style.opacity = "0";
+        document.body.appendChild(fallback);
+        let copied = false;
+        try {
+          fallback.select();
+          copied = document.execCommand("copy");
+        } finally {
+          fallback.remove();
+        }
+        if (!copied) throw new Error("Clipboard copy was unavailable");
+      }
+      setCopiedId(id);
+      setCopyFailedId(null);
+    } catch {
+      setCopiedId(null);
+      setCopyFailedId(id);
+    }
+    if (copyFeedbackTimerRef.current !== null) {
+      window.clearTimeout(copyFeedbackTimerRef.current);
+    }
+    copyFeedbackTimerRef.current = window.setTimeout(() => {
+      setCopiedId(null);
+      setCopyFailedId(null);
+      copyFeedbackTimerRef.current = null;
+    }, 2000);
   };
 
   return (
@@ -194,7 +242,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     ) : (
                       /* ─── Normal display mode ─── */
                       <>
-                        <div className="max-w-full rounded-[24px] bg-[#f2f2f0] px-5 py-3 text-[16px] font-normal leading-[1.6] text-slate-800 select-text break-words">
+                        <div className="max-w-full rounded-[24px] bg-[#f2f2f0] px-5 py-3 text-[16px] font-normal leading-[1.6] text-slate-800 select-text break-words whitespace-pre-wrap">
                           {message.attachments && message.attachments.length > 0 && (
                             <div className="mb-2 flex flex-wrap gap-1.5">
                               {message.attachments.map((file, index) => (
@@ -246,16 +294,35 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           <button
                             type="button"
                             onClick={() => handleCopy(message.id, message.content)}
-                            title={isCopied ? "Copied!" : "Copy input"}
-                            aria-label="Copy input"
+                            title={
+                              isCopied
+                                ? "Copied!"
+                                : copyFailedId === message.id
+                                  ? "Copy failed"
+                                  : "Copy input"
+                            }
+                            aria-label={
+                              isCopied
+                                ? "Copied input"
+                                : copyFailedId === message.id
+                                  ? "Copy failed"
+                                  : "Copy input"
+                            }
                             className="p-1 rounded-md hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer"
                           >
                             {isCopied ? (
                               <Check size={12} className="text-emerald-600" strokeWidth={2} />
+                            ) : copyFailedId === message.id ? (
+                              <CircleAlert size={13} className="text-rose-600" strokeWidth={1.8} />
                             ) : (
                               <Copy size={13} strokeWidth={1.8} />
                             )}
                           </button>
+                          {copyFailedId === message.id && (
+                            <span role="status" className="text-[11px] text-rose-600">
+                              Copy failed
+                            </span>
+                          )}
                           <MessageTimestamp timestamp={message.timestamp} />
                         </div>
                       </>
@@ -271,6 +338,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             const isThinkingOnThisResponse = isThinking && message.isStreaming;
             const isRespondingOnThisResponse = isResponding && isThinkingOnThisResponse;
             const isStopped = message.generationStatus === "stopped";
+            const isError = message.generationStatus === "error";
             return (
               <div
                 key={message.id}
@@ -279,10 +347,16 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 <div className="min-w-0 flex-1">
                   {(isThinkingOnThisResponse ||
                     (hasCompletedResponse && thinkingDuration) ||
-                    isStopped) && (
-                    <div className="chat-thinking-status mb-2 flex min-h-7 gap-2 text-[13px] text-slate-500">
+                    isStopped ||
+                    isError) && (
+                    <div
+                      className={`chat-thinking-status mb-2 flex min-h-7 gap-2 text-[13px] ${isError ? "text-rose-700" : "text-slate-500"}`}
+                      role={isError ? "alert" : undefined}
+                    >
                       {isThinkingOnThisResponse ? (
                         <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
+                      ) : isError ? (
+                        <CircleAlert size={14} aria-hidden="true" />
                       ) : isStopped ? (
                         <Square size={12} aria-hidden="true" />
                       ) : (
@@ -290,6 +364,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       )}
                       {isStopped ? (
                         <span>Response stopped</span>
+                      ) : isError ? (
+                        <span>Couldn’t complete this response</span>
                       ) : isThinkingOnThisResponse ? (
                         <span
                           role="timer"
@@ -306,7 +382,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     </div>
                   )}
                   {/* Assistant prose and structured Markdown */}
-                  <div className="w-full select-text">
+                  <div
+                    className={`w-full select-text ${isError ? "rounded-lg border border-rose-100 bg-rose-50/60 px-3 py-2 text-rose-900" : ""}`}
+                  >
                     <AssistantResponse
                       content={message.content}
                       isStreaming={Boolean(message.isStreaming)}
@@ -318,6 +396,50 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     className={`mt-2 flex h-8 items-center gap-1 text-[13px] text-slate-500 ${hasCompletedResponse ? "" : "invisible"}`}
                     aria-hidden={!hasCompletedResponse}
                   >
+                    {hasCompletedResponse && !isError && onSaveArtifact && (
+                      <button
+                        type="button"
+                        disabled={
+                          savingArtifactId === message.id || savedArtifactIds.has(message.id)
+                        }
+                        onClick={async () => {
+                          setSavingArtifactId(message.id);
+                          setArtifactSaveErrorId(null);
+                          try {
+                            await onSaveArtifact(message);
+                            setSavedArtifactIds((current) => new Set(current).add(message.id));
+                          } catch {
+                            setArtifactSaveErrorId(message.id);
+                          } finally {
+                            setSavingArtifactId(null);
+                          }
+                        }}
+                        title={
+                          savedArtifactIds.has(message.id)
+                            ? "Saved to Artifacts"
+                            : "Save to Artifacts"
+                        }
+                        aria-label={
+                          savedArtifactIds.has(message.id)
+                            ? "Saved to Artifacts"
+                            : "Save response to Artifacts"
+                        }
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-slate-600 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-default disabled:opacity-80"
+                      >
+                        {savedArtifactIds.has(message.id) ? (
+                          <Check size={14} className="text-emerald-600" />
+                        ) : (
+                          <BookmarkPlus size={14} />
+                        )}
+                        <span className="text-xs">
+                          {savingArtifactId === message.id
+                            ? "Saving…"
+                            : savedArtifactIds.has(message.id)
+                              ? "Saved"
+                              : "Save"}
+                        </span>
+                      </button>
+                    )}
                     {message.retryPayload && (
                       <button
                         type="button"
@@ -334,18 +456,43 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     <button
                       type="button"
                       onClick={() => handleCopy(message.id, message.content)}
-                      title={copiedId === message.id ? "Copied!" : "Copy response"}
-                      aria-label={copiedId === message.id ? "Copied response" : "Copy response"}
+                      title={
+                        copiedId === message.id
+                          ? "Copied!"
+                          : copyFailedId === message.id
+                            ? "Copy failed"
+                            : "Copy response"
+                      }
+                      aria-label={
+                        copiedId === message.id
+                          ? "Copied response"
+                          : copyFailedId === message.id
+                            ? "Copy failed"
+                            : "Copy response"
+                      }
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     >
                       {copiedId === message.id ? (
                         <Check size={14} className="text-emerald-600" />
+                      ) : copyFailedId === message.id ? (
+                        <CircleAlert size={14} className="text-rose-600" />
                       ) : (
                         <Copy size={14} strokeWidth={1.8} />
                       )}
                     </button>
+                    {copyFailedId === message.id && (
+                      <span role="status" className="text-[11px] text-rose-600">
+                        Copy failed
+                      </span>
+                    )}
                     <MessageTimestamp timestamp={message.timestamp} />
                   </div>
+                  {artifactSaveErrorId === message.id && (
+                    <p className="text-xs text-rose-700" role="alert">
+                      Could not save this response. Your chat is still here; retry when your
+                      connection is available.
+                    </p>
+                  )}
 
                   {/* Action suggestion chips */}
                   {message.actionChips && message.actionChips.length > 0 && (
@@ -354,7 +501,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         <button
                           key={cIdx}
                           type="button"
-                          onClick={() => onSelectActionChip?.(chip)}
+                          onClick={() => onSelectActionChip?.(chip, message.id)}
                           className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-[background-color,color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 ${
                             chip === "Connect API Key"
                               ? "bg-slate-950 text-white shadow-[0_2px_6px_rgba(15,23,42,0.16)] hover:-translate-y-px hover:bg-slate-800 hover:shadow-[0_5px_12px_rgba(15,23,42,0.18)]"

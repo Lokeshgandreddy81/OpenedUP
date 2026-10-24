@@ -90,6 +90,7 @@ export const ChatRequestSchema = z.object({
 export const ChapterChatRequestSchema = z
   .object({
     chapterId: z.string().min(1).max(200),
+    chapterTitle: z.string().trim().min(1).max(300),
     startPage: z.number().int().positive(),
     endPage: z.number().int().positive(),
     question: z.string().trim().min(1).max(8_000),
@@ -110,6 +111,16 @@ export const ChapterChatRequestSchema = z
       .max(8)
       .refine((items) => new Set(items.map((item) => item.id)).size === items.length)
       .refine((items) => items.reduce((size, item) => size + item.text.length, 0) <= 32_000),
+    imagePages: z
+      .array(
+        z.object({
+          pageNumber: z.number().int().positive(),
+          mimeType: z.enum(["image/jpeg", "image/png"]),
+          base64Data: z.string().min(1).max(1_500_000),
+        })
+      )
+      .max(8)
+      .optional(),
   })
   .strict()
   .superRefine((request, context) => {
@@ -129,6 +140,25 @@ export const ChapterChatRequestSchema = z
         });
       }
     });
+    request.imagePages?.forEach((item, index) => {
+      if (item.pageNumber < request.startPage || item.pageNumber > request.endPage) {
+        context.addIssue({
+          code: "custom",
+          message: "Image page is outside the selected chapter.",
+          path: ["imagePages", index, "pageNumber"],
+        });
+      }
+    });
+    if (
+      (request.imagePages || []).reduce((size, item) => size + item.base64Data.length, 0) >
+      8_000_000
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Chapter page images exceed the 8 MB context limit.",
+        path: ["imagePages"],
+      });
+    }
     if (request.history.reduce((total, message) => total + message.content.length, 0) > 24_000) {
       context.addIssue({
         code: "custom",
@@ -189,7 +219,24 @@ export const ArtifactRequestSchema = z.object({
   language: z.string().max(100).optional(),
   modelUsed: z.string().max(200).optional(),
   isShared: z.boolean().optional().default(false),
+  isFavorite: z.boolean().optional(),
+  collection: z.string().trim().min(1).max(80).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(32)).max(12).optional(),
 });
+
+export const ArtifactOrganizationRequestSchema = z
+  .object({
+    isFavorite: z.boolean().optional(),
+    collection: z.string().trim().min(1).max(80).nullable().optional(),
+    tags: z.array(z.string().trim().min(1).max(32)).max(12).optional(),
+  })
+  .refine(
+    (organization) =>
+      organization.isFavorite !== undefined ||
+      organization.collection !== undefined ||
+      organization.tags !== undefined,
+    { message: "Provide at least one organization field." }
+  );
 
 export const ImportArtifactsRequestSchema = z.object({
   artifacts: z
@@ -327,6 +374,7 @@ export type AppendConversationMessageRequest = z.infer<
   typeof AppendConversationMessageRequestSchema
 >;
 export type ArtifactRequest = z.infer<typeof ArtifactRequestSchema>;
+export type ArtifactOrganizationRequest = z.infer<typeof ArtifactOrganizationRequestSchema>;
 export type ImportArtifactsRequest = z.infer<typeof ImportArtifactsRequestSchema>;
 export type ProjectSnapshot = z.infer<typeof ProjectSnapshotSchema>;
 export type ReplaceProjectsRequest = z.infer<typeof ReplaceProjectsRequestSchema>;

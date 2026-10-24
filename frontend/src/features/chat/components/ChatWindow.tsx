@@ -97,12 +97,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [customizeInitialCategory, setCustomizeInitialCategory] =
     useState<CustomizeCategory>(initialCustomizeCategory);
   const processedInitialViewRef = useRef<typeof initialView | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(
+    () => window.matchMedia("(min-width: 640px)").matches
+  );
   const [isScheduledTasksInternalOpen, setIsScheduledTasksInternalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AiModelId>(
     "openrouter-nemotron-3.5-lightning-free"
   );
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [artifactDraftPrompt, setArtifactDraftPrompt] = useState("");
+  const [artifactActionError, setArtifactActionError] = useState("");
   const installedPluginIds = useInstalledPluginIds();
   const [isSkillsMenuOpen, setIsSkillsMenuOpen] = useState(false);
 
@@ -166,6 +170,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     if (view === "projects") {
       setProjectsNavKey((k) => k + 1);
     }
+    if (window.matchMedia("(max-width: 639px)").matches) setIsSidebarOpen(false);
     if (view === "customize") {
       setCustomizeInitialCategory("Connectors");
     }
@@ -178,6 +183,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setActiveView("customize");
     onViewChange?.("customize");
   }, [onViewChange]);
+
+  const handleOpenScheduledTasks = useCallback(() => {
+    if (window.matchMedia("(max-width: 639px)").matches) setIsSidebarOpen(false);
+    if (onOpenScheduledTasks) onOpenScheduledTasks();
+    else setIsScheduledTasksInternalOpen(true);
+  }, [onOpenScheduledTasks]);
 
   const [isThinking, setIsThinking] = useState(false);
   const [isResponding, setIsResponding] = useState(false);
@@ -836,6 +847,37 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     [activeConversation, currentMessages, handleSendMessage, isTemporaryChat, selectedModel, user]
   );
 
+  const handleSaveAssistantArtifact = useCallback(
+    async (message: ChatMessage) => {
+      const messageIndex = currentMessages.findIndex((item) => item.id === message.id);
+      const previousUserMessage = currentMessages
+        .slice(0, messageIndex)
+        .reverse()
+        .find((item) => item.role === "user")?.content;
+      const codeBlocks = [...message.content.matchAll(/```([\w+-]*)\s*\n([\s\S]*?)```/g)];
+      const isSingleCodeArtifact = codeBlocks.length === 1;
+      const category = isSingleCodeArtifact ? "Code" : "Documents";
+      const language = isSingleCodeArtifact
+        ? codeBlocks[0]?.[1]?.toLowerCase() || "text"
+        : "markdown";
+      const content = isSingleCodeArtifact ? (codeBlocks[0]?.[2] || "").trim() : message.content;
+      const heading = message.content.match(/^#{1,2}\s+(.+)$/m)?.[1]?.trim();
+      const promptTitle = previousUserMessage?.replace(/\s+/g, " ").trim();
+      const title = (heading || promptTitle || `${category} from chat`).slice(0, 100);
+      const { persistArtifactItem } = await import("../../artifacts");
+      const { modelName } = getKeyForModel(selectedModel);
+      await persistArtifactItem({
+        title,
+        category,
+        content,
+        language,
+        modelUsed: modelName,
+        isShared: false,
+      });
+    },
+    [currentMessages, selectedModel]
+  );
+
   if (!isOpen) return null;
   return (
     <div
@@ -872,7 +914,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         onPinConversation={handlePinConversation}
         onRenameConversation={handleRenameConversation}
         onArchiveConversation={handleArchiveConversation}
-        onOpenScheduledTasks={onOpenScheduledTasks || (() => setIsScheduledTasksInternalOpen(true))}
+        onOpenScheduledTasks={handleOpenScheduledTasks}
         activeView={activeView}
         onSelectView={handleSelectView}
       />
@@ -884,34 +926,39 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         isScheduledTasksOpen={isScheduledTasksInternalOpen}
         onSelectView={handleSelectView}
         onNavigateToChat={(prompt) => {
+          setArtifactDraftPrompt(prompt || "");
           handleSelectView("chat");
-          if (prompt) handleSendMessage(prompt, selectedModel);
         }}
         onCloseScheduledTasks={() => setIsScheduledTasksInternalOpen(false)}
       />
 
+      {isSidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-label="Close navigation"
+          className="absolute inset-0 z-30 bg-slate-950/20 backdrop-blur-[1px] sm:hidden"
+        />
+      )}
+
       {activeView === "chat" ? (
         <main
           aria-label="Chat canvas"
-          className={`flex-1 min-w-0 h-full flex flex-col overflow-hidden bg-[#fcfcfb] relative transition-[padding] duration-150 ${
-            isEmptyChat ? "justify-between" : "justify-between"
-          } ${!isSidebarOpen ? "pr-11" : ""}`}
+          className="relative flex h-full min-w-0 flex-1 flex-col justify-between overflow-hidden bg-[#fcfcfb]"
         >
           {/* Top Header Bar: Incognito / Temporary Chat Icon */}
           <div className="w-full flex items-center justify-between gap-3 px-5 sm:px-8 py-3 z-30 shrink-0 relative border-b border-slate-100/80 bg-[#fcfcfb]/95">
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-medium text-slate-700">
-                {isTemporaryChat
-                  ? "Temporary chat"
-                  : activeConversation?.messages.find((message) => message.role === "user")
-                      ?.content ||
-                    activeConversation?.title ||
-                    "New chat"}
+              <p
+                className="truncate text-[13px] font-medium text-slate-700"
+                title={isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"}
+              >
+                {isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"}
               </p>
             </div>
             <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
               {user ? (
-                <span className="text-xs text-slate-500">
+                <span className="hidden max-w-48 truncate text-xs text-slate-500 sm:inline">
                   {user.displayName || user.email || "Signed in"}
                 </span>
               ) : (
@@ -1008,21 +1055,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <div className="flex-1 w-full flex flex-col items-center justify-center px-4 pb-16 select-none animate-in fade-in duration-200">
               <div className="w-full max-w-[880px] flex flex-col items-center">
                 {/* Hero Heading below the incognito bar */}
-                <div className="text-center mb-6">
-                  <h2 className="text-[30px] md:text-[34px] font-medium text-slate-800 tracking-tight">
-                    Ask anything
+                <div className="mb-7 text-center">
+                  <h2 className="text-[30px] font-medium tracking-[-0.035em] text-slate-900 md:text-[36px]">
+                    What can I help with?
                   </h2>
-                  <p className="mt-2 text-sm text-slate-500">
-                    Explore a topic, work through a problem, or make sense of a document.
+                  <p className="mt-2 text-[14px] text-slate-500">
+                    Ask a question or drop in a file to get started.
                   </p>
                 </div>
 
                 {/* Centered Input Box */}
                 <div className="w-full">
                   <ChatInput
-                    onSendMessage={(msg, m, eff, files) =>
-                      handleSendMessage(msg, m, eff, undefined, files)
-                    }
+                    initialText={artifactDraftPrompt}
+                    onSendMessage={(msg, m, eff, files) => {
+                      setArtifactDraftPrompt("");
+                      void handleSendMessage(msg, m, eff, undefined, files);
+                    }}
                     isThinking={isThinking}
                     onStopThinking={stopGeneration}
                     placeholder="Message Shoebox…"
@@ -1032,6 +1081,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     onOpenPlugins={() => handleSelectView("plugins")}
                     onOpenBenchmarks={() => handleSelectView("benchmarks")}
                     onOpenProviders={handleOpenProvidersTab}
+                    starterPrompts={[
+                      { label: "Explain a concept", prompt: "Explain a concept to me simply: " },
+                      { label: "Help me write", prompt: "Help me write: " },
+                      { label: "Summarize a document", prompt: "Summarize this document: " },
+                    ]}
                   />
                 </div>
               </div>
@@ -1044,25 +1098,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 isThinking={isThinking}
                 isResponding={isResponding}
                 thinkingElapsedSeconds={thinkingElapsedSeconds}
-                onSelectActionChip={(chip) => {
+                onSaveArtifact={handleSaveAssistantArtifact}
+                onSelectActionChip={(chip, messageId) => {
                   if (chip === "Export findings" || chip === "Export sequence") {
-                    const lastAssistant = [...currentMessages]
-                      .reverse()
-                      .find((m) => m.role === "assistant");
-                    if (lastAssistant) {
-                      const { modelName } = getKeyForModel(selectedModel);
-                      void import("../../artifacts").then(({ persistArtifactItem }) =>
-                        persistArtifactItem({
-                          title: `${docTitle || "Chat"} Synthesis`,
-                          category: lastAssistant.content.includes("```") ? "Code" : "Documents",
-                          content: lastAssistant.content,
-                          modelUsed: modelName,
-                          isShared: false,
-                        })
+                    const assistantMessage = currentMessages.find((item) => item.id === messageId);
+                    if (!assistantMessage) return;
+                    setArtifactActionError("");
+                    void handleSaveAssistantArtifact(assistantMessage)
+                      .then(() => handleSelectView("artifacts"))
+                      .catch(() =>
+                        setArtifactActionError(
+                          "Could not save the artifact. Your conversation is still available; try again when the connection is back."
+                        )
                       );
-                      handleSelectView("artifacts");
-                      return;
-                    }
+                    return;
                   }
                   if (chip === "Connect API Key") {
                     handleOpenProvidersTab();
@@ -1090,11 +1139,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   );
                 }}
               />
+              {artifactActionError && (
+                <p
+                  role="alert"
+                  className="mx-auto mb-3 w-[min(800px,calc(100%-2.5rem))] rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+                >
+                  {artifactActionError}
+                </p>
+              )}
 
               {/* Centered Floating Bottom Input */}
               <div className="animate-in fade-in duration-150 pb-6">
                 <ChatInput
+                  initialText={artifactDraftPrompt}
                   onSendMessage={(msg, m, eff, files) => {
+                    setArtifactDraftPrompt("");
                     handleSendMessage(msg, m, eff, undefined, files);
                   }}
                   isThinking={isThinking}

@@ -1,7 +1,56 @@
-import type { ChapterSource, ChapterSourcePage } from "./chapterSource";
+import type { ChapterPageImage, ChapterSource, ChapterSourcePage } from "./chapterSource";
 
 export interface RetrievedChapterPassage extends ChapterSourcePage {
   score: number;
+}
+
+export interface ChapterEvidence {
+  id: string;
+  pageNumber: number;
+  text: string;
+}
+
+export function prepareChapterEvidence(
+  passages: RetrievedChapterPassage[],
+  images: ChapterPageImage[] = [],
+  maxPages = 8
+): { evidence: ChapterEvidence[]; images: ChapterPageImage[] } {
+  if (images.length === 0) {
+    return {
+      evidence: passages.slice(0, maxPages).map(({ id, pageNumber, text }) => ({
+        id,
+        pageNumber,
+        text: text.slice(0, 8_000),
+      })),
+      images: [],
+    };
+  }
+
+  const evidenceByPage = new Map<number, ChapterEvidence>();
+  for (const passage of passages) {
+    if (evidenceByPage.size >= maxPages) break;
+    if (!evidenceByPage.has(passage.pageNumber)) {
+      evidenceByPage.set(passage.pageNumber, {
+        id: passage.id,
+        pageNumber: passage.pageNumber,
+        text: passage.text.slice(0, 8_000),
+      });
+    }
+  }
+  for (const image of images) {
+    if (evidenceByPage.size >= maxPages) break;
+    if (!evidenceByPage.has(image.pageNumber)) {
+      evidenceByPage.set(image.pageNumber, {
+        id: `visual:page-${image.pageNumber}`,
+        pageNumber: image.pageNumber,
+        text: `Visual content from PDF page ${image.pageNumber}.`,
+      });
+    }
+  }
+
+  const evidence = [...evidenceByPage.values()];
+  const citedPages = new Set(evidence.map((item) => item.pageNumber));
+  return { evidence, images: images.filter((image) => citedPages.has(image.pageNumber)) };
 }
 
 const STOP_WORDS = new Set([
@@ -11,17 +60,28 @@ const STOP_WORDS = new Set([
   "are",
   "as",
   "at",
+  "about",
   "be",
+  "bullet",
   "by",
   "for",
   "from",
+  "give",
   "how",
+  "idea",
+  "ideas",
   "in",
   "is",
   "it",
+  "me",
   "of",
   "on",
   "or",
+  "one",
+  "please",
+  "point",
+  "summarize",
+  "tell",
   "that",
   "the",
   "this",
@@ -34,6 +94,8 @@ const STOP_WORDS = new Set([
   "who",
   "why",
   "with",
+  "explain",
+  "chapter",
 ]);
 
 function terms(text: string) {
@@ -70,7 +132,13 @@ export function retrieveChapterPassages(
     while (start < page.text.length) {
       let end = Math.min(page.text.length, start + chunkSize);
       if (end < page.text.length) {
-        const boundary = page.text.lastIndexOf(" ", end);
+        const boundary = Math.max(
+          page.text.lastIndexOf("\n", end),
+          page.text.lastIndexOf(". ", end),
+          page.text.lastIndexOf("? ", end),
+          page.text.lastIndexOf("! ", end),
+          page.text.lastIndexOf(" ", end)
+        );
         if (boundary > start + chunkSize * 0.6) end = boundary;
       }
       const text = page.text.slice(start, end).trim();
@@ -118,51 +186,63 @@ export function retrieveChapterPassages(
   const resultLimit = Math.max(0, limit);
   if (resultLimit === 0) return [];
 
-  // A strict keyword-only gate made ordinary paraphrases look like missing
-  // chapter content. Keep the strongest lexical hits, then let the selected
-  // model judge a small, evenly spread sample of the same chapter when those
-  // hits are weak or absent. The model still has to cite supporting passages.
-  const hasStrongMatch = ranked.length >= 2 && ranked[0]!.score >= 1.5;
-  if (hasStrongMatch) {
-    const selected: RetrievedChapterPassage[] = [];
-    const pageCounts = new Map<number, number>();
-    for (const passage of ranked) {
-      if ((pageCounts.get(passage.pageNumber) || 0) >= 2) continue;
-      selected.push(passage);
-      pageCounts.set(passage.pageNumber, (pageCounts.get(passage.pageNumber) || 0) + 1);
-      if (selected.length >= resultLimit) break;
-    }
-    if (selected.length < resultLimit) {
-      const selectedIds = new Set(selected.map((passage) => passage.id));
-      for (const passage of ranked) {
-        if (selected.length >= resultLimit) break;
-        if (!selectedIds.has(passage.id)) selected.push(passage);
+  const broadStudyPrompt =
+    queryTerms.length === 0 ||
+    /\b(summar(?:y|ize|ise)|key takeaways|takeaways|main ideas|key idea|key term|remember|overview|hello|hi|hey)\b/i.test(
+      question
+    );
+  if (broadStudyPrompt) {
+    const overview: RetrievedChapterPassage[] = [];
+    const usedIds = new Set<string>();
+    const pages = [...new Set(passages.map((passage) => passage.pageNumber))];
+    const representativeCount = Math.min(resultLimit, pages.length);
+    const representativePages =
+      representativeCount <= 1
+        ? pages.slice(0, representativeCount)
+        : Array.from({ length: representativeCount }, (_, index) => {
+            const pageIndex = Math.floor((index * (pages.length - 1)) / (representativeCount - 1));
+            return pages[pageIndex];
+          });
+
+    // Spread a bounded overview across the whole chapter so later pages are
+    // represented even when the chapter is longer than the evidence budget.
+    for (const pageNumber of representativePages) {
+      const passage = passages.find((item) => item.pageNumber === pageNumber);
+      if (passage) {
+        overview.push({ ...passage, score: 0 });
+        usedIds.add(passage.id);
       }
     }
-    return selected;
-  }
-
-  const selected = ranked.slice(0, Math.min(2, resultLimit));
-  const selectedIds = new Set(selected.map((passage) => passage.id));
-  const remaining = passages.filter((passage) => !selectedIds.has(passage.id));
-  const slots = resultLimit - selected.length;
-  for (let index = 0; index < slots && remaining.length > 0; index += 1) {
-    const sampleIndex = Math.round(((index + 1) * (remaining.length - 1)) / (slots + 1));
-    const candidate = remaining[sampleIndex];
-    if (candidate && !selectedIds.has(candidate.id)) {
-      selected.push({ ...candidate, score: 0 });
-      selectedIds.add(candidate.id);
+    for (const passage of passages) {
+      if (overview.length >= resultLimit) break;
+      if (usedIds.has(passage.id)) continue;
+      overview.push({ ...passage, score: 0 });
     }
+    return overview;
   }
 
-  // When a chapter is too short or duplicate samples collapse, fill from the
-  // beginning in document order so the API always receives usable evidence.
-  for (const passage of passages) {
+  if (ranked.length === 0) {
+    // Lexical search cannot recognize a paraphrase with no shared terms. Give
+    // the model a bounded, page-diverse candidate set from this chapter so it
+    // can judge semantic relevance instead of the UI abstaining immediately.
+    const candidates: RetrievedChapterPassage[] = [];
+    for (const pageNumber of [...new Set(passages.map((passage) => passage.pageNumber))]) {
+      const passage = passages.find((item) => item.pageNumber === pageNumber);
+      if (passage) candidates.push({ ...passage, score: 0 });
+      if (candidates.length >= resultLimit) break;
+    }
+    return candidates;
+  }
+
+  // Never pad weak lexical matches with arbitrary chapter samples. Unrelated
+  // passages make the model more likely to fabricate a grounded-sounding reply.
+  const selected: RetrievedChapterPassage[] = [];
+  const pageCounts = new Map<number, number>();
+  for (const passage of ranked) {
+    if ((pageCounts.get(passage.pageNumber) || 0) >= 2) continue;
+    selected.push(passage);
+    pageCounts.set(passage.pageNumber, (pageCounts.get(passage.pageNumber) || 0) + 1);
     if (selected.length >= resultLimit) break;
-    if (!selectedIds.has(passage.id)) {
-      selected.push({ ...passage, score: 0 });
-      selectedIds.add(passage.id);
-    }
   }
-  return selected.slice(0, resultLimit);
+  return selected;
 }

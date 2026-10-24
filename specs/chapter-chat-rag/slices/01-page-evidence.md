@@ -17,7 +17,7 @@ Make a selected searchable-text chapter representable as immutable, page-aware s
 - Introduce a chapter-chat-owned source type with opaque session `documentId` and `chapterId`, chapter title, original 1-based start/end page, and an ordered list of `{ passageId, pageNumber, text }` source pages/passages.
 - Extract from the original browser PDF (or the existing parser response if it can prove exact per-page text); never use generated overview/summary fields as evidence.
 - Restrict extraction to the selected chapter’s validated page range. Preserve original page numbers even if the viewer uses a sliced PDF blob.
-- Treat a chapter as searchable only when it has usable extracted text. A scanned/empty chapter yields a typed unsupported state and an actionable explanation; it is never indexed as empty placeholder or OCR output.
+- Use selectable PDF text as the default retrievable evidence. For a selected model that declares image input support, page images from the same selected chapter may be sent as additional evidence for scans, diagrams, and tables; this does not create OCR text or a persisted index. A text-only model receives no images. Never cite generated summaries/placeholders.
 - Keep data in memory for the prototype and clear it when the source file/session is discarded. Do not persist API keys or source text.
 - Keep generic attachment extraction behavior unchanged. Share a low-level PDF.js helper only if it does not inherit generic attachment caps or change its outputs.
 
@@ -25,7 +25,7 @@ Make a selected searchable-text chapter representable as immutable, page-aware s
 
 - Each extracted text passage has a stable identity for the current session and an absolute original page number.
 - Invalid, empty, reversed, and out-of-document page ranges fail safely.
-- Scanned/image-only and zero-text pages cannot be misrepresented as searchable source.
+- Scanned/image-only pages are sent only to an image-capable selected model and remain page-cited; zero-text pages are never misrepresented as extracted text.
 - Extracted text is tied to the selected chapter and discarded when the active source is removed.
 - Existing chapter and generic-chat behavior is unchanged.
 
@@ -35,4 +35,4 @@ Add focused tests for a synthetic PDF with known text on pages before, within, a
 
 ## Out of scope
 
-OCR, embeddings, vector storage, model requests, chat UI, chapter-history persistence, generic chat refactors, migrations.
+Server OCR, embeddings, vector storage, chapter-history persistence, generic chat refactors, migrations.

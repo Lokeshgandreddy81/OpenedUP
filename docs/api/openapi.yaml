@@ -265,7 +265,7 @@ paths:
   /api/chat/stream:
     post:
       summary: Stream a chat response as server-sent events
-      description: Emits step, token, done, or error events. The current implementation emits tokens after provider generation completes.
+      description: Emits step, token, done, or error events as provider output arrives.
       parameters:
         - in: header
           name: x-provider-key
@@ -319,6 +319,70 @@ paths:
                 type: string
         "400":
           description: Validation error.
+
+  /api/chat/chapter:
+    post:
+      summary: Answer using evidence from one selected PDF chapter
+      description: Validates the selected chapter's page bounds and evidence, then returns a grounded answer with citations mapped to submitted evidence IDs.
+      parameters:
+        - in: header
+          name: x-provider-key
+          schema:
+            type: string
+        - in: header
+          name: x-provider-base-url
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChapterChatRequest"
+      responses:
+        "200":
+          description: Grounded chapter answer, validated citations, and abstention state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChapterChatResult"
+        "400":
+          description: Invalid request or evidence outside the selected chapter.
+        "401":
+          description: A user-supplied API key is required for the selected provider.
+
+  /api/chat/chapter/stream:
+    post:
+      summary: Stream a grounded answer about one selected PDF chapter
+      description: Emits thinking/responding phase events followed by a validated done result, or an actionable error event. Disconnects and request timeouts cancel provider generation.
+      parameters:
+        - in: header
+          name: x-provider-key
+          schema:
+            type: string
+        - in: header
+          name: x-provider-base-url
+          schema:
+            type: string
+            format: uri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChapterChatRequest"
+      responses:
+        "200":
+          description: Server-sent event stream with phase, done, or error events.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          description: Invalid request or evidence outside the selected chapter.
+        "401":
+          description: A user-supplied API key is required for the selected provider.
 
   /api/chat/rules:
     get:
@@ -437,6 +501,33 @@ paths:
       responses:
         "204": { description: Deleted. }
 
+  /api/artifacts/{id}/organization:
+    patch:
+      summary: Update account-synced organization metadata without creating a content version
+      security: [{ FirebaseBearer: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                isFavorite: { type: boolean }
+                collection: { type: [string, "null"], minLength: 1, maxLength: 80 }
+                tags:
+                  type: array
+                  maxItems: 12
+                  items: { type: string, minLength: 1, maxLength: 32 }
+      responses:
+        "200": { description: Updated organization metadata. }
+        "404": { description: Artifact is not owned by the caller. }
+
   /api/artifacts/{id}/versions:
     get:
       summary: List the 50 most recent versions of an owned artifact
@@ -548,6 +639,70 @@ paths:
         "400": { description: Invalid or oversized project snapshot. }
 
 components:
+  schemas:
+    ChapterChatRequest:
+      type: object
+      additionalProperties: false
+      required: [chapterId, chapterTitle, startPage, endPage, question, model, history, evidence]
+      properties:
+        chapterId: { type: string, minLength: 1, maxLength: 200 }
+        chapterTitle: { type: string, minLength: 1, maxLength: 300 }
+        startPage: { type: integer, minimum: 1 }
+        endPage: { type: integer, minimum: 1 }
+        question: { type: string, minLength: 1, maxLength: 8000 }
+        model: { type: string, minLength: 1, maxLength: 200 }
+        customModel: { type: string, maxLength: 200 }
+        customProvider:
+          { type: string, enum: [anthropic, openai, google, deepseek, kimi, qwen, xai, custom] }
+        effort: { type: string, enum: [Low, Medium, High, Extra, Max] }
+        history:
+          type: array
+          maxItems: 12
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role: { type: string, enum: [user, assistant] }
+              content: { type: string, minLength: 1, maxLength: 40000 }
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            type: object
+            required: [id, pageNumber, text]
+            properties:
+              id: { type: string, minLength: 1, maxLength: 300 }
+              pageNumber: { type: integer, minimum: 1 }
+              text: { type: string, minLength: 1, maxLength: 8000 }
+        imagePages:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            required: [pageNumber, mimeType, base64Data]
+            properties:
+              pageNumber: { type: integer, minimum: 1 }
+              mimeType: { type: string, enum: [image/jpeg, image/png] }
+              base64Data: { type: string, minLength: 1, maxLength: 1500000 }
+    ChapterChatResult:
+      type: object
+      required: [answer, citations, abstained, modelUsed, providerUsed]
+      properties:
+        answer: { type: string }
+        citations:
+          type: array
+          items:
+            type: object
+            required: [id, pageNumber]
+            properties:
+              id: { type: string }
+              pageNumber: { type: integer, minimum: 1 }
+        abstained: { type: boolean }
+        modelUsed: { type: string }
+        providerUsed: { type: string }
+        status: { type: string, enum: [generation-error] }
+        error: { type: string }
   securitySchemes:
     FirebaseBearer:
       type: http

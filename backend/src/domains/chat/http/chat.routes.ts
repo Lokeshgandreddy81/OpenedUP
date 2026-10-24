@@ -8,6 +8,7 @@ import {
   handleChat,
   handleChatStream,
   handleChapterChat,
+  handleChapterChatStream,
   handleGetSkills,
   handleGetRules,
   handleSaveRules,
@@ -19,6 +20,11 @@ export const chatRouter = Router();
 chatRouter.post("/chat", validateBody(ChatRequestSchema), handleChat);
 chatRouter.post("/chat/stream", validateBody(ChatRequestSchema), handleChatStream);
 chatRouter.post("/chat/chapter", validateBody(ChapterChatRequestSchema), handleChapterChat);
+chatRouter.post(
+  "/chat/chapter/stream",
+  validateBody(ChapterChatRequestSchema),
+  handleChapterChatStream
+);
 chatRouter.get("/chat/skills", handleGetSkills);
 chatRouter.get("/chat/rules", handleGetRules);
 chatRouter.post("/chat/rules", validateBody(WorkspaceRulesRequestSchema), handleSaveRules);

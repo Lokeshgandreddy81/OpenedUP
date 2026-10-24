@@ -5,12 +5,16 @@ import { getFirebaseIdToken } from "../../../app/integrations/workspaceLiveSync"
 
 export interface ArtifactItem {
   id: string;
+  legacyId?: string;
   title: string;
   category: "Code" | "Documents";
   content: string;
   language?: string;
   modelUsed?: string;
   isShared?: boolean;
+  isFavorite?: boolean;
+  collection?: string;
+  tags?: string[];
   createdAt: number;
   updatedAt: number;
   isOwner?: boolean;
@@ -20,6 +24,12 @@ export type ArtifactVersion = Pick<
   ArtifactItem,
   "id" | "title" | "category" | "content" | "language" | "modelUsed" | "updatedAt"
 >;
+
+export interface ArtifactOrganizationUpdate {
+  isFavorite?: boolean;
+  collection?: string | null;
+  tags?: string[];
+}
 
 const ARTIFACTS_STORAGE_KEY = "openedup_artifacts_v1";
 const ARTIFACTS_SYNC_EVENT = "openedup-artifacts-sync";
@@ -48,10 +58,24 @@ export function getStoredArtifacts(): ArtifactItem[] {
   }
 }
 
+function normalizeArtifactTags(tags: string[] = []): string[] {
+  const seen = new Set<string>();
+  return tags
+    .map((tag) => tag.trim())
+    .filter((tag) => {
+      const key = tag.toLocaleLowerCase();
+      if (!tag || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12);
+}
+
 export function saveArtifactItem(
   item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
 ): ArtifactItem {
   const current = getStoredArtifacts();
+  const existingArtifact = current.find((artifact) => artifact.id === item.id);
   const now = Date.now();
   const newItem: ArtifactItem = {
     id: item.id || `art-${now}-${Math.random().toString(36).slice(2, 6)}`,
@@ -61,6 +85,10 @@ export function saveArtifactItem(
     language: item.language,
     modelUsed: item.modelUsed,
     isShared: Boolean(item.isShared),
+    isFavorite: item.isFavorite ?? existingArtifact?.isFavorite ?? false,
+    collection:
+      item.collection === undefined ? existingArtifact?.collection : item.collection || undefined,
+    tags: normalizeArtifactTags(item.tags ?? existingArtifact?.tags),
     createdAt: now,
     updatedAt: now,
   };
@@ -100,6 +128,27 @@ export function saveArtifactItem(
   return newItem;
 }
 
+export function updateStoredArtifactOrganization(
+  id: string,
+  update: ArtifactOrganizationUpdate
+): ArtifactItem | null {
+  const current = getStoredArtifacts();
+  const existing = current.find((artifact) => artifact.id === id);
+  if (!existing) return null;
+  const updated: ArtifactItem = {
+    ...existing,
+    ...(update.isFavorite !== undefined ? { isFavorite: update.isFavorite } : {}),
+    ...(update.collection !== undefined ? { collection: update.collection || undefined } : {}),
+    ...(update.tags !== undefined ? { tags: normalizeArtifactTags(update.tags) } : {}),
+  };
+  window.localStorage.setItem(
+    ARTIFACTS_STORAGE_KEY,
+    JSON.stringify(current.map((artifact) => (artifact.id === id ? updated : artifact)))
+  );
+  window.dispatchEvent(new CustomEvent(ARTIFACTS_SYNC_EVENT));
+  return updated;
+}
+
 export async function persistArtifactItem(
   item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
 ): Promise<ArtifactItem> {
@@ -125,6 +174,7 @@ export function useArtifacts() {
   const [artifacts, setArtifacts] = useState<ArtifactItem[]>(() => getStoredArtifacts());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [syncAttempt, setSyncAttempt] = useState(0);
 
   const refresh = useCallback(() => {
     setArtifacts(getStoredArtifacts());
@@ -155,7 +205,12 @@ export function useArtifacts() {
                 content: a.content,
                 language: a.language,
                 modelUsed: a.modelUsed,
-                isShared: Boolean(a.isShared),
+                // Existing local share toggles were device-local. Never expose old local records
+                // to every signed-in account as a side effect of the one-time import.
+                isShared: false,
+                isFavorite: a.isFavorite ?? false,
+                collection: a.collection ?? null,
+                tags: a.tags ?? [],
                 createdAt: a.createdAt,
                 updatedAt: a.updatedAt,
               })),
@@ -181,7 +236,7 @@ export function useArtifacts() {
     return () => {
       cancelled = true;
     };
-  }, [user, refresh]);
+  }, [user, refresh, syncAttempt]);
 
   useEffect(() => {
     const handleSync = () => refresh();
@@ -197,6 +252,7 @@ export function useArtifacts() {
     artifacts,
     loading,
     error,
+    retrySync: () => setSyncAttempt((attempt) => attempt + 1),
     addArtifact: async (
       item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
     ) => {
@@ -225,6 +281,27 @@ export function useArtifacts() {
         body: JSON.stringify(item),
       });
       if (!response.ok) throw new Error("Could not update artifact.");
+      const data = (await response.json()) as { artifact: ArtifactItem };
+      setArtifacts((current) =>
+        current.map((artifact) => (artifact.id === id ? data.artifact : artifact))
+      );
+      return data.artifact;
+    },
+    updateOrganization: async (id: string, update: ArtifactOrganizationUpdate) => {
+      if (!user) {
+        const updated = updateStoredArtifactOrganization(id, update);
+        if (!updated) throw new Error("Could not find this artifact.");
+        return updated;
+      }
+      const response = await authenticatedChatFetch(
+        `/api/artifacts/${encodeURIComponent(id)}/organization`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(update),
+        }
+      );
+      if (!response.ok) throw new Error("Could not update artifact organization.");
       const data = (await response.json()) as { artifact: ArtifactItem };
       setArtifacts((current) =>
         current.map((artifact) => (artifact.id === id ? data.artifact : artifact))

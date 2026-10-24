@@ -60,6 +60,7 @@ const CodingAgentsPage = lazy(() =>
 
 export const AppShell: React.FC = () => {
   const {
+    engineOutput,
     isWorkspaceModalOpen,
     setIsWorkspaceModalOpen,
     handleIngestWorkspaceFiles,
@@ -106,7 +107,7 @@ export const AppShell: React.FC = () => {
           path="/chat"
           element={
             <PageRoute name="Chat" fallback={<ChatPageSkeleton />}>
-              <ChatPage />
+              <ChatPage chapters={engineOutput.computedRows} />
             </PageRoute>
           }
         />

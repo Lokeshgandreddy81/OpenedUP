@@ -130,6 +130,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     tag: "Top",
     description: "For complex work and everyday tasks",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "claude-fable-5.1": {
     id: "claude-fable-5.1",
@@ -139,6 +140,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "ANTHROPIC_API_KEY",
     description: "For your toughest challenges",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "gpt-6-astra": {
     id: "gpt-6-astra",
@@ -149,6 +151,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     tag: "Max",
     description: "Most capable general reasoning",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "gemini-4-argon": {
     id: "gemini-4-argon",
@@ -159,6 +162,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     tag: "High",
     description: "Fastest for quick deep answers",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "muse-wonder": {
     id: "muse-wonder",
@@ -167,6 +171,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     upstreamModelId: "claude-haiku-5-5",
     envKeyName: "ANTHROPIC_API_KEY",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "gpt-6.1-sol": {
     id: "gpt-6.1-sol",
@@ -176,6 +181,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "OPENAI_API_KEY",
     tag: "Max",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "grok-4.7": {
     id: "grok-4.7",
@@ -185,6 +191,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "XAI_API_KEY",
     tag: "xHigh",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "deepseek-v4.1-flash": {
     id: "deepseek-v4.1-flash",
@@ -194,6 +201,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "DEEPSEEK_API_KEY",
     tag: "Fast",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "deepseek-v4-pro": {
     id: "deepseek-v4-pro",
@@ -238,6 +246,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     upstreamModelId: "gpt-6-luna",
     envKeyName: "OPENAI_API_KEY",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "gemini-3.8-flash": {
     id: "gemini-3.8-flash",
@@ -247,6 +256,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "GEMINI_API_KEY",
     tag: "Fast",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
   "openrouter-nemotron-3.5-lightning-free": {
     id: "openrouter-nemotron-3.5-lightning-free",

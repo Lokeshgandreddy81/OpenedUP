@@ -1,5 +1,9 @@
 import type { Request, Response } from "express";
-import type { ArtifactRequest, ImportArtifactsRequest } from "@charan-interiors/contracts";
+import type {
+  ArtifactOrganizationRequest,
+  ArtifactRequest,
+  ImportArtifactsRequest,
+} from "@charan-interiors/contracts";
 import { ArtifactRepository } from "../repositories/artifactRepository.js";
 
 const artifacts = new ArtifactRepository();
@@ -18,6 +22,19 @@ export function updateArtifact(req: Request, res: Response): void {
     req.principal!.uid,
     req.params["id"]!,
     req.body as ArtifactRequest
+  );
+  if (!artifact) {
+    res.status(404).json({ error: "Artifact not found.", requestId: req.id });
+    return;
+  }
+  res.json({ artifact });
+}
+
+export function updateArtifactOrganization(req: Request, res: Response): void {
+  const artifact = artifacts.updateOrganization(
+    req.principal!.uid,
+    req.params["id"]!,
+    req.body as ArtifactOrganizationRequest
   );
   if (!artifact) {
     res.status(404).json({ error: "Artifact not found.", requestId: req.id });

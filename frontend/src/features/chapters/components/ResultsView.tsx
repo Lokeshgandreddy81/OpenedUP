@@ -449,6 +449,17 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     return true;
   }, [computedRows, photos]);
 
+  useEffect(() => {
+    if (!isPdfDocument) return;
+    const mobileViewport = window.matchMedia("(max-width: 767px)");
+    const closeDrawerOnMobile = (event: MediaQueryListEvent | MediaQueryList) => {
+      if (event.matches) setIsSidebarOpen(false);
+    };
+    closeDrawerOnMobile(mobileViewport);
+    mobileViewport.addEventListener("change", closeDrawerOnMobile);
+    return () => mobileViewport.removeEventListener("change", closeDrawerOnMobile);
+  }, [isPdfDocument]);
+
   // Study mode reads as an outline of the active document (or summary across multiple documents)
   const pdfDocTitle = useMemo(() => {
     const pdfPhotos = photos.filter(
@@ -1329,7 +1340,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   };
 
   return (
-    <div className="w-full min-h-screen md:h-screen flex flex-col bg-white overflow-x-hidden md:overflow-hidden animate-view-fade">
+    <div className="w-full h-dvh min-h-dvh md:h-screen flex flex-col bg-white overflow-hidden animate-view-fade">
       {onAddFiles && (
         <input
           ref={addFilesInputRef}
@@ -1396,8 +1407,8 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
               >
                 {isPdfDocument ? (
                   /* Minimalist Sidebar Header styled exactly like screenshot */
-                  <div className="shrink-0 mb-3 flex items-center justify-between px-1.5 pt-1 pb-1 select-none">
-                    <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="shrink-0 mb-3 flex items-center justify-between px-1 pt-1 pb-1 select-none">
+                    <div className="flex min-w-0 items-center gap-1">
                       <button
                         type="button"
                         onClick={handleBackToChat}
@@ -1407,11 +1418,11 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                       >
                         <ArrowLeft size={16} strokeWidth={2} aria-hidden={true} />
                       </button>
-                      <span className="text-[17px] font-semibold text-slate-900 tracking-tight truncate">
+                      <span className="shrink-0 text-[15px] font-semibold tracking-tight text-slate-900">
                         Chapters
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex shrink-0 items-center gap-0.5">
                       <button
                         type="button"
                         onClick={() => addFilesInputRef.current?.click()}
@@ -1963,6 +1974,15 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
               </div>
             </div>
           </aside>
+        )}
+
+        {isPdfDocument && isChaptersDrawerOpen && (
+          <button
+            type="button"
+            aria-label="Close chapters sidebar"
+            onClick={handleCloseSidebar}
+            className="absolute inset-0 z-[9] bg-slate-950/10 backdrop-blur-[1px] md:hidden"
+          />
         )}
 
         {/* Right pane (beside the sidebar, full width when the sidebar is closed): Treemap OR Proof Panel */}
