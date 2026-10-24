@@ -1,11 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
-import type {
-  ChatRequest,
-  VerifyKeyRequest,
-  WorkspaceRulesRequest,
-} from "@charan-interiors/contracts";
+import type { ChatRequest, WorkspaceRulesRequest } from "@charan-interiors/contracts";
 import { processChat, processChatStream } from "../application/chat.service.js";
-import { verifyProviderKey } from "../providers/llm.service.js";
 import { isValidApiKey } from "../../../platform/config/index.js";
 import {
   runAgenticWorkspaceTools,
@@ -24,13 +19,14 @@ function requestProviderCredential(
   headerApiKey?: string,
   headerBaseUrl?: string
 ) {
-  if (headerApiKey) return { apiKey: headerApiKey, baseUrl: headerBaseUrl };
-  if (!req.principal) return {};
   const provider =
     payload.model === "custom-model"
       ? payload.customProvider || "custom"
       : (getModelMeta(payload.model || "gemini-3.8-flash").provider as ProviderId);
-  return getProviderCredential(req.principal.uid, provider) || {};
+  const savedCredential = req.principal ? getProviderCredential(req.principal.uid, provider) : null;
+  if (headerApiKey)
+    return { apiKey: headerApiKey, baseUrl: headerBaseUrl || savedCredential?.baseUrl };
+  return savedCredential || {};
 }
 
 function isLoopbackRequest(req: Request): boolean {
@@ -187,33 +183,6 @@ export async function handleChatStream(
 
 export function handleGetSkills(_req: Request, res: Response): void {
   res.json({ skills: SKILLS });
-}
-
-export async function handleVerifyKey(req: Request, res: Response): Promise<void> {
-  const body = req.body as VerifyKeyRequest;
-  const headerApiKey =
-    typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
-  const headerBaseUrl =
-    typeof req.headers["x-provider-base-url"] === "string"
-      ? req.headers["x-provider-base-url"]
-      : undefined;
-  const savedCredential = req.principal
-    ? getProviderCredential(req.principal.uid, body.provider)
-    : null;
-  const apiKey = body.apiKey || headerApiKey || savedCredential?.apiKey;
-  if (!isValidApiKey(apiKey)) {
-    res.status(401).json({
-      error: `MISSING_API_KEY:${body.provider}:Connect your own ${PROVIDER_CATALOG[body.provider].name} API key first.`,
-      requestId: req.id,
-    });
-    return;
-  }
-  const result = await verifyProviderKey({
-    provider: body.provider,
-    apiKey,
-    baseUrl: body.baseUrl || headerBaseUrl || savedCredential?.baseUrl,
-  });
-  res.json(result);
 }
 
 export function handleGetRules(req: Request, res: Response): void {

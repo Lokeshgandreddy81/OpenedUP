@@ -783,6 +783,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleModelChange = useCallback(
     (model: AiModelId) => {
       setSelectedModel(model);
+      handleOpenProvidersTab();
       if (!isTemporaryChat && activeConversationId) {
         setConversations((prev) =>
           prev.map((conversation) =>
@@ -801,7 +802,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         }
       }
     },
-    [activeConversationId, isTemporaryChat, user]
+    [activeConversationId, handleOpenProvidersTab, isTemporaryChat, user]
   );
 
   const handleEditMessage = useCallback(

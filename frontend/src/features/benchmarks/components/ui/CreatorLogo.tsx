@@ -15,6 +15,7 @@ export interface CreatorLogoProps {
 export const CREATOR_BRAND_COLORS: Record<string, string> = {
   anthropic: "#CC785C",
   openai: "#10A37F",
+  openrouter: "#000000",
   google: "#4285F4",
   meta: "#0089F4",
   deepseek: "#2243E6",
@@ -50,6 +51,7 @@ export const CREATOR_BRAND_COLORS: Record<string, string> = {
   cartesia: "#0055FF",
   elevenlabs: "#000000",
   kimi: "#047AFE",
+  qwen: "#FF7018",
   inclusionai: "#4FB5FF",
   chinamobile: "#00B8EA",
   motif: "#6A93EB",
@@ -89,6 +91,7 @@ export const CREATOR_BRAND_COLORS: Record<string, string> = {
 export const CREATOR_DISPLAY_NAMES: Record<string, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
+  openrouter: "OpenRouter",
   google: "Google",
   meta: "Meta",
   deepseek: "DeepSeek",
@@ -124,6 +127,7 @@ export const CREATOR_DISPLAY_NAMES: Record<string, string> = {
   cartesia: "Cartesia",
   elevenlabs: "ElevenLabs",
   kimi: "Moonshot AI / Kimi",
+  qwen: "Alibaba / Qwen",
   inclusionai: "InclusionAI",
   chinamobile: "China Mobile",
   motif: "Motif Technologies",
@@ -164,6 +168,7 @@ export const CREATOR_LOGO_MAP: Record<string, string> = {
   // Frontier labs
   anthropic: "/img/logos/anthropic.svg",
   openai: "/img/logos/openai.svg",
+  openrouter: "/img/logos/openrouter.png",
   google: "/img/logos/google.svg",
   meta: "/img/logos/meta.svg",
   deepseek: "/img/logos/deepseek.svg",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PROVIDER_IDS } from "../types/models.js";
 
 export const PhotoInputSchema = z.object({
   globalIndex: z.number().int().positive(),
@@ -77,21 +78,13 @@ export const ChatRequestSchema = z.object({
     .optional(),
   model: z.string().min(1).max(200).optional(),
   customModel: z.string().trim().min(1).max(200).optional(),
-  customProvider: z
-    .enum(["anthropic", "openai", "google", "deepseek", "xai", "zhipu", "custom"])
-    .optional(),
+  customProvider: z.enum(PROVIDER_IDS).optional(),
   effort: z.enum(["Low", "Medium", "High", "Extra", "Max"]).optional(),
   skillIds: z
     .array(z.enum(["document-grounding", "workspace-context", "executive-directness"]))
     .max(3)
     .refine((ids) => new Set(ids).size === ids.length, "Skill IDs must be unique.")
     .optional(),
-});
-
-export const VerifyKeyRequestSchema = z.object({
-  provider: z.enum(["anthropic", "openai", "google", "deepseek", "xai", "zhipu", "custom"]),
-  apiKey: z.string().optional(),
-  baseUrl: z.string().optional(),
 });
 
 export const WorkspaceRulesRequestSchema = z.object({
@@ -258,13 +251,13 @@ export const ReplaceProjectsRequestSchema = ProjectsCollectionSchema;
 export const ImportProjectsRequestSchema = ProjectsCollectionSchema;
 
 export const ProviderCredentialRequestSchema = z.object({
-  provider: z.enum(["anthropic", "openai", "google", "deepseek", "xai", "zhipu", "custom"]),
+  provider: z.enum(PROVIDER_IDS),
   apiKey: z.string().trim().min(1).max(1000),
   baseUrl: z.string().trim().max(2048).optional(),
 });
 
 export const ProviderEndpointRequestSchema = z.object({
-  provider: z.enum(["anthropic", "openai", "google", "deepseek", "xai", "zhipu", "custom"]),
+  provider: z.enum(PROVIDER_IDS),
   baseUrl: z.string().trim().min(1).max(2048),
 });
 
@@ -275,7 +268,6 @@ export type CheckDuplicatesRequest = z.infer<typeof CheckDuplicatesRequestSchema
 export type ParsePdfChaptersRequest = z.infer<typeof ParsePdfChaptersRequestSchema>;
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
-export type VerifyKeyRequest = z.infer<typeof VerifyKeyRequestSchema>;
 export type WorkspaceRulesRequest = z.infer<typeof WorkspaceRulesRequestSchema>;
 export type CreateConversationRequest = z.infer<typeof CreateConversationRequestSchema>;
 export type UpdateConversationRequest = z.infer<typeof UpdateConversationRequestSchema>;

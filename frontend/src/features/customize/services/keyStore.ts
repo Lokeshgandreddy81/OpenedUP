@@ -146,10 +146,11 @@ export function getProviderChatRequestConfig(modelId: string): {
   modelName: string;
   customModelFields: { customModel?: string; customProvider?: ProviderId };
 } {
-  const { apiKey, baseUrl, providerName, modelName } = getKeyForModel(modelId);
+  const { apiKey, baseUrl, provider, providerName, modelName } = getKeyForModel(modelId);
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiKey) headers["x-provider-key"] = apiKey;
-  if (baseUrl) headers["x-provider-base-url"] = baseUrl;
+  // Let the backend apply an account's saved endpoint when no browser override exists.
+  if (getStoredBaseUrls()[provider]?.trim()) headers["x-provider-base-url"] = baseUrl;
   if (modelId !== "custom-model")
     return { headers, providerName, modelName, customModelFields: {} };
   return {
@@ -161,48 +162,6 @@ export function getProviderChatRequestConfig(modelId: string): {
       customProvider: getCustomModelProvider(),
     },
   };
-}
-
-export function maskApiKey(key?: string): string {
-  if (!key) return "";
-  const trimmed = key.trim();
-  if (trimmed.length <= 8) return "••••••••";
-  return `${trimmed.slice(0, 6)}••••${trimmed.slice(-4)}`;
-}
-
-export async function verifyProviderKeyRequest(params: {
-  provider: ProviderId;
-  apiKey?: string;
-  baseUrl?: string;
-}): Promise<{
-  valid: boolean;
-  provider: ProviderId;
-  latencyMs: number;
-  message: string;
-}> {
-  try {
-    const res = await fetch("/api/chat/verify-key", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
-    });
-    if (!res.ok) {
-      return {
-        valid: false,
-        provider: params.provider,
-        latencyMs: 0,
-        message: `Verification failed (${res.status})`,
-      };
-    }
-    return await res.json();
-  } catch (err) {
-    return {
-      valid: false,
-      provider: params.provider,
-      latencyMs: 0,
-      message: err instanceof Error ? err.message : "Network error",
-    };
-  }
 }
 
 export function useProviderKeys() {

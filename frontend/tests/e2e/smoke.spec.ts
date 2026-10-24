@@ -94,7 +94,7 @@ test.describe("Production Smoke Tests", () => {
     await expect(page.getByTestId("chat-composer")).toBeVisible();
     await page.getByRole("button", { name: "Customize" }).click();
     await page.getByRole("button", { name: "Providers" }).click();
-    await expect(page.getByText("Anthropic", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /Anthropic.*Not connected/ })).toBeVisible();
     const hasHorizontalOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     );
@@ -109,13 +109,16 @@ test.describe("Production Smoke Tests", () => {
     await page.getByRole("button", { name: "Customize" }).click();
     await page.getByRole("button", { name: "Providers" }).click();
 
-    const keyInput = page.getByPlaceholder(/GEMINI_API_KEY/);
+    await page.getByRole("button", { name: "Edit Google Gemini settings" }).click();
+    const keyInput = page.getByPlaceholder("Paste Google Gemini API key");
     await keyInput.fill("ephemeral-test-key");
-    const providerCard = page.locator("div.rounded-2xl.border.p-5").filter({ has: keyInput });
+    const providerCard = page.locator("section").filter({ has: keyInput });
     const popupPromise = page.waitForEvent("popup", { timeout: 1000 }).catch(() => null);
-    await providerCard.getByRole("button", { name: "Connect" }).click();
+    await providerCard.getByRole("button", { name: "Connect", exact: true }).click();
 
-    await expect(providerCard.getByRole("button", { name: "Connected" })).toBeVisible();
+    await expect(
+      providerCard.getByRole("button", { name: "Connected", exact: true })
+    ).toBeVisible();
     await expect(providerCard.getByText(/Available for this browser session/)).toBeVisible();
     expect(await popupPromise).toBeNull();
     expect(await page.evaluate(() => localStorage.getItem("openedup_byok_keys_v1"))).toBeNull();

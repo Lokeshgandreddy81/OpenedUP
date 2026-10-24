@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  generateMultiProviderChat,
-  verifyProviderKey,
-} from "../../src/domains/chat/providers/llm.service.js";
+import { generateMultiProviderChat } from "../../src/domains/chat/providers/llm.service.js";
 import { PROVIDER_CATALOG, type ProviderId } from "@charan-interiors/contracts";
 
 const googleGenerateContent = vi.fn();
@@ -38,8 +35,9 @@ const providers: ProviderId[] = [
   "openai",
   "google",
   "deepseek",
+  "kimi",
+  "qwen",
   "xai",
-  "zhipu",
   "custom",
 ];
 
@@ -58,51 +56,6 @@ describe.each(providers)("%s provider adapter", (provider) => {
     googleGenerateContent.mockReset();
     googleGenerateContentStream.mockReset();
     googleClientOptions = {};
-  });
-
-  it("verifies a key using the provider's verification request", async () => {
-    googleGenerateContent.mockResolvedValue({ text: "ok" });
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ data: [] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      })
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await verifyProviderKey({ provider, apiKey: "adapter-test-key" });
-
-    expect(result.valid).toBe(true);
-    expect(result.provider).toBe(provider);
-    if (provider === "google") {
-      expect(googleClientOptions).toMatchObject({
-        apiKey: "adapter-test-key",
-        httpOptions: {
-          baseUrl: PROVIDER_CATALOG.google.defaultBaseUrl,
-          apiVersion: "",
-        },
-      });
-      expect(googleClientOptions.httpOptions?.fetch).toBeTypeOf("function");
-      expect(googleGenerateContent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: "gemini-3.8-flash",
-          contents: "Ping",
-          config: { maxOutputTokens: 5 },
-        })
-      );
-      return;
-    }
-    const { url, init, body } = getRequest(fetchMock);
-    expect(new URL(url).origin).toBe(new URL(PROVIDER_CATALOG[provider].defaultBaseUrl).origin);
-    if (provider === "anthropic") {
-      expect(url).toBe(`${PROVIDER_CATALOG[provider].defaultBaseUrl}/messages`);
-      expect(new Headers(init.headers).get("x-api-key")).toBe("adapter-test-key");
-      expect(body?.model).toBe("claude-opus-5-5");
-    } else {
-      expect(url).toBe(`${PROVIDER_CATALOG[provider].defaultBaseUrl}/models`);
-      expect(new Headers(init.headers).get("authorization")).toBe("Bearer adapter-test-key");
-      expect(init.method).toBe("GET");
-    }
   });
 
   it("sends a chat request through the provider adapter and returns its response", async () => {
@@ -135,8 +88,9 @@ describe.each(providers)("%s provider adapter", (provider) => {
                 openai: "gpt-6-astra",
                 google: "gemini-3.8-flash",
                 deepseek: "deepseek-v4.1-flash",
+                kimi: "kimi-k3.1-pro",
+                qwen: "qwen3.8-max",
                 xai: "grok-4.7",
-                zhipu: "glm-5.3",
               } as const
             )[provider],
       ...(provider === "custom"

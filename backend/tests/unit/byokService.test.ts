@@ -21,6 +21,16 @@ describe("BYOK Multi-Provider & Agentic Tools Unit Tests", () => {
     );
   });
 
+  it.each([
+    ["kimi-k3.1-pro", "kimi", "https://api.moonshot.ai/v1"],
+    ["qwen3.8-max", "qwen", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"],
+  ] as const)("routes %s to %s using its provider endpoint", (modelId, provider, baseUrl) => {
+    const credentials = resolveProviderCredentials(modelId, "provider-test-key");
+
+    expect(credentials).toMatchObject({ provider, baseUrl, apiKey: "provider-test-key" });
+    expect(credentials.upstreamModelId).toBe(modelId);
+  });
+
   it("rejects unknown model IDs instead of silently routing them to Gemini", () => {
     expect(() => resolveProviderCredentials("not-a-real-model")).toThrow(/UNKNOWN_MODEL:/);
   });

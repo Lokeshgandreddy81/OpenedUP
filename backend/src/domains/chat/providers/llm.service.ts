@@ -340,104 +340,6 @@ export function resolveProviderCredentials(
   );
 }
 
-/**
- * Live ping verification for a provider API key
- */
-export async function verifyProviderKey(params: {
-  provider: ProviderId;
-  apiKey?: string | undefined;
-  baseUrl?: string | undefined;
-}): Promise<{
-  valid: boolean;
-  provider: ProviderId;
-  latencyMs: number;
-  message: string;
-}> {
-  const startMs = Date.now();
-  const providerMeta = PROVIDER_CATALOG[params.provider];
-  const sampleModelMap: Record<ProviderId, string> = {
-    anthropic: "claude-opus-5.5",
-    openai: "gpt-6-astra",
-    google: "gemini-3.8-flash",
-    deepseek: "deepseek-v4.1-flash",
-    xai: "grok-4.7",
-    zhipu: "glm-5.3",
-    custom: "custom-model",
-  };
-
-  try {
-    const creds = resolveProviderCredentials(
-      sampleModelMap[params.provider],
-      params.apiKey,
-      params.baseUrl,
-      params.provider === "custom" ? "openai/gpt-4o-mini" : undefined
-    );
-
-    if (params.provider === "google") {
-      const ai = new GoogleGenAI({
-        apiKey: creds.apiKey,
-        httpOptions: {
-          baseUrl: creds.baseUrl,
-          apiVersion: "",
-          fetch: fetchProviderFromSdk,
-        },
-      });
-      await ai.models.generateContent({
-        model: creds.upstreamModelId,
-        contents: "Ping",
-        config: { maxOutputTokens: 5 },
-      });
-    } else if (params.provider === "anthropic") {
-      const endpoint = `${creds.baseUrl.replace(/\/+$/, "")}/messages`;
-      const res = await fetchProvider(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": creds.apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: creds.upstreamModelId,
-          max_tokens: 4,
-          messages: [{ role: "user", content: "hi" }],
-        }),
-      });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${errText.slice(0, 120) || res.statusText}`);
-      }
-    } else {
-      const endpoint = `${creds.baseUrl.replace(/\/+$/, "")}/models`;
-      const res = await fetchProvider(endpoint, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${creds.apiKey}`,
-        },
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
-    }
-
-    const latencyMs = Math.max(1, Date.now() - startMs);
-    return {
-      valid: true,
-      provider: params.provider,
-      latencyMs,
-      message: `${providerMeta.name} key verified (${latencyMs}ms)`,
-    };
-  } catch (err: unknown) {
-    const latencyMs = Math.max(1, Date.now() - startMs);
-    const rawMsg = err instanceof Error ? err.message : "Verification failed";
-    return {
-      valid: false,
-      provider: params.provider,
-      latencyMs,
-      message: rawMsg.replace(/^MISSING_API_KEY:[^:]+:/, ""),
-    };
-  }
-}
-
 function resolveEffort(effort?: string): "low" | "medium" | "high" | "xhigh" | "max" {
   switch (effort) {
     case "Low":
@@ -508,7 +410,7 @@ async function callAnthropic(params: {
 }
 
 /**
- * Calls OpenAI-compatible Chat Completions API (OpenAI, DeepSeek, xAI Grok, Zhipu GLM, OpenRouter, Ollama)
+ * Calls OpenAI-compatible Chat Completions API for the selected provider.
  */
 async function callOpenAICompatible(params: {
   apiKey: string;
@@ -664,7 +566,7 @@ export async function generateMultiProviderChat(
     return { text, modelUsed, providerUsed: provider };
   }
 
-  // OpenAI, DeepSeek, xAI Grok, Zhipu GLM, Custom / OpenRouter / Ollama
+  // OpenAI-compatible providers, including OpenRouter.
   const text = await callOpenAICompatible({
     apiKey,
     baseUrl,

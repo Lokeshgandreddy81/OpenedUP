@@ -986,7 +986,7 @@ function ModelDetailsCard({
   const provider = metadata.isFree
     ? "OpenRouter"
     : metadata.provider === "custom"
-      ? "OpenRouter / Ollama"
+      ? "OpenRouter"
       : (PROVIDER_CATALOG[metadata.provider]?.name ?? metadata.provider);
   const inputs = metadata.inputModalities
     ?.map((modality) => modality[0]?.toUpperCase() + modality.slice(1))

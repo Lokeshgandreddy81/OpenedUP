@@ -1,26 +1,12 @@
 import React, { useState, useEffect } from "react";
-import {
-  Search,
-  Plus,
-  ChevronDown,
-  Key,
-  Eye,
-  EyeOff,
-  Check,
-  Trash2,
-  ExternalLink,
-  ShieldCheck,
-  Sparkles,
-  Activity,
-  FileCode,
-  Scroll,
-} from "lucide-react";
+import { Search, Plus, ChevronDown, Eye, EyeOff, Check, Trash2, ExternalLink } from "lucide-react";
 import {
   PROVIDER_CATALOG,
   getModelsForProvider,
   type ProviderId,
 } from "@charan-interiors/contracts";
-import { useProviderKeys, maskApiKey, verifyProviderKeyRequest } from "../services/keyStore";
+import { CreatorLogo } from "../../benchmarks/publicApi";
+import { useProviderKeys } from "../services/keyStore";
 import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 
 export type CustomizeCategory = "Skills" | "Connectors" | "Plugins" | "Providers";
@@ -59,49 +45,29 @@ const PROVIDER_ORDER: ProviderId[] = [
   "openai",
   "google",
   "deepseek",
+  "kimi",
+  "qwen",
   "xai",
-  "zhipu",
   "custom",
 ];
 
-interface BuiltInSkill {
-  id: string;
-  name: string;
-  description: string;
-  ruleSnippet: string;
-}
-
-const BUILTIN_OPENCODE_SKILLS: BuiltInSkill[] = [
-  {
-    id: "skill-arch",
-    name: "Principal Architecture Synthesis",
-    description:
-      "Enforces modular boundaries, strict TypeScript contracts, and zero-regression checks.",
-    ruleSnippet: "- Always enforce strict TypeScript types and modular separation of concerns.",
-  },
-  {
-    id: "skill-doc-citations",
-    name: "Document Chapter Grounding",
-    description:
-      "Requires every quantitative or structural claim to cite indexed chapter titles and page ranges.",
-    ruleSnippet:
-      "- Ground every synthesis in active document chapters and page ranges when available.",
-  },
-  {
-    id: "skill-concise",
-    name: "Executive Directness",
-    description:
-      "Eliminates conversational filler and formats multi-factor comparisons as scannable tables.",
-    ruleSnippet:
-      "- Skip filler; lead directly with the answer and use compact Markdown tables for comparisons.",
-  },
-];
+const PROVIDER_LOGO_CREATOR: Record<ProviderId, string> = {
+  anthropic: "anthropic",
+  openai: "openai",
+  google: "google",
+  deepseek: "deepseek",
+  kimi: "kimi",
+  qwen: "qwen",
+  xai: "xai",
+  custom: "openrouter",
+};
 
 export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   initialCategory = "Connectors",
 }) => {
   const [activeCategory, setActiveCategory] = useState<CustomizeCategory>(initialCategory);
   const [subTab, setSubTab] = useState<CustomizeSubTab>("Discover");
+  const [expandedProviderId, setExpandedProviderId] = useState<ProviderId | null>("anthropic");
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
@@ -129,68 +95,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   const [sessionKeyNoticeMap, setSessionKeyNoticeMap] = useState<
     Partial<Record<ProviderId, boolean>>
   >({});
-  const [verifyingMap, setVerifyingMap] = useState<Partial<Record<ProviderId, boolean>>>({});
-  const [verifyStatusMap, setVerifyStatusMap] = useState<
-    Partial<Record<ProviderId, { valid: boolean; message: string }>>
-  >({});
-
-  // OPENEDUP.md & Global AGENTS.md Rules state
-  const [projectRules, setProjectRules] = useState("");
-  const [globalRules, setGlobalRules] = useState("");
-  const [rulesSavedScope, setRulesSavedScope] = useState<"project" | "global" | null>(null);
+  const [saveErrorMap, setSaveErrorMap] = useState<Partial<Record<ProviderId, string>>>({});
 
   useEffect(() => {
     setActiveCategory(initialCategory);
   }, [initialCategory]);
-
-  useEffect(() => {
-    fetch("/api/chat/rules")
-      .then((r) => (r.ok ? r.json() : null))
-      .then(
-        (
-          data: {
-            projectRules?: string;
-            globalRules?: string;
-          } | null
-        ) => {
-          if (data) {
-            setProjectRules(data.projectRules || "");
-            setGlobalRules(data.globalRules || "");
-          }
-        }
-      )
-      .catch(() => {
-        // ignore offline
-      });
-  }, []);
-
-  const handleSaveRules = async (scope: "project" | "global", contentOverride?: string) => {
-    const content =
-      contentOverride !== undefined
-        ? contentOverride
-        : scope === "project"
-          ? projectRules
-          : globalRules;
-    try {
-      const res = await fetch("/api/chat/rules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scope, content }),
-      });
-      if (res.ok) {
-        setRulesSavedScope(scope);
-        setTimeout(() => setRulesSavedScope(null), 1600);
-      }
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleAppendSkillSnippet = (snippet: string) => {
-    const next = projectRules.trim() ? `${projectRules.trim()}\n${snippet}` : snippet;
-    setProjectRules(next);
-    handleSaveRules("project", next);
-  };
 
   const handleSaveProvider = async (providerId: ProviderId) => {
     const rawKey = draftKeys[providerId] ?? keys[providerId] ?? "";
@@ -201,15 +110,17 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
       if (rawKey.trim()) await setProviderKey(providerId, rawKey.trim(), rawUrl);
       else await setProviderEndpoint(providerId, rawUrl!);
     } catch (error) {
-      setVerifyStatusMap((prev) => ({
+      setSaveErrorMap((prev) => ({
         ...prev,
-        [providerId]: {
-          valid: false,
-          message: error instanceof Error ? error.message : "Could not save provider key.",
-        },
+        [providerId]: error instanceof Error ? error.message : "Could not save provider key.",
       }));
       return;
     }
+    setSaveErrorMap((prev) => {
+      const next = { ...prev };
+      delete next[providerId];
+      return next;
+    });
     setDraftKeys((prev) => {
       const next = { ...prev };
       delete next[providerId];
@@ -227,29 +138,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     }, 1800);
   };
 
-  const handleVerifyProvider = async (providerId: ProviderId) => {
-    const rawKey = (draftKeys[providerId] ?? keys[providerId] ?? "").trim();
-    const rawUrl = draftUrls[providerId] ?? baseUrls[providerId];
-    setVerifyingMap((prev) => ({ ...prev, [providerId]: true }));
-    setVerifyStatusMap((prev) => {
-      const next = { ...prev };
-      delete next[providerId];
-      return next;
-    });
-
-    const res = await verifyProviderKeyRequest({
-      provider: providerId,
-      apiKey: rawKey || undefined,
-      baseUrl: rawUrl || undefined,
-    });
-
-    setVerifyingMap((prev) => ({ ...prev, [providerId]: false }));
-    setVerifyStatusMap((prev) => ({
-      ...prev,
-      [providerId]: { valid: res.valid, message: res.message },
-    }));
-  };
-
   const handleRemoveProvider = (providerId: ProviderId) => {
     deleteProviderKey(providerId);
     setDraftKeys((prev) => {
@@ -257,7 +145,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
       delete next[providerId];
       return next;
     });
-    setVerifyStatusMap((prev) => {
+    setSaveErrorMap((prev) => {
       const next = { ...prev };
       delete next[providerId];
       return next;
@@ -279,20 +167,23 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     );
   });
 
+  useEffect(() => {
+    const firstVisibleProvider = filteredProviders.find((provider) => hasKey(provider.id));
+    if (firstVisibleProvider) {
+      setExpandedProviderId(firstVisibleProvider.id);
+    } else if (subTab === "Yours") {
+      setExpandedProviderId(null);
+    }
+  }, [filteredProviders, hasKey, subTab]);
+
   return (
-    <div className="flex-1 w-full h-full bg-white flex flex-col font-sans select-none overflow-y-auto">
+    <div className="flex-1 w-full h-full bg-[#fcfcfb] flex flex-col font-sans select-none overflow-y-auto">
       <div className="w-full px-6 sm:px-8 md:px-10 lg:px-12 pt-7 md:pt-8 pb-12 flex flex-col">
         {/* Title in Editorial Serif font matching design */}
         <div className="flex items-center justify-between">
           <h1 className="text-[28px] md:text-[30px] font-serif text-neutral-900 font-normal tracking-tight">
-            Customize
+            {activeCategory === "Providers" ? "AI Providers" : "Customize"}
           </h1>
-          {activeCategory === "Providers" && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 text-[12px] text-neutral-700 font-medium">
-              <ShieldCheck size={14} className="text-emerald-600" />
-              <span>BYOK Vault · {connectedCount} Active</span>
-            </div>
-          )}
         </div>
 
         {/* Navigation & Controls Toolbar */}
@@ -317,7 +208,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                     >
                       <span>{cat}</span>
                       {cat === "Providers" && connectedCount > 0 && (
-                        <span className="text-[10.5px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
+                        <span className="text-[10.5px] px-1.5 py-0.2 rounded-full bg-neutral-900 text-white font-semibold">
                           {connectedCount}
                         </span>
                       )}
@@ -367,7 +258,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 placeholder={
                   activeCategory === "Providers" ? "Search providers or models" : "Search"
                 }
-                className="h-8 pl-8 pr-3 w-52 sm:w-60 md:w-64 text-[13px] text-neutral-900 placeholder-neutral-400 bg-white border border-neutral-200/90 rounded-lg outline-none focus:border-neutral-400 transition-colors"
+                className="h-9 pl-8 pr-3 w-52 sm:w-60 md:w-64 text-[13px] text-neutral-900 placeholder-neutral-500 bg-neutral-50 rounded-xl outline-none focus:ring-2 focus:ring-neutral-300/70 transition-shadow"
               />
             </div>
 
@@ -385,18 +276,25 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
             <div className="relative">
               <button
                 type="button"
+                aria-expanded={isAddMenuOpen}
+                aria-controls="customize-add-options"
                 onClick={() => setIsAddMenuOpen((v) => !v)}
-                className="h-8 bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-[0.98]"
+                className="h-9 bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-4 rounded-xl flex items-center gap-2 transition-colors cursor-pointer shadow-sm active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
               >
-                <Plus size={14} strokeWidth={2} />
+                <Plus size={15} strokeWidth={2} />
                 <span>Add</span>
-                <ChevronDown size={13} strokeWidth={2} className="text-white/80" />
+                <ChevronDown
+                  size={14}
+                  strokeWidth={2}
+                  className={`text-white/80 transition-transform ${isAddMenuOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
               {isAddMenuOpen && (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-neutral-200/80 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100 text-[13px] text-neutral-700 select-none"
+                  id="customize-add-options"
+                  className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-white p-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.2)] ring-1 ring-neutral-200/80 z-40 animate-in fade-in zoom-in-95 duration-100 text-[13.5px] text-neutral-700 select-none"
                 >
                   <button
                     type="button"
@@ -404,7 +302,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       setIsAddMenuOpen(false);
                       setActiveCategory("Providers");
                     }}
-                    className="w-full text-left px-3 py-1.5 hover:bg-neutral-50 hover:text-neutral-950 cursor-pointer font-medium"
+                    className="flex h-9 w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
                   >
                     Connect API key
                   </button>
@@ -412,23 +310,19 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                     type="button"
                     onClick={() => {
                       setIsAddMenuOpen(false);
-                      setActiveCategory("Skills");
+                      setActiveCategory("Connectors");
                     }}
-                    className="w-full text-left px-3 py-1.5 hover:bg-neutral-50 hover:text-neutral-950 cursor-pointer"
-                  >
-                    Edit OPENEDUP.md rules
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddMenuOpen(false)}
-                    className="w-full text-left px-3 py-1.5 hover:bg-neutral-50 hover:text-neutral-950 cursor-pointer"
+                    className="flex h-9 w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
                   >
                     Add connector
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsAddMenuOpen(false)}
-                    className="w-full text-left px-3 py-1.5 hover:bg-neutral-50 hover:text-neutral-950 cursor-pointer"
+                    onClick={() => {
+                      setIsAddMenuOpen(false);
+                      setActiveCategory("Plugins");
+                    }}
+                    className="flex h-9 w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
                   >
                     Add plugin
                   </button>
@@ -441,23 +335,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
         {/* Main Content Area */}
         {activeCategory === "Providers" ? (
           <div className="mt-7 flex flex-col gap-5">
-            {/* Banner Explaining OpenCode-style BYOK */}
-            <div className="rounded-2xl border border-neutral-200/80 bg-neutral-50/70 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-neutral-900 text-white flex items-center justify-center shrink-0 mt-0.5">
-                  <Key size={15} />
-                </div>
-                <div>
-                  <h2 className="text-[14px] font-medium text-neutral-900">
-                    Bring Your Own Key (BYOK) Architecture
-                  </h2>
-                  <p className="text-[12.5px] text-neutral-500 mt-0.5 leading-relaxed">
-                    Chat uses your own provider API key. Sign in to encrypt and save it to your
-                    account, or keep it in this browser session. Your key is used to send requests
-                    to the selected provider.
-                  </p>
-                </div>
-              </div>
+            <div className="flex justify-end">
               {subTab === "Yours" && connectedCount === 0 && (
                 <button
                   type="button"
@@ -469,8 +347,8 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
               )}
             </div>
 
-            {/* Grid of Provider Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Flat provider list keeps setup controls easy to scan. */}
+            <div className="flex flex-col gap-3">
               {filteredProviders.map((provider) => {
                 const isConnected = hasKey(provider.id);
                 const savedKey = keys[provider.id] || "";
@@ -482,375 +360,236 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                     : baseUrls[provider.id] || provider.defaultBaseUrl;
                 const isRevealed = Boolean(revealedMap[provider.id]);
                 const isJustSaved = Boolean(savedFeedbackMap[provider.id]);
-                const isVerifying = Boolean(verifyingMap[provider.id]);
                 const savedEndpoint = baseUrls[provider.id] || provider.defaultBaseUrl;
                 const endpointChanged =
                   draftUrls[provider.id] !== undefined &&
                   draftUrls[provider.id]!.trim() !== savedEndpoint;
-                const verifyStatus = verifyStatusMap[provider.id];
-                const poweredModels = getModelsForProvider(provider.id);
-
+                const saveError = saveErrorMap[provider.id];
                 return (
-                  <div
-                    key={provider.id}
-                    className={`rounded-2xl border p-5 transition-all flex flex-col justify-between gap-4 ${
-                      isConnected
-                        ? "border-emerald-200/90 bg-white shadow-[0_2px_12px_rgba(16,185,129,0.04)]"
-                        : "border-neutral-200/90 bg-white hover:border-neutral-300"
-                    }`}
-                  >
-                    <div>
-                      {/* Card Header */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-[14px] font-semibold shrink-0 ${
-                              isConnected
-                                ? "bg-neutral-900 text-white"
-                                : "bg-neutral-100 text-neutral-700"
+                  <section key={provider.id} className="overflow-hidden rounded-[22px] bg-white">
+                    <div className="flex items-center justify-between gap-4 px-5 py-4">
+                      <button
+                        type="button"
+                        aria-expanded={expandedProviderId === provider.id}
+                        onClick={() =>
+                          setExpandedProviderId((current) =>
+                            current === provider.id ? null : provider.id
+                          )
+                        }
+                        className="flex min-w-0 flex-1 items-center gap-3.5 text-left"
+                      >
+                        <CreatorLogo
+                          creator={PROVIDER_LOGO_CREATOR[provider.id]}
+                          size={28}
+                          title={provider.name}
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-[15px] font-medium text-neutral-900">
+                            {provider.name}
+                          </span>
+                          <span
+                            className={`mt-0.5 inline-flex items-center text-[12.5px] ${
+                              isConnected ? "text-emerald-700" : "text-neutral-600"
                             }`}
                           >
-                            {provider.name.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="text-[15px] font-medium text-neutral-900">
-                                {provider.name}
-                              </h3>
-                              <span
-                                className={`text-[11px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${
-                                  isConnected
-                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                                    : "bg-neutral-100 text-neutral-500"
-                                }`}
-                              >
-                                <span
-                                  className={`w-1.5 h-1.5 rounded-full ${
-                                    isConnected ? "bg-emerald-500" : "bg-neutral-400"
-                                  }`}
-                                />
-                                {savedKey
-                                  ? maskApiKey(savedKey)
-                                  : isConnected
-                                    ? "Connected"
-                                    : "Not connected"}
-                              </span>
-                            </div>
-                            <p className="text-[12.5px] text-neutral-500 mt-0.5">
-                              {provider.tagline}
-                            </p>
-                          </div>
-                        </div>
-
+                            {isConnected ? "Connected" : "Not connected"}
+                          </span>
+                        </span>
+                      </button>
+                      <div className="flex shrink-0 items-center gap-3">
                         <a
                           href={provider.docsUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[12px] text-neutral-400 hover:text-neutral-800 flex items-center gap-1 transition-colors shrink-0"
+                          className="hidden items-center gap-1 text-[12.5px] text-neutral-600 transition-colors hover:text-neutral-900 sm:flex"
                           title={`Get ${provider.name} API Key`}
                         >
                           <span>Get key</span>
                           <ExternalLink size={12} />
                         </a>
-                      </div>
-
-                      {/* Models Powered by this Provider */}
-                      {poweredModels.length > 0 && (
-                        <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-                          <span className="text-[11px] text-neutral-400 flex items-center gap-1 mr-1">
-                            <Sparkles size={11} />
-                            Powers:
-                          </span>
-                          {poweredModels.map((m) => (
-                            <span
-                              key={m.id}
-                              className="text-[11px] px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700 font-normal"
-                            >
-                              {m.name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Key Input & Controls */}
-                    <div className="pt-2 border-t border-neutral-100 flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="relative flex-1">
-                          <input
-                            type={isRevealed ? "text" : "password"}
-                            value={currentInput}
-                            onChange={(e) =>
-                              setDraftKeys((prev) => ({
-                                ...prev,
-                                [provider.id]: e.target.value,
-                              }))
-                            }
-                            placeholder={`${provider.envKeyName} (${provider.keyPlaceholder})`}
-                            className="w-full h-9 pl-3 pr-9 text-[12.5px] font-mono text-neutral-900 placeholder:text-neutral-400 placeholder:font-sans bg-neutral-50 border border-neutral-200/90 rounded-xl outline-none focus:bg-white focus:border-neutral-400 transition-all"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setRevealedMap((prev) => ({
-                                ...prev,
-                                [provider.id]: !prev[provider.id],
-                              }))
-                            }
-                            aria-label={isRevealed ? "Hide API key" : "Show API key"}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
-                          >
-                            {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </div>
-
                         <button
                           type="button"
-                          onClick={() => handleSaveProvider(provider.id)}
-                          disabled={!currentInput.trim() && !(isConnected && endpointChanged)}
-                          className={`h-9 px-3.5 rounded-xl text-[12.5px] font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                            isJustSaved
-                              ? "bg-emerald-600 text-white"
-                              : "bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-40 disabled:pointer-events-none"
-                          }`}
-                        >
-                          {isJustSaved ? (
-                            <>
-                              <Check size={13} />
-                              <span>
-                                {sessionKeyNoticeMap[provider.id] ? "Connected" : "Saved"}
-                              </span>
-                            </>
-                          ) : (
-                            <span>
-                              {isConnected && endpointChanged && !currentInput.trim()
-                                ? "Save endpoint"
-                                : isConnected
-                                  ? "Update"
-                                  : "Connect"}
-                            </span>
-                          )}
-                        </button>
-
-                        {isConnected && (
-                          <button
-                            type="button"
-                            onClick={() => handleVerifyProvider(provider.id)}
-                            disabled={isVerifying}
-                            title="Ping provider API to verify key"
-                            className="h-9 px-2.5 rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 text-[12px] font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                          >
-                            <Activity size={13} className={isVerifying ? "animate-spin" : ""} />
-                            <span>{isVerifying ? "Testing..." : "Test"}</span>
-                          </button>
-                        )}
-
-                        {isConnected && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveProvider(provider.id)}
-                            title="Disconnect key"
-                            aria-label="Disconnect key"
-                            className="h-9 w-9 rounded-xl border border-neutral-200 text-neutral-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50/50 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Verification feedback line */}
-                      {verifyStatus && (
-                        <div
-                          className={`text-[11.5px] px-2.5 py-1 rounded-lg flex items-center gap-1.5 ${
-                            verifyStatus.valid
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-rose-50 text-rose-600"
-                          }`}
-                        >
-                          <span>{verifyStatus.valid ? "✓" : "⚠"}</span>
-                          <span className="truncate">{verifyStatus.message}</span>
-                        </div>
-                      )}
-                      {sessionKeyNoticeMap[provider.id] && (
-                        <p className="text-[11px] text-neutral-500">
-                          Available for this browser session. Sign in to save this key to your
-                          account.
-                        </p>
-                      )}
-
-                      <label className="flex items-center gap-2">
-                        <span className="text-[11.5px] text-neutral-400 shrink-0">
-                          API endpoint:
-                        </span>
-                        <input
-                          type="url"
-                          value={currentUrl}
-                          onChange={(event) =>
-                            setDraftUrls((prev) => ({ ...prev, [provider.id]: event.target.value }))
+                          aria-label={`${expandedProviderId === provider.id ? "Collapse" : "Edit"} ${provider.name} settings`}
+                          aria-expanded={expandedProviderId === provider.id}
+                          onClick={() =>
+                            setExpandedProviderId((current) =>
+                              current === provider.id ? null : provider.id
+                            )
                           }
-                          placeholder={provider.defaultBaseUrl}
-                          aria-label={`${provider.name} API endpoint`}
-                          className="flex-1 h-8 px-2.5 text-[12px] font-mono text-neutral-700 bg-neutral-50 border border-neutral-200/80 rounded-lg outline-none focus:bg-white focus:border-neutral-400"
-                        />
-                      </label>
-
-                      {provider.id === "custom" && (
-                        <>
-                          <label className="flex items-center gap-2">
-                            <span className="text-[11.5px] text-neutral-400 shrink-0">
-                              Credentials from:
-                            </span>
-                            <select
-                              value={customModelProvider}
-                              onChange={(event) =>
-                                setCustomProvider(event.target.value as ProviderId)
-                              }
-                              className="flex-1 h-8 px-2.5 text-[12px] text-neutral-700 bg-neutral-50 border border-neutral-200/80 rounded-lg outline-none focus:bg-white focus:border-neutral-400"
-                            >
-                              {PROVIDER_ORDER.map((providerId) => (
-                                <option key={providerId} value={providerId}>
-                                  {PROVIDER_CATALOG[providerId].name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <span className="text-[11.5px] text-neutral-400 shrink-0">
-                              Model ID:
-                            </span>
-                            <input
-                              type="text"
-                              value={customModelId}
-                              onChange={(e) => setCustomModel(e.target.value)}
-                              placeholder="openai/gpt-4o-mini or llama3.3"
-                              className="flex-1 h-8 px-2.5 text-[12px] font-mono text-neutral-700 bg-neutral-50 border border-neutral-200/80 rounded-lg outline-none focus:bg-white focus:border-neutral-400"
-                            />
-                          </label>
-                          <p className="text-[11px] text-neutral-400">
-                            Uses the {PROVIDER_CATALOG[customModelProvider].name} key and saved API
-                            endpoint from that provider’s card.
-                          </p>
-                        </>
-                      )}
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+                        >
+                          <ChevronDown
+                            size={17}
+                            className={`transition-transform ${
+                              expandedProviderId === provider.id ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+
+                    {expandedProviderId === provider.id && (
+                      <div className="mx-3 mb-3 rounded-[18px] bg-neutral-50/70 px-4 py-4 sm:mx-4 sm:px-5">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(140px,220px)_minmax(0,1fr)] sm:items-center">
+                          <label
+                            htmlFor={`provider-key-${provider.id}`}
+                            className="text-[13px] font-medium text-neutral-800"
+                          >
+                            API key
+                          </label>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                id={`provider-key-${provider.id}`}
+                                type={isRevealed ? "text" : "password"}
+                                value={currentInput}
+                                onChange={(e) =>
+                                  setDraftKeys((prev) => ({
+                                    ...prev,
+                                    [provider.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder={`Paste ${provider.name} API key`}
+                                className="h-10 w-full rounded-xl bg-white pl-3 pr-9 text-[12.5px] font-mono text-neutral-900 outline-none shadow-[inset_0_0_0_1px_rgba(15,23,42,0.13)] transition-shadow placeholder:font-sans placeholder:text-neutral-500 focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRevealedMap((prev) => ({
+                                    ...prev,
+                                    [provider.id]: !prev[provider.id],
+                                  }))
+                                }
+                                aria-label={isRevealed ? "Hide API key" : "Show API key"}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-500 hover:text-neutral-900"
+                              >
+                                {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSaveProvider(provider.id)}
+                              disabled={!currentInput.trim() && !(isConnected && endpointChanged)}
+                              className={`h-9 shrink-0 cursor-pointer rounded-xl px-3.5 text-[12.5px] font-medium transition-all flex items-center gap-1.5 ${
+                                isJustSaved
+                                  ? "bg-neutral-900 text-white hover:bg-neutral-800"
+                                  : "bg-neutral-900 text-white hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-700 disabled:opacity-100 disabled:pointer-events-none"
+                              }`}
+                            >
+                              {isJustSaved ? (
+                                <>
+                                  <Check size={13} />
+                                  <span>
+                                    {sessionKeyNoticeMap[provider.id] ? "Connected" : "Saved"}
+                                  </span>
+                                </>
+                              ) : (
+                                <span>
+                                  {isConnected && endpointChanged && !currentInput.trim()
+                                    ? "Save endpoint"
+                                    : isConnected
+                                      ? "Update"
+                                      : "Connect"}
+                                </span>
+                              )}
+                            </button>
+
+                            {isConnected && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveProvider(provider.id)}
+                                title="Disconnect key"
+                                aria-label="Disconnect key"
+                                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex flex-col gap-2.5">
+                          {saveError && (
+                            <p role="alert" className="text-[11.5px] text-rose-600">
+                              {saveError}
+                            </p>
+                          )}
+                          {sessionKeyNoticeMap[provider.id] && (
+                            <p className="text-[11px] text-neutral-500">
+                              Available for this browser session. Sign in to save this key to your
+                              account.
+                            </p>
+                          )}
+
+                          <details className="group pt-1">
+                            <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-[12.5px] text-neutral-700 transition-colors hover:text-neutral-950 [&::-webkit-details-marker]:hidden">
+                              Advanced settings
+                              <ChevronDown
+                                size={13}
+                                className="transition-transform group-open:rotate-180"
+                              />
+                            </summary>
+                            <div className="mt-3 flex flex-col gap-2.5">
+                              <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-500">
+                                API endpoint
+                                <input
+                                  type="url"
+                                  value={currentUrl}
+                                  onChange={(event) =>
+                                    setDraftUrls((prev) => ({
+                                      ...prev,
+                                      [provider.id]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder={provider.defaultBaseUrl}
+                                  aria-label={`${provider.name} API endpoint`}
+                                  className="h-9 px-3 text-[12px] font-mono text-neutral-700 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                />
+                              </label>
+
+                              {provider.id === "custom" && (
+                                <>
+                                  <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-500">
+                                    Credentials from
+                                    <select
+                                      value={customModelProvider}
+                                      onChange={(event) =>
+                                        setCustomProvider(event.target.value as ProviderId)
+                                      }
+                                      className="h-9 px-3 text-[12px] text-neutral-700 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                    >
+                                      {PROVIDER_ORDER.map((providerId) => (
+                                        <option key={providerId} value={providerId}>
+                                          {PROVIDER_CATALOG[providerId].name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                  <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-500">
+                                    Model ID
+                                    <input
+                                      type="text"
+                                      value={customModelId}
+                                      onChange={(e) => setCustomModel(e.target.value)}
+                                      placeholder="openai/gpt-4o-mini"
+                                      className="h-9 px-3 text-[12px] font-mono text-neutral-700 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                    />
+                                  </label>
+                                </>
+                              )}
+                            </div>
+                          </details>
+                        </div>
+                      </div>
+                    )}
+                  </section>
                 );
               })}
             </div>
           </div>
-        ) : activeCategory === "Skills" ? (
-          <div className="mt-7 flex flex-col gap-6">
-            {/* Project Rules (OPENEDUP.md) & Global Rules (AGENTS.md) Editors */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Project Rules Card */}
-              <div className="rounded-2xl border border-neutral-200/90 bg-white p-5 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-neutral-900 text-white flex items-center justify-center">
-                      <FileCode size={15} />
-                    </div>
-                    <div>
-                      <h3 className="text-[14.5px] font-medium text-neutral-900">
-                        Project Rules (<span className="font-mono text-[13px]">OPENEDUP.md</span>)
-                      </h3>
-                      <p className="text-[12px] text-neutral-500">
-                        Automatically injected into every BYOK model prompt in this repository.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveRules("project")}
-                    className={`px-3 py-1.5 rounded-xl text-[12px] font-medium transition-colors cursor-pointer ${
-                      rulesSavedScope === "project"
-                        ? "bg-emerald-600 text-white"
-                        : "bg-neutral-900 text-white hover:bg-neutral-800"
-                    }`}
-                  >
-                    {rulesSavedScope === "project" ? "Saved OPENEDUP.md" : "Save Rules"}
-                  </button>
-                </div>
-
-                <textarea
-                  rows={5}
-                  value={projectRules}
-                  onChange={(e) => setProjectRules(e.target.value)}
-                  placeholder="# Project Instructions (OPENEDUP.md)&#10;- Use strict TypeScript&#10;- Cite document chapter numbers..."
-                  className="w-full p-3 rounded-xl bg-neutral-50 border border-neutral-200/80 font-mono text-[12px] text-neutral-800 outline-none focus:bg-white focus:border-neutral-400 resize-y"
-                />
-              </div>
-
-              {/* Global Rules Card */}
-              <div className="rounded-2xl border border-neutral-200/90 bg-white p-5 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-neutral-100 text-neutral-800 flex items-center justify-center">
-                      <Scroll size={15} />
-                    </div>
-                    <div>
-                      <h3 className="text-[14.5px] font-medium text-neutral-900">
-                        Global Rules (
-                        <span className="font-mono text-[13px]">~/.config/openedup/AGENTS.md</span>)
-                      </h3>
-                      <p className="text-[12px] text-neutral-500">
-                        Personal cross-project instructions applied across all sessions.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveRules("global")}
-                    className={`px-3 py-1.5 rounded-xl text-[12px] font-medium transition-colors cursor-pointer ${
-                      rulesSavedScope === "global"
-                        ? "bg-emerald-600 text-white"
-                        : "bg-neutral-900 text-white hover:bg-neutral-800"
-                    }`}
-                  >
-                    {rulesSavedScope === "global" ? "Saved AGENTS.md" : "Save Global"}
-                  </button>
-                </div>
-
-                <textarea
-                  rows={5}
-                  value={globalRules}
-                  onChange={(e) => setGlobalRules(e.target.value)}
-                  placeholder="# Global Personal Rules (AGENTS.md)&#10;- Prefer concise executive summaries..."
-                  className="w-full p-3 rounded-xl bg-neutral-50 border border-neutral-200/80 font-mono text-[12px] text-neutral-800 outline-none focus:bg-white focus:border-neutral-400 resize-y"
-                />
-              </div>
-            </div>
-
-            {/* Built-in OpenCode Skill Templates */}
-            <div>
-              <h3 className="text-[13px] font-medium text-neutral-500 uppercase tracking-wider mb-3">
-                Reusable Prompt Templates
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {BUILTIN_OPENCODE_SKILLS.map((skill) => (
-                  <div
-                    key={skill.id}
-                    className="rounded-2xl border border-neutral-200/90 bg-white p-4 flex flex-col justify-between gap-3"
-                  >
-                    <div>
-                      <h4 className="text-[14px] font-medium text-neutral-900">{skill.name}</h4>
-                      <p className="text-[12px] text-neutral-500 mt-1 leading-relaxed">
-                        {skill.description}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAppendSkillSnippet(skill.ruleSnippet)}
-                      className="self-start px-3 py-1 rounded-lg border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 text-[12px] font-medium text-neutral-800 transition-colors cursor-pointer"
-                    >
-                      + Add guidance to OPENEDUP.md
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         ) : (
-          /* Clean empty canvas for Connectors, Plugins matching design */
+          /* Skills, Connectors, and Plugins share the same empty canvas. */
           <div className="flex-1 w-full min-h-[400px]" />
         )}
       </div>

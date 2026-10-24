@@ -14,8 +14,9 @@ const providers: ProviderId[] = [
   "openai",
   "google",
   "deepseek",
+  "kimi",
+  "qwen",
   "xai",
-  "zhipu",
   "custom",
 ];
 
@@ -31,6 +32,14 @@ it("keeps unsigned provider keys in memory while making them available to chat",
   expect(getStoredKeys().google).toBe(key);
   expect(localStorage.getItem("openedup_byok_keys_v1")).toBeNull();
   expect(getProviderChatRequestConfig("gemini-3.8-flash").headers["x-provider-key"]).toBe(key);
+});
+
+it("does not override an account-saved endpoint with the browser default", () => {
+  saveStoredKey("kimi", "session-kimi-api-key");
+
+  const requestConfig = getProviderChatRequestConfig("kimi-k3.1-pro");
+
+  expect(requestConfig.headers["x-provider-base-url"]).toBeUndefined();
 });
 
 describe.each(providers)("custom model routing for %s", (provider) => {
