@@ -6,6 +6,8 @@ import {
   Square,
   ArrowUp,
   Check,
+  FileText,
+  LoaderCircle,
   Paperclip,
   Scroll,
   Boxes,
@@ -15,10 +17,12 @@ import {
   ChevronRight,
   Mic,
   Search,
+  X,
 } from "lucide-react";
 import { getChatModels, getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
 import { useProviderKeys } from "../../customize";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
+import { readChatAttachments, type ChatAttachmentFile } from "../../../app/files/chatAttachments";
 import type { AiModelId, AiModelOption, EffortLevel } from "./chatTypes";
 
 const ProjectsIcon: React.FC<{ size?: number; className?: string }> = ({
@@ -43,7 +47,12 @@ const ProjectsIcon: React.FC<{ size?: number; className?: string }> = ({
 );
 
 interface ChatInputProps {
-  onSendMessage: (message: string, model: AiModelId, effort?: EffortLevel) => void;
+  onSendMessage: (
+    message: string,
+    model: AiModelId,
+    effort?: EffortLevel,
+    attachments?: ChatAttachmentFile[]
+  ) => void;
   isThinking: boolean;
   onStopThinking?: () => void;
   placeholder?: string;
@@ -107,6 +116,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   initialText = "",
 }) => {
   const [text, setText] = useState(initialText);
+  const [attachments, setAttachments] = useState<ChatAttachmentFile[]>([]);
+  const [isReadingFiles, setIsReadingFiles] = useState(false);
+  const [fileError, setFileError] = useState("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
 
   const { customModelId, customModelProvider } = useProviderKeys();
@@ -261,12 +273,35 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       onStopThinking?.();
       return;
     }
+    if (isReadingFiles) return;
     const trimmed = text.trim();
-    if (!trimmed) return;
-    onSendMessage(trimmed, selectedModel, supportsEffort ? selectedEffort : undefined);
+    if (!trimmed && attachments.length === 0) return;
+    onSendMessage(
+      trimmed || "Please review the attached file(s).",
+      selectedModel,
+      supportsEffort ? selectedEffort : undefined,
+      attachments
+    );
     setText("");
+    setAttachments([]);
+    setFileError("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
+    }
+  };
+
+  const handleFilesSelected = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setIsReadingFiles(true);
+    setFileError("");
+    try {
+      const result = await readChatAttachments(Array.from(files), attachments);
+      setAttachments((current) => [...current, ...result.files]);
+      setFileError(result.errors.join(" "));
+    } catch {
+      setFileError("One or more files could not be read. Try again with a PDF or text file.");
+    } finally {
+      setIsReadingFiles(false);
     }
   };
 
@@ -284,16 +319,61 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             type="file"
             ref={fileInputRef}
             className="hidden"
+            disabled={isReadingFiles}
+            multiple
+            accept=".pdf,.txt,.md,.csv,.json,.xml,.yaml,.yml,.log,application/pdf,text/plain,text/markdown,text/csv,application/json,application/xml"
             onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                const file = e.target.files[0];
-                setText((prev) =>
-                  prev ? `${prev}\n[Attached: ${file.name}]` : `[Attached: ${file.name}]`
-                );
-                e.target.value = "";
-              }
+              void handleFilesSelected(e.target.files);
+              e.target.value = "";
             }}
           />
+
+          {(attachments.length > 0 || isReadingFiles) && (
+            <div className="flex flex-wrap gap-2 px-1" aria-label="Attached files">
+              {attachments.map((file) => (
+                <div
+                  key={file.id}
+                  className="inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 py-1.5 pl-2.5 pr-1.5 text-left"
+                >
+                  <FileText size={15} className="shrink-0 text-slate-500" aria-hidden="true" />
+                  <span
+                    className="min-w-0 truncate text-[13px] font-medium text-slate-700"
+                    title={file.name}
+                  >
+                    {file.name}
+                  </span>
+                  <span className="shrink-0 text-[12px] text-slate-500">
+                    {formatFileSize(file.size)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttachments((current) => current.filter((item) => item.id !== file.id))
+                    }
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                    aria-label={`Remove ${file.name}`}
+                    title={`Remove ${file.name}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              {isReadingFiles && (
+                <div
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-500"
+                  role="status"
+                >
+                  <LoaderCircle size={14} className="animate-spin" />
+                  Reading files…
+                </div>
+              )}
+            </div>
+          )}
+          {fileError && (
+            <p role="alert" className="px-1 text-xs leading-5 text-amber-700">
+              {fileError}
+            </p>
+          )}
 
           {/* Text input area */}
           <textarea
@@ -331,7 +411,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 title="Add context, files, or extensions"
                 aria-label="Add context"
                 aria-expanded={isPlusMenuOpen}
-                className={`h-9 w-9 rounded-xl transition-[background-color,color,transform] duration-150 cursor-pointer flex items-center justify-center ${
+                disabled={isReadingFiles}
+                className={`h-9 w-9 rounded-xl transition-[background-color,color,transform] duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-50 ${
                   isPlusMenuOpen
                     ? "bg-slate-200/80 text-slate-900"
                     : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
@@ -365,7 +446,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         className="text-slate-600 group-hover:text-slate-900 shrink-0"
                       />
                       <span className="text-[13px] text-slate-800 font-normal">
-                        Add files or photos
+                        Add files (PDF or text)
                       </span>
                     </div>
                     <span className="text-[11px] font-mono text-slate-400 shrink-0 tracking-tight">
@@ -799,7 +880,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!isThinking && !text.trim()}
+                disabled={
+                  !isThinking && (isReadingFiles || (!text.trim() && attachments.length === 0))
+                }
                 title={isThinking ? "Stop generation" : "Send message"}
                 aria-label={isThinking ? "Stop generation" : "Send message"}
                 className="h-9 w-9 rounded-full flex items-center justify-center transition-[background-color,color,transform,box-shadow] duration-150 cursor-pointer bg-slate-900 text-white shadow-[0_2px_5px_rgba(15,23,42,0.16)] hover:bg-slate-700 hover:shadow-[0_4px_10px_rgba(15,23,42,0.2)] active:scale-95 disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
@@ -891,4 +974,10 @@ function ModelDetailsCard({
       </dl>
     </div>
   );
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1_000) return `${bytes} B`;
+  if (bytes < 1_000_000) return `${(bytes / 1_000).toFixed(1)} KB`;
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
 }

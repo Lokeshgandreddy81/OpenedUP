@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowDown, Check, Clock3, Copy, LoaderCircle, Pencil } from "lucide-react";
+import { ArrowDown, Check, Clock3, Copy, FileText, LoaderCircle, Pencil } from "lucide-react";
 import type { ChatMessage } from "./chatTypes";
 import { AssistantResponse } from "./AssistantResponse";
 
@@ -195,6 +195,27 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       /* ─── Normal display mode ─── */
                       <>
                         <div className="max-w-full rounded-[24px] bg-[#f2f2f0] px-5 py-3 text-[16px] font-normal leading-[1.6] text-slate-800 select-text break-words">
+                          {message.attachments && message.attachments.length > 0 && (
+                            <div className="mb-2 flex flex-wrap gap-1.5">
+                              {message.attachments.map((file, index) => (
+                                <span
+                                  key={file.id ?? `${file.name}-${index}`}
+                                  className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/75 px-2.5 py-1.5 text-[12px] leading-4 text-slate-600"
+                                  title={`${file.name} · ${formatFileSize(file.size)}`}
+                                >
+                                  <FileText
+                                    size={13}
+                                    className="shrink-0 text-slate-500"
+                                    aria-hidden="true"
+                                  />
+                                  <span className="max-w-56 truncate">{file.name}</span>
+                                  <span className="shrink-0 text-slate-400">
+                                    {formatFileSize(file.size)}
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {message.content}
                         </div>
                         {/* Action buttons down below the input text: edit & copy */}
@@ -352,3 +373,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     </div>
   );
 };
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1_000) return `${bytes} B`;
+  if (bytes < 1_000_000) return `${(bytes / 1_000).toFixed(1)} KB`;
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}

@@ -9,6 +9,10 @@ import { ChatWorkspaceScreens } from "../pages/ChatPage/ChatWorkspaceScreens";
 import { getKeyForModel, getProviderChatRequestConfig } from "../../customize";
 import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
+import {
+  chatAttachmentsForContext,
+  type ChatAttachmentFile,
+} from "../../../app/files/chatAttachments";
 import type { ChatConversation, ChatMessage, AiModelId, EffortLevel } from "./chatTypes";
 import type { ComputedRow } from "@charan-interiors/contracts";
 
@@ -363,7 +367,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       text: string,
       model: AiModelId,
       effort: EffortLevel = "Medium",
-      priorMessagesOverride?: ChatMessage[]
+      priorMessagesOverride?: ChatMessage[],
+      attachments: ChatAttachmentFile[] = []
     ) => {
       if (activeRequestControllerRef.current) return;
       const controller = new AbortController();
@@ -385,6 +390,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         role: "user",
         content: text,
         timestamp: new Date().toISOString(),
+        ...(attachments.length > 0
+          ? {
+              attachments: attachments.map(({ id, name, size, type }) => ({
+                id,
+                name,
+                size,
+                type,
+              })),
+            }
+          : {}),
       };
 
       let targetId = activeConversationId;
@@ -445,7 +460,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ role: "user", content: text }),
+              body: JSON.stringify({
+                role: "user",
+                content: text,
+                ...(userMessage.attachments?.length
+                  ? {
+                      metadata: {
+                        attachments: userMessage.attachments.map(({ name, size, type }) => ({
+                          name,
+                          size,
+                          type,
+                        })),
+                      },
+                    }
+                  : {}),
+              }),
               signal: controller.signal,
             }
           );
@@ -470,6 +499,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           })),
           context: {
             docTitle,
+            projectFiles: chatAttachmentsForContext(attachments),
             chapters: chapters.slice(0, 20).map((chapter) => ({
               title: chapter.merchant || `Chapter ${chapter.row}`,
               summary: chapter.category || "",
@@ -961,7 +991,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 {/* Centered Input Box */}
                 <div className="w-full">
                   <ChatInput
-                    onSendMessage={(msg, m, eff) => handleSendMessage(msg, m, eff)}
+                    onSendMessage={(msg, m, eff, files) =>
+                      handleSendMessage(msg, m, eff, undefined, files)
+                    }
                     isThinking={isThinking}
                     onStopThinking={stopGeneration}
                     placeholder="Message Shoebox…"
@@ -1014,8 +1046,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               {/* Centered Floating Bottom Input */}
               <div className="animate-in fade-in duration-150 pb-6">
                 <ChatInput
-                  onSendMessage={(msg, m, eff) => {
-                    handleSendMessage(msg, m, eff);
+                  onSendMessage={(msg, m, eff, files) => {
+                    handleSendMessage(msg, m, eff, undefined, files);
                   }}
                   isThinking={isThinking}
                   onStopThinking={stopGeneration}

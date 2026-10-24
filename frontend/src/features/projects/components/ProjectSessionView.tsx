@@ -18,7 +18,7 @@ import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
 import { AssistantResponse } from "../../chat";
-import { projectFilesForChat } from "./projectFiles";
+import { chatAttachmentsForContext } from "../../../app/files/chatAttachments";
 import type { ProjectItem, ProjectSession, ProjectSessionMessage } from "./projectTypes";
 
 const MessageTimestamp: React.FC<{ timestamp?: string }> = ({ timestamp }) => {
@@ -144,7 +144,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         context: {
           docTitle: project.name,
           projectInstructions: project.customInstructions,
-          projectFiles: projectFilesForChat(project.files),
+          projectFiles: chatAttachmentsForContext(project.files),
         },
       });
       const requestInit = {

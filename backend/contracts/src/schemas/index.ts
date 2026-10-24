@@ -117,6 +117,16 @@ export const ConversationMessageMetadataSchema = z.object({
   stepTitle: z.string().max(200).optional(),
   stepDescription: z.string().max(2_000).optional(),
   actionChips: z.array(z.string().max(100)).max(8).optional(),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(500),
+        size: z.number().int().nonnegative(),
+        type: z.string().max(200).optional(),
+      })
+    )
+    .max(20)
+    .optional(),
   modelUsed: z.string().max(200).optional(),
   providerUsed: z.string().max(100).optional(),
 });

@@ -15,7 +15,7 @@ import {
 import { getChatModels, MODEL_REGISTRY } from "@charan-interiors/contracts";
 import { useProviderKeys } from "../../customize";
 import type { ProjectItem, ProjectSession } from "./projectTypes";
-import { readProjectFiles } from "./projectFiles";
+import { readChatAttachments } from "../../../app/files/chatAttachments";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
 
 export interface ProjectWorkspaceViewProps {
@@ -47,8 +47,12 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   const [projectDescription, setProjectDescription] = useState(project.description || "");
   const [isPinned, setIsPinned] = useState(Boolean(project.isPinned));
   const [fileError, setFileError] = useState("");
-  const { isListening, error: speechError, toggle: toggleSpeechInput } = useSpeechInput(
-    (transcript) => setPromptText((current) => `${current}${current ? " " : ""}${transcript}`)
+  const {
+    isListening,
+    error: speechError,
+    toggle: toggleSpeechInput,
+  } = useSpeechInput((transcript) =>
+    setPromptText((current) => `${current}${current ? " " : ""}${transcript}`)
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,7 +85,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const result = await readProjectFiles(Array.from(files), project.files || []);
+    const result = await readChatAttachments(Array.from(files), project.files || []);
     setFileError(result.errors.join(" "));
     const newFiles = result.files;
 

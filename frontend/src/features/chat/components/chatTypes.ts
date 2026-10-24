@@ -7,6 +7,7 @@ export interface ChatMessage {
   actionChips?: string[];
   isThinking?: boolean;
   isStreaming?: boolean;
+  attachments?: Array<{ id?: string; name: string; size: number; type?: string }>;
 }
 
 export interface ChatConversation {

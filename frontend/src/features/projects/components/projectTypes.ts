@@ -1,12 +1,6 @@
-export interface ProjectFile {
-  id: string;
-  name: string;
-  size: number;
-  type?: string;
-  uploadedAt: number;
-  /** Extracted text for supported text formats; binary contents are never persisted as metadata. */
-  content?: string;
-}
+import type { ChatAttachmentFile } from "../../../app/files/chatAttachments";
+
+export type ProjectFile = ChatAttachmentFile;
 
 export interface ProjectSessionMessage {
   id: string;

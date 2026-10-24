@@ -21,7 +21,10 @@ import type {
 } from "../../components/projectTypes";
 import { ProjectWorkspaceView } from "../../components/ProjectWorkspaceView";
 import { ProjectSessionView } from "../../components/ProjectSessionView";
-import { readProjectFiles, projectFilesForChat } from "../../components/projectFiles";
+import {
+  chatAttachmentsForContext,
+  readChatAttachments,
+} from "../../../../app/files/chatAttachments";
 import {
   getLocalProjects,
   loadAccountProjects,
@@ -352,7 +355,7 @@ export const ProjectsScreen: React.FC = () => {
   const handleModalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const result = await readProjectFiles(Array.from(files), modalFiles);
+    const result = await readChatAttachments(Array.from(files), modalFiles);
     setModalFileError(result.errors.join(" "));
     setModalFiles((prev) => [...prev, ...result.files]);
     e.target.value = "";
@@ -436,7 +439,7 @@ export const ProjectsScreen: React.FC = () => {
           context: {
             docTitle: targetProject.name,
             projectInstructions: targetProject.customInstructions,
-            projectFiles: projectFilesForChat(targetProject.files),
+            projectFiles: chatAttachmentsForContext(targetProject.files),
           },
         }),
       };

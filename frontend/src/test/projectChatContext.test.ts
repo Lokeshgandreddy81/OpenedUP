@@ -13,21 +13,21 @@ vi.mock("pdfjs-dist", () => ({
   }),
 }));
 vi.mock("pdfjs-dist/build/pdf.worker.min.mjs?url", () => ({ default: "mock-worker.js" }));
-import { readProjectFiles, projectFilesForChat } from "../features/projects/components/projectFiles";
+import { chatAttachmentsForContext, readChatAttachments } from "../app/files/chatAttachments";
 import { consumeChatStream } from "../app/api/chatApi";
 
 describe("project file context", () => {
   it("extracts text content and forwards it with source filename", async () => {
-    const result = await readProjectFiles([new File(["quarterly revenue"], "report.md")]);
+    const result = await readChatAttachments([new File(["quarterly revenue"], "report.md")]);
     expect(result.files[0]).toMatchObject({ name: "report.md", content: "quarterly revenue" });
-    expect(projectFilesForChat(result.files)).toEqual([
+    expect(chatAttachmentsForContext(result.files)).toEqual([
       { name: "report.md", content: "quarterly revenue" },
     ]);
     expect(result.errors).toEqual([]);
   });
 
   it("rejects binary files instead of treating their names as indexed content", async () => {
-    const result = await readProjectFiles([new File([new Uint8Array([0, 1, 2])], "image.png")]);
+    const result = await readChatAttachments([new File([new Uint8Array([0, 1, 2])], "image.png")]);
     expect(result.files).toEqual([]);
     expect(result.errors[0]).toContain("supported formats");
   });
@@ -36,7 +36,7 @@ describe("project file context", () => {
     const file = new File([new Uint8Array([37, 80, 68, 70])], "report.pdf", {
       type: "application/pdf",
     });
-    const result = await readProjectFiles([file]);
+    const result = await readChatAttachments([file]);
     expect(result.errors).toEqual([]);
     expect(result.files[0]?.content).toContain("--- Page 1 ---");
     expect(result.files[0]?.content).toContain("Quarterly revenue increased");

@@ -1,10 +1,16 @@
-import type { ProjectFile } from "./projectTypes";
+export interface ChatAttachmentFile {
+  id: string;
+  name: string;
+  size: number;
+  type?: string;
+  uploadedAt: number;
+  content?: string;
+}
 
 const MAX_TEXT_FILE_BYTES = 100_000;
 const MAX_PDF_FILE_BYTES = 5_000_000;
-const MAX_PROJECT_TEXT_CHARS = 120_000;
+const MAX_CONTEXT_CHARS = 120_000;
 const MAX_PDF_PAGES = 50;
-
 const TEXT_TYPES = new Set([
   "text/plain",
   "text/markdown",
@@ -36,19 +42,25 @@ async function readFileBytes(file: File): Promise<ArrayBuffer> {
   });
 }
 
-export async function readProjectFiles(files: File[], existing: ProjectFile[] = []) {
-  const existingChars = existing.reduce((total, file) => total + (file.content?.length || 0), 0);
-  let remaining = Math.max(0, MAX_PROJECT_TEXT_CHARS - existingChars);
-  const accepted: ProjectFile[] = [];
+export async function readChatAttachments(files: File[], existing: ChatAttachmentFile[] = []) {
+  let remaining = Math.max(
+    0,
+    MAX_CONTEXT_CHARS - existing.reduce((total, file) => total + (file.content?.length || 0), 0)
+  );
+  const attachments: ChatAttachmentFile[] = [];
   const errors: string[] = [];
 
   for (const file of files) {
+    if (existing.length + attachments.length >= 20) {
+      errors.push(`${file.name}: you can attach up to 20 files per message.`);
+      continue;
+    }
     const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
     const isText =
       TEXT_TYPES.has(file.type) || /\.(txt|md|csv|json|xml|ya?ml|log)$/i.test(file.name);
     if (!isText && !isPdf) {
       errors.push(
-        `${file.name}: supported formats are PDF and text, Markdown, CSV, JSON, XML, YAML, or log files.`
+        `${file.name}: supported formats are PDF, text, Markdown, CSV, JSON, XML, YAML, or log files.`
       );
       continue;
     }
@@ -60,7 +72,7 @@ export async function readProjectFiles(files: File[], existing: ProjectFile[] = 
       continue;
     }
     if (remaining <= 0) {
-      errors.push(`${file.name}: project text context is full (120 KB maximum).`);
+      errors.push(`${file.name}: attached text context is full (120 KB maximum).`);
       continue;
     }
 
@@ -91,7 +103,7 @@ export async function readProjectFiles(files: File[], existing: ProjectFile[] = 
           text = pageText.join("\n\n");
           if (!pageText.some((page) => page.replace(/--- Page \d+ ---/, "").trim())) {
             errors.push(
-              `${file.name}: no selectable text was found. Scanned PDFs need OCR before they can be used in project chat.`
+              `${file.name}: no selectable text was found. Scanned PDFs need OCR before they can be used in chat.`
             );
             continue;
           }
@@ -102,29 +114,30 @@ export async function readProjectFiles(files: File[], existing: ProjectFile[] = 
           await document.destroy();
         }
       }
+
       const content = text.slice(0, remaining);
-      const wasTruncated = content.length < text.length;
       remaining -= content.length;
-      accepted.push({
+      attachments.push({
         id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: file.name,
         size: file.size,
-        type: file.type || "text/plain",
+        type: file.type || (isPdf ? "application/pdf" : "text/plain"),
         uploadedAt: Date.now(),
         content,
       });
-      if (wasTruncated) {
-        errors.push(`${file.name}: text was truncated to fit the project context limit.`);
+      if (content.length < text.length) {
+        errors.push(`${file.name}: text was truncated to fit the 120 KB context limit.`);
       }
     } catch (error) {
       const reason = error instanceof Error ? error.message : "Could not read file.";
       errors.push(`${file.name}: could not read or parse this file (${reason}).`);
     }
   }
-  return { files: accepted, errors };
+
+  return { files: attachments, errors };
 }
 
-export function projectFilesForChat(files: ProjectFile[] = []) {
+export function chatAttachmentsForContext(files: ChatAttachmentFile[] = []) {
   return files
     .filter((file) => Boolean(file.content?.trim()))
     .map(({ name, content }) => ({ name, content: content || "" }));
