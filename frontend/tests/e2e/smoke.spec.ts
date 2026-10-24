@@ -92,7 +92,11 @@ test.describe("Production Smoke Tests", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/chat");
     await expect(page.getByTestId("chat-composer")).toBeVisible();
+    const chatDialog = page.getByRole("dialog", { name: "Chat" });
+    await expect(chatDialog.getByRole("button", { name: "Plugins", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Customize" }).click();
+    await expect(chatDialog.getByRole("button", { name: "Plugins", exact: true })).toBeVisible();
+    await chatDialog.getByRole("button", { name: "Plugins", exact: true }).click();
     await page.getByRole("button", { name: "Providers" }).click();
     await expect(page.getByRole("button", { name: /Anthropic.*Not connected/ })).toBeVisible();
     const hasHorizontalOverflow = await page.evaluate(

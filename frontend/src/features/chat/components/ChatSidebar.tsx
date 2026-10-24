@@ -6,7 +6,6 @@ import {
   Clock,
   Shapes,
   Briefcase,
-  Blocks,
   BarChart3,
   BookOpen,
   GitFork,
@@ -246,19 +245,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </button>
         <button
           type="button"
-          onClick={() => onSelectView?.("plugins")}
-          title="Plugins"
-          aria-label="Plugins"
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
-            activeView === "plugins"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
-          }`}
-        >
-          <Blocks size={16} strokeWidth={1.8} />
-        </button>
-        <button
-          type="button"
           onClick={() => onSelectView?.("benchmarks")}
           title="Benchmarks"
           aria-label="Benchmarks"
@@ -345,7 +331,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </button>
       </div>
 
-      {/* Navigation action list: Scheduled chats, New chat, Projects, Artifacts, Customize, Plugins */}
+      {/* Navigation action list: Scheduled chats, New chat, Projects, Artifacts, Customize */}
       <div className="px-2 mb-3 flex flex-col gap-0.5">
         <button
           type="button"
@@ -405,19 +391,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         >
           <Briefcase size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
           <span>Customize</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectView?.("plugins")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
-            activeView === "plugins"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
-          }`}
-        >
-          <Blocks size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
-          <span>Plugins</span>
         </button>
 
         <button
