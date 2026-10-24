@@ -42,10 +42,12 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string>("claude-opus-5.5");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [thinkingElapsedSeconds, setThinkingElapsedSeconds] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isShareCopied, setIsShareCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const thinkingStartedAtRef = useRef<number | null>(null);
 
   const { hasKey } = useProviderKeys();
   const { user } = useChatAuth();
@@ -63,6 +65,18 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [session.messages]);
+
+  useEffect(() => {
+    const startedAt = thinkingStartedAtRef.current;
+    if (!isGenerating || startedAt === null) return;
+
+    const updateElapsedTime = () => {
+      setThinkingElapsedSeconds(Math.max(1, Math.ceil((Date.now() - startedAt) / 1000)));
+    };
+    updateElapsedTime();
+    const timer = window.setInterval(updateElapsedTime, 1000);
+    return () => window.clearInterval(timer);
+  }, [isGenerating]);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard?.writeText(text);
@@ -89,6 +103,9 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
     };
 
     const newMessages = [...session.messages, userMsg];
+    const startMs = Date.now();
+    thinkingStartedAtRef.current = startMs;
+    setThinkingElapsedSeconds(1);
     setReplyText("");
     setIsGenerating(true);
 
@@ -118,7 +135,6 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         body: requestBody,
         signal: controller.signal,
       };
-      const startMs = Date.now();
       const response = await (user
         ? authenticatedChatFetch("/api/chat/stream", requestInit)
         : fetch("/api/chat/stream", requestInit));
@@ -167,7 +183,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         role: "assistant",
         content: replyContent,
         timestamp: "Just now",
-        thinkingTime: `${Math.max(1, Math.round((Date.now() - startMs) / 1000))}s`,
+        thinkingTime: `${Math.max(1, Math.ceil((Date.now() - startMs) / 1000))}s`,
         isStreaming: false,
       };
 
@@ -197,6 +213,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
       });
     } finally {
       activeRequestRef.current = null;
+      thinkingStartedAtRef.current = null;
       setIsGenerating(false);
     }
   };
@@ -297,8 +314,29 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
 
             // Assistant Message (Editorial Serif)
             const thinkingDuration = msg.thinkingTime?.replace(/^thinking\s*/i, "").trim();
+            const isThinkingOnThisResponse = isGenerating && msg.isStreaming;
             return (
               <div key={msg.id} className="flex flex-col items-start gap-2.5">
+                {(isThinkingOnThisResponse || (!msg.isStreaming && thinkingDuration)) && (
+                  <span
+                    role={isThinkingOnThisResponse ? "timer" : undefined}
+                    aria-label={
+                      isThinkingOnThisResponse
+                        ? `Thinking for ${thinkingElapsedSeconds} seconds`
+                        : undefined
+                    }
+                    className="inline-flex items-center gap-1.5 text-[12px] text-neutral-500"
+                  >
+                    {isThinkingOnThisResponse ? (
+                      <LoaderCircle size={13} className="animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Clock3 size={13} strokeWidth={1.8} />
+                    )}
+                    {isThinkingOnThisResponse
+                      ? `Thinking · ${thinkingElapsedSeconds}s`
+                      : `Thought for ${thinkingDuration}`}
+                  </span>
+                )}
                 <div className="font-serif text-[17px] md:text-[17.5px] leading-relaxed text-neutral-900 tracking-normal break-words whitespace-pre-wrap">
                   {msg.content}
                 </div>
@@ -306,11 +344,6 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
                 {/* Assistant response details and actions */}
                 {!msg.isStreaming && (
                   <div className="flex items-center gap-2 pt-1 text-neutral-400">
-                    {thinkingDuration && (
-                      <span className="inline-flex items-center gap-1.5 text-[12px] text-neutral-500">
-                        <Clock3 size={13} strokeWidth={1.8} /> Thought for {thinkingDuration}
-                      </span>
-                    )}
                     <button
                       type="button"
                       onClick={() => handleCopy(msg.content, msg.id)}
@@ -330,9 +363,13 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
             );
           })}
           {isGenerating && session.messages.at(-1)?.role === "user" && (
-            <div className="inline-flex items-center gap-2 text-[13px] text-neutral-400 animate-pulse">
+            <div
+              className="inline-flex items-center gap-1.5 text-[12px] text-neutral-500"
+              role="timer"
+              aria-label={`Thinking for ${thinkingElapsedSeconds} seconds`}
+            >
               <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
-              Thinking…
+              Thinking · {thinkingElapsedSeconds}s
             </div>
           )}
           <div ref={messagesEndRef} />
