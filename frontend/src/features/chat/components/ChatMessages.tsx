@@ -167,7 +167,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         </div>
 
                         {/* Action buttons down below the input text: edit & copy */}
-                        <div className="mt-1.5 flex items-center gap-1 select-none text-slate-500 transition-colors sm:hidden sm:group-hover/user-msg:flex sm:group-focus-within/user-msg:flex">
+                        <div className="mt-1.5 flex h-7 items-center gap-1 select-none text-slate-500 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/user-msg:opacity-100 sm:group-focus-within/user-msg:opacity-100">
                           <button
                             type="button"
                             onClick={() => {
