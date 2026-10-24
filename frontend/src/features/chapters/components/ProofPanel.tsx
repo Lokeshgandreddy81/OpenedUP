@@ -31,9 +31,6 @@ interface ProofPanelProps {
   phase: "entering" | "active" | "exiting";
   isSidebarOpen?: boolean;
   onOpenSidebar?: () => void;
-  isRoadmapOpen?: boolean;
-  onToggleRoadmap?: () => void;
-  onOpenRoadmapCanvas?: () => void;
   onSelectRow: (rowNumber: number) => void;
   onUpdateRow: (rowNumber: number, updater: (prev: ReceiptRow) => ReceiptRow) => void;
   onClose: () => void;
@@ -89,9 +86,6 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
   phase,
   isSidebarOpen = true,
   onOpenSidebar,
-  isRoadmapOpen,
-  onToggleRoadmap,
-  onOpenRoadmapCanvas,
   onSelectRow,
   onUpdateRow,
   onClose,
@@ -118,7 +112,6 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
     Boolean(row.extracted_text);
   const [chapterPdfUrl, setChapterPdfUrl] = useState<string | null>(null);
   const [chapterAspect, setChapterAspect] = useState<number | null>(null);
-  const [isSlicingPdf, setIsSlicingPdf] = useState<boolean>(false);
   const [sliceFailed, setSliceFailed] = useState<boolean>(false);
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
 
@@ -162,14 +155,12 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
       if (cached) {
         setChapterPdfUrl(cached.url);
         setChapterAspect(cached.aspect > 0 ? cached.aspect : null);
-        setIsSlicingPdf(false);
         setSliceFailed(false);
         return;
       }
 
       // Clear previous chapter's sliced URL so stale chapter doesn't linger while slicing
       setChapterPdfUrl(null);
-      setIsSlicingPdf(true);
       setSliceFailed(false);
       try {
         // 2. Reuse cached parsed PDFDocument if available
@@ -194,7 +185,6 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
           } else {
             setChapterPdfUrl(null);
             setChapterAspect(null);
-            setIsSlicingPdf(false);
             return;
           }
 
@@ -264,10 +254,6 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
           setChapterAspect(null);
           setSliceFailed(true);
         }
-      } finally {
-        if (active) {
-          setIsSlicingPdf(false);
-        }
       }
     }
 
@@ -289,24 +275,10 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
   const canSliceChapterPdf =
     isChapter && Boolean(photo && (photo.file || photo.objectUrl || photo.base64Data));
 
-  const segPagesOf = (r: ComputedRow) =>
-    Math.max(1, (r.end_page ?? r.start_page ?? 1) - (r.start_page ?? 1) + 1);
-
-  // Multi-document awareness: isolate the active document's chapters
-  const isMultiDoc = useMemo(() => {
-    const docIndices = new Set(allRows.map((r) => r.doc_index ?? r.photo_index ?? 1));
-    return docIndices.size > 1;
-  }, [allRows]);
-
   const activeDocIndex = row.doc_index ?? row.photo_index ?? 1;
   const activeDocName =
     row.doc_name || (photo?.displayName ?? photo?.name) || `Document ${activeDocIndex}`;
   const activeDocParts = useMemo(() => splitDocumentName(activeDocName), [activeDocName]);
-
-  const docRows = useMemo(() => {
-    if (!isMultiDoc) return allRows;
-    return allRows.filter((r) => (r.doc_index ?? r.photo_index ?? 1) === activeDocIndex);
-  }, [allRows, isMultiDoc, activeDocIndex]);
 
   const dupTarget = useMemo(() => {
     if (!row.duplicate_of) return null;
@@ -323,25 +295,6 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
       Boolean(dupTarget && isCrossDocumentPair(dupTarget, row))
     );
   }, [row, dupTarget]);
-
-  // Document total, for the reading rail and the page meta in the top bar.
-  const docTotalPages = useMemo(() => {
-    const targetRows = isMultiDoc ? docRows : allRows;
-    if (targetRows.length === 0) return 0;
-    return targetRows.reduce((max, r) => Math.max(max, r.end_page ?? r.start_page ?? 0), 0);
-  }, [isMultiDoc, docRows, allRows]);
-
-  const cumulativeTotalPages = useMemo(() => {
-    if (!isMultiDoc || allRows.length === 0) return 0;
-    return allRows.reduce(
-      (max, r) =>
-        Math.max(
-          max,
-          r.cumulative_end_page ?? r.cumulative_start_page ?? r.end_page ?? r.start_page ?? 0
-        ),
-      0
-    );
-  }, [isMultiDoc, allRows]);
 
   const orderedNavRows = useMemo(() => {
     const base =
@@ -574,7 +527,6 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
 
   const currencySymbol = getCurrencySymbol(row.effective_currency);
   const sourceMeta = row.source_meta ?? photo?.sourceMeta;
-  const sourceType = sourceMeta?.sourceType ?? "manual_upload";
   const effectiveCostCenter = row.cost_center || sourceMeta?.costCenter || "Unassigned";
 
   return (

@@ -1,3 +1,8 @@
 export { default } from "./pages/CustomizePage";
-export { useProviderKeys, getProviderChatRequestConfig, getKeyForModel } from "./services/keyStore";
+export {
+  useProviderKeys,
+  getProviderKeyDrafts,
+  getProviderChatRequestConfig,
+  getKeyForModel,
+} from "./publicApi";
 export type { CustomizeCategory, CustomizeScreenProps } from "./pages/CustomizePage";

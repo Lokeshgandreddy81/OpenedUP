@@ -71,6 +71,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     }
     return [];
   });
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [executingTask, setExecutingTask] = useState<ScheduledTask | null>(null);
 
   // Save to localStorage whenever tasks change
   useEffect(() => {
@@ -97,7 +99,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isCreateModalOpen, executingTask]);
 
   // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -129,7 +131,6 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   }, [isFilterMenuOpen]);
 
   // Modal creation state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalPrompt, setModalPrompt] = useState("");
   const [modalIcon, setModalIcon] = useState("⏱️");
@@ -243,7 +244,6 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   }, []);
 
   // Execution simulation state
-  const [executingTask, setExecutingTask] = useState<ScheduledTask | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionOutput, setExecutionOutput] = useState<string>("");
 

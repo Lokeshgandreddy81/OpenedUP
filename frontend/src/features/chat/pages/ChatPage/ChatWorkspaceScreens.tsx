@@ -31,7 +31,6 @@ export type ChatWorkspaceView =
 
 export interface ChatWorkspaceScreensProps {
   activeView: ChatWorkspaceView;
-  docTitle: string;
   customizeInitialCategory: CustomizeCategory;
   projectsNavKey: number;
   isScheduledTasksOpen: boolean;
@@ -42,7 +41,6 @@ export interface ChatWorkspaceScreensProps {
 
 export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
   activeView,
-  docTitle,
   customizeInitialCategory,
   projectsNavKey,
   isScheduledTasksOpen,
@@ -100,7 +98,7 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
           name="Benchmarks"
           fallback={<ChatScreenLoading name="Benchmarks" />}
         >
-          <BenchmarksScreen onClose={() => onSelectView("chat")} docTitle={docTitle} />
+          <BenchmarksScreen onClose={() => onSelectView("chat")} />
         </PageRoute>
       );
       break;

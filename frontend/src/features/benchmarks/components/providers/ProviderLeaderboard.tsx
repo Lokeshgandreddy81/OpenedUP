@@ -165,11 +165,6 @@ export const ProviderLeaderboard: React.FC<ProviderLeaderboardProps> = ({
     return Math.max(...providerMatches.map((m) => m.support.medianTps));
   }, [providerMatches]);
 
-  const minPrice = useMemo(() => {
-    if (providerMatches.length === 0) return 0;
-    return Math.min(...providerMatches.map((m) => m.support.blendedPricePer1M));
-  }, [providerMatches]);
-
   const maxPrice = useMemo(() => {
     if (providerMatches.length === 0) return 0;
     return Math.max(...providerMatches.map((m) => m.support.blendedPricePer1M));
@@ -830,7 +825,7 @@ export const ProviderLeaderboard: React.FC<ProviderLeaderboardProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {providerMatches.map((match, idx) => {
+                {providerMatches.map((match) => {
                   const { provider, metadata, support } = match;
                   const speedRatio = (support.medianTps / maxTps) * 100;
                   const isSpeedKing = fastestProvider?.provider.id === provider.id;

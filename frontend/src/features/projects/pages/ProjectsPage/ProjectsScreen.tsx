@@ -10,7 +10,7 @@ import {
   Sparkles,
   FileText,
 } from "lucide-react";
-import { getProviderChatRequestConfig } from "../../../customize";
+import { getProviderChatRequestConfig } from "../../../customize/publicApi";
 import { useChatAuth } from "../../../../app/auth/ChatAuthContext";
 import { authenticatedChatFetch, consumeChatStream } from "../../../../app/api/chatApi";
 import type {

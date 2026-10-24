@@ -23,7 +23,6 @@ import { RoadmapCanvas } from "../../roadmaps";
 import { ChatWindow } from "../../chat";
 import { BenchmarksView } from "../../benchmarks";
 import { ScheduledTasksView } from "../../scheduled";
-import { getStoredRoadmapProgress } from "../../roadmaps";
 import type {
   ComputedRow,
   FailedBatchInfo,
@@ -56,12 +55,6 @@ import {
 } from "../../../app/components/MotionPrimitives";
 import { ProofPanel } from "./ProofPanel";
 import { COST_CENTER_OPTIONS } from "./WorkspaceSyncModal";
-import {
-  createAuditGmailDraft,
-  getAccessToken,
-  requestWorkspaceAccessToken,
-  saveAuditCsvToDrive,
-} from "../../../app/integrations/workspaceLiveSync";
 
 interface ResultsViewProps {
   photos: UploadedPhoto[];
@@ -74,7 +67,6 @@ interface ResultsViewProps {
   onUpdateRow: (rowNumber: number, updater: (prev: ReceiptRow) => ReceiptRow) => void;
   onChangeCostCenter?: (rowId: string, newCostCenter: string) => void;
   onAddFiles?: (files: FileList | File[]) => void;
-  onOpenWorkspaceModal?: () => void;
   onNewPile: () => void;
 }
 
@@ -206,7 +198,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   onUpdateRow,
   onChangeCostCenter,
   onAddFiles,
-  onOpenWorkspaceModal,
   onNewPile,
 }) => {
   const navigate = useNavigate();
@@ -225,7 +216,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   );
   const [activeNavTab, setActiveNavTab] = useState<SidebarTab>("chapters");
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
-  const [isRoadmapOpen, setIsRoadmapOpen] = useState<boolean>(true);
   const [isChatOpen, setIsChatOpen] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       const s = window.location.search;
@@ -315,17 +305,17 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     relayoutTimersRef.current = [];
   };
 
-  const clearProofTimers = () => {
+  const clearProofTimers = useCallback(() => {
     proofTimersRef.current.forEach((t) => window.clearTimeout(t));
     proofTimersRef.current = [];
-  };
+  }, []);
 
   useEffect(() => {
     return () => {
       clearRelayoutTimers();
       clearProofTimers();
     };
-  }, []);
+  }, [clearProofTimers]);
 
   useEffect(() => {
     if (reducedMotion) {
@@ -475,14 +465,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     }
     return `${pdfPhotos.length} Documents`;
   }, [photos, computedRows, selectedProofRow]);
-
-  const totalPagesCount = useMemo(() => {
-    return computedRows.reduce((max, r) => Math.max(max, r.end_page || r.start_page || 0), 0);
-  }, [computedRows]);
-
-  const totalWordCount = useMemo(() => {
-    return computedRows.reduce((acc, r) => acc + (r.word_count || 0), 0);
-  }, [computedRows]);
 
   interface DocumentSection {
     docIndex: number;
@@ -726,20 +708,15 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   // distinguishable when the narrow sidebar truncates the name.
   const sidebarDocParts = useMemo(() => splitDocumentName(sidebarTitle), [sidebarTitle]);
 
-  const roadmapProgressPercent = useMemo(() => {
-    if (!isPdfDocument || computedRows.length === 0) return 0;
-    const docKey = sidebarTitle.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-    const progress = getStoredRoadmapProgress(docKey);
-    const completed = Object.values(progress).filter((s) => s === "completed").length;
-    return Math.round((completed / Math.max(1, computedRows.length)) * 100);
-  }, [isPdfDocument, computedRows.length, sidebarTitle]);
-
   const isChaptersDrawerOpen = isPdfDocument
     ? activeNavTab === "chapters" && isSidebarOpen
     : isSidebarOpen;
 
   // Study mode lists the whole outline; audit mode lists the open tile's receipts.
-  const sidebarRows = isPdfDocument ? computedRows : (activeOpenTile?.receipts ?? []);
+  const sidebarRows = useMemo(
+    () => (isPdfDocument ? computedRows : (activeOpenTile?.receipts ?? [])),
+    [isPdfDocument, computedRows, activeOpenTile?.receipts]
+  );
 
   const filteredSidebarRows = useMemo(() => {
     const q = outlineSearchQuery.trim().toLowerCase();
@@ -820,7 +797,13 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
           totalAmount: fromMinorUnits(totalCents, reconciliation.mainCurrency),
         };
       });
-  }, [groupingMode, computedRows, reconciliation.mainCurrency]);
+  }, [
+    groupingMode,
+    computedRows,
+    filteredSidebarRows,
+    outlineSearchQuery,
+    reconciliation.mainCurrency,
+  ]);
 
   // Treemap shows every other merchant (or in PDF mode, all chapters strictly in sequential numerical sequence)
   const treemapSourceTiles = useMemo(() => {
@@ -867,32 +850,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     }
   };
 
-  const handleOpenSidebar = () => {
-    if (isSidebarOpen) return;
-    sidebarClosedRef.current = false;
-    clearRelayoutTimers();
-
-    const targetId = openTileId ?? lastOpenTileIdRef.current ?? merchantTiles[0]?.id;
-    if (targetId && targetId !== openTileId) {
-      setOpenTileId(targetId);
-    }
-
-    if (reducedMotion) {
-      setIsSidebarOpen(true);
-      setSidebarAnimPhase("open");
-      setListPhase("visible");
-      return;
-    }
-
-    setSidebarAnimPhase("opening");
-    setIsSidebarOpen(true);
-    setListPhase("visible");
-    const t = window.setTimeout(() => {
-      setSidebarAnimPhase("open");
-    }, 320);
-    relayoutTimersRef.current.push(t);
-  };
-
   const handleCloseSidebar = () => {
     if (!isSidebarOpen) return;
     sidebarClosedRef.current = true;
@@ -918,46 +875,57 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     relayoutTimersRef.current.push(t);
   };
 
-  const handleSelectReceiptRow = (rowNum: number) => {
-    clearProofTimers();
-    if (!isSidebarOpen && merchantTiles.length > 0) {
-      const ownerTile =
-        merchantTiles.find((t) => t.receipts.some((r) => r.row === rowNum)) || merchantTiles[0];
-      setOpenTileId(ownerTile.id);
-    }
+  const handleSelectReceiptRow = useCallback(
+    (rowNum: number) => {
+      clearProofTimers();
+      if (!isSidebarOpen && merchantTiles.length > 0) {
+        const ownerTile =
+          merchantTiles.find((t) => t.receipts.some((r) => r.row === rowNum)) || merchantTiles[0];
+        setOpenTileId(ownerTile.id);
+      }
 
-    if (proofPhase === "active" || proofPhase === "entering") {
+      if (proofPhase === "active" || proofPhase === "entering") {
+        setSelectedProofRow(rowNum);
+        return;
+      }
+
       setSelectedProofRow(rowNum);
-      return;
-    }
+      if (reducedMotion) {
+        setProofPhase("active");
+        return;
+      }
 
-    setSelectedProofRow(rowNum);
-    if (reducedMotion) {
-      setProofPhase("active");
-      return;
-    }
+      if (isPdfDocument) {
+        // Study mode has no treemap to collapse — the reader simply grows in.
+        setProofPhase("entering");
+        const t1 = window.setTimeout(() => {
+          setProofPhase("active");
+        }, 400);
+        proofTimersRef.current.push(t1);
+        return;
+      }
 
-    if (isPdfDocument) {
-      // Study mode has no treemap to collapse — the reader simply grows in.
-      setProofPhase("entering");
+      setProofPhase("collapsing_treemap");
+      const totalCollapseTime = 220 + Math.min(positionedTiles.length, 5) * 30;
       const t1 = window.setTimeout(() => {
-        setProofPhase("active");
-      }, 400);
+        setProofPhase("entering");
+        const t2 = window.setTimeout(() => {
+          setProofPhase("active");
+        }, 400);
+        proofTimersRef.current.push(t2);
+      }, totalCollapseTime);
       proofTimersRef.current.push(t1);
-      return;
-    }
-
-    setProofPhase("collapsing_treemap");
-    const totalCollapseTime = 220 + Math.min(positionedTiles.length, 5) * 30;
-    const t1 = window.setTimeout(() => {
-      setProofPhase("entering");
-      const t2 = window.setTimeout(() => {
-        setProofPhase("active");
-      }, 400);
-      proofTimersRef.current.push(t2);
-    }, totalCollapseTime);
-    proofTimersRef.current.push(t1);
-  };
+    },
+    [
+      clearProofTimers,
+      isSidebarOpen,
+      merchantTiles,
+      proofPhase,
+      reducedMotion,
+      isPdfDocument,
+      positionedTiles.length,
+    ]
+  );
 
   const handleCloseProof = () => {
     clearProofTimers();
@@ -978,7 +946,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   useEffect(() => {
     if (!isPdfDocument || proofPhase !== "hidden" || computedRows.length === 0) return;
     handleSelectReceiptRow(computedRows[0].row);
-  }, [isPdfDocument, proofPhase, computedRows]);
+  }, [isPdfDocument, proofPhase, computedRows, handleSelectReceiptRow]);
 
   const handleUpdateRowWithFlip = (
     rowNumber: number,
@@ -987,22 +955,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     captureFlipSnapshot(380, "cubic-bezier(0.25, 1, 0.5, 1)");
     onUpdateRow(rowNumber, updater);
   };
-
-  const [confirmExportMode, setConfirmExportMode] = useState<"drive" | "gmail" | null>(null);
-  const [driveFilename, setDriveFilename] = useState<string>(
-    () => `shoebox-audit-${new Date().toISOString().slice(0, 10)}.csv`
-  );
-  const [gmailRecipient, setGmailRecipient] = useState<string>("");
-  const [gmailSubject, setGmailSubject] = useState<string>(
-    () => `Shoebox Spend Audit Ledger (${new Date().toISOString().slice(0, 10)})`
-  );
-  const [isExportingWorkspace, setIsExportingWorkspace] = useState<boolean>(false);
-  const [workspaceExportStatus, setWorkspaceExportStatus] = useState<{
-    type: "success" | "error";
-    message: string;
-    linkUrl?: string;
-    linkLabel?: string;
-  } | null>(null);
 
   const handleExportCsv = useCallback(() => {
     setExportSweeping(true);
@@ -1047,129 +999,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, [handleExportCsv]);
-
-  const handleConfirmWorkspaceExport = async () => {
-    if (!confirmExportMode || isExportingWorkspace) return;
-    setIsExportingWorkspace(true);
-    setWorkspaceExportStatus(null);
-
-    try {
-      let token = await getAccessToken();
-      if (!token) {
-        const authRes = await requestWorkspaceAccessToken({
-          includeDrive: confirmExportMode === "drive",
-          includeGmail: confirmExportMode === "gmail",
-        });
-        token = authRes.accessToken;
-      }
-
-      const docCount =
-        reconciliation.totalDocuments ??
-        photos.filter(
-          (p) => p.mimeType === "application/pdf" || p.name.toLowerCase().endsWith(".pdf")
-        ).length;
-      const defaultFilename = isPdfDocument
-        ? docCount > 1
-          ? `shoebox-multi-doc-audit-${new Date().toISOString().slice(0, 10)}.csv`
-          : `shoebox-audit-${new Date().toISOString().slice(0, 10)}.csv`
-        : docCount > 1
-          ? `shoebox-consolidated-audit-${new Date().toISOString().slice(0, 10)}.csv`
-          : `shoebox-audit-${new Date().toISOString().slice(0, 10)}.csv`;
-
-      const csv = generateReceiptsCsv(computedRows);
-      const cleanName = driveFilename.trim() || defaultFilename;
-
-      if (confirmExportMode === "drive") {
-        const uploaded = await saveAuditCsvToDrive(token, cleanName, csv);
-        setWorkspaceExportStatus({
-          type: "success",
-          message: `Saved "${uploaded.name}" (${computedRows.length} ${
-            isPdfDocument ? "entries" : "receipts"
-          }) to Google Drive.`,
-          linkUrl: uploaded.webViewLink || `https://drive.google.com/file/d/${uploaded.id}/view`,
-          linkLabel: "Open in Drive ↗",
-        });
-      } else {
-        const summaryLines = [
-          `Shoebox Workspace Spend Audit Summary`,
-          `=====================================`,
-          `Date: ${new Date().toISOString().slice(0, 10)}`,
-          ...(docCount > 1 ? [`Total Documents Audited: ${docCount}`] : []),
-          isPdfDocument
-            ? `Total Cumulative Pages: ${reconciliation.totalCumulativePages ?? reconciliation.totalPhotos}`
-            : `Total Photos Audited: ${reconciliation.totalPhotos}`,
-          isPdfDocument
-            ? `Total Chapters / Sections: ${reconciliation.totalReceipts}`
-            : `Total Receipts Extracted: ${reconciliation.totalReceipts}`,
-          ...(reconciliation.crossDocumentDuplicatesCount &&
-          reconciliation.crossDocumentDuplicatesCount > 0
-            ? [`Cross-Document Duplicates Flagged: ${reconciliation.crossDocumentDuplicatesCount}`]
-            : []),
-          `Reconciled Spend (${reconciliation.mainCurrency}): ${formatCurrencyAmount(
-            reconciliation.mainTotalAmount,
-            reconciliation.mainCurrency
-          )}`,
-          ...(reconciliation.foreignTotals.length > 0
-            ? [
-                `Foreign Currencies: ${reconciliation.foreignTotals
-                  .map((ft) => formatCurrencyAmount(ft.totalAmount, ft.currency))
-                  .join(", ")}`,
-              ]
-            : []),
-          `Items Flagged for Review: ${reconciliation.toCheckCount}`,
-          ``,
-          `Top ${isPdfDocument ? "Sections" : "Merchants"}:`,
-          ...merchantTiles
-            .slice(0, 8)
-            .map(
-              (t) =>
-                `- ${t.name}: ${formatCurrencyAmount(
-                  t.totalAmount,
-                  t.currency
-                )} (${t.receipts.length} ${
-                  t.receipts.length === 1
-                    ? isPdfDocument
-                      ? "entry"
-                      : "receipt"
-                    : isPdfDocument
-                      ? "entries"
-                      : "receipts"
-                })`
-            ),
-          ``,
-          `The full code-verified consolidated multi-document ledger is attached as ${cleanName}.`,
-        ];
-
-        await createAuditGmailDraft(token, {
-          to: gmailRecipient.trim() || undefined,
-          subject:
-            gmailSubject.trim() ||
-            `Shoebox Spend Audit Ledger (${new Date().toISOString().slice(0, 10)})`,
-          bodyText: summaryLines.join("\n"),
-          csvFilename: cleanName,
-          csvContent: csv,
-        });
-
-        setWorkspaceExportStatus({
-          type: "success",
-          message: `Created Gmail draft "${
-            gmailSubject.trim() || "Shoebox Spend Audit Ledger"
-          }" with ${computedRows.length} ${isPdfDocument ? "entries" : "receipts"} attached.`,
-          linkUrl: "https://mail.google.com/mail/u/0/#drafts",
-          linkLabel: "Open Gmail Drafts ↗",
-        });
-      }
-      setConfirmExportMode(null);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to export to Google Workspace.";
-      setWorkspaceExportStatus({
-        type: "error",
-        message: msg,
-      });
-    } finally {
-      setIsExportingWorkspace(false);
-    }
-  };
 
   const activeProofRowObj = useMemo(
     () =>
@@ -1256,13 +1085,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
           ? animateIndex * 25
           : 0;
 
-    const srcType = r.source_meta?.sourceType || "manual_upload";
-    const srcBadge =
-      srcType === "drive_file"
-        ? "DRIVE"
-        : srcType === "gmail_attachment" || srcType === "gmail_html"
-          ? "GMAIL"
-          : "UPLOAD";
     const costCenterValue = r.cost_center || r.source_meta?.costCenter || "Unassigned";
     const costCenterShort = costCenterValue !== "Unassigned" ? costCenterValue.split(" ")[0] : null;
 
@@ -1290,33 +1112,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     const timeDisplay = r.time && r.time.trim() ? r.time.trim() : "—";
 
     const isChapterRow = r.start_page !== undefined || r.chapter_number !== undefined;
-    const chapterPages = isChapterRow
-      ? r.end_page !== undefined && r.end_page !== r.start_page
-        ? `${r.start_page ?? 1}–${r.end_page}`
-        : `${r.start_page ?? 1}`
-      : "";
-    // Key topics sometimes repeat the chapter title verbatim; showing both reads
-    // as a duplicated, mismatched entry, so only genuinely extra topics surface.
-    const normalizeTopic = (s: string) =>
-      s
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim();
-    const chapterTitleDisplay = formatDisplayTitle(
-      stripChapterNumberPrefix(r.chapter_title ?? r.merchant ?? "", r.chapter_number ?? r.row)
-    );
-    const revealTopics = (r.key_topics ?? [])
-      .filter((t) => normalizeTopic(t) !== normalizeTopic(chapterTitleDisplay))
-      .slice(0, 2);
-
-    const isMultiDoc = documentSections.length > 1;
-    const cumulativePages =
-      isChapterRow && isMultiDoc && r.cumulative_start_page !== undefined
-        ? r.cumulative_end_page !== undefined && r.cumulative_end_page !== r.cumulative_start_page
-          ? `${r.cumulative_start_page}–${r.cumulative_end_page}`
-          : `${r.cumulative_start_page}`
-        : "";
-
     return (
       <li
         key={r.row}
@@ -2233,19 +2028,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                   setActiveNavTab("chapters");
                   setIsSidebarOpen(true);
                 }}
-                isRoadmapOpen={activeNavTab === "roadmap"}
-                onToggleRoadmap={() => {
-                  if (activeNavTab === "roadmap" && isSidebarOpen) {
-                    setIsSidebarOpen(false);
-                  } else {
-                    setActiveNavTab("roadmap");
-                    setIsSidebarOpen(true);
-                  }
-                }}
-                onOpenRoadmapCanvas={() => {
-                  setActiveNavTab("roadmap");
-                  setIsSidebarOpen(true);
-                }}
                 phase={
                   proofPhase === "exiting"
                     ? "exiting"
@@ -2551,12 +2333,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
           }}
           chapters={computedRows}
           docTitle={sidebarTitle}
-          onSelectChapter={(rowNum) => {
-            setSelectedProofRow(rowNum);
-            setProofPhase("active");
-            setIsChatOpen(false);
-            setActiveNavTab("chapters");
-          }}
           onOpenScheduledTasks={() => setIsScheduledTasksOpen(true)}
         />
       )}
@@ -2569,7 +2345,6 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
             setIsBenchmarksOpen(false);
             setActiveNavTab("chapters");
           }}
-          docTitle={sidebarTitle}
         />
       )}
 
@@ -2582,7 +2357,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
             setActiveNavTab("chapters");
           }}
           openedFromChat={isChatOpen}
-          onNavigateToChat={(prompt) => {
+          onNavigateToChat={() => {
             setIsScheduledTasksOpen(false);
             setIsChatOpen(true);
           }}

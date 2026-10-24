@@ -13,7 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import { getChatModels, MODEL_REGISTRY } from "@charan-interiors/contracts";
-import { useProviderKeys } from "../../customize";
+import { useProviderKeys } from "../../customize/publicApi";
 import type { ProjectItem, ProjectSession } from "./projectTypes";
 import { readChatAttachments } from "../../../app/files/chatAttachments";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";

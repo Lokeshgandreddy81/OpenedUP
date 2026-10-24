@@ -1,6 +1,29 @@
 import React, { useState, useMemo, useRef } from "react";
 import { ChevronsUpDown, SlidersHorizontal, Check, Search } from "lucide-react";
 
+const SVG_WIDTH = 1100;
+const SVG_HEIGHT = 430;
+const PLOT_LEFT = 85;
+const PLOT_RIGHT = 1055;
+const PLOT_TOP = 28;
+const PLOT_BOTTOM = 355;
+const PLOT_WIDTH = PLOT_RIGHT - PLOT_LEFT;
+const PLOT_HEIGHT = PLOT_BOTTOM - PLOT_TOP;
+const T_MIN = new Date("2022-11-01T00:00:00Z").getTime();
+const T_MAX = new Date("2026-10-18T00:00:00Z").getTime();
+
+function getXCoordinate(dateStr: string): number {
+  const t = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00Z" : "")).getTime();
+  if (!Number.isFinite(t) || t <= T_MIN) return PLOT_LEFT;
+  if (t >= T_MAX) return PLOT_RIGHT;
+  return PLOT_LEFT + ((t - T_MIN) / (T_MAX - T_MIN)) * PLOT_WIDTH;
+}
+
+function getYCoordinate(score: number): number {
+  const ratio = Math.max(0, Math.min(60, score)) / 60;
+  return PLOT_BOTTOM - ratio * PLOT_HEIGHT;
+}
+
 export interface TimelineModelPoint {
   id: string;
   name: string;
@@ -1383,35 +1406,6 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-
-  // SVG Coordinate Constants (+30% larger dimensions for maximum clarity)
-  const SVG_WIDTH = 1100;
-  const SVG_HEIGHT = 430;
-  const PLOT_LEFT = 85;
-  const PLOT_RIGHT = 1055;
-  const PLOT_TOP = 28;
-  const PLOT_BOTTOM = 355;
-  const PLOT_WIDTH = PLOT_RIGHT - PLOT_LEFT;
-  const PLOT_HEIGHT = PLOT_BOTTOM - PLOT_TOP;
-
-  // Timeline bounds: Nov 1, 2022 to Oct 18, 2026
-  const T_MIN = useMemo(() => new Date("2022-11-01T00:00:00Z").getTime(), []);
-  const T_MAX = useMemo(() => new Date("2026-10-18T00:00:00Z").getTime(), []);
-
-  /**
-   * Linear time projection mapping ISO dates to SVG X coordinates
-   */
-  const getXCoordinate = (dateStr: string): number => {
-    const t = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00Z" : "")).getTime();
-    if (!Number.isFinite(t) || t <= T_MIN) return PLOT_LEFT;
-    if (t >= T_MAX) return PLOT_RIGHT;
-    return PLOT_LEFT + ((t - T_MIN) / (T_MAX - T_MIN)) * PLOT_WIDTH;
-  };
-
-  const getYCoordinate = (score: number): number => {
-    const ratio = Math.max(0, Math.min(60, score)) / 60;
-    return PLOT_BOTTOM - ratio * PLOT_HEIGHT;
-  };
 
   // Group models by creator and construct chronological step lines
   const creatorLines = useMemo(() => {

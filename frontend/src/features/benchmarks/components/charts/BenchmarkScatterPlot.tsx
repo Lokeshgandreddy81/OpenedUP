@@ -196,11 +196,12 @@ export const BenchmarkScatterPlot: React.FC<BenchmarkScatterPlotProps> = ({
         setPan({ x: 0, y: 0 });
       }
     }
-  }, [activePresetId]);
+  }, [activePresetId, activePreset]);
 
   // --- Filtering State ---
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCreators, setSelectedCreators] = useState<Set<CreatorId>>(new Set());
+  const hasInitializedCreatorsRef = useRef(false);
   const [weightsFilter, setWeightsFilter] = useState<"all" | WeightsType>("all");
   const [reasoningFilter, setReasoningFilter] = useState<"all" | "extended-thinking" | "standard">(
     "all"
@@ -232,11 +233,12 @@ export const BenchmarkScatterPlot: React.FC<BenchmarkScatterPlotProps> = ({
   });
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  // Initialize selected creators when models load
+  // Initialize filters once when model data first arrives so an intentional empty selection stays empty.
   useEffect(() => {
-    if (models.length > 0 && selectedCreators.size === 0) {
+    if (models.length > 0 && !hasInitializedCreatorsRef.current) {
       const allCreators = new Set<CreatorId>(models.map((m) => m.creator));
       setSelectedCreators(allCreators);
+      hasInitializedCreatorsRef.current = true;
     }
   }, [models]);
 

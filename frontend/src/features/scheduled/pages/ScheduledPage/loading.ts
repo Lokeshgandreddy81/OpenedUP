@@ -1,0 +1,1 @@
+export { ScheduledPageSkeleton } from "./LoadingSkeleton";

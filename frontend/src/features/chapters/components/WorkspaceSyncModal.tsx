@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type DateRangeFilter,
   type DiscoveredWorkspaceItem,
@@ -63,6 +63,7 @@ export const WorkspaceSyncModal: React.FC<WorkspaceSyncModalProps> = ({
 }) => {
   const reducedMotion = usePrefersReducedMotion();
   const [isClosing, setIsClosing] = useState(false);
+  const wasOpenRef = useRef(false);
 
   // Step 1: OAuth & Source Selection (hydrated from sessionStorage if active)
   const [accessToken, setAccessToken] = useState<string | null>(
@@ -137,7 +138,9 @@ export const WorkspaceSyncModal: React.FC<WorkspaceSyncModalProps> = ({
 
   // Re-verify persisted OAuth session whenever the drawer opens
   useEffect(() => {
-    if (!isOpen) return;
+    const justOpened = isOpen && !wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+    if (!justOpened) return;
     const savedSession = getSavedWorkspaceSession();
     if (savedSession) {
       setAccessToken(savedSession.accessToken);
@@ -150,7 +153,7 @@ export const WorkspaceSyncModal: React.FC<WorkspaceSyncModalProps> = ({
       setGrantedScopes({ drive: false, gmail: false });
       onConnectedEmailChange?.(null);
     }
-  }, [isOpen]);
+  }, [isOpen, accessToken, accountEmail, onConnectedEmailChange]);
 
   const handleTriggerClose = useCallback(() => {
     if (isDownloading || isClosing) return;

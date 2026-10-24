@@ -403,7 +403,7 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
     const ro = new ResizeObserver(update);
     ro.observe(headerRef.current);
     return () => ro.disconnect();
-  }, [docTitle, chapters]);
+  }, [docTitle, chapters, headerHeight]);
 
   const layout = useMemo(
     () => computeRoadmapLayout(graph, progress, headerHeight),
@@ -706,18 +706,6 @@ export const RoadmapCanvas: React.FC<RoadmapCanvasProps> = ({
               .replace(/\s*[-—–]+\s*CHAPTERS?\s*\d+[-–\d\s]*/gi, "")
               .replace(/^PART\s+[IVXLCDM\d]+:\s*/i, "")
               .trim() || rawTitle;
-
-          const filteredSubTopics = (selectedTopic.subTopics || []).filter((sub) => {
-            const t = sub.text.trim().toLowerCase();
-            const cleanLower = displayTitle.toLowerCase();
-            return (
-              t.length > 2 &&
-              t !== cleanLower &&
-              !cleanLower.endsWith(t) &&
-              t !== "chapters" &&
-              t !== "chapter"
-            );
-          });
 
           const cleanSummary = (selectedTopic.summary || "")
             .replace(/^CHAPTER\s+\d+\s*[-—–]\s*[^:\n]+:\s*/i, "")

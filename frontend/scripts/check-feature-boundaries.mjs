@@ -17,7 +17,11 @@ const parsedConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, fr
 function filesUnder(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const entryPath = path.join(directory, entry.name);
-    return entry.isDirectory() ? filesUnder(entryPath) : /\.(ts|tsx)$/.test(entry.name) ? [entryPath] : [];
+    return entry.isDirectory()
+      ? filesUnder(entryPath)
+      : /\.(ts|tsx)$/.test(entry.name)
+        ? [entryPath]
+        : [];
   });
 }
 
@@ -28,7 +32,10 @@ function featureAt(filePath) {
 }
 
 const violations = [];
-for (const containingFile of filesUnder(featuresRoot)) {
+const productionFiles = filesUnder(sourceRoot).filter(
+  (file) => !file.split(path.sep).includes("test") && !/\.(test|spec)\.(ts|tsx)$/.test(file)
+);
+for (const containingFile of productionFiles) {
   const sourceFeature = featureAt(containingFile);
   const source = ts.createSourceFile(
     containingFile,
@@ -58,17 +65,25 @@ for (const containingFile of filesUnder(featuresRoot)) {
   visit(source);
 
   for (const specifier of specifiers) {
-    const resolved = ts.resolveModuleName(
-      specifier,
-      containingFile,
-      parsedConfig.options,
-      ts.sys
-    ).resolvedModule?.resolvedFileName;
-    if (!resolved) continue;
+    const resolved = ts.resolveModuleName(specifier, containingFile, parsedConfig.options, ts.sys)
+      .resolvedModule?.resolvedFileName;
+    if (!resolved) {
+      if (specifier.includes("/features/") || specifier.startsWith("./features/")) {
+        violations.push(
+          `${path.relative(process.cwd(), containingFile)} has an unresolved feature import ${specifier}`
+        );
+      }
+      continue;
+    }
     const targetFeature = featureAt(resolved);
     if (!targetFeature || targetFeature === sourceFeature) continue;
     const entryName = path.basename(resolved);
-    if (entryName === "index.ts" || entryName === "index.tsx" || entryName === "publicApi.ts")
+    if (
+      entryName === "index.ts" ||
+      entryName === "index.tsx" ||
+      entryName === "publicApi.ts" ||
+      entryName === "loading.ts"
+    )
       continue;
     violations.push(
       `${path.relative(process.cwd(), containingFile)} imports private ${targetFeature} module ${specifier}`
@@ -77,7 +92,9 @@ for (const containingFile of filesUnder(featuresRoot)) {
 }
 
 if (violations.length > 0) {
-  globalThis.console.error("Cross-feature imports must use the target feature's index.ts or publicApi.ts:");
+  globalThis.console.error(
+    "Cross-feature imports must use the target feature's index.ts or publicApi.ts:"
+  );
   for (const violation of violations) globalThis.console.error(`- ${violation}`);
   process.exit(1);
 }

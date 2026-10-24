@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { getChatModels, getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
-import { useProviderKeys } from "../../customize";
+import { useProviderKeys } from "../../customize/publicApi";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
 import { readChatAttachments, type ChatAttachmentFile } from "../../../app/files/chatAttachments";
 import type { AiModelId, AiModelOption, EffortLevel } from "./chatTypes";
@@ -737,9 +737,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                               }`}
                             >
                               <div className="flex min-w-0 items-center gap-2 pr-2">
-                                <span
-                                  className="truncate text-[14px] font-semibold leading-snug text-slate-950"
-                                >
+                                <span className="truncate text-[14px] font-semibold leading-snug text-slate-950">
                                   {model.name}
                                 </span>
                               </div>

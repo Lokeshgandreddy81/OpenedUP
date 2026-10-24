@@ -6,7 +6,7 @@ import { ChatInput } from "./ChatInput";
 import { CHAT_PLUGINS, useInstalledPluginIds } from "../../plugins/publicApi";
 import type { CustomizeCategory } from "../../customize";
 import { ChatWorkspaceScreens } from "../pages/ChatPage/ChatWorkspaceScreens";
-import { getKeyForModel, getProviderChatRequestConfig } from "../../customize";
+import { getKeyForModel, getProviderChatRequestConfig } from "../../customize/publicApi";
 import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
 import {
@@ -48,7 +48,6 @@ export interface ChatWindowProps {
   onClose: () => void;
   chapters?: ComputedRow[];
   docTitle?: string;
-  onSelectChapter?: (rowNumber: number) => void;
   onOpenScheduledTasks?: () => void;
   initialView?:
     | "chat"
@@ -77,7 +76,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onClose,
   chapters = [],
   docTitle = "Document",
-  onSelectChapter,
   onOpenScheduledTasks,
   initialView = "chat",
   onViewChange,
@@ -96,6 +94,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   >(initialView);
   const [customizeInitialCategory, setCustomizeInitialCategory] =
     useState<CustomizeCategory>("Connectors");
+  const processedInitialViewRef = useRef<typeof initialView | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isScheduledTasksInternalOpen, setIsScheduledTasksInternalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AiModelId>(
@@ -112,6 +111,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [installedPluginIds]);
 
   useEffect(() => {
+    if (processedInitialViewRef.current === initialView) return;
+    processedInitialViewRef.current = initialView;
     if (initialView === "chapters") {
       if (onViewChange) {
         onViewChange("chapters");
@@ -128,9 +129,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }
       return;
     }
-    if (initialView && initialView !== activeView) {
-      setActiveView(initialView);
-    }
+    setActiveView((current) => (current === initialView ? current : initialView));
   }, [initialView, onViewChange, navigate]);
 
   const [projectsNavKey, setProjectsNavKey] = useState(0);
@@ -778,7 +777,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     ]
   );
 
-  const currentMessages = isTemporaryChat ? temporaryMessages : activeConversation?.messages || [];
+  const currentMessages = useMemo(
+    () => (isTemporaryChat ? temporaryMessages : (activeConversation?.messages ?? [])),
+    [isTemporaryChat, temporaryMessages, activeConversation?.messages]
+  );
   const isEmptyChat = currentMessages.length === 0 && !isThinking;
   const handleModelChange = useCallback(
     (model: AiModelId) => {
@@ -875,7 +877,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       <ChatWorkspaceScreens
         activeView={activeView}
-        docTitle={docTitle}
         customizeInitialCategory={customizeInitialCategory}
         projectsNavKey={projectsNavKey}
         isScheduledTasksOpen={isScheduledTasksInternalOpen}

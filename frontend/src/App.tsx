@@ -1,34 +1,61 @@
 import React, { lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AppProvider, useAppContext } from "./features/chapters/state/AppContext";
+import { AppProvider, useAppContext, WorkspaceSyncModal } from "./features/chapters";
 import { ChatAuthProvider } from "./app/auth/ChatAuthContext";
-import { WorkspaceSyncModal } from "./features/chapters/components/WorkspaceSyncModal";
 import { PageRoute } from "./app/components/PageRoute";
 
-import { LandingPageSkeleton } from "./features/chapters/pages/LandingPage/LoadingSkeleton";
-import { ResultsPageSkeleton } from "./features/chapters/pages/ResultsPage/LoadingSkeleton";
-import { RoadmapPageSkeleton } from "./features/roadmaps/pages/RoadmapPage/LoadingSkeleton";
-import { BenchmarksPageSkeleton } from "./features/benchmarks/pages/BenchmarksPage/LoadingSkeleton";
-import { ChatPageSkeleton } from "./features/chat/pages/ChatPage/LoadingSkeleton";
-import { ProjectsPageSkeleton } from "./features/projects/pages/ProjectsPage/LoadingSkeleton";
-import { ScheduledPageSkeleton } from "./features/scheduled/pages/ScheduledPage/LoadingSkeleton";
-import { ImageArenaPageSkeleton } from "./features/benchmarks/pages/ImageArenaPage/LoadingSkeleton";
-import { CodingAgentsPageSkeleton } from "./features/benchmarks/pages/CodingAgentsPage/LoadingSkeleton";
+import { LandingPageSkeleton } from "./features/chapters/pages/LandingPage/loading";
+import { ResultsPageSkeleton } from "./features/chapters/pages/ResultsPage/loading";
+import { RoadmapPageSkeleton } from "./features/roadmaps/pages/RoadmapPage/loading";
+import { BenchmarksPageSkeleton } from "./features/benchmarks/pages/BenchmarksPage/loading";
+import { ChatPageSkeleton } from "./features/chat/pages/ChatPage/loading";
+import { ProjectsPageSkeleton } from "./features/projects/pages/ProjectsPage/loading";
+import { ScheduledPageSkeleton } from "./features/scheduled/pages/ScheduledPage/loading";
+import { ImageArenaPageSkeleton } from "./features/benchmarks/pages/ImageArenaPage/loading";
+import { CodingAgentsPageSkeleton } from "./features/benchmarks/pages/CodingAgentsPage/loading";
 
-const LandingPage = lazy(() => import("./features/chapters/pages/LandingPage/LandingPage"));
-const ResultsPage = lazy(() => import("./features/chapters/pages/ResultsPage/ResultsPage"));
-const RoadmapPage = lazy(() => import("./features/roadmaps/pages/RoadmapPage/RoadmapPage"));
-const BenchmarksPage = lazy(
-  () => import("./features/benchmarks/pages/BenchmarksPage/BenchmarksPage")
+const LandingPage = lazy(() =>
+  import("./features/chapters/pages/LandingPage").then(({ LandingPage }) => ({
+    default: LandingPage,
+  }))
 );
-const ChatPage = lazy(() => import("./features/chat/pages/ChatPage/ChatPage"));
-const ProjectsPage = lazy(() => import("./features/projects/pages/ProjectsPage/ProjectsPage"));
-const ScheduledPage = lazy(() => import("./features/scheduled/pages/ScheduledPage/ScheduledPage"));
-const ImageArenaPage = lazy(
-  () => import("./features/benchmarks/pages/ImageArenaPage/ImageArenaPage")
+const ResultsPage = lazy(() =>
+  import("./features/chapters/pages/ResultsPage").then(({ ResultsPage }) => ({
+    default: ResultsPage,
+  }))
 );
-const CodingAgentsPage = lazy(
-  () => import("./features/benchmarks/pages/CodingAgentsPage/CodingAgentsPage")
+const RoadmapPage = lazy(() =>
+  import("./features/roadmaps/pages/RoadmapPage").then(({ RoadmapPage }) => ({
+    default: RoadmapPage,
+  }))
+);
+const BenchmarksPage = lazy(() =>
+  import("./features/benchmarks/pages/BenchmarksPage").then(({ BenchmarksPage }) => ({
+    default: BenchmarksPage,
+  }))
+);
+const ChatPage = lazy(() =>
+  import("./features/chat/pages/ChatPage").then(({ ChatPage }) => ({ default: ChatPage }))
+);
+const ProjectsPage = lazy(() =>
+  import("./features/projects/pages/ProjectsPage").then(({ ProjectsPage }) => ({
+    default: ProjectsPage,
+  }))
+);
+const ScheduledPage = lazy(() =>
+  import("./features/scheduled/pages/ScheduledPage").then(({ ScheduledPage }) => ({
+    default: ScheduledPage,
+  }))
+);
+const ImageArenaPage = lazy(() =>
+  import("./features/benchmarks/pages/ImageArenaPage").then(({ ImageArenaPage }) => ({
+    default: ImageArenaPage,
+  }))
+);
+const CodingAgentsPage = lazy(() =>
+  import("./features/benchmarks/pages/CodingAgentsPage").then(({ CodingAgentsPage }) => ({
+    default: CodingAgentsPage,
+  }))
 );
 
 export const AppShell: React.FC = () => {

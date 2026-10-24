@@ -6,178 +6,11 @@ import { CreatorLogo, getCreatorColor } from "../ui/CreatorLogo";
 export interface ModelComparatorProps {
   models: AIModelBenchmark[];
   initialModelIds?: string[];
-  onSelectModel?: (model: AIModelBenchmark) => void;
 }
 
 // Colors for up to 5 comparison slots
 const SLOT_LABELS = ["A", "B", "C", "D", "E"] as const;
 type SlotKey = (typeof SLOT_LABELS)[number];
-
-const SLOT_CONFIGS: Record<
-  SlotKey,
-  {
-    slot: SlotKey;
-    label: string;
-    strokeColor: string;
-    fillColor: string;
-    badgeBg: string;
-    badgeText: string;
-    badgeBorder: string;
-    accentBorder: string;
-    dotClass: string;
-  }
-> = {
-  A: {
-    slot: "A",
-    label: "Model A",
-    strokeColor: "#0047FF",
-    fillColor: "rgba(0,71,255,0.18)",
-    badgeBg: "bg-slate-100",
-    badgeText: "text-slate-600",
-    badgeBorder: "border-transparent",
-    accentBorder: "border-transparent",
-    dotClass: "bg-slate-400",
-  },
-  B: {
-    slot: "B",
-    label: "Model B",
-    strokeColor: "#10B981",
-    fillColor: "rgba(16,185,129,0.18)",
-    badgeBg: "bg-slate-100",
-    badgeText: "text-slate-600",
-    badgeBorder: "border-transparent",
-    accentBorder: "border-transparent",
-    dotClass: "bg-slate-400",
-  },
-  C: {
-    slot: "C",
-    label: "Model C",
-    strokeColor: "#F59E0B",
-    fillColor: "rgba(245,158,11,0.18)",
-    badgeBg: "bg-slate-100",
-    badgeText: "text-slate-600",
-    badgeBorder: "border-transparent",
-    accentBorder: "border-transparent",
-    dotClass: "bg-slate-400",
-  },
-  D: {
-    slot: "D",
-    label: "Model D",
-    strokeColor: "#8B5CF6",
-    fillColor: "rgba(139,92,246,0.18)",
-    badgeBg: "bg-slate-100",
-    badgeText: "text-slate-600",
-    badgeBorder: "border-transparent",
-    accentBorder: "border-transparent",
-    dotClass: "bg-slate-400",
-  },
-  E: {
-    slot: "E",
-    label: "Model E",
-    strokeColor: "#EC4899",
-    fillColor: "rgba(236,72,153,0.18)",
-    badgeBg: "bg-slate-100",
-    badgeText: "text-slate-600",
-    badgeBorder: "border-transparent",
-    accentBorder: "border-transparent",
-    dotClass: "bg-slate-400",
-  },
-};
-
-const SLOT_CONFIG_LIST = Object.values(SLOT_CONFIGS);
-
-// 6 Radar dimensions definition
-interface RadarDimension {
-  id: string;
-  name: string;
-  shortLabel: string;
-  metricLabel: string;
-  calculateScore: (model: AIModelBenchmark) => number; // 0 to 100
-  formatRawValue: (model: AIModelBenchmark) => string;
-}
-
-const RADAR_DIMENSIONS: RadarDimension[] = [
-  {
-    id: "reasoning",
-    name: "Reasoning",
-    shortLabel: "Reasoning",
-    metricLabel: "GPQA & MMLU-Pro",
-    calculateScore: (m) => {
-      // Blend GPQA Diamond (70%) and MMLU-Pro (30%)
-      const gpqa = m.quality.gpqaDiamond || 50;
-      const mmlu = m.quality.mmluPro || 50;
-      const raw = gpqa * 0.65 + mmlu * 0.35;
-      return Math.min(100, Math.max(15, raw));
-    },
-    formatRawValue: (m) =>
-      `GPQA: ${m.quality.gpqaDiamond.toFixed(1)}% | MMLU: ${m.quality.mmluPro.toFixed(1)}%`,
-  },
-  {
-    id: "coding",
-    name: "Coding",
-    shortLabel: "Coding",
-    metricLabel: "SWE-bench Verified",
-    calculateScore: (m) => {
-      // SWE-bench verified score (top models are ~70-75%, normalize to 100)
-      const swe = m.quality.sweBenchVerified || 35;
-      return Math.min(100, Math.max(15, (swe / 75) * 100));
-    },
-    formatRawValue: (m) => `${m.quality.sweBenchVerified.toFixed(1)}% SWE-bench`,
-  },
-  {
-    id: "factuality",
-    name: "Factuality",
-    shortLabel: "Factuality",
-    metricLabel: "Omniscience Accuracy",
-    calculateScore: (m) => {
-      const acc = m.quality.omniscienceAccuracy || 80;
-      const nonHalluc = m.quality.omniscienceNonHallucination || 80;
-      return Math.min(100, Math.max(20, (acc + nonHalluc) / 2));
-    },
-    formatRawValue: (m) => `${m.quality.omniscienceAccuracy.toFixed(1)}% accuracy`,
-  },
-  {
-    id: "speed",
-    name: "Output Speed",
-    shortLabel: "Speed",
-    metricLabel: "Tokens / Second",
-    calculateScore: (m) => {
-      // Normalize median tokens/sec (0 to 250 t/s -> 0 to 100)
-      const tps = m.performance.outputSpeedTokensPerSec.median;
-      return Math.min(100, Math.max(15, (tps / 220) * 100));
-    },
-    formatRawValue: (m) => `${Math.round(m.performance.outputSpeedTokensPerSec.median)} tok/s`,
-  },
-  {
-    id: "latency",
-    name: "Low Latency",
-    shortLabel: "Latency",
-    metricLabel: "Time to 1st Token (TTFT)",
-    calculateScore: (m) => {
-      // Lower TTFT is better: 0.25s -> 100, 2.5s -> 20
-      const ttft = m.performance.ttftSeconds.median;
-      const normalized = 100 - ((ttft - 0.25) / 2.25) * 80;
-      return Math.min(100, Math.max(15, normalized));
-    },
-    formatRawValue: (m) => `${m.performance.ttftSeconds.median.toFixed(2)}s TTFT`,
-  },
-  {
-    id: "costEfficiency",
-    name: "Cost Efficiency",
-    shortLabel: "Cost",
-    metricLabel: "Blended Price / 1M",
-    calculateScore: (m) => {
-      // Lower blended price is better: $0.15 -> 100, $15.00 -> 15
-      const price = m.pricing.blendedPricePer1M;
-      if (price <= 0.15) return 100;
-      // Logarithmic decay
-      const logRatio = Math.log10(1 + price) / Math.log10(1 + 15);
-      const score = 100 - logRatio * 85;
-      return Math.min(100, Math.max(15, score));
-    },
-    formatRawValue: (m) => `$${m.pricing.blendedPricePer1M.toFixed(2)} / 1M`,
-  },
-];
 
 /**
  * Format context window into human readable tokens (200K, 1M, etc.)
@@ -190,11 +23,7 @@ function formatContextTokens(tokens: number): string {
   return `${Math.round(tokens / 1_000)}K tokens`;
 }
 
-export const ModelComparator: React.FC<ModelComparatorProps> = ({
-  models,
-  initialModelIds,
-  onSelectModel,
-}) => {
+export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initialModelIds }) => {
   // Determine smart initial selections
   const defaultModelA = useMemo(() => {
     if (initialModelIds?.[0]) {
@@ -310,25 +139,9 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({
         model,
         slotLabel,
         originalIdx,
-        config:
-          SLOT_CONFIG_LIST[
-            displayIdx === 0 ? 0 : displayIdx === ordered.length - 1 ? 1 : displayIdx + 1
-          ] ?? SLOT_CONFIG_LIST[0],
       };
     });
   }, [selectedModels]);
-
-  // Visibility toggle for radar chart layers
-  const [visibleSlots, setVisibleSlots] = useState<Record<SlotKey, boolean>>({
-    A: true,
-    B: true,
-    C: true,
-    D: true,
-    E: true,
-  });
-
-  // Active hovered dimension on radar chart
-  const [hoveredDimension, setHoveredDimension] = useState<RadarDimension | null>(null);
 
   // Model Picker Modal states
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -343,7 +156,6 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({
     return selectedModels.map((model, i) => ({
       slot: SLOT_LABELS[i] as SlotKey,
       model,
-      config: SLOT_CONFIG_LIST[i] ?? SLOT_CONFIG_LIST[0],
     }));
   }, [selectedModels]);
 
@@ -351,25 +163,6 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({
   const modelA = selectedModels[0];
   const modelB = selectedModels[1];
   const modelC = selectedModels[2] ?? null;
-
-  // ==========================================================
-  // RADAR CHART MATH & GEOMETRY
-  // ==========================================================
-  const RADAR_RADIUS = 160;
-  const RADAR_CENTER = 230; // 460x460 canvas center
-  const NUM_AXES = RADAR_DIMENSIONS.length; // 6 axes
-
-  // Calculate polygon points string for a given model
-  const getRadarPolygonPoints = (model: AIModelBenchmark): string => {
-    return RADAR_DIMENSIONS.map((dim, i) => {
-      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / NUM_AXES;
-      const score = dim.calculateScore(model);
-      const r = (score / 100) * RADAR_RADIUS;
-      const x = RADAR_CENTER + r * Math.cos(angle);
-      const y = RADAR_CENTER + r * Math.sin(angle);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
-  };
 
   // Filtered + sorted models for picker modal
   const filteredPickerModels = useMemo(() => {
@@ -487,7 +280,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({
             className="grid gap-5 max-w-4xl mx-auto mt-[5%]"
             style={{ gridTemplateColumns: `repeat(${selectedModels.length}, minmax(0, 1fr))` }}
           >
-            {displayModels.map(({ model, slotLabel, originalIdx, config }) => {
+            {displayModels.map(({ model, slotLabel, originalIdx }) => {
               const isEdge = originalIdx === 0 || originalIdx === 1;
               return (
                 <div
@@ -739,7 +532,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({
               Benchmark
             </div>
 
-            {activeModels.map(({ slot, model, config }) => (
+            {activeModels.map(({ slot, model }) => (
               <div key={slot} className="flex items-center justify-center gap-2">
                 <span
                   className="truncate px-2 py-1 rounded text-white text-[11px] font-bold"
@@ -962,7 +755,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({
               Benchmark
             </div>
 
-            {activeModels.map(({ slot, model, config }) => (
+            {activeModels.map(({ slot, model }) => (
               <div key={slot} className="flex items-center justify-center gap-2">
                 <span
                   className="truncate px-2 py-1 rounded text-white text-[11px] font-bold"
@@ -1111,7 +904,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({
               Benchmark
             </div>
 
-            {activeModels.map(({ slot, model, config }) => (
+            {activeModels.map(({ slot, model }) => (
               <div key={slot} className="flex items-center justify-center gap-2">
                 <span
                   className="truncate px-2 py-1 rounded text-white text-[11px] font-bold"

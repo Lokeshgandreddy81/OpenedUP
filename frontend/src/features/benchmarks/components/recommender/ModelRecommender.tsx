@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Sparkles,
   Zap,
@@ -23,7 +23,7 @@ export interface ModelRecommenderProps {
 }
 
 // Preset Workload Ratios
-type WorkloadRatioPreset = "standard" | "reading" | "generation" | "custom";
+type WorkloadRatioPreset = "standard" | "reading" | "generation";
 
 interface RatioConfig {
   id: WorkloadRatioPreset;
@@ -117,8 +117,6 @@ export const ModelRecommender: React.FC<ModelRecommenderProps> = ({
   // Workload Token Estimator Controls
   const [monthlyTokensMillions, setMonthlyTokensMillions] = useState<number>(20); // 20 Million tokens/month default
   const [selectedRatioPreset, setSelectedRatioPreset] = useState<WorkloadRatioPreset>("standard");
-  const [customInputPercent, setCustomInputPercent] = useState<number>(75);
-
   // Filter & Search Controls
   const [filterWeights, setFilterWeights] = useState<"all" | WeightsType>("all");
   const [filterReasoning, setFilterReasoning] = useState<"all" | "reasoning" | "standard">("all");
@@ -126,28 +124,27 @@ export const ModelRecommender: React.FC<ModelRecommenderProps> = ({
 
   // Input & Output token ratio fractions
   const { inputFraction, outputFraction } = useMemo(() => {
-    if (selectedRatioPreset === "custom") {
-      const inFrac = customInputPercent / 100;
-      return { inputFraction: inFrac, outputFraction: 1 - inFrac };
-    }
     const preset = RATIO_PRESETS.find((r) => r.id === selectedRatioPreset) ?? RATIO_PRESETS[0];
     return {
       inputFraction: preset.inputPercent / 100,
       outputFraction: preset.outputPercent / 100,
     };
-  }, [selectedRatioPreset, customInputPercent]);
+  }, [selectedRatioPreset]);
 
   // Total tokens in integer count
   const totalTokens = monthlyTokensMillions * 1_000_000;
 
   // Calculate estimated monthly workload cost for any model
-  const calculateModelCost = (model: AIModelBenchmark): number => {
-    const inputTokens = totalTokens * inputFraction;
-    const outputTokens = totalTokens * outputFraction;
-    const inputCost = (inputTokens / 1_000_000) * model.pricing.inputPricePer1M;
-    const outputCost = (outputTokens / 1_000_000) * model.pricing.outputPricePer1M;
-    return inputCost + outputCost;
-  };
+  const calculateModelCost = useCallback(
+    (model: AIModelBenchmark): number => {
+      const inputTokens = totalTokens * inputFraction;
+      const outputTokens = totalTokens * outputFraction;
+      const inputCost = (inputTokens / 1_000_000) * model.pricing.inputPricePer1M;
+      const outputCost = (outputTokens / 1_000_000) * model.pricing.outputPricePer1M;
+      return inputCost + outputCost;
+    },
+    [totalTokens, inputFraction, outputFraction]
+  );
 
   // Find dynamic ranges for normalization across all models
   const modelRanges = useMemo(() => {
@@ -199,7 +196,7 @@ export const ModelRecommender: React.FC<ModelRecommenderProps> = ({
       minLatency: Math.max(minLatency, 0.05),
       maxLatency,
     };
-  }, [models, totalTokens, inputFraction, outputFraction]);
+  }, [models, calculateModelCost]);
 
   // Real-time Dynamic Optima Scoring Engine
   const scoredModels = useMemo(() => {
@@ -275,9 +272,7 @@ export const ModelRecommender: React.FC<ModelRecommenderProps> = ({
     weightCost,
     weightLatency,
     modelRanges,
-    totalTokens,
-    inputFraction,
-    outputFraction,
+    calculateModelCost,
   ]);
 
   // Filtered scored models according to user filters
@@ -1032,7 +1027,7 @@ export const ModelRecommender: React.FC<ModelRecommenderProps> = ({
             {/* Weights Filter */}
             <select
               value={filterWeights}
-              onChange={(e) => setFilterWeights(e.target.value as any)}
+              onChange={(e) => setFilterWeights(e.target.value as "all" | WeightsType)}
               className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20"
             >
               <option value="all">All Weights</option>
@@ -1043,7 +1038,9 @@ export const ModelRecommender: React.FC<ModelRecommenderProps> = ({
             {/* Reasoning Filter */}
             <select
               value={filterReasoning}
-              onChange={(e) => setFilterReasoning(e.target.value as any)}
+              onChange={(e) =>
+                setFilterReasoning(e.target.value as "all" | "reasoning" | "standard")
+              }
               className="bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0047FF]/20"
             >
               <option value="all">All Architectures</option>

@@ -7,7 +7,6 @@ interface CodexNavRailProps {
   activeTab: SidebarTab;
   isOpen: boolean;
   onSelectTab: (tab: SidebarTab) => void;
-  onToggleOpen?: () => void;
   onExport?: () => void;
   userInitials?: string;
   totalChapters?: number;
@@ -18,7 +17,6 @@ export const CodexNavRail: React.FC<CodexNavRailProps> = ({
   activeTab,
   isOpen,
   onSelectTab,
-  onToggleOpen,
   totalChapters = 0,
   roadmapProgressPercent = 0,
 }) => {

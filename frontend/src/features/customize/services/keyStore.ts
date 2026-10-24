@@ -30,7 +30,7 @@ export function getStoredKeys(): StoredKeysMap {
   return { ...memoryKeys };
 }
 
-function getKeyDrafts(): StoredKeysMap {
+export function getProviderKeyDrafts(): StoredKeysMap {
   return { ...legacyKeysToImport, ...memoryKeys };
 }
 
@@ -100,6 +100,7 @@ export function saveStoredKey(provider: ProviderId, apiKey: string, baseUrl?: st
 
 export function removeStoredKey(provider: ProviderId): void {
   if (typeof window === "undefined") return;
+  delete legacyKeysToImport[provider];
   const currentKeys = { ...getStoredKeys() };
   delete currentKeys[provider];
   memoryKeys = currentKeys;
@@ -166,7 +167,7 @@ export function getProviderChatRequestConfig(modelId: string): {
 
 export function useProviderKeys() {
   const { user } = useChatAuth();
-  const [keys, setKeys] = useState<StoredKeysMap>(() => getKeyDrafts());
+  const [keys, setKeys] = useState<StoredKeysMap>(() => getProviderKeyDrafts());
   const [baseUrls, setBaseUrls] = useState<StoredUrlsMap>(() => getStoredBaseUrls());
   const [accountProviders, setAccountProviders] = useState<ProviderId[]>(
     () => cachedAccountProviders
@@ -179,7 +180,7 @@ export function useProviderKeys() {
   const currentUserId = user?.uid;
 
   const refresh = useCallback(() => {
-    setKeys(getKeyDrafts());
+    setKeys(getProviderKeyDrafts());
     setBaseUrls(getStoredBaseUrls());
     setAccountProviders([...cachedAccountProviders]);
     setCustomModelIdState(getCustomModelId());
@@ -190,7 +191,7 @@ export function useProviderKeys() {
     if (lastUserIdRef.current !== currentUserId) {
       if (lastUserIdRef.current) memoryKeys = {};
       cachedAccountProviders = [];
-      setKeys(getKeyDrafts());
+      setKeys(getProviderKeyDrafts());
       setAccountProviders([]);
     }
     lastUserIdRef.current = currentUserId;

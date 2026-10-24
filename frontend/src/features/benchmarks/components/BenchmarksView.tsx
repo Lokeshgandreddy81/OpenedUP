@@ -13,14 +13,9 @@ import { BenchmarkCatalogView } from "./catalog/BenchmarkCatalogView";
 export interface BenchmarksViewProps {
   isOpen: boolean;
   onClose: () => void;
-  docTitle?: string;
 }
 
-export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
-  isOpen,
-  onClose,
-  docTitle = "Document",
-}) => {
+export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<BenchmarkCategory>("overview");
   const [selectedModel, setSelectedModel] = useState<AIModelBenchmark | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,11 +59,6 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
   };
 
   // Compare models handler
-  const handleCompareModels = (modelIds: string[]) => {
-    setCompareModelIds(modelIds);
-    setActiveTab("compare");
-  };
-
   // Compare single model trigger
   const handleCompareSingle = (model: AIModelBenchmark) => {
     setCompareModelIds((prev) => {
@@ -268,7 +258,6 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
                   setSelectedModel(model);
                   setActiveTab("overview");
                 }}
-                onCompareModels={handleCompareModels}
                 onCompareSingle={handleCompareSingle}
                 searchInputRef={searchInputRef}
               />
@@ -285,11 +274,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
             )}
 
             {activeTab === "compare" && (
-              <ModelComparator
-                models={BENCHMARK_MODELS}
-                initialModelIds={compareModelIds}
-                onSelectModel={handleSelectModel}
-              />
+              <ModelComparator models={BENCHMARK_MODELS} initialModelIds={compareModelIds} />
             )}
           </div>
         )}

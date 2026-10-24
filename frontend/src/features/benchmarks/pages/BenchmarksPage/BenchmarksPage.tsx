@@ -16,7 +16,7 @@ export const BenchmarksPageContent: React.FC = () => {
 
   return (
     <div className="w-screen h-screen">
-      <BenchmarksView isOpen={true} onClose={handleClose} docTitle="AI Model Benchmarks" />
+      <BenchmarksView isOpen={true} onClose={handleClose} />
     </div>
   );
 };

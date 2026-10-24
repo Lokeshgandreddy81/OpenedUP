@@ -1,0 +1,1 @@
+export { ResultsPageSkeleton } from "./LoadingSkeleton";

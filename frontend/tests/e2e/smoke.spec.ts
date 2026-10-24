@@ -101,6 +101,45 @@ test.describe("Production Smoke Tests", () => {
     expect(hasHorizontalOverflow).toBe(false);
   });
 
+  test("selecting a paid model opens its provider settings and sends chat with that key", async ({
+    page,
+  }) => {
+    let requestHeaders: Record<string, string> = {};
+    let requestBody: { model?: string } = {};
+    await page.route("**/api/chat/stream", async (route) => {
+      requestHeaders = route.request().headers();
+      requestBody = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: 'event: token\ndata: {"delta":"Connected model response."}\n\nevent: done\ndata: {"content":"Connected model response."}\n\n',
+      });
+    });
+    await page.addInitScript(() => localStorage.clear());
+    await page.goto("/chat");
+
+    await page.getByRole("button", { name: /Nemotron/ }).click();
+    await page.getByRole("button", { name: "More models" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Claude Opus 5.5" }).click();
+    await expect(page.getByRole("heading", { name: "AI Providers" })).toBeVisible();
+
+    const providerCard = page.locator("section").filter({
+      has: page.getByPlaceholder("Paste Anthropic API key"),
+    });
+    await providerCard.getByPlaceholder("Paste Anthropic API key").fill("ephemeral-anthropic-key");
+    await providerCard.getByRole("button", { name: "Connect", exact: true }).click();
+    await expect(
+      providerCard.getByRole("button", { name: "Connected", exact: true })
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "New chat" }).last().click();
+    await page.getByTestId("chat-composer").fill("Hello from the selected model");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await expect(page.getByText("Connected model response.")).toBeVisible();
+    expect(requestHeaders["x-provider-key"]).toBe("ephemeral-anthropic-key");
+    expect(requestBody.model).toBe("claude-opus-5.5");
+  });
+
   test("Gemini BYOK connects for the current session without requiring account sign-in", async ({
     page,
   }) => {
@@ -122,6 +161,35 @@ test.describe("Production Smoke Tests", () => {
     await expect(providerCard.getByText(/Available for this browser session/)).toBeVisible();
     expect(await popupPromise).toBeNull();
     expect(await page.evaluate(() => localStorage.getItem("openedup_byok_keys_v1"))).toBeNull();
+  });
+
+  test("disconnecting a migrated provider key clears its draft from the current session", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "openedup_byok_keys_v1",
+        JSON.stringify({ anthropic: "legacy-anthropic-key" })
+      );
+    });
+    await page.goto("/chat");
+    await page.getByRole("button", { name: "Customize" }).click();
+    await page.getByRole("button", { name: "Providers" }).click();
+
+    const providerCard = page.locator("section").filter({
+      has: page.getByPlaceholder("Paste Anthropic API key"),
+    });
+    const keyInput = providerCard.getByPlaceholder("Paste Anthropic API key");
+    await expect(keyInput).toHaveValue("legacy-anthropic-key");
+    await providerCard.getByRole("button", { name: "Connect", exact: true }).click();
+    await expect(
+      providerCard.getByRole("button", { name: "Connected", exact: true })
+    ).toBeVisible();
+
+    await providerCard.getByRole("button", { name: "Disconnect key" }).click();
+
+    await expect(keyInput).toHaveValue("");
+    await expect(providerCard.getByText("Not connected")).toBeVisible();
   });
 
   test("a failed stream does not poison the next request with an empty assistant message", async ({

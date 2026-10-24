@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FailedBatchInfo, UploadedPhoto } from "@charan-interiors/contracts";
 import { RisingWord, usePrefersReducedMotion } from "../../../app/components/MotionPrimitives";
@@ -52,13 +52,13 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [reducedMotion]);
 
-  const handleStart = () => {
+  const handleStart = useCallback(() => {
     if (onGetStarted) {
       onGetStarted();
     } else {
       navigate("/chat");
     }
-  };
+  }, [navigate, onGetStarted]);
 
   /* ── Keyboard shortcut: Enter key triggers get started ── */
   useEffect(() => {
@@ -77,7 +77,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onGetStarted, navigate]);
+  }, [handleStart]);
 
   const fadeIn = (step: number, delay = 0): React.CSSProperties => ({
     opacity: loadStep >= step ? 1 : 0,

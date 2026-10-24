@@ -13,7 +13,6 @@ export const ResultsPageContent: React.FC = () => {
     handleUpdateRow,
     handleChangeCostCenter,
     handleAddFiles,
-    setIsWorkspaceModalOpen,
     handleNewPile,
   } = useAppContext();
 
@@ -29,7 +28,6 @@ export const ResultsPageContent: React.FC = () => {
       onUpdateRow={handleUpdateRow}
       onChangeCostCenter={handleChangeCostCenter}
       onAddFiles={handleAddFiles}
-      onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
       onNewPile={handleNewPile}
     />
   );

@@ -120,7 +120,7 @@ Each route/screen belongs to one feature and has its own `.tsx` page entry. Feat
 
 ### Installation
 
-Clone the repository and run deterministic installation:
+Use Node.js `24.12.0` or newer and npm `10` or newer. The repository pins the tested Node version in `.nvmrc`; npm rejects versions outside the declared engine range. Then clone and install:
 
 ```bash
 git clone git@github.com:Lokeshgandreddy81/OpenedUP.git
@@ -128,23 +128,33 @@ cd OpenedUP
 npm ci
 ```
 
-### Environment Configuration
+### Local Development
 
-Copy the environment templates used by the frontend and backend:
+No environment file is required to start the app locally. Run both services from the repository root:
 
 ```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+npm run dev
 ```
 
-| Variable              | Required   | Default | Description                                                                                              |
-| :-------------------- | :--------- | :------ | :------------------------------------------------------------------------------------------------------- |
-| `GEMINI_API_KEY`      | Optional   | None    | Server key for Gemini-powered document extraction. Chat uses a personal provider key entered in the app. |
-| `PORT`                | Optional   | `3000`  | HTTP port for the API and static asset server.                                                           |
-| `FIREBASE_PROJECT_ID` | Optional   | None    | Firebase project used to verify signed-in users and protect saved provider keys.                         |
-| `BYOK_ENCRYPTION_KEY` | Production | None    | Base64-encoded 32-byte key used to encrypt saved provider credentials.                                   |
+Open <http://localhost:5173>. Vite proxies `/api` requests to the backend at `http://localhost:3000`. Chat requires a key for the selected provider, entered in the app. To enable server-side Gemini processing for scanned PDFs and images, copy `backend/.env.example` to `backend/.env` and set `GEMINI_API_KEY`; it is optional for startup and ordinary BYOK chat. `frontend/.env.example` is only needed if you want to override the Vite API proxy target.
 
-For local development, run `npm run dev`. The frontend uses Vite's default local port and the backend uses `PORT`; chat requests require a key for the selected provider, entered in the app. Do not commit populated `.env` files.
+### Docker Compose
+
+Compose uses the root `.env` file (separate from `backend/.env`):
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Open <http://localhost:8080>. Before using signed-in credential storage, set `FIREBASE_PROJECT_ID` to match `frontend/firebase-applet-config.json` and set a stable, randomly generated, base64-encoded 32-byte `BYOK_ENCRYPTION_KEY` in `.env`. `GEMINI_API_KEY` is optional and enables server-side Gemini document processing. Keep the `openedup-data` volume to preserve stored account data. Do not commit populated `.env` files.
+
+| Variable              | Required                  | Description                                                                                               |
+| :-------------------- | :------------------------ | :-------------------------------------------------------------------------------------------------------- |
+| `GEMINI_API_KEY`      | Optional                  | Server key for Gemini-powered scanned document processing. Chat uses the provider key entered in the app. |
+| `PORT`                | Optional                  | Backend HTTP port; defaults to `3000`.                                                                    |
+| `FIREBASE_PROJECT_ID` | Optional                  | Firebase project used to verify signed-in users and protect saved provider keys.                          |
+| `BYOK_ENCRYPTION_KEY` | For saved keys in Compose | Base64-encoded 32-byte key used to encrypt saved provider credentials.                                    |
 
 ---
 
@@ -163,7 +173,7 @@ Run all scripts from the repository root:
 | `npm run lint`          | Runs ESLint flat configuration check with zero allowable errors.            |
 | `npm run format:check`  | Verifies code adherence to Prettier formatting standards.                   |
 | `npm run format`        | Auto-formats all code, markdown, YAML, and configuration files.             |
-| `npm run e2e`           | Executes Playwright end-to-end smoke test suite against running server.     |
+| `npm run e2e`           | Builds and starts the production server for the Playwright smoke tests.     |
 | `npm audit`             | Scans dependency tree for vulnerabilities (0 high/critical allowed).        |
 
 ---

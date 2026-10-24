@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { getChatModels, MODEL_REGISTRY } from "@charan-interiors/contracts";
-import { getProviderChatRequestConfig, useProviderKeys } from "../../customize";
+import { getProviderChatRequestConfig, useProviderKeys } from "../../customize/publicApi";
 import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";

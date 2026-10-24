@@ -9,14 +9,12 @@ export interface AADimensionSectionsProps {
   models: AIModelBenchmark[];
   onSelectModel: (model: AIModelBenchmark) => void;
   onCompareModel?: (model: AIModelBenchmark) => void;
-  compareModelIds?: string[];
 }
 
 export const AADimensionSections: React.FC<AADimensionSectionsProps> = ({
   models,
   onSelectModel,
   onCompareModel,
-  compareModelIds = [],
 }) => {
   // Metric tab states
   const [intelMetric, setIntelMetric] = useState<

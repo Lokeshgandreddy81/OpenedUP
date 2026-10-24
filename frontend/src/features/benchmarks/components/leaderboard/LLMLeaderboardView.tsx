@@ -19,7 +19,6 @@ export interface LLMLeaderboardViewProps {
   selectedModelId?: string | null;
   onSelectModel?: (model: AIModelBenchmark) => void;
   onNavigateToModels?: (model: AIModelBenchmark) => void;
-  onCompareModels?: (modelIds: string[]) => void;
   onCompareSingle?: (model: AIModelBenchmark) => void;
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
@@ -205,7 +204,6 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
   selectedModelId,
   onSelectModel,
   onNavigateToModels,
-  onCompareModels,
   onCompareSingle,
   searchInputRef,
 }) => {
