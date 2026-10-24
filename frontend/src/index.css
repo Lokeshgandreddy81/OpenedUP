@@ -839,7 +839,9 @@ select:focus-visible,
 
 .assistant-markdown {
   color: #252a32;
+  font-family: "Figtree", "DM Sans", sans-serif;
   font-size: 16px;
+  font-weight: 400;
   line-height: 1.72;
   overflow-wrap: anywhere;
 }

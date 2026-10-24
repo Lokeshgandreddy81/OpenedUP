@@ -357,7 +357,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
                       : `Thought for ${thinkingDuration}`}
                   </span>
                 )}
-                <div className="font-serif text-[17px] md:text-[17.5px] leading-relaxed text-neutral-900 tracking-normal break-words whitespace-pre-wrap">
+                <div className="font-sans text-[16px] leading-[1.72] font-normal text-neutral-900 tracking-normal break-words whitespace-pre-wrap">
                   {msg.content}
                 </div>
 
