@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LoaderCircle } from "lucide-react";
 
 interface AssistantResponseProps {
   messageId: string;
@@ -63,12 +62,6 @@ export const AssistantResponse: React.FC<AssistantResponseProps> = ({
 
   return (
     <div className="assistant-markdown min-w-0 w-full" aria-live={isStreaming ? "off" : undefined}>
-      {isStreaming && !visibleContent.trim() && (
-        <p className="inline-flex items-center gap-2 text-[14px] text-slate-500">
-          <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
-          Thinking…
-        </p>
-      )}
       <MarkdownBlocks content={visibleContent} />
     </div>
   );
