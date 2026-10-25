@@ -30,6 +30,12 @@ const IMAGE_TYPES = new Set([
   "image/gif",
 ]);
 
+function normalizeMimeType(mime: string): string {
+  const lower = (mime || "").toLowerCase().trim();
+  if (lower === "image/jpg" || lower === "image/pjpeg" || lower === "image/jfif") return "image/jpeg";
+  return lower || "image/jpeg";
+}
+
 async function readFileText(file: File) {
   if (typeof file.text === "function") return file.text();
   return new Promise<string>((resolve, reject) => {
@@ -95,7 +101,7 @@ export async function readChatAttachments(files: File[], existing: ChatAttachmen
       try {
         const dataUrl = await readFileDataUrl(file);
         const base64Data = dataUrl.replace(/^data:[^;]+;base64,/, "");
-        const mimeType =
+        const mimeType = normalizeMimeType(
           file.type ||
           (/\.png$/i.test(file.name)
             ? "image/png"
@@ -103,7 +109,8 @@ export async function readChatAttachments(files: File[], existing: ChatAttachmen
               ? "image/webp"
               : /\.gif$/i.test(file.name)
                 ? "image/gif"
-                : "image/jpeg");
+                : "image/jpeg")
+        );
         attachments.push({
           id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: file.name,
@@ -206,7 +213,7 @@ export function chatImageAttachments(files: ChatAttachmentFile[] = []) {
     .filter((file) => Boolean(file.base64Data))
     .map(({ name, mimeType, type, base64Data }) => ({
       name,
-      mimeType: mimeType || type || "image/jpeg",
+      mimeType: normalizeMimeType(mimeType || type || "image/jpeg"),
       base64Data: base64Data || "",
     }));
 }

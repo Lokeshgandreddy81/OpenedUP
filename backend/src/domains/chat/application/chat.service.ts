@@ -1,4 +1,5 @@
 import type { ChatRequest } from "@charan-interiors/contracts";
+import { getModelMeta } from "@charan-interiors/contracts";
 import {
   generateMultiProviderChat,
   generateMultiProviderChatStream,
@@ -27,7 +28,18 @@ export async function processChat(
   providerUsed: string;
 }> {
   const startTime = Date.now();
-  const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort } = payload;
+  const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort, images } = payload;
+
+  const meta = getModelMeta(model);
+  if (
+    images?.length &&
+    meta.inputModalities &&
+    !meta.inputModalities.includes("image")
+  ) {
+    throw new Error(
+      `${meta.name} does not support image analysis. Please select a multimodal vision model (such as Claude Opus/Fable, GPT-6, Gemini, Grok, Kimi K3.1, or Qwen 3.8 Max) to analyze images.`
+    );
+  }
 
   // Run agentic workspace inspection tools (rules, chapters, attached files)
   const toolTraces = options?.toolTraces ?? runAgenticWorkspaceTools(payload);
@@ -40,6 +52,7 @@ export async function processChat(
     messages,
     systemInstruction: `${toolTraces.enrichedSystemInstruction}\n${skills.instructions}`,
     effort,
+    images,
     injectedApiKey: options?.injectedApiKey,
     injectedBaseUrl: options?.injectedBaseUrl,
     signal: options?.signal,
@@ -70,6 +83,18 @@ export async function processChatStream(
 ) {
   const startTime = Date.now();
   const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort, images } = payload;
+
+  const meta = getModelMeta(model);
+  if (
+    images?.length &&
+    meta.inputModalities &&
+    !meta.inputModalities.includes("image")
+  ) {
+    throw new Error(
+      `${meta.name} does not support image analysis. Please select a multimodal vision model (such as Claude Opus/Fable, GPT-6, Gemini, Grok, Kimi K3.1, or Qwen 3.8 Max) to analyze images.`
+    );
+  }
+
   const toolTraces = options?.toolTraces ?? runAgenticWorkspaceTools(payload);
   const skills = executeSkills(payload);
   const generated = await generateMultiProviderChatStream(

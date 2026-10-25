@@ -212,6 +212,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     tag: "Top",
     description: "DeepSeek's flagship model for complex reasoning and coding",
     isChatModel: true,
+    inputModalities: ["text"],
   },
   "kimi-k3.1-pro": {
     id: "kimi-k3.1-pro",
@@ -331,6 +332,7 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     envKeyName: "OPENROUTER_API_KEY",
     description: "Use a model ID from your connected OpenAI-compatible endpoint",
     isChatModel: true,
+    inputModalities: ["text", "image"],
   },
 };
 

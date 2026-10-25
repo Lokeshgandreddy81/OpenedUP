@@ -84,6 +84,27 @@ async function consumeSseResponse(
   return full;
 }
 
+function normalizeMimeType(mime: string): string {
+  const lower = (mime || "").toLowerCase().trim();
+  if (lower === "image/jpg" || lower === "image/pjpeg" || lower === "image/jfif") return "image/jpeg";
+  return lower || "image/jpeg";
+}
+
+function normalizeAnthropicMediaType(
+  mime: string
+): "image/jpeg" | "image/png" | "image/gif" | "image/webp" {
+  const normalized = normalizeMimeType(mime);
+  if (
+    normalized === "image/jpeg" ||
+    normalized === "image/png" ||
+    normalized === "image/gif" ||
+    normalized === "image/webp"
+  ) {
+    return normalized;
+  }
+  return "image/jpeg";
+}
+
 export async function generateMultiProviderChatStream(
   params: LlmGenerateParams,
   onDelta: (delta: string) => void
@@ -102,27 +123,32 @@ export async function generateMultiProviderChatStream(
 
   const allImages = [
     ...(params.images || []).map((img) => ({
-      mimeType: img.mimeType,
+      mimeType: normalizeMimeType(img.mimeType),
       base64Data: img.base64Data.replace(/^data:[^;]+;base64,/, ""),
     })),
     ...(params.imagePages || []).map((image) => ({
-      mimeType: image.mimeType,
+      mimeType: normalizeMimeType(image.mimeType),
       base64Data: image.base64Data.replace(/^data:[^;]+;base64,/, ""),
     })),
   ];
 
   if (provider === "google") {
-    const contents = params.messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [
-        { text: m.content },
-        ...(m.role === "user" && m === params.messages.at(-1)
-          ? allImages.map((image) => ({
-              inlineData: { mimeType: image.mimeType, data: image.base64Data },
-            }))
-          : []),
-      ],
-    }));
+    const contents = params.messages.map((m) => {
+      const isLastUser = m.role === "user" && m === params.messages.at(-1);
+      const textContent =
+        m.content?.trim() || (isLastUser && allImages.length ? "Please analyze the attached image(s)." : "");
+      return {
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [
+          ...(textContent ? [{ text: textContent }] : []),
+          ...(isLastUser
+            ? allImages.map((image) => ({
+                inlineData: { mimeType: normalizeMimeType(image.mimeType), data: image.base64Data },
+              }))
+            : []),
+        ],
+      };
+    });
     const ai = new GoogleGenAI({
       apiKey,
       httpOptions: { baseUrl, apiVersion: "", fetch: fetchProviderFromSdk },
@@ -171,16 +197,15 @@ export async function generateMultiProviderChatStream(
           content:
             m.role === "user" && m === params.messages.at(-1) && allImages.length
               ? [
-                  { type: "text", text: m.content },
+                  {
+                    type: "text",
+                    text: m.content?.trim() || "Please analyze the attached image(s).",
+                  },
                   ...allImages.map((image) => ({
                     type: "image",
                     source: {
                       type: "base64",
-                      media_type: image.mimeType as
-                        | "image/jpeg"
-                        | "image/png"
-                        | "image/gif"
-                        | "image/webp",
+                      media_type: normalizeAnthropicMediaType(image.mimeType),
                       data: image.base64Data,
                     },
                   })),
@@ -212,22 +237,31 @@ export async function generateMultiProviderChatStream(
           : { temperature: 0.2, max_tokens: maxTokens }),
         messages: [
           { role: "system", content: params.systemInstruction },
-          ...params.messages.map((m) => ({
-            role: m.role,
-            content:
-              m.role === "user" && m === params.messages.at(-1) && allImages.length
-                ? [
-                    { type: "text", text: m.content },
-                    ...allImages.map((image) => ({
-                      type: "image_url",
-                      image_url: {
-                        url: `data:${image.mimeType};base64,${image.base64Data}`,
-                        detail: "high",
-                      },
-                    })),
-                  ]
-                : m.content,
-          })),
+          ...params.messages.map((m) => {
+            const isLastUser = m.role === "user" && m === params.messages.at(-1);
+            if (isLastUser && allImages.length) {
+              return {
+                role: m.role,
+                content: [
+                  {
+                    type: "text",
+                    text: m.content?.trim() || "Please analyze the attached image(s).",
+                  },
+                  ...allImages.map((image) => ({
+                    type: "image_url",
+                    image_url: {
+                      url: `data:${normalizeMimeType(image.mimeType)};base64,${image.base64Data}`,
+                      ...(provider === "openai" || provider === "xai" ? { detail: "high" } : {}),
+                    },
+                  })),
+                ],
+              };
+            }
+            return {
+              role: m.role,
+              content: m.content,
+            };
+          }),
         ],
       }),
     });
@@ -432,7 +466,9 @@ async function callAnthropic(params: {
   systemInstruction: string;
   effort: "low" | "medium" | "high" | "xhigh" | "max";
   maxTokens: number;
+  images?: Array<{ mimeType: string; base64Data: string }>;
 }): Promise<string> {
+  const images = params.images || [];
   const endpoint = `${params.baseUrl.replace(/\/+$/, "")}/messages`;
   const response = await fetchProvider(endpoint, {
     method: "POST",
@@ -449,7 +485,23 @@ async function callAnthropic(params: {
       system: params.systemInstruction,
       messages: params.messages.map((m) => ({
         role: m.role,
-        content: m.content,
+        content:
+          m.role === "user" && m === params.messages.at(-1) && images.length
+            ? [
+                {
+                  type: "text",
+                  text: m.content?.trim() || "Please analyze the attached image(s).",
+                },
+                ...images.map((image) => ({
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: normalizeAnthropicMediaType(image.mimeType),
+                    data: image.base64Data,
+                  },
+                })),
+              ]
+            : m.content,
       })),
     }),
   });
@@ -478,7 +530,9 @@ async function callOpenAICompatible(params: {
   effort: "low" | "medium" | "high" | "xhigh" | "max";
   maxTokens: number;
   provider: ProviderId;
+  images?: Array<{ mimeType: string; base64Data: string }>;
 }): Promise<string> {
+  const images = params.images || [];
   const endpoint = `${params.baseUrl.replace(/\/+$/, "")}/chat/completions`;
   const response = await fetchProvider(endpoint, {
     method: "POST",
@@ -496,10 +550,33 @@ async function callOpenAICompatible(params: {
         : { temperature: 0.2, max_tokens: params.maxTokens }),
       messages: [
         { role: "system", content: params.systemInstruction },
-        ...params.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        ...params.messages.map((m) => {
+          const isLastUser = m.role === "user" && m === params.messages.at(-1);
+          if (isLastUser && images.length) {
+            return {
+              role: m.role,
+              content: [
+                {
+                  type: "text",
+                  text: m.content?.trim() || "Please analyze the attached image(s).",
+                },
+                ...images.map((image) => ({
+                  type: "image_url",
+                  image_url: {
+                    url: `data:${normalizeMimeType(image.mimeType)};base64,${image.base64Data}`,
+                    ...(params.provider === "openai" || params.provider === "xai"
+                      ? { detail: "high" }
+                      : {}),
+                  },
+                })),
+              ],
+            };
+          }
+          return {
+            role: m.role,
+            content: m.content,
+          };
+        }),
       ],
     }),
   });
@@ -526,10 +603,25 @@ async function callGoogleGemini(params: {
   systemInstruction: string;
   effort: "low" | "medium" | "high" | "xhigh" | "max";
   allowFallback: boolean;
+  images?: Array<{ mimeType: string; base64Data: string }>;
 }): Promise<{ text: string; modelUsed: string }> {
-  const contents = params.messages
-    .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
-    .join("\n\n");
+  const images = params.images || [];
+  const contents = params.messages.map((m) => {
+    const isLastUser = m.role === "user" && m === params.messages.at(-1);
+    const textContent =
+      m.content?.trim() || (isLastUser && images.length ? "Please analyze the attached image(s)." : "");
+    return {
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [
+        ...(textContent ? [{ text: textContent }] : []),
+        ...(isLastUser
+          ? images.map((image) => ({
+              inlineData: { mimeType: normalizeMimeType(image.mimeType), data: image.base64Data },
+            }))
+          : []),
+      ],
+    };
+  });
 
   const ai = new GoogleGenAI({
     apiKey: params.apiKey,
@@ -595,6 +687,17 @@ export async function generateMultiProviderChat(
   const effort = resolveEffort(params.effort);
   const maxTokens = maxOutputTokensForEffort(effort);
 
+  const allImages = [
+    ...(params.images || []).map((img) => ({
+      mimeType: normalizeMimeType(img.mimeType),
+      base64Data: img.base64Data.replace(/^data:[^;]+;base64,/, ""),
+    })),
+    ...(params.imagePages || []).map((image) => ({
+      mimeType: normalizeMimeType(image.mimeType),
+      base64Data: image.base64Data.replace(/^data:[^;]+;base64,/, ""),
+    })),
+  ];
+
   logEvent(`Dispatching BYOK chat -> provider=${provider} model=${upstreamModelId}`);
 
   if (provider === "anthropic") {
@@ -606,6 +709,7 @@ export async function generateMultiProviderChat(
       systemInstruction: params.systemInstruction,
       effort,
       maxTokens,
+      images: allImages,
     });
     return { text, modelUsed: upstreamModelId, providerUsed: provider };
   }
@@ -619,6 +723,7 @@ export async function generateMultiProviderChat(
       systemInstruction: params.systemInstruction,
       effort,
       allowFallback: params.modelId !== "custom-model",
+      images: allImages,
     });
     return { text, modelUsed, providerUsed: provider };
   }
@@ -633,6 +738,7 @@ export async function generateMultiProviderChat(
     effort,
     maxTokens,
     provider,
+    images: allImages,
   });
 
   return { text, modelUsed: upstreamModelId, providerUsed: provider };
