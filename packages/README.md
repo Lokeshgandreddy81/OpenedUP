@@ -7,7 +7,8 @@ This directory contains shared runtime-neutral packages, contracts, and core arc
 ```
 packages/
 ├── contracts/     # @charan-interiors/contracts: Shared API models, Zod schemas, and types
-└── docs/          # Architecture decision records (ADRs), OpenAPI specs, and system blueprints
+├── docs/          # Architecture decision records (ADRs), OpenAPI specs, and system blueprints
+└── scripts/       # Monorepo development and orchestration scripts
 ```
 
 ## Packages & Modules

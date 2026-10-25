@@ -33,7 +33,7 @@ import {
 } from "@charan-interiors/contracts";
 import { useProviderKeys, getKeyForModel } from "../../customize/publicApi";
 import { ClockIcon } from "./ClockIcon";
-import { AssistantResponse } from "../../chat/components/AssistantResponse";
+import { AssistantResponse } from "../../chat";
 import {
   type ScheduledTask,
   type TaskTemplate,

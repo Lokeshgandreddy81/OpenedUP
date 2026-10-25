@@ -12,7 +12,7 @@
   "scripts": {
     "dev:frontend": "npm run --workspace=@charan-interiors/frontend dev",
     "dev:backend": "npm run --workspace=@charan-interiors/backend dev",
-    "dev": "node scripts/dev.mjs",
+    "dev": "node packages/scripts/dev.mjs",
     "build": "npm run --workspaces --if-present build",
     "test": "npm run --workspaces --if-present test",
     "test:coverage": "npm run --workspaces --if-present test:coverage",
@@ -26,7 +26,6 @@
     "check:feature-boundaries": "node frontend/scripts/check-feature-boundaries.mjs"
   },
   "devDependencies": {
-    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^9.21.0",
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
@@ -34,14 +33,6 @@
     "prettier": "^3.5.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.25.0"
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
-    ]
   },
   "overrides": {
     "@grpc/grpc-js": "1.14.6",

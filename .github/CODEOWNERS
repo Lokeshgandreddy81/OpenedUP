@@ -4,7 +4,6 @@
 # Specific path ownership
 /frontend/ @Lokeshgandreddy81
 /backend/ @Lokeshgandreddy81
-/backend/contracts/ @Lokeshgandreddy81
-/backend/scripts/ @Lokeshgandreddy81
+/python/ @Lokeshgandreddy81
+/packages/ @Lokeshgandreddy81
 /.github/ @Lokeshgandreddy81
-/docs/ @Lokeshgandreddy81
