@@ -412,10 +412,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     <div className="mb-2.5">
                       {isThinkingOnThisResponse ? (
                         <div
-                          className="chat-thinking-status inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/90 px-3 py-1 text-[12.5px] text-slate-600 shadow-2xs select-none"
+                          className="chat-thinking-status inline-flex items-center gap-1.5 px-1 py-0.5 text-[12px] font-medium text-neutral-500 select-none"
                           role="status"
                         >
-                          <LoaderCircle size={13} className="animate-spin text-slate-500" aria-hidden="true" />
+                          <LoaderCircle size={12} className="animate-spin text-neutral-400" aria-hidden="true" />
                           <span
                             role="timer"
                             aria-label={`${isRespondingOnThisResponse ? "Responding" : "Thinking"} for ${thinkingElapsedSeconds} seconds`}
