@@ -1,4 +1,5 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from "react";
+import { type ComponentType, type LazyExoticComponent } from "react";
+import { lazyWithRetry as lazy } from "../../../../app/components/lazyWithRetry";
 
 export type RoadmapPageProps = {
   onBack?: () => void;

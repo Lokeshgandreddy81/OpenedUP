@@ -1,8 +1,9 @@
-import React, { lazy } from "react";
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext, WorkspaceSyncModal } from "./features/chapters";
 import { ChatAuthProvider } from "./app/auth/ChatAuthContext";
 import { PageRoute } from "./app/components/PageRoute";
+import { lazyWithRetry } from "./app/components/lazyWithRetry";
 
 import { LandingPageSkeleton } from "./features/chapters/pages/LandingPage/loading";
 import { ResultsPageSkeleton } from "./features/chapters/pages/ResultsPage/loading";
@@ -14,45 +15,45 @@ import { ScheduledPageSkeleton } from "./features/scheduled/pages/ScheduledPage/
 import { ImageArenaPageSkeleton } from "./features/benchmarks/pages/ImageArenaPage/loading";
 import { CodingAgentsPageSkeleton } from "./features/benchmarks/pages/CodingAgentsPage/loading";
 
-const LandingPage = lazy(() =>
+const LandingPage = lazyWithRetry(() =>
   import("./features/chapters/pages/LandingPage").then(({ LandingPage }) => ({
     default: LandingPage,
   }))
 );
-const ResultsPage = lazy(() =>
+const ResultsPage = lazyWithRetry(() =>
   import("./features/chapters/pages/ResultsPage").then(({ ResultsPage }) => ({
     default: ResultsPage,
   }))
 );
-const RoadmapPage = lazy(() =>
+const RoadmapPage = lazyWithRetry(() =>
   import("./features/roadmaps/pages/RoadmapPage").then(({ RoadmapPage }) => ({
     default: RoadmapPage,
   }))
 );
-const BenchmarksPage = lazy(() =>
+const BenchmarksPage = lazyWithRetry(() =>
   import("./features/benchmarks/pages/BenchmarksPage").then(({ BenchmarksPage }) => ({
     default: BenchmarksPage,
   }))
 );
-const ChatPage = lazy(() =>
+const ChatPage = lazyWithRetry(() =>
   import("./features/chat/pages/ChatPage").then(({ ChatPage }) => ({ default: ChatPage }))
 );
-const ProjectsPage = lazy(() =>
+const ProjectsPage = lazyWithRetry(() =>
   import("./features/projects/pages/ProjectsPage").then(({ ProjectsPage }) => ({
     default: ProjectsPage,
   }))
 );
-const ScheduledPage = lazy(() =>
+const ScheduledPage = lazyWithRetry(() =>
   import("./features/scheduled/pages/ScheduledPage").then(({ ScheduledPage }) => ({
     default: ScheduledPage,
   }))
 );
-const ImageArenaPage = lazy(() =>
+const ImageArenaPage = lazyWithRetry(() =>
   import("./features/benchmarks/pages/ImageArenaPage").then(({ ImageArenaPage }) => ({
     default: ImageArenaPage,
   }))
 );
-const CodingAgentsPage = lazy(() =>
+const CodingAgentsPage = lazyWithRetry(() =>
   import("./features/benchmarks/pages/CodingAgentsPage").then(({ CodingAgentsPage }) => ({
     default: CodingAgentsPage,
   }))

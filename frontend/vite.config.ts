@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, import.meta.dirname, "VITE_");
 
   return {
-    base: "./",
+    base: "/",
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

@@ -27,6 +27,15 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private handleReset = () => {
+    const errorMsg = this.state.error?.message || "";
+    if (
+      errorMsg.includes("MIME type") ||
+      errorMsg.includes("Failed to fetch dynamically imported module") ||
+      errorMsg.includes("Importing a module script failed")
+    ) {
+      window.location.reload();
+      return;
+    }
     this.setState({ hasError: false, error: null });
     if (this.props.onReset) {
       this.props.onReset();

@@ -1,21 +1,22 @@
-import React, { lazy } from "react";
+import React from "react";
 import { PageRoute } from "../../../../app/components/PageRoute";
+import { lazyWithRetry } from "../../../../app/components/lazyWithRetry";
 import { ChatScreenLoading } from "./screens/ChatScreenLoading";
 import type { CustomizeCategory } from "../../../customize";
 
-const ProjectsScreen = lazy(() =>
+const ProjectsScreen = lazyWithRetry(() =>
   import("../../../projects").then((feature) => ({ default: feature.ProjectsScreen }))
 );
-const ArtifactsScreen = lazy(() => import("../../../artifacts"));
-const CustomizeScreen = lazy(() => import("../../../customize"));
-const PluginsScreen = lazy(() => import("../../../plugins"));
-const BenchmarksScreen = lazy(() =>
+const ArtifactsScreen = lazyWithRetry(() => import("../../../artifacts"));
+const CustomizeScreen = lazyWithRetry(() => import("../../../customize"));
+const PluginsScreen = lazyWithRetry(() => import("../../../plugins"));
+const BenchmarksScreen = lazyWithRetry(() =>
   import("../../../benchmarks").then((feature) => ({ default: feature.ChatBenchmarksScreen }))
 );
-const RoadmapsScreen = lazy(() =>
+const RoadmapsScreen = lazyWithRetry(() =>
   import("../../../roadmaps").then((feature) => ({ default: feature.RoadmapsScreen }))
 );
-const ScheduledTasksScreen = lazy(() =>
+const ScheduledTasksScreen = lazyWithRetry(() =>
   import("../../../scheduled").then((feature) => ({ default: feature.ChatScheduledTasksScreen }))
 );
 

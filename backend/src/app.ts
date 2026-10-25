@@ -51,7 +51,14 @@ export function createApp(): Express {
   if (fs.existsSync(frontendDist)) {
     app.use(express.static(frontendDist));
     app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/api") || req.path === "/healthz") return next();
+      if (
+        req.path.startsWith("/api") ||
+        req.path === "/healthz" ||
+        req.path.startsWith("/assets/") ||
+        Boolean(path.extname(req.path))
+      ) {
+        return next();
+      }
       res.sendFile(path.join(frontendDist, "index.html"));
     });
   }
