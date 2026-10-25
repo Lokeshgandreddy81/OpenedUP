@@ -8,7 +8,7 @@ RUN apk --no-cache add python3 make g++
 
 # Copy root workspace manifests
 COPY package.json package-lock.json ./
-COPY backend/contracts/package.json backend/contracts/
+COPY packages/contracts/package.json packages/contracts/
 COPY backend/package.json backend/
 COPY frontend/package.json frontend/
 
@@ -16,7 +16,7 @@ COPY frontend/package.json frontend/
 RUN npm ci
 
 # Copy contract and backend sources
-COPY backend/contracts/ backend/contracts/
+COPY packages/contracts/ packages/contracts/
 COPY backend/ backend/
 
 # Build runtime-neutral contracts before bundling the backend
@@ -42,7 +42,7 @@ RUN mkdir -p /var/lib/openedup && chown -R node:node /var/lib/openedup
 # Copy built artifacts and runtime packages
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/backend/contracts ./backend/contracts
+COPY --from=builder /app/packages/contracts ./packages/contracts
 COPY --from=builder /app/backend/dist ./dist
 COPY --from=builder /app/backend/package.json ./package.json
 

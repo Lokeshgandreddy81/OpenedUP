@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy root workspace manifests
 COPY package.json package-lock.json ./
-COPY backend/contracts/package.json backend/contracts/
+COPY packages/contracts/package.json packages/contracts/
 COPY backend/package.json backend/
 COPY frontend/package.json frontend/
 
@@ -14,7 +14,7 @@ COPY frontend/package.json frontend/
 RUN npm ci
 
 # Copy sources
-COPY backend/contracts/ backend/contracts/
+COPY packages/contracts/ packages/contracts/
 COPY frontend/ frontend/
 
 # Build client production bundle
