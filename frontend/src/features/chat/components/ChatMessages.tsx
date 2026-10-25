@@ -4,7 +4,6 @@ import {
   BookmarkPlus,
   CircleAlert,
   Check,
-  ChevronDown,
   Clock3,
   Copy,
   FileText,
@@ -80,16 +79,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     fileName?: string;
     fileSize?: string;
   } | null>(null);
-  const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(() => new Set());
-
-  const toggleThinkingExpanded = (messageId: string) => {
-    setExpandedThinkingIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(messageId)) next.delete(messageId);
-      else next.add(messageId);
-      return next;
-    });
-  };
 
   const lastUserMessageId = [...messages].reverse().find((message) => message.role === "user")?.id;
   const lastUserMessageIdRef = React.useRef(lastUserMessageId);
@@ -446,33 +435,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           <span>Response stopped</span>
                         </div>
                       ) : (
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() => toggleThinkingExpanded(message.id)}
-                            aria-expanded={expandedThinkingIds.has(message.id)}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-50/80 hover:bg-slate-100/90 px-2.5 py-1 text-[12px] font-medium text-slate-600 transition-colors cursor-pointer select-none"
-                          >
-                            <Clock3 size={12} className="text-slate-400 stroke-[2]" />
-                            <span>Thought for {thinkingDuration}</span>
-                            <ChevronDown
-                              size={12}
-                              className={`text-slate-400 transition-transform duration-150 ${
-                                expandedThinkingIds.has(message.id) ? "rotate-180" : ""
-                              }`}
-                            />
-                          </button>
-                          {expandedThinkingIds.has(message.id) && (
-                            <div className="mt-1.5 max-w-md rounded-xl border border-slate-200/70 bg-slate-50/70 p-3 text-[12px] leading-relaxed text-slate-600 shadow-2xs animate-in fade-in slide-in-from-top-1 duration-150 select-text">
-                              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider pb-1.5 border-b border-slate-200/60 mb-1.5">
-                                <span>Thinking Process</span>
-                                <span className="font-mono text-slate-500">{thinkingDuration}</span>
-                              </div>
-                              <p className="text-slate-600 font-normal">
-                                Reasoning completed with structured synthesis and grounding checks.
-                              </p>
-                            </div>
-                          )}
+                        <div
+                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-50/80 px-2.5 py-1 text-[12px] font-medium text-slate-500 select-none"
+                        >
+                          <Clock3 size={12} className="text-slate-400 stroke-[2]" aria-hidden="true" />
+                          <span>Thought for {thinkingDuration}</span>
                         </div>
                       )}
                     </div>
