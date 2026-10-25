@@ -30,7 +30,11 @@ import {
   PROVIDER_CATALOG,
   type ScheduledTaskRunRecord,
 } from "@charan-interiors/contracts";
-import { useProviderKeys, getKeyForModel } from "../../customize/publicApi";
+import {
+  useProviderKeys,
+  getKeyForModel,
+  getProviderChatRequestConfig,
+} from "../../customize/publicApi";
 import { CreatorLogo } from "../../benchmarks/publicApi";
 import { ClockIcon } from "./ClockIcon";
 import { AssistantResponse } from "../../chat";
@@ -523,11 +527,12 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       ...(resolvedKey ? { apiKey: resolvedKey } : {}),
     };
 
+    const providerConfig = getProviderChatRequestConfig(selectedModel);
     setIsSavingTask(true);
     try {
       const saved = existingTask
-        ? await updateScheduledTask(existingTask.id, draft)
-        : await createScheduledTask(taskInput(draft));
+        ? await updateScheduledTask(existingTask.id, draft, providerConfig.headers)
+        : await createScheduledTask(taskInput(draft), providerConfig.headers);
       setTasks((prev) =>
         existingTask ? prev.map((task) => (task.id === saved.id ? saved : task)) : [saved, ...prev]
       );
@@ -585,8 +590,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     setExecutionRunRecord(null);
 
     try {
-      const { apiKey } = getKeyForModel(task.model || "gpt-6-astra");
-      const effectiveKey = task.apiKey || apiKey;
+      const providerConfig = getProviderChatRequestConfig(task.model || "gpt-6-astra");
+      const effectiveKey = task.apiKey || providerConfig.headers["x-provider-key"];
+      const effectiveBaseUrl = providerConfig.headers["x-provider-base-url"];
       if (!effectiveKey) {
         const meta = getModelMeta(task.model || "gpt-6-astra");
         const providerName = PROVIDER_CATALOG[meta.provider]?.name || "Provider";
@@ -594,7 +600,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
           `Connect your ${providerName} key in Customize → Providers to run this task.`
         );
       }
-      const run = await runScheduledTask(task.id, effectiveKey);
+      const run = await runScheduledTask(task.id, effectiveKey, effectiveBaseUrl);
       setIsExecuting(false);
       setExecutionRunRecord(run);
       setExecutionOutput(scheduledRunMessage(run));
@@ -1274,8 +1280,18 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                             )}
 
                             {run.error && (
-                              <div className="mt-2 p-2.5 bg-rose-50/50 rounded-md text-xs text-rose-800 font-mono">
-                                {run.error}
+                              <div className="mt-2 p-2.5 bg-rose-50/50 rounded-md text-xs text-rose-800 font-mono flex items-center justify-between gap-3">
+                                <span className="flex-1">{run.error}</span>
+                                {run.error.includes("Customize → Providers") && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onNavigateToProviders()}
+                                    className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-all cursor-pointer shrink-0 flex items-center gap-1 shadow-xs active:scale-95"
+                                  >
+                                    <KeyRound size={11} />
+                                    <span>Connect Key</span>
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>

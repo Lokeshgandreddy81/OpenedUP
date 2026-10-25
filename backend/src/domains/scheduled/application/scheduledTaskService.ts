@@ -17,7 +17,7 @@ import {
   saveProviderCredential,
 } from "../../credentials/application/credentialVault.js";
 import { isValidApiKey } from "../../../platform/config/index.js";
-import { logEvent } from "../../../platform/observability/logger.js";
+import { logEvent, redactSecretsString } from "../../../platform/observability/logger.js";
 import {
   ScheduledTaskRepository,
   type ClaimedScheduledRun,
@@ -38,11 +38,17 @@ export class ScheduledTaskService {
     return this.tasks.list(userId);
   }
 
-  create(userId: string, input: ScheduledTaskInput): ScheduledTaskRecord {
+  create(userId: string, input: ScheduledTaskInput, headerBaseUrl?: string): ScheduledTaskRecord {
     this.assertModel(input.model);
-    if (input.apiKey?.trim()) {
-      const provider = getModelMeta(input.model).provider as ProviderId;
-      saveProviderCredential(userId, provider, { apiKey: input.apiKey.trim() });
+    const provider = getModelMeta(input.model).provider as ProviderId;
+    const existing = this.loadCredential(userId, provider);
+    const apiKey = input.apiKey?.trim() || existing?.apiKey;
+    const baseUrl = headerBaseUrl?.trim() || existing?.baseUrl;
+    if (apiKey) {
+      saveProviderCredential(userId, provider, {
+        apiKey,
+        ...(baseUrl ? { baseUrl } : {}),
+      });
     }
     return this.tasks.create(userId, input);
   }
@@ -50,12 +56,19 @@ export class ScheduledTaskService {
   update(
     userId: string,
     id: string,
-    input: UpdateScheduledTaskRequest
+    input: UpdateScheduledTaskRequest,
+    headerBaseUrl?: string
   ): ScheduledTaskRecord | null {
     this.assertModel(input.model);
-    if (input.apiKey?.trim()) {
-      const provider = getModelMeta(input.model).provider as ProviderId;
-      saveProviderCredential(userId, provider, { apiKey: input.apiKey.trim() });
+    const provider = getModelMeta(input.model).provider as ProviderId;
+    const existing = this.loadCredential(userId, provider);
+    const apiKey = input.apiKey?.trim() || existing?.apiKey;
+    const baseUrl = headerBaseUrl?.trim() || existing?.baseUrl;
+    if (apiKey) {
+      saveProviderCredential(userId, provider, {
+        apiKey,
+        ...(baseUrl ? { baseUrl } : {}),
+      });
     }
     return this.tasks.update(userId, id, input);
   }
@@ -69,7 +82,11 @@ export class ScheduledTaskService {
       this.assertModel(task.model);
       if (task.apiKey?.trim()) {
         const provider = getModelMeta(task.model).provider as ProviderId;
-        saveProviderCredential(userId, provider, { apiKey: task.apiKey.trim() });
+        const existing = this.loadCredential(userId, provider);
+        saveProviderCredential(userId, provider, {
+          apiKey: task.apiKey.trim(),
+          ...(existing?.baseUrl ? { baseUrl: existing.baseUrl } : {}),
+        });
       }
     }
     return this.tasks.import(userId, input);
@@ -78,18 +95,21 @@ export class ScheduledTaskService {
   runNow(
     userId: string,
     taskId: string,
-    credential?: { apiKey: string; baseUrl?: string }
+    credential?: { apiKey?: string; baseUrl?: string }
   ): ScheduledTaskRunRecord | null {
     const task = this.tasks.get(userId, taskId);
     if (!task) return null;
     const provider = getModelMeta(task.model).provider as ProviderId;
-    if (credential?.apiKey) {
-      saveProviderCredential(userId, provider, credential);
+    const saved = this.loadCredential(userId, provider);
+    const apiKey = credential?.apiKey?.trim() || saved?.apiKey;
+    const baseUrl = credential?.baseUrl?.trim() || saved?.baseUrl;
+    if (apiKey) {
+      saveProviderCredential(userId, provider, {
+        apiKey,
+        ...(baseUrl ? { baseUrl } : {}),
+      });
     }
-    const effectiveCredential = credential?.apiKey
-      ? credential
-      : this.loadCredential(userId, provider);
-    if (!effectiveCredential || !isValidApiKey(effectiveCredential.apiKey)) {
+    if (!apiKey || !isValidApiKey(apiKey)) {
       throw new Error(
         `MISSING_API_KEY:${provider}:Connect your ${PROVIDER_CATALOG[provider].name} key in Customize → Providers to run this task.`
       );
@@ -120,7 +140,10 @@ export class ScheduledTaskService {
 
   private assertModel(modelId: string): void {
     if (!MODEL_REGISTRY[modelId]?.isChatModel) {
-      throw new Error(`UNKNOWN_MODEL:${modelId}:Choose a model from the available model list.`);
+      const safeModelId = redactSecretsString(
+        String(modelId).replace(/[^\x21-\x7E]/g, "").slice(0, 64)
+      );
+      throw new Error(`UNKNOWN_MODEL:${safeModelId}:Choose a model from the available model list.`);
     }
   }
 
@@ -147,9 +170,12 @@ export class ScheduledTaskService {
         },
         { injectedApiKey: credential.apiKey, injectedBaseUrl: credential.baseUrl }
       );
-      const conversationId = this.persistConversation(task, response.content);
-      if (conversationId && !task.startInNewChat)
-        this.tasks.setConversationId(task.id, conversationId);
+      let conversationId: string | null = null;
+      if (task.notifications === "Important updates") {
+        conversationId = this.persistConversation(task, response.content, false);
+        if (conversationId && !task.startInNewChat)
+          this.tasks.setConversationId(task.id, conversationId);
+      }
       this.tasks.finishRun({
         runId: run.id,
         taskId: task.id,
@@ -170,19 +196,29 @@ export class ScheduledTaskService {
       const safeMessage = rawMessage.startsWith("MISSING_API_KEY:")
         ? rawMessage.split(":").slice(2).join(":")
         : actionableProviderError(rawMessage);
+
+      let conversationId: string | null = null;
+      if (task.notifications === "Important updates" || task.notifications === "Failed runs only") {
+        conversationId = this.persistConversation(task, safeMessage, true);
+        if (conversationId && !task.startInNewChat)
+          this.tasks.setConversationId(task.id, conversationId);
+      }
+
       this.tasks.finishRun({
         runId: run.id,
         taskId: task.id,
         status: "failed",
         finishedAt: Date.now(),
         error: safeMessage.slice(0, 4_000),
+        ...(conversationId ? { conversationId } : {}),
       });
     }
   }
 
   private persistConversation(
     task: NonNullable<ReturnType<ScheduledTaskRepository["getForExecution"]>>,
-    output: string
+    output: string,
+    isFailure = false
   ): string | null {
     try {
       const reusable =
@@ -199,9 +235,15 @@ export class ScheduledTaskService {
       });
       this.conversations.appendMessage(task.userId, conversation.id, {
         role: "assistant",
-        content: output,
-        status: "complete",
-        metadata: { source: "scheduled-task", taskId: task.id },
+        content: isFailure
+          ? `⚠️ Scheduled task "${task.title}" could not run.\n\n${output}`
+          : output,
+        status: isFailure ? "interrupted" : "complete",
+        metadata: {
+          source: "scheduled-task",
+          taskId: task.id,
+          ...(isFailure ? { failure: true, error: output } : {}),
+        },
       });
       return conversation.id;
     } catch (error) {

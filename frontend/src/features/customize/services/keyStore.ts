@@ -7,6 +7,7 @@ const KEYS_STORAGE_KEY = "openedup_byok_keys_v1";
 const URLS_STORAGE_KEY = "openedup_byok_urls_v1";
 const CUSTOM_MODEL_STORAGE_KEY = "openedup_byok_custom_model_v1";
 const CUSTOM_PROVIDER_STORAGE_KEY = "openedup_byok_custom_provider_v1";
+const SYNC_BEACON_KEY = "openedup_byok_sync_beacon_v1";
 const SYNC_EVENT = "openedup-byok-sync";
 
 export type StoredKeysMap = Partial<Record<ProviderId, string>>;
@@ -14,6 +15,21 @@ export type StoredUrlsMap = Partial<Record<ProviderId, string>>;
 
 let memoryKeys: StoredKeysMap = {};
 const legacyKeysToImport: StoredKeysMap = {};
+
+export function purgeSensitiveKeysFromPersistentStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(KEYS_STORAGE_KEY);
+  } catch {
+    /* ignore restricted storage environments */
+  }
+  try {
+    window.sessionStorage?.removeItem?.(KEYS_STORAGE_KEY);
+  } catch {
+    /* ignore restricted storage environments */
+  }
+}
+
 if (typeof window !== "undefined") {
   try {
     const raw = window.localStorage.getItem(KEYS_STORAGE_KEY);
@@ -22,7 +38,9 @@ if (typeof window !== "undefined") {
       if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
         for (const [k, v] of Object.entries(legacy)) {
           if (k in PROVIDER_CATALOG && typeof v === "string" && v.trim().length > 0) {
-            legacyKeysToImport[k as ProviderId] = v.trim();
+            const trimmed = v.trim();
+            legacyKeysToImport[k as ProviderId] = trimmed;
+            memoryKeys[k as ProviderId] = trimmed;
           }
         }
       }
@@ -31,10 +49,61 @@ if (typeof window !== "undefined") {
     /* malformed legacy key cache */
   }
   // Ensure sensitive API keys are immediately purged from persistent browser storage
-  window.localStorage.removeItem(KEYS_STORAGE_KEY);
+  purgeSensitiveKeysFromPersistentStorage();
 }
 
 let cachedAccountProviders: ProviderId[] = [];
+let pendingCredentialsFetch: Promise<ProviderId[]> | null = null;
+
+function notifySync(includeCrossTab = true): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+  if (includeCrossTab) {
+    try {
+      window.localStorage.setItem(SYNC_BEACON_KEY, String(Date.now()));
+    } catch {
+      /* ignore storage quota or private browsing errors */
+    }
+  }
+}
+
+async function fetchAccountProviders(userId?: string): Promise<ProviderId[]> {
+  if (!userId) {
+    cachedAccountProviders = [];
+    return [];
+  }
+  if (pendingCredentialsFetch) return pendingCredentialsFetch;
+
+  pendingCredentialsFetch = (async () => {
+    try {
+      const accountResponse = await authenticatedChatFetch("/api/credentials");
+      if (accountResponse.ok) {
+        const accountData = (await accountResponse.json()) as { providers: ProviderId[] };
+        const valid = (Array.isArray(accountData.providers) ? accountData.providers : []).filter(
+          (p) => p in PROVIDER_CATALOG
+        );
+        cachedAccountProviders = valid;
+        window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+        return valid;
+      }
+      return cachedAccountProviders;
+    } catch {
+      return cachedAccountProviders;
+    } finally {
+      pendingCredentialsFetch = null;
+    }
+  })();
+
+  return pendingCredentialsFetch;
+}
+
+export function clearMemoryKeys(): void {
+  memoryKeys = {};
+  for (const k of Object.keys(legacyKeysToImport)) {
+    delete legacyKeysToImport[k as ProviderId];
+  }
+  notifySync(true);
+}
 
 export function getStoredKeys(): StoredKeysMap {
   return { ...memoryKeys };
@@ -75,7 +144,7 @@ export function saveCustomModelId(modelId: string): void {
   const trimmed = modelId.trim();
   if (trimmed) window.localStorage.setItem(CUSTOM_MODEL_STORAGE_KEY, trimmed);
   else window.localStorage.removeItem(CUSTOM_MODEL_STORAGE_KEY);
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+  notifySync(true);
 }
 
 export function getCustomModelProvider(): ProviderId {
@@ -87,7 +156,7 @@ export function getCustomModelProvider(): ProviderId {
 export function saveCustomModelProvider(provider: ProviderId): void {
   if (typeof window === "undefined" || !(provider in PROVIDER_CATALOG)) return;
   window.localStorage.setItem(CUSTOM_PROVIDER_STORAGE_KEY, provider);
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+  notifySync(true);
 }
 
 export function saveStoredKey(provider: ProviderId, apiKey: string, baseUrl?: string): void {
@@ -114,7 +183,7 @@ export function saveStoredKey(provider: ProviderId, apiKey: string, baseUrl?: st
     window.localStorage.setItem(URLS_STORAGE_KEY, JSON.stringify(currentUrls));
   }
 
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+  notifySync(true);
 }
 
 export function removeStoredKey(provider: ProviderId): void {
@@ -128,11 +197,24 @@ export function removeStoredKey(provider: ProviderId): void {
   delete currentUrls[provider];
   window.localStorage.setItem(URLS_STORAGE_KEY, JSON.stringify(currentUrls));
 
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+  notifySync(true);
 }
 
-export function hasKeyForProvider(provider: ProviderId): boolean {
+export function hasKeyForProvider(providerOrModel: ProviderId | string): boolean {
+  const provider =
+    providerOrModel === "custom-model"
+      ? getCustomModelProvider()
+      : (providerOrModel as ProviderId);
   return Boolean(getStoredKeys()[provider]?.trim()) || cachedAccountProviders.includes(provider);
+}
+
+export function hasAccountKeyForProvider(provider: ProviderId): boolean {
+  return cachedAccountProviders.includes(provider);
+}
+
+export function hasKeyForModel(modelId: string): boolean {
+  const { provider } = getKeyForModel(modelId);
+  return hasKeyForProvider(provider);
 }
 
 export function getKeyForModel(modelId: string): {
@@ -146,7 +228,7 @@ export function getKeyForModel(modelId: string): {
     modelId === "custom-model" ? getCustomModelProvider() : getModelMeta(modelId).provider;
   const keys = getStoredKeys();
   const urls = getStoredBaseUrls();
-  const providerMeta = PROVIDER_CATALOG[provider];
+  const providerMeta = PROVIDER_CATALOG[provider] ?? PROVIDER_CATALOG.custom;
 
   return {
     provider,
@@ -208,48 +290,58 @@ export function useProviderKeys() {
 
   useEffect(() => {
     if (lastUserIdRef.current !== currentUserId) {
-      if (lastUserIdRef.current) memoryKeys = {};
+      if (lastUserIdRef.current) {
+        memoryKeys = {};
+        for (const k of Object.keys(legacyKeysToImport)) {
+          delete legacyKeysToImport[k as ProviderId];
+        }
+      }
       cachedAccountProviders = [];
       setKeys(getProviderKeyDrafts());
       setAccountProviders([]);
+      notifySync(false);
     }
     lastUserIdRef.current = currentUserId;
-    let cancelled = false;
-    void (async () => {
-      try {
-        let nextAccountProviders: ProviderId[] = [];
-        if (currentUserId) {
-          const accountResponse = await authenticatedChatFetch("/api/credentials");
-          if (accountResponse.ok) {
-            const accountData = (await accountResponse.json()) as { providers: ProviderId[] };
-            nextAccountProviders = accountData.providers;
-          }
-        }
-        if (!cancelled) {
-          cachedAccountProviders = nextAccountProviders;
-          setAccountProviders(nextAccountProviders);
-        }
-      } catch {
-        if (!cancelled) {
-          cachedAccountProviders = [];
-          setAccountProviders([]);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+
+    if (currentUserId) {
+      void fetchAccountProviders(currentUserId).then((providers) => {
+        setAccountProviders(providers);
+      });
+    }
   }, [currentUserId]);
 
   useEffect(() => {
     const handleSync = () => refresh();
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === KEYS_STORAGE_KEY) {
+        purgeSensitiveKeysFromPersistentStorage();
+        return;
+      }
+
+      if (
+        event.key === null ||
+        event.key === SYNC_BEACON_KEY ||
+        event.key === URLS_STORAGE_KEY ||
+        event.key === CUSTOM_MODEL_STORAGE_KEY ||
+        event.key === CUSTOM_PROVIDER_STORAGE_KEY
+      ) {
+        refresh();
+        if (currentUserId) {
+          void fetchAccountProviders(currentUserId).then((providers) => {
+            setAccountProviders(providers);
+          });
+        }
+      }
+    };
+
     window.addEventListener(SYNC_EVENT, handleSync);
-    window.addEventListener("storage", handleSync);
+    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener(SYNC_EVENT, handleSync);
-      window.removeEventListener("storage", handleSync);
+      window.removeEventListener("storage", handleStorage);
     };
-  }, [refresh]);
+  }, [currentUserId, refresh]);
 
   const setProviderKey = useCallback(
     async (provider: ProviderId, apiKey: string, baseUrl?: string) => {
@@ -264,9 +356,8 @@ export function useProviderKeys() {
         delete memoryKeys[provider];
         if (!cachedAccountProviders.includes(provider))
           cachedAccountProviders = [...cachedAccountProviders, provider];
-        // Other mounted views (such as Scheduled Tasks) use their own hook
-        // instance and need the updated account-backed provider status too.
-        window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+        // Other mounted views and other browser tabs need the updated account-backed status
+        notifySync(true);
       }
       if (apiKey.trim()) delete legacyKeysToImport[provider];
       refresh();
@@ -321,11 +412,23 @@ export function useProviderKeys() {
   }, []);
 
   const hasKey = useCallback(
-    (provider: ProviderId) => {
+    (providerOrModel: ProviderId | string) => {
+      const provider =
+        providerOrModel === "custom-model"
+          ? customModelProvider
+          : (providerOrModel as ProviderId);
       if (memoryKeys[provider]?.trim()) return true;
       return accountProviders.includes(provider);
     },
-    [accountProviders]
+    [accountProviders, customModelProvider]
+  );
+
+  const hasKeyForModelHook = useCallback(
+    (modelId: string) => {
+      const { provider } = getKeyForModel(modelId);
+      return hasKey(provider);
+    },
+    [hasKey]
   );
 
   const hasAccountKey = useCallback(
@@ -335,13 +438,10 @@ export function useProviderKeys() {
 
   const refreshAccountProviders = useCallback(async (): Promise<ProviderId[]> => {
     if (!currentUserId) return [];
-    const response = await authenticatedChatFetch("/api/credentials");
-    if (!response.ok) throw new Error("Could not verify saved provider keys.");
-    const data = (await response.json()) as { providers: ProviderId[] };
-    cachedAccountProviders = data.providers;
-    setAccountProviders(data.providers);
-    window.dispatchEvent(new CustomEvent(SYNC_EVENT));
-    return data.providers;
+    const providers = await fetchAccountProviders(currentUserId);
+    setAccountProviders(providers);
+    notifySync(true);
+    return providers;
   }, [currentUserId]);
 
   const allProviderIds = Object.keys(PROVIDER_CATALOG) as ProviderId[];
@@ -359,6 +459,7 @@ export function useProviderKeys() {
     setProviderEndpoint,
     deleteProviderKey,
     hasKey,
+    hasKeyForModel: hasKeyForModelHook,
     hasAccountKey,
     refreshAccountProviders,
   };

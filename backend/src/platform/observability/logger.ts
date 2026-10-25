@@ -14,11 +14,13 @@ try {
 
 const SECRET_PATTERNS = [
   /Bearer\s+[A-Za-z0-9._~+/-]+=*/gi,
-  /\bAIza[0-9A-Za-z_-]{35}\b/g,
-  /\bsk-(?:proj-|live-)?[a-zA-Z0-9_-]{20,}\b/g,
-  /\bsk-ant-[a-zA-Z0-9_-]{20,}\b/g,
-  /x-provider-key:\s*[^\s,]+/gi,
-  /(?:apiKey|api_key|injectedApiKey|token|secret|password)=([^&\s]+)/gi,
+  /\bAIza[0-9A-Za-z_-]{30,45}\b/g,
+  /\bsk-(?:proj-|live-|ant-|or-v1-)?[a-zA-Z0-9_-]{16,}\b/g,
+  /\bgsk_[a-zA-Z0-9_-]{20,}\b/g,
+  /\bpplx-[a-zA-Z0-9_-]{20,}\b/g,
+  /(?:x-provider-key|x-api-key):\s*[^\s,]+/gi,
+  /"(?:x-provider-key|x-api-key|apiKey|injectedApiKey|token|secret|password|authorization)"\s*:\s*"[^"]+"/gi,
+  /(?:apiKey|api_key|injectedApiKey|token|secret|password|key)=([^&\s]+)/gi,
 ];
 
 export function redactSecretsString(text: string): string {
@@ -50,7 +52,9 @@ export function redactSecretsObject<T>(obj: T): T {
       lowerKey.includes("secret") ||
       lowerKey.includes("token") ||
       lowerKey.includes("password") ||
-      lowerKey.includes("authorization")
+      lowerKey.includes("authorization") ||
+      lowerKey.includes("credential") ||
+      lowerKey.includes("auth")
     ) {
       result[key] = "[REDACTED]";
     } else {
@@ -74,14 +78,46 @@ const loggerOptions: LoggerOptions = {
       "apiKey",
       "*.apiKey",
       "*.*.apiKey",
+      "*.*.*.apiKey",
       "injectedApiKey",
       "*.injectedApiKey",
+      "*.*.injectedApiKey",
       "token",
       "*.token",
+      "*.*.token",
       "secret",
       "*.secret",
+      "*.*.secret",
+      "authorization",
+      "*.authorization",
+      "*.*.authorization",
+      "password",
+      "*.password",
+      "*.*.password",
     ],
     censor: "[REDACTED]",
+  },
+  serializers: {
+    err: (err: unknown) => {
+      if (err instanceof Error) {
+        return {
+          type: err.name,
+          message: redactSecretsString(err.message),
+          stack: err.stack ? redactSecretsString(err.stack) : undefined,
+        };
+      }
+      return err;
+    },
+    error: (err: unknown) => {
+      if (err instanceof Error) {
+        return {
+          type: err.name,
+          message: redactSecretsString(err.message),
+          stack: err.stack ? redactSecretsString(err.stack) : undefined,
+        };
+      }
+      return err;
+    },
   },
 };
 

@@ -394,13 +394,31 @@ export const ImportProjectsRequestSchema = ProjectsCollectionSchema;
 
 export const ProviderCredentialRequestSchema = z.object({
   provider: z.enum(PROVIDER_IDS),
-  apiKey: z.string().trim().min(1).max(1000),
-  baseUrl: z.string().trim().max(2048).optional(),
+  apiKey: z
+    .string()
+    .trim()
+    .min(1)
+    .max(1000)
+    .regex(
+      /^[\x21-\x7E]+$/,
+      "API key must contain only visible ASCII characters without control characters or whitespace."
+    ),
+  baseUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .regex(/^[\x20-\x7E]+$/, "Base URL must not contain newlines or control characters.")
+    .optional(),
 });
 
 export const ProviderEndpointRequestSchema = z.object({
   provider: z.enum(PROVIDER_IDS),
-  baseUrl: z.string().trim().min(1).max(2048),
+  baseUrl: z
+    .string()
+    .trim()
+    .min(1)
+    .max(2048)
+    .regex(/^[\x20-\x7E]+$/, "Base URL must not contain newlines or control characters."),
 });
 
 const ScheduledRecurrenceSchema = z.object({
@@ -422,7 +440,15 @@ export const ScheduledTaskInputSchema = z
     effort: z.enum(["Low", "Medium", "High"]).default("Medium"),
     notifications: z.enum(["Important updates", "Failed runs only"]).default("Important updates"),
     startInNewChat: z.boolean().default(false),
-    apiKey: z.string().trim().max(1000).optional(),
+    apiKey: z
+      .string()
+      .trim()
+      .max(1000)
+      .regex(
+        /^[\x21-\x7E]+$/,
+        "API key must contain only visible ASCII characters without control characters or whitespace."
+      )
+      .optional(),
   })
   .superRefine((task, context) => {
     if (task.frequency === "weekly" && task.dayOfWeek === undefined) {

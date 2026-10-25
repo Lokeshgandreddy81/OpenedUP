@@ -1,9 +1,26 @@
-import React, { useState, useEffect } from "react";
-import { Search, Plus, ChevronDown, Eye, EyeOff, Check, Trash2, ExternalLink } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Search,
+  Plus,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Check,
+  Trash2,
+  ExternalLink,
+  AlertCircle,
+  X,
+  RotateCcw,
+  KeyRound,
+  ShieldCheck,
+  Server,
+  Layers,
+} from "lucide-react";
 import {
   PROVIDER_CATALOG,
   getModelsForProvider,
   type ProviderId,
+  type ModelMetadata,
 } from "@charan-interiors/contracts";
 import { CreatorLogo } from "../../benchmarks/publicApi";
 import { useProviderKeys } from "../services/keyStore";
@@ -63,7 +80,7 @@ const PROVIDER_LOGO_CREATOR: Record<ProviderId, string> = {
 };
 
 export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
-  initialCategory = "Connectors",
+  initialCategory = "Providers",
 }) => {
   const [activeCategory, setActiveCategory] = useState<CustomizeCategory>(initialCategory);
   const [subTab, setSubTab] = useState<CustomizeSubTab>("Discover");
@@ -90,6 +107,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   const [draftKeys, setDraftKeys] = useState<Partial<Record<ProviderId, string>>>({});
   const [draftUrls, setDraftUrls] = useState<Partial<Record<ProviderId, string>>>({});
   const [revealedMap, setRevealedMap] = useState<Partial<Record<ProviderId, boolean>>>({});
+  const [isSavingMap, setIsSavingMap] = useState<Partial<Record<ProviderId, boolean>>>({});
   const [savedFeedbackMap, setSavedFeedbackMap] = useState<Partial<Record<ProviderId, boolean>>>(
     {}
   );
@@ -104,21 +122,71 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     const rawUrl = draftUrls[providerId] ?? baseUrls[providerId];
     const endpointOnlyUpdate = !rawKey.trim() && hasKey(providerId) && Boolean(rawUrl);
     if (!rawKey.trim() && !endpointOnlyUpdate) return;
+
+    setIsSavingMap((prev) => ({ ...prev, [providerId]: true }));
     try {
       if (rawKey.trim()) await setProviderKey(providerId, rawKey.trim(), rawUrl);
       else await setProviderEndpoint(providerId, rawUrl!);
+
+      setSaveErrorMap((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+      setDraftKeys((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+      setDraftUrls((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+      setSavedFeedbackMap((prev) => ({ ...prev, [providerId]: true }));
+      setTimeout(() => {
+        setSavedFeedbackMap((prev) => ({ ...prev, [providerId]: false }));
+      }, 2000);
     } catch (error) {
       setSaveErrorMap((prev) => ({
         ...prev,
         [providerId]: error instanceof Error ? error.message : "Could not save provider key.",
       }));
-      return;
+    } finally {
+      setIsSavingMap((prev) => ({ ...prev, [providerId]: false }));
     }
-    setSaveErrorMap((prev) => {
-      const next = { ...prev };
-      delete next[providerId];
-      return next;
-    });
+  };
+
+  const handleRemoveProvider = async (providerId: ProviderId) => {
+    setIsSavingMap((prev) => ({ ...prev, [providerId]: true }));
+    try {
+      await deleteProviderKey(providerId);
+      setDraftKeys((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+      setDraftUrls((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+      setSaveErrorMap((prev) => {
+        const next = { ...prev };
+        delete next[providerId];
+        return next;
+      });
+    } catch (error) {
+      setSaveErrorMap((prev) => ({
+        ...prev,
+        [providerId]: error instanceof Error ? error.message : "Could not remove provider key.",
+      }));
+    } finally {
+      setIsSavingMap((prev) => ({ ...prev, [providerId]: false }));
+    }
+  };
+
+  const handleDiscardDraft = (providerId: ProviderId) => {
     setDraftKeys((prev) => {
       const next = { ...prev };
       delete next[providerId];
@@ -129,19 +197,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
       delete next[providerId];
       return next;
     });
-    setSavedFeedbackMap((prev) => ({ ...prev, [providerId]: true }));
-    setTimeout(() => {
-      setSavedFeedbackMap((prev) => ({ ...prev, [providerId]: false }));
-    }, 1800);
-  };
-
-  const handleRemoveProvider = (providerId: ProviderId) => {
-    deleteProviderKey(providerId);
-    setDraftKeys((prev) => {
-      const next = { ...prev };
-      delete next[providerId];
-      return next;
-    });
     setSaveErrorMap((prev) => {
       const next = { ...prev };
       delete next[providerId];
@@ -149,38 +204,65 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     });
   };
 
-  const filteredProviders = PROVIDER_ORDER.map((id) => PROVIDER_CATALOG[id]).filter((provider) => {
-    if (subTab === "Yours" && !hasKey(provider.id)) {
-      return false;
-    }
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const models = getModelsForProvider(provider.id);
-    return (
-      provider.name.toLowerCase().includes(q) ||
-      provider.tagline.toLowerCase().includes(q) ||
-      provider.envKeyName.toLowerCase().includes(q) ||
-      models.some((m) => m.name.toLowerCase().includes(q))
-    );
-  });
+  const filteredProviders = useMemo(() => {
+    return PROVIDER_ORDER.map((id) => PROVIDER_CATALOG[id]).filter((provider) => {
+      if (subTab === "Yours" && !hasKey(provider.id)) {
+        return false;
+      }
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      const models = getModelsForProvider(provider.id);
+      return (
+        provider.name.toLowerCase().includes(q) ||
+        provider.tagline.toLowerCase().includes(q) ||
+        provider.envKeyName.toLowerCase().includes(q) ||
+        provider.keyPrefix.toLowerCase().includes(q) ||
+        (provider.id === "custom" && customModelId.toLowerCase().includes(q)) ||
+        models.some(
+          (m: ModelMetadata) =>
+            m.name.toLowerCase().includes(q) ||
+            m.id.toLowerCase().includes(q) ||
+            m.upstreamModelId.toLowerCase().includes(q) ||
+            (m.tag && m.tag.toLowerCase().includes(q)) ||
+            (m.description && m.description.toLowerCase().includes(q))
+        )
+      );
+    });
+  }, [subTab, hasKey, searchQuery, customModelId]);
 
+  // Handle switching tabs smoothly
   useEffect(() => {
-    const firstVisibleProvider = filteredProviders.find((provider) => hasKey(provider.id));
-    if (firstVisibleProvider) {
-      setExpandedProviderId(firstVisibleProvider.id);
-    } else if (subTab === "Yours") {
-      setExpandedProviderId(null);
+    if (subTab === "Yours") {
+      const firstConnected = PROVIDER_ORDER.find((id) => hasKey(id));
+      setExpandedProviderId(firstConnected || null);
+    } else {
+      setExpandedProviderId((curr) => {
+        if (curr && PROVIDER_ORDER.includes(curr)) return curr;
+        return "anthropic";
+      });
     }
-  }, [filteredProviders, hasKey, subTab]);
+  }, [subTab, hasKey]);
+
+  // If search filters out the currently expanded provider, select first matching or null
+  useEffect(() => {
+    if (expandedProviderId && !filteredProviders.some((p) => p.id === expandedProviderId)) {
+      setExpandedProviderId(filteredProviders[0]?.id || null);
+    }
+  }, [filteredProviders, expandedProviderId]);
 
   return (
     <div className="flex-1 w-full h-full bg-[#fcfcfb] flex flex-col font-sans select-none overflow-y-auto">
       <div className="w-full px-6 sm:px-8 md:px-10 lg:px-12 pt-7 md:pt-8 pb-12 flex flex-col">
         {/* Title in Editorial Serif font matching design */}
         <div className="flex items-center justify-between">
-          <h1 className="text-[28px] md:text-[30px] font-serif text-neutral-900 font-normal tracking-tight">
-            {activeCategory === "Providers" ? "AI Providers" : "Customize"}
-          </h1>
+          <div>
+            <h1 className="text-[28px] md:text-[30px] font-serif text-neutral-900 font-normal tracking-tight">
+              {activeCategory === "Providers" ? "AI Providers & BYOK" : "Customize"}
+            </h1>
+            <p className="mt-1 text-[13px] text-neutral-500">
+              Bring your own API keys for frontier reasoning, coding, and multimodal intelligence.
+            </p>
+          </div>
         </div>
 
         {/* Navigation & Controls Toolbar */}
@@ -204,9 +286,15 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       }`}
                     >
                       <span>{cat}</span>
-                      {cat === "Providers" && connectedCount > 0 && (
-                        <span className="text-[10.5px] px-1.5 py-0.2 rounded-full bg-neutral-900 text-white font-semibold">
-                          {connectedCount}
+                      {cat === "Providers" && (
+                        <span
+                          className={`text-[10.5px] px-1.5 py-0.2 rounded-full font-semibold ${
+                            connectedCount > 0
+                              ? "bg-neutral-900 text-white"
+                              : "bg-neutral-200 text-neutral-600"
+                          }`}
+                        >
+                          {connectedCount > 0 ? connectedCount : 8}
                         </span>
                       )}
                     </button>
@@ -222,18 +310,28 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
             <div className="bg-[#F1F1F4] p-0.5 rounded-lg inline-flex items-center">
               {(["Yours", "Discover"] as CustomizeSubTab[]).map((tab) => {
                 const isActive = subTab === tab;
+                const countBadge = tab === "Yours" ? connectedCount : 8;
                 return (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setSubTab(tab)}
-                    className={`text-[12.5px] transition-all cursor-pointer ${
+                    className={`text-[12.5px] transition-all cursor-pointer flex items-center gap-1.5 ${
                       isActive
                         ? "bg-white text-neutral-900 font-medium px-3 py-1 rounded-md shadow-xs"
                         : "text-neutral-500 hover:text-neutral-800 font-normal px-2.5 py-1 rounded-md"
                     }`}
                   >
-                    {tab}
+                    <span>{tab}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                        isActive
+                          ? "bg-neutral-100 text-neutral-800 font-semibold"
+                          : "text-neutral-400"
+                      }`}
+                    >
+                      {countBadge}
+                    </span>
                   </button>
                 );
               })}
@@ -253,10 +351,20 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
-                  activeCategory === "Providers" ? "Search providers or models" : "Search"
+                  activeCategory === "Providers" ? "Search providers, models, or tags" : "Search"
                 }
-                className="h-9 pl-8 pr-3 w-52 sm:w-60 md:w-64 text-[13px] text-neutral-900 placeholder-neutral-500 bg-neutral-50 rounded-xl outline-none focus:ring-2 focus:ring-neutral-300/70 transition-shadow"
+                className="h-9 pl-8 pr-7 w-52 sm:w-64 md:w-72 text-[13px] text-neutral-900 placeholder-neutral-400 bg-neutral-50 rounded-xl outline-none focus:ring-2 focus:ring-neutral-300/70 transition-shadow"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                  className="absolute right-2 text-neutral-400 hover:text-neutral-700"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
 
             {/* Filter Sliders Button */}
@@ -331,40 +439,92 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
         {/* Main Content Area */}
         {activeCategory === "Providers" ? (
-          <div className="mt-7 flex flex-col gap-5">
-            <div className="flex justify-end">
-              {subTab === "Yours" && connectedCount === 0 && (
+          <div className="mt-7 flex flex-col gap-4">
+            {/* Empty State: When "Yours" tab has zero connected keys */}
+            {subTab === "Yours" && connectedCount === 0 && (
+              <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-3xl border border-neutral-200/80 shadow-2xs">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center text-neutral-600 mb-3">
+                  <KeyRound size={22} />
+                </div>
+                <h3 className="text-[16px] font-semibold text-neutral-900">
+                  No connected API keys yet
+                </h3>
+                <p className="mt-1 text-[13px] text-neutral-500 max-w-md">
+                  Connect an API key from Anthropic, OpenAI, Google, DeepSeek, Kimi, Qwen, xAI, or
+                  OpenRouter to start using BYOK frontier models.
+                </p>
                 <button
                   type="button"
                   onClick={() => setSubTab("Discover")}
-                  className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-[12.5px] font-medium hover:bg-neutral-800 transition-colors cursor-pointer shrink-0"
+                  className="mt-5 px-4 py-2 rounded-xl bg-neutral-950 text-white text-[13px] font-medium hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer"
                 >
-                  Browse providers
+                  Explore 8 available providers
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Flat provider list keeps setup controls easy to scan. */}
-            <div className="flex flex-col gap-3">
+            {/* Empty State: Search Query returned no matches */}
+            {filteredProviders.length === 0 && (subTab === "Discover" || connectedCount > 0) && (
+              <div className="flex flex-col items-center justify-center p-10 text-center bg-white rounded-3xl border border-neutral-200/80">
+                <Search size={22} className="text-neutral-400 mb-2.5" />
+                <h3 className="text-[15px] font-medium text-neutral-900">
+                  No providers or models matching &ldquo;{searchQuery}&rdquo;
+                </h3>
+                <p className="mt-1 text-[12.5px] text-neutral-500">
+                  Try searching by provider name, model tag (e.g. &ldquo;Top&rdquo;,
+                  &ldquo;Fast&rdquo;, &ldquo;Free&rdquo;), or model ID.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="mt-4 px-3.5 py-1.5 rounded-lg border border-neutral-200 text-neutral-700 text-[12.5px] font-medium hover:bg-neutral-50 transition-colors cursor-pointer"
+                >
+                  Clear search query
+                </button>
+              </div>
+            )}
+
+            {/* Flat provider list */}
+            <div className="flex flex-col gap-3.5">
               {filteredProviders.map((provider) => {
                 const isConnected = hasKey(provider.id);
                 const isAccountConnected = hasAccountKey(provider.id);
                 const savedKey = keys[provider.id] || "";
                 const currentInput =
                   draftKeys[provider.id] !== undefined ? draftKeys[provider.id]! : savedKey;
+                const savedEndpoint = baseUrls[provider.id] || provider.defaultBaseUrl;
                 const currentUrl =
-                  draftUrls[provider.id] !== undefined
-                    ? draftUrls[provider.id]!
-                    : baseUrls[provider.id] || provider.defaultBaseUrl;
+                  draftUrls[provider.id] !== undefined ? draftUrls[provider.id]! : savedEndpoint;
                 const isRevealed = Boolean(revealedMap[provider.id]);
                 const isJustSaved = Boolean(savedFeedbackMap[provider.id]);
-                const savedEndpoint = baseUrls[provider.id] || provider.defaultBaseUrl;
+                const isSaving = Boolean(isSavingMap[provider.id]);
                 const endpointChanged =
                   draftUrls[provider.id] !== undefined &&
                   draftUrls[provider.id]!.trim() !== savedEndpoint;
+                const hasKeyDraft =
+                  draftKeys[provider.id] !== undefined &&
+                  draftKeys[provider.id]!.trim() !== savedKey;
+                const hasUnsavedDraft = hasKeyDraft || endpointChanged;
                 const saveError = saveErrorMap[provider.id];
+                const models = getModelsForProvider(provider.id);
+
+                // Prefix hint check
+                const isPrefixMismatch =
+                  Boolean(currentInput.trim()) &&
+                  currentInput.length >= 4 &&
+                  provider.keyPrefix &&
+                  !currentInput.startsWith(provider.keyPrefix);
+
                 return (
-                  <section key={provider.id} className="overflow-hidden rounded-[22px] bg-white">
+                  <section
+                    key={provider.id}
+                    className={`overflow-hidden rounded-[22px] bg-white border transition-shadow ${
+                      expandedProviderId === provider.id
+                        ? "border-neutral-300/80 shadow-sm"
+                        : "border-neutral-200/70 hover:border-neutral-300/60 shadow-2xs"
+                    }`}
+                  >
+                    {/* Header Row */}
                     <div className="flex items-center justify-between gap-4 px-5 py-4">
                       <button
                         type="button"
@@ -374,45 +534,79 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                             current === provider.id ? null : provider.id
                           )
                         }
-                        className="flex min-w-0 flex-1 items-center gap-3.5 text-left"
+                        className="flex min-w-0 flex-1 items-center gap-3.5 text-left cursor-pointer"
                       >
                         <CreatorLogo
                           creator={PROVIDER_LOGO_CREATOR[provider.id]}
-                          size={28}
+                          size={32}
                           title={provider.name}
                         />
-                        <span className="min-w-0">
-                          <span className="block truncate text-[15px] font-medium text-neutral-900">
-                            {provider.name}
-                          </span>
-                          <span
-                            className={`mt-0.5 inline-flex items-center text-[12.5px] ${
-                              isAccountConnected
-                                ? "text-emerald-700"
-                                : isConnected
-                                  ? "text-amber-700"
-                                  : "text-neutral-600"
-                            }`}
-                          >
-                            {isAccountConnected
-                              ? "Connected"
-                              : isConnected
-                                ? "Browser session only"
-                                : "Not connected"}
-                          </span>
-                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="truncate text-[15.5px] font-medium text-neutral-900">
+                              {provider.name}
+                            </span>
+
+                            {/* Connection status tag */}
+                            <span
+                              className={`inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full ${
+                                isAccountConnected
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70"
+                                  : isConnected
+                                    ? "bg-amber-50 text-amber-800 border border-amber-200/70"
+                                    : "bg-neutral-100 text-neutral-600"
+                              }`}
+                            >
+                              {isAccountConnected ? (
+                                <>
+                                  <ShieldCheck size={12} className="text-emerald-700" />
+                                  <span>Account connected</span>
+                                </>
+                              ) : isConnected ? (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                  <span>Browser session only</span>
+                                </>
+                              ) : (
+                                <span>Not connected</span>
+                              )}
+                            </span>
+
+                            {/* Unsaved draft indicator */}
+                            {hasUnsavedDraft && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                <span>Unsaved draft</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-1 flex items-center gap-2 flex-wrap">
+                            <span className="text-[12.5px] text-neutral-500 line-clamp-1">
+                              {provider.tagline}
+                            </span>
+                            <span className="text-neutral-300">•</span>
+                            <span className="text-[11.5px] font-mono text-neutral-400">
+                              {provider.envKeyName}
+                            </span>
+                          </div>
+                        </div>
                       </button>
-                      <div className="flex shrink-0 items-center gap-3">
+
+                      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                        {/* Docs URL Link */}
                         <a
                           href={provider.docsUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="hidden items-center gap-1 text-[12.5px] text-neutral-600 transition-colors hover:text-neutral-900 sm:flex"
-                          title={`Get ${provider.name} API Key`}
+                          className="flex items-center gap-1 text-[12px] text-neutral-600 hover:text-neutral-950 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors font-medium"
+                          title={`Get ${provider.name} API Key from official console`}
                         >
-                          <span>Get key</span>
+                          <span className="hidden sm:inline">Get key</span>
                           <ExternalLink size={12} />
                         </a>
+
+                        {/* Expand / Collapse Button */}
                         <button
                           type="button"
                           aria-label={`${expandedProviderId === provider.id ? "Collapse" : "Edit"} ${provider.name} settings`}
@@ -422,11 +616,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                               current === provider.id ? null : provider.id
                             )
                           }
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 cursor-pointer"
                         >
                           <ChevronDown
                             size={17}
-                            className={`transition-transform ${
+                            className={`transition-transform duration-200 ${
                               expandedProviderId === provider.id ? "rotate-180" : ""
                             }`}
                           />
@@ -434,15 +628,80 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       </div>
                     </div>
 
+                    {/* Expanded Configuration Panel */}
                     {expandedProviderId === provider.id && (
-                      <div className="mx-3 mb-3 rounded-[18px] bg-neutral-50/70 px-4 py-4 sm:mx-4 sm:px-5">
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(140px,220px)_minmax(0,1fr)] sm:items-center">
-                          <label
-                            htmlFor={`provider-key-${provider.id}`}
-                            className="text-[13px] font-medium text-neutral-800"
-                          >
-                            API key
-                          </label>
+                      <div className="mx-3.5 mb-3.5 rounded-[18px] bg-neutral-50/80 p-4 sm:p-5 border border-neutral-150">
+                        {/* Models and Capabilities Tags */}
+                        {models.length > 0 && (
+                          <div className="mb-4 pb-3.5 border-b border-neutral-200/70">
+                            <div className="flex items-center gap-1.5 text-[11.5px] font-medium text-neutral-500 uppercase tracking-wider mb-2">
+                              <Layers size={12} />
+                              <span>Available Models ({models.length})</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {models.map((model) => (
+                                <span
+                                  key={model.id}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-neutral-200 text-[12px] text-neutral-800 shadow-2xs"
+                                >
+                                  <span className="font-medium">{model.name}</span>
+                                  {model.tag && (
+                                    <span
+                                      className={`text-[9.5px] font-semibold px-1.5 py-0.2 rounded ${
+                                        model.tag === "Free"
+                                          ? "bg-emerald-100 text-emerald-800"
+                                          : model.tag === "Top" || model.tag === "Max"
+                                            ? "bg-amber-100 text-amber-800"
+                                            : "bg-blue-100 text-blue-800"
+                                      }`}
+                                    >
+                                      {model.tag}
+                                    </span>
+                                  )}
+                                  {model.contextWindowTokens && (
+                                    <span className="text-[10px] text-neutral-400 font-mono">
+                                      {Math.round(model.contextWindowTokens / 1000)}k
+                                    </span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* API Key Input Section */}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <label
+                                htmlFor={`provider-key-${provider.id}`}
+                                className="text-[13px] font-medium text-neutral-800"
+                              >
+                                API key
+                              </label>
+                              {/* Prefix Hint Badge */}
+                              {provider.keyPrefix && (
+                                <span
+                                  title={`Expected key prefix for ${provider.name}`}
+                                  className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-neutral-200/70 text-neutral-700 font-medium"
+                                >
+                                  Prefix: {provider.keyPrefix}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Official console link */}
+                            <a
+                              href={provider.docsUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11.5px] text-neutral-600 hover:text-neutral-900 inline-flex items-center gap-1 transition-colors"
+                            >
+                              <span>{provider.name} Console</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+
                           <div className="flex min-w-0 items-center gap-2">
                             <div className="relative flex-1">
                               <input
@@ -455,8 +714,12 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     [provider.id]: e.target.value,
                                   }))
                                 }
-                                placeholder={`Paste ${provider.name} API key`}
-                                className="h-10 w-full rounded-xl bg-white pl-3 pr-9 text-[12.5px] font-mono text-neutral-900 outline-none shadow-[inset_0_0_0_1px_rgba(15,23,42,0.13)] transition-shadow placeholder:font-sans placeholder:text-neutral-500 focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                placeholder={
+                                  isAccountConnected && !currentInput
+                                    ? "•••••••••••••••• (Saved to your account)"
+                                    : `e.g. ${provider.keyPlaceholder || provider.keyPrefix}`
+                                }
+                                className="h-10 w-full rounded-xl bg-white pl-3 pr-10 text-[12.5px] font-mono text-neutral-900 outline-none shadow-[inset_0_0_0_1px_rgba(15,23,42,0.13)] transition-shadow placeholder:font-sans placeholder:text-neutral-400 focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.35)]"
                               />
                               <button
                                 type="button"
@@ -467,29 +730,51 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                   }))
                                 }
                                 aria-label={isRevealed ? "Hide API key" : "Show API key"}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-500 hover:text-neutral-900"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 hover:text-neutral-800 transition-colors p-1"
                               >
-                                {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                                {isRevealed ? <EyeOff size={15} /> : <Eye size={15} />}
                               </button>
                             </div>
 
+                            {/* Discard draft button if user made changes */}
+                            {hasUnsavedDraft && (
+                              <button
+                                type="button"
+                                onClick={() => handleDiscardDraft(provider.id)}
+                                title="Discard unsaved changes"
+                                aria-label="Discard unsaved changes"
+                                className="h-9 px-2.5 text-[12px] rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <RotateCcw size={13} />
+                                <span className="hidden sm:inline">Discard</span>
+                              </button>
+                            )}
+
+                            {/* Save / Connect / Update Button */}
                             <button
                               type="button"
                               onClick={() => handleSaveProvider(provider.id)}
-                              disabled={!currentInput.trim() && !(isConnected && endpointChanged)}
-                              className={`h-9 shrink-0 cursor-pointer rounded-xl px-3.5 text-[12.5px] font-medium transition-all flex items-center gap-1.5 ${
+                              disabled={
+                                isSaving ||
+                                (!currentInput.trim() && !(isConnected && endpointChanged))
+                              }
+                              className={`h-9 shrink-0 cursor-pointer rounded-xl px-4 text-[12.5px] font-medium transition-all flex items-center gap-1.5 ${
                                 isJustSaved
-                                  ? "bg-neutral-900 text-white hover:bg-neutral-800"
-                                  : "bg-neutral-900 text-white hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-700 disabled:opacity-100 disabled:pointer-events-none"
+                                  ? "bg-emerald-700 text-white"
+                                  : isSaving
+                                    ? "bg-neutral-700 text-white cursor-wait"
+                                    : "bg-neutral-950 text-white hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-500 disabled:cursor-not-allowed"
                               }`}
                             >
                               {isJustSaved ? (
                                 <>
-                                  <Check size={13} />
+                                  <Check size={14} />
                                   <span>
                                     {hasAccountKey(provider.id) ? "Saved" : "Saved for session"}
                                   </span>
                                 </>
+                              ) : isSaving ? (
+                                <span>Saving...</span>
                               ) : (
                                 <span>
                                   {isConnected && endpointChanged && !currentInput.trim()
@@ -501,46 +786,184 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                               )}
                             </button>
 
+                            {/* Disconnect / Remove Key Button */}
                             {isConnected && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveProvider(provider.id)}
-                                title="Disconnect key"
-                                aria-label="Disconnect key"
-                                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                                disabled={isSaving}
+                                title="Disconnect API key"
+                                aria-label="Disconnect API key"
+                                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-200"
                               >
                                 <Trash2 size={14} />
                               </button>
                             )}
                           </div>
+
+                          {/* Prefix Mismatch Notice */}
+                          {isPrefixMismatch && (
+                            <p className="text-[11.5px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                              <AlertCircle size={13} className="shrink-0" />
+                              <span>
+                                Notice: {provider.name} keys typically start with &ldquo;
+                                {provider.keyPrefix}&rdquo;.
+                              </span>
+                            </p>
+                          )}
+
+                          {/* Error Banner */}
+                          {saveError && (
+                            <div
+                              role="alert"
+                              className="text-[12px] text-rose-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl flex items-center justify-between gap-2"
+                            >
+                              <div className="flex items-center gap-2">
+                                <AlertCircle size={14} className="shrink-0 text-rose-600" />
+                                <span>{saveError}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSaveErrorMap((prev) => {
+                                    const next = { ...prev };
+                                    delete next[provider.id];
+                                    return next;
+                                  })
+                                }
+                                aria-label="Dismiss error"
+                                className="text-rose-500 hover:text-rose-800"
+                              >
+                                <X size={13} />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Account vs Browser Session Explanatory Note */}
+                          {isConnected && !isAccountConnected && (
+                            <p className="text-[11.5px] text-neutral-500 mt-0.5">
+                              This key is stored in browser session memory.{" "}
+                              {user
+                                ? "Click Update to securely encrypt and sync it with your account for scheduled tasks and other devices."
+                                : "Sign in, then click Update to save it to your account for scheduled tasks and multi-device access."}
+                            </p>
+                          )}
+                          {isAccountConnected && (
+                            <p className="text-[11px] text-emerald-700/90 mt-0.5 flex items-center gap-1">
+                              <ShieldCheck size={13} />
+                              <span>
+                                Key is encrypted with AES-GCM and stored in your account vault.
+                              </span>
+                            </p>
+                          )}
                         </div>
 
-                        <div className="mt-3 flex flex-col gap-2.5">
-                          {saveError && (
-                            <p role="alert" className="text-[11.5px] text-rose-600">
-                              {saveError}
-                            </p>
-                          )}
-                          {isConnected && !isAccountConnected && (
-                            <p className="text-[11px] text-neutral-500">
-                              This key is only available in this browser.{" "}
-                              {user
-                                ? "Click Update to save it to your account for scheduled tasks and across devices."
-                                : "Sign in, then click Update to save it to your account for scheduled tasks and across devices."}
-                            </p>
-                          )}
+                        {/* Custom Model Configurations (Prominent for Custom / OpenRouter) */}
+                        {provider.id === "custom" && (
+                          <div className="mt-4 pt-4 border-t border-neutral-200/80 flex flex-col gap-3">
+                            <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-800">
+                              <Server size={14} className="text-neutral-600" />
+                              <span>Custom Model & Endpoint Settings</span>
+                            </div>
 
-                          <details className="group pt-1">
-                            <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-[12.5px] text-neutral-700 transition-colors hover:text-neutral-950 [&::-webkit-details-marker]:hidden">
-                              Advanced settings
-                              <ChevronDown
-                                size={13}
-                                className="transition-transform group-open:rotate-180"
-                              />
-                            </summary>
-                            <div className="mt-3 flex flex-col gap-2.5">
-                              <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-500">
-                                API endpoint
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {/* Model ID Input */}
+                              <label className="flex flex-col gap-1.5 text-[12px] text-neutral-600 font-medium">
+                                <span>Model ID</span>
+                                <input
+                                  type="text"
+                                  value={customModelId}
+                                  onChange={(e) => setCustomModel(e.target.value)}
+                                  placeholder="e.g. openai/gpt-4o-mini or meta-llama/llama-3.3-70b"
+                                  className="h-9 px-3 text-[12px] font-mono text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                />
+                                <span className="text-[10.5px] text-neutral-400 font-normal">
+                                  Any model ID supported by OpenRouter or your custom endpoint.
+                                </span>
+                              </label>
+
+                              {/* Credentials Provider Selection */}
+                              <label className="flex flex-col gap-1.5 text-[12px] text-neutral-600 font-medium">
+                                <span>Credentials from</span>
+                                <select
+                                  value={customModelProvider}
+                                  onChange={(event) =>
+                                    setCustomProvider(event.target.value as ProviderId)
+                                  }
+                                  className="h-9 px-3 text-[12px] text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                >
+                                  {PROVIDER_ORDER.map((providerId) => (
+                                    <option key={providerId} value={providerId}>
+                                      {PROVIDER_CATALOG[providerId].name}
+                                    </option>
+                                  ))}
+                                </select>
+                                <span className="text-[10.5px] text-neutral-400 font-normal">
+                                  Authenticates using the key configured for{" "}
+                                  {PROVIDER_CATALOG[customModelProvider].name}.
+                                </span>
+                              </label>
+                            </div>
+
+                            {/* Quick Presets for Custom Endpoint */}
+                            <div className="flex items-center gap-2 pt-1 flex-wrap">
+                              <span className="text-[11px] text-neutral-500 font-medium">
+                                Quick presets:
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDraftUrls((prev) => ({
+                                    ...prev,
+                                    custom: "https://openrouter.ai/api/v1",
+                                  }))
+                                }
+                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                              >
+                                OpenRouter Default
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDraftUrls((prev) => ({
+                                    ...prev,
+                                    custom: "http://localhost:11434/v1",
+                                  }))
+                                }
+                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                              >
+                                Ollama Local (11434)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDraftUrls((prev) => ({
+                                    ...prev,
+                                    custom: "http://localhost:1234/v1",
+                                  }))
+                                }
+                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                              >
+                                LM Studio (1234)
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Advanced Settings (Base URL Override) */}
+                        <details className="group mt-4 pt-3 border-t border-neutral-200/80">
+                          <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-[12px] font-medium text-neutral-700 transition-colors hover:text-neutral-950 [&::-webkit-details-marker]:hidden">
+                            <span>Advanced endpoint overrides</span>
+                            <ChevronDown
+                              size={13}
+                              className="transition-transform group-open:rotate-180 text-neutral-500"
+                            />
+                          </summary>
+
+                          <div className="mt-3 flex flex-col gap-2">
+                            <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-500 font-medium">
+                              <span>API Base URL Endpoint</span>
+                              <div className="flex items-center gap-2">
                                 <input
                                   type="url"
                                   value={currentUrl}
@@ -552,43 +975,30 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                   }
                                   placeholder={provider.defaultBaseUrl}
                                   aria-label={`${provider.name} API endpoint`}
-                                  className="h-9 px-3 text-[12px] font-mono text-neutral-700 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                  className="h-9 flex-1 px-3 text-[12px] font-mono text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
                                 />
-                              </label>
-
-                              {provider.id === "custom" && (
-                                <>
-                                  <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-500">
-                                    Credentials from
-                                    <select
-                                      value={customModelProvider}
-                                      onChange={(event) =>
-                                        setCustomProvider(event.target.value as ProviderId)
-                                      }
-                                      className="h-9 px-3 text-[12px] text-neutral-700 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
-                                    >
-                                      {PROVIDER_ORDER.map((providerId) => (
-                                        <option key={providerId} value={providerId}>
-                                          {PROVIDER_CATALOG[providerId].name}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
-                                  <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-500">
-                                    Model ID
-                                    <input
-                                      type="text"
-                                      value={customModelId}
-                                      onChange={(e) => setCustomModel(e.target.value)}
-                                      placeholder="openai/gpt-4o-mini"
-                                      className="h-9 px-3 text-[12px] font-mono text-neutral-700 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
-                                    />
-                                  </label>
-                                </>
-                              )}
-                            </div>
-                          </details>
-                        </div>
+                                {currentUrl !== provider.defaultBaseUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDraftUrls((prev) => ({
+                                        ...prev,
+                                        [provider.id]: provider.defaultBaseUrl,
+                                      }))
+                                    }
+                                    title="Reset to default endpoint"
+                                    className="h-9 px-2.5 text-[11.5px] rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
+                              </div>
+                              <span className="text-[10.5px] text-neutral-400 font-normal">
+                                Default: {provider.defaultBaseUrl}
+                              </span>
+                            </label>
+                          </div>
+                        </details>
                       </div>
                     )}
                   </section>
@@ -597,7 +1007,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
             </div>
           </div>
         ) : (
-          /* Skills, Connectors, and Plugins share the same empty canvas. */
+          /* Skills, Connectors, and Plugins share the same empty canvas */
           <div className="flex-1 w-full min-h-[400px]" />
         )}
       </div>

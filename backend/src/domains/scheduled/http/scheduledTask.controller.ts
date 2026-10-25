@@ -5,6 +5,8 @@ import type {
   UpdateScheduledTaskRequest,
 } from "@charan-interiors/contracts";
 import { ScheduledTaskService } from "../application/scheduledTaskService.js";
+import { sanitizeApiKey, sanitizeBaseUrl } from "../../../platform/config/index.js";
+import { redactSecretsString } from "../../../platform/observability/logger.js";
 
 const scheduledTasks = new ScheduledTaskService();
 export const DEFAULT_USER_ID = "default";
@@ -15,10 +17,27 @@ function getUserId(req: Request): string {
 
 function handleKnownRequestError(error: unknown, req: Request, res: Response, next: NextFunction) {
   if (error instanceof Error && error.message.startsWith("UNKNOWN_MODEL:")) {
-    res.status(400).json({ error: error.message, requestId: req.id });
+    res.status(400).json({ error: redactSecretsString(error.message), requestId: req.id });
     return;
   }
   next(error);
+}
+
+function extractHeaderCredential(req: Request): {
+  headerApiKey: string | undefined;
+  headerBaseUrl: string | undefined;
+} {
+  const rawKey = Array.isArray(req.headers["x-provider-key"])
+    ? req.headers["x-provider-key"][0]
+    : req.headers["x-provider-key"];
+  const headerApiKey = sanitizeApiKey(rawKey);
+
+  const rawUrl = Array.isArray(req.headers["x-provider-base-url"])
+    ? req.headers["x-provider-base-url"][0]
+    : req.headers["x-provider-base-url"];
+  const headerBaseUrl = sanitizeBaseUrl(rawUrl);
+
+  return { headerApiKey, headerBaseUrl };
 }
 
 export function listScheduledTasks(req: Request, res: Response): void {
@@ -27,7 +46,12 @@ export function listScheduledTasks(req: Request, res: Response): void {
 
 export function createScheduledTask(req: Request, res: Response, next: NextFunction): void {
   try {
-    const task = scheduledTasks.create(getUserId(req), req.body as ScheduledTaskInput);
+    const { headerBaseUrl } = extractHeaderCredential(req);
+    const task = scheduledTasks.create(
+      getUserId(req),
+      req.body as ScheduledTaskInput,
+      headerBaseUrl
+    );
     res.status(201).json({ task });
   } catch (error) {
     handleKnownRequestError(error, req, res, next);
@@ -36,10 +60,12 @@ export function createScheduledTask(req: Request, res: Response, next: NextFunct
 
 export function updateScheduledTask(req: Request, res: Response, next: NextFunction): void {
   try {
+    const { headerBaseUrl } = extractHeaderCredential(req);
     const task = scheduledTasks.update(
       getUserId(req),
       req.params["id"]!,
-      req.body as UpdateScheduledTaskRequest
+      req.body as UpdateScheduledTaskRequest,
+      headerBaseUrl
     );
     if (!task) {
       res.status(404).json({ error: "Scheduled task not found.", requestId: req.id });
@@ -68,19 +94,17 @@ export function importScheduledTasks(req: Request, res: Response, next: NextFunc
 }
 
 export function queueScheduledTaskRun(req: Request, res: Response): void {
-  const headerKey =
-    typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
-  const headerBaseUrl =
-    typeof req.headers["x-provider-base-url"] === "string"
-      ? req.headers["x-provider-base-url"]
-      : undefined;
+  const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
 
   try {
     const run = scheduledTasks.runNow(
       getUserId(req),
       req.params["id"]!,
-      headerKey
-        ? { apiKey: headerKey, ...(headerBaseUrl ? { baseUrl: headerBaseUrl } : {}) }
+      headerApiKey || headerBaseUrl
+        ? {
+            ...(headerApiKey ? { apiKey: headerApiKey } : {}),
+            ...(headerBaseUrl ? { baseUrl: headerBaseUrl } : {}),
+          }
         : undefined
     );
     if (!run) {
@@ -92,11 +116,12 @@ export function queueScheduledTaskRun(req: Request, res: Response): void {
     res.status(202).json({ run });
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Scheduled task execution failed.";
-    if (rawMessage.startsWith("MISSING_API_KEY:")) {
-      res.status(401).json({ error: rawMessage, requestId: req.id });
+    const safeMessage = redactSecretsString(rawMessage);
+    if (safeMessage.startsWith("MISSING_API_KEY:")) {
+      res.status(401).json({ error: safeMessage, requestId: req.id });
       return;
     }
-    res.status(400).json({ error: rawMessage, requestId: req.id });
+    res.status(400).json({ error: safeMessage, requestId: req.id });
   }
 }
 

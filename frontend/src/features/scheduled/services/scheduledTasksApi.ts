@@ -6,6 +6,7 @@ import {
   type ScheduledTaskRunRecord,
 } from "@charan-interiors/contracts";
 import type { ScheduledTask, TaskFrequency } from "../components/scheduledTypes";
+import { getFirebaseIdToken } from "../../../app/integrations/workspaceLiveSync";
 
 const LEGACY_TASKS_KEY = "shoebox_scheduled_tasks";
 const IMPORT_MARKER_KEY = "shoebox_scheduled_tasks_imported_v1";
@@ -220,6 +221,14 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 async function scheduledFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const token = await getFirebaseIdToken().catch(() => null);
+  if (token) {
+    const headers = new Headers(init.headers);
+    if (!headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    return fetch(input, { ...init, headers });
+  }
   return fetch(input, init);
 }
 
@@ -253,20 +262,27 @@ export async function listScheduledTasks(): Promise<ScheduledTask[]> {
   return body.tasks.map(fromApiTask);
 }
 
-export async function createScheduledTask(input: ScheduledTaskInput): Promise<ScheduledTask> {
+export async function createScheduledTask(
+  input: ScheduledTaskInput,
+  extraHeaders?: Record<string, string>
+): Promise<ScheduledTask> {
   const response = await scheduledFetch("/api/scheduled-tasks", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...extraHeaders },
     body: JSON.stringify(input),
   });
   const body = await parseResponse<{ task: ScheduledTaskRecord }>(response);
   return fromApiTask(body.task);
 }
 
-export async function updateScheduledTask(id: string, task: ScheduledTask): Promise<ScheduledTask> {
+export async function updateScheduledTask(
+  id: string,
+  task: ScheduledTask,
+  extraHeaders?: Record<string, string>
+): Promise<ScheduledTask> {
   const response = await scheduledFetch(`/api/scheduled-tasks/${encodeURIComponent(id)}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...extraHeaders },
     body: JSON.stringify(toApiTask(task)),
   });
   const body = await parseResponse<{ task: ScheduledTaskRecord }>(response);
@@ -288,10 +304,12 @@ export async function listScheduledTaskRuns(taskId: string): Promise<ScheduledTa
 
 export async function runScheduledTask(
   id: string,
-  apiKey?: string
+  apiKey?: string,
+  baseUrl?: string
 ): Promise<ScheduledTaskRunRecord> {
   const headers = new Headers();
   if (apiKey) headers.set("x-provider-key", apiKey);
+  if (baseUrl) headers.set("x-provider-base-url", baseUrl);
   const response = await scheduledFetch(`/api/scheduled-tasks/${encodeURIComponent(id)}/run`, {
     method: "POST",
     headers,

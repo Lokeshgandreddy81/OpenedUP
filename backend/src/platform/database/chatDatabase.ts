@@ -179,7 +179,7 @@ function defaultDatabasePath(): string {
 export function openChatDatabase(databasePath = defaultDatabasePath()): ChatDatabase {
   if (databasePath !== ":memory:") fs.mkdirSync(path.dirname(databasePath), { recursive: true });
   const database = new Database(databasePath);
-  database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+  database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON;");
   if (databasePath !== ":memory:") database.exec("PRAGMA journal_mode = WAL;");
   database.exec(SCHEMA);
   migrateChatDatabase(database);

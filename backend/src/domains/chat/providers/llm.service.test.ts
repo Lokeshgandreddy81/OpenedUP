@@ -11,6 +11,8 @@ import {
   buildOpenAiMessages,
   resolveProviderCredentials,
   resolveGeminiThinkingLevel,
+  resolveOpenAiEffort,
+  normalizeBaseUrl,
 } from "./llm.service.js";
 import { processChat } from "../application/chat.service.js";
 import {
@@ -194,32 +196,89 @@ test("6. Gemini thinking level resolution", () => {
   assert.equal(resolveGeminiThinkingLevel("max"), ThinkingLevel.HIGH);
 });
 
-test("7. BYOK credential resolution and overrides", () => {
-  // Google BYOK
+test("7. BYOK credential resolution for all 8 providers and overrides", () => {
+  // 1. Anthropic
+  const anthropicCreds = resolveProviderCredentials("claude-opus-5.5", "sk-ant-test123");
+  assert.equal(anthropicCreds.provider, "anthropic");
+  assert.equal(anthropicCreds.upstreamModelId, "claude-opus-5-5");
+  assert.equal(anthropicCreds.apiKey, "sk-ant-test123");
+  assert.equal(anthropicCreds.baseUrl, "https://api.anthropic.com/v1");
+
+  // 2. OpenAI
+  const openaiCreds = resolveProviderCredentials("gpt-6-astra", "sk-test123");
+  assert.equal(openaiCreds.provider, "openai");
+  assert.equal(openaiCreds.upstreamModelId, "gpt-6-astra");
+  assert.equal(openaiCreds.apiKey, "sk-test123");
+  assert.equal(openaiCreds.baseUrl, "https://api.openai.com/v1");
+
+  // 3. Google Gemini
   const googleCreds = resolveProviderCredentials("gemini-3.8-flash", "AIzaSyTest123");
   assert.equal(googleCreds.provider, "google");
+  assert.equal(googleCreds.upstreamModelId, "gemini-3.8-flash");
   assert.equal(googleCreds.apiKey, "AIzaSyTest123");
   assert.equal(googleCreds.baseUrl, "https://generativelanguage.googleapis.com/v1beta");
 
-  // Custom Base URL override
-  const customBase = resolveProviderCredentials(
-    "claude-opus-5.5",
-    "sk-ant-test123",
-    "https://proxy.example.com/anthropic"
-  );
-  assert.equal(customBase.provider, "anthropic");
-  assert.equal(customBase.baseUrl, "https://proxy.example.com/anthropic");
+  // 4. DeepSeek
+  const deepseekCreds = resolveProviderCredentials("deepseek-v4.1-flash", "sk-ds-test123");
+  assert.equal(deepseekCreds.provider, "deepseek");
+  assert.equal(deepseekCreds.upstreamModelId, "deepseek-flash");
+  assert.equal(deepseekCreds.apiKey, "sk-ds-test123");
+  assert.equal(deepseekCreds.baseUrl, "https://api.deepseek.com");
 
-  // Custom model
+  // 5. Kimi (Moonshot)
+  const kimiCreds = resolveProviderCredentials("kimi-k3.1-pro", "sk-kimi-test123");
+  assert.equal(kimiCreds.provider, "kimi");
+  assert.equal(kimiCreds.upstreamModelId, "kimi-k3.1-pro");
+  assert.equal(kimiCreds.apiKey, "sk-kimi-test123");
+  assert.equal(kimiCreds.baseUrl, "https://api.moonshot.ai/v1");
+
+  // 6. Qwen (DashScope)
+  const qwenCreds = resolveProviderCredentials("qwen3.8-max", "sk-qwen-test123");
+  assert.equal(qwenCreds.provider, "qwen");
+  assert.equal(qwenCreds.upstreamModelId, "qwen3.8-max");
+  assert.equal(qwenCreds.apiKey, "sk-qwen-test123");
+  assert.equal(qwenCreds.baseUrl, "https://dashscope-intl.aliyuncs.com/compatible-mode/v1");
+
+  // 7. xAI (Grok)
+  const xaiCreds = resolveProviderCredentials("grok-4.7", "xai-test123");
+  assert.equal(xaiCreds.provider, "xai");
+  assert.equal(xaiCreds.upstreamModelId, "grok-4.7");
+  assert.equal(xaiCreds.apiKey, "xai-test123");
+  assert.equal(xaiCreds.baseUrl, "https://api.x.ai/v1");
+
+  // 8. Custom / OpenRouter (default provider "custom")
   const customModelCreds = resolveProviderCredentials(
     "custom-model",
     "sk-or-test123",
-    "https://openrouter.ai/api/v1",
-    "openai/gpt-4o",
-    "custom"
+    undefined,
+    "meta-llama/llama-3-70b-instruct"
   );
   assert.equal(customModelCreds.provider, "custom");
-  assert.equal(customModelCreds.upstreamModelId, "openai/gpt-4o");
+  assert.equal(customModelCreds.upstreamModelId, "meta-llama/llama-3-70b-instruct");
+  assert.equal(customModelCreds.apiKey, "sk-or-test123");
+  assert.equal(customModelCreds.baseUrl, "https://openrouter.ai/api/v1");
+
+  // Custom model with explicit customProvider override (e.g. openai)
+  const customWithProvider = resolveProviderCredentials(
+    "custom-model",
+    "sk-proj-test123",
+    undefined,
+    "ft:gpt-4o:my-org",
+    "openai"
+  );
+  assert.equal(customWithProvider.provider, "openai");
+  assert.equal(customWithProvider.upstreamModelId, "ft:gpt-4o:my-org");
+  assert.equal(customWithProvider.baseUrl, "https://api.openai.com/v1");
+
+  // Custom model with invalid customProvider falls back safely to "custom"
+  const customInvalidProvider = resolveProviderCredentials(
+    "custom-model",
+    "sk-or-test123",
+    undefined,
+    "custom-upstream",
+    "invalid-provider" as unknown as undefined
+  );
+  assert.equal(customInvalidProvider.provider, "custom");
 
   // Missing custom model ID
   assert.throws(
@@ -227,14 +286,109 @@ test("7. BYOK credential resolution and overrides", () => {
     /MISSING_CUSTOM_MODEL/
   );
 
-  // Missing API Key
-  assert.throws(() => resolveProviderCredentials("gpt-6-astra", ""), /MISSING_API_KEY:openai/);
-
   // Unknown model
   assert.throws(
     () => resolveProviderCredentials("nonexistent-model-xyz", "key"),
     /UNKNOWN_MODEL:nonexistent-model-xyz/
   );
+});
+
+test("7b. Custom base URL overrides: trailing slashes, custom ports, and protocol validation", () => {
+  // Trailing slashes stripped
+  const strippedSlash = resolveProviderCredentials(
+    "claude-opus-5.5",
+    "sk-ant-test123",
+    "https://proxy.example.com/anthropic///"
+  );
+  assert.equal(strippedSlash.baseUrl, "https://proxy.example.com/anthropic");
+
+  // Custom port preserved and trailing slash stripped
+  const customPort = resolveProviderCredentials(
+    "gpt-6-astra",
+    "sk-test123",
+    "https://proxy.example.com:8443/v1/"
+  );
+  assert.equal(customPort.baseUrl, "https://proxy.example.com:8443/v1");
+
+  // Direct normalizeBaseUrl unit tests
+  assert.equal(normalizeBaseUrl("https://api.openai.com/v1/"), "https://api.openai.com/v1");
+  assert.equal(
+    normalizeBaseUrl("https://custom-gateway.corp.com:9443/llm/"),
+    "https://custom-gateway.corp.com:9443/llm"
+  );
+  assert.equal(
+    normalizeBaseUrl("https://api.moonshot.ai/v1"),
+    "https://api.moonshot.ai/v1"
+  );
+
+  // Protocol validation: HTTP rejected
+  assert.throws(
+    () => resolveProviderCredentials("gpt-6-astra", "sk-test", "http://insecure.example.com/v1"),
+    /Provider URL must use HTTPS\./
+  );
+  assert.throws(
+    () => normalizeBaseUrl("http://insecure.example.com/v1"),
+    /Provider URL must use HTTPS\./
+  );
+
+  // Protocol validation: FTP rejected
+  assert.throws(
+    () => normalizeBaseUrl("ftp://files.example.com/v1"),
+    /Provider URL must use HTTPS\./
+  );
+
+  // Malformed URL rejected
+  assert.throws(
+    () => normalizeBaseUrl("not-a-valid-url"),
+    /Provider base URL must be a valid URL\./
+  );
+
+  // Embedded credentials rejected
+  assert.throws(
+    () => normalizeBaseUrl("https://user:pass@proxy.example.com/v1"),
+    /Provider URL must not contain credentials\./
+  );
+});
+
+test("7c. Missing API key actionable error format for all 8 providers", () => {
+  const missingCases = [
+    { model: "claude-opus-5.5", provider: "anthropic" },
+    { model: "gpt-6-astra", provider: "openai" },
+    { model: "gemini-4-argon", provider: "google" },
+    { model: "deepseek-v4.1-flash", provider: "deepseek" },
+    { model: "kimi-k3.1-pro", provider: "kimi" },
+    { model: "qwen3.8-max", provider: "qwen" },
+    { model: "grok-4.7", provider: "xai" },
+    { model: "custom-model", provider: "custom", customModel: "custom-upstream" },
+  ];
+
+  for (const { model, provider, customModel } of missingCases) {
+    const expectedPattern = new RegExp(`MISSING_API_KEY:${provider}:.+Customize → Providers`);
+    assert.throws(
+      () => resolveProviderCredentials(model, "", undefined, customModel),
+      expectedPattern
+    );
+    // Also verify whitespace-only key triggers missing key error
+    assert.throws(
+      () => resolveProviderCredentials(model, "   ", undefined, customModel),
+      expectedPattern
+    );
+  }
+
+  // Custom model with customProvider missing key error
+  assert.throws(
+    () => resolveProviderCredentials("custom-model", "", undefined, "gpt-4o", "openai"),
+    /MISSING_API_KEY:openai:.+Customize → Providers/
+  );
+});
+
+test("7d. OpenAI reasoning_effort resolution", () => {
+  assert.equal(resolveOpenAiEffort("low"), "low");
+  assert.equal(resolveOpenAiEffort("medium"), "medium");
+  assert.equal(resolveOpenAiEffort("high"), "high");
+  // Extra/Max must map safely to "high" for OpenAI API compliance
+  assert.equal(resolveOpenAiEffort("xhigh"), "high");
+  assert.equal(resolveOpenAiEffort("max"), "high");
 });
 
 test("8. Text-only model protection in chat.service.ts", async () => {

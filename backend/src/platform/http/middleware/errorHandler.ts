@@ -1,33 +1,37 @@
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../../errors/errors.js";
-import { logger } from "../../observability/logger.js";
+import { logger, redactSecretsString } from "../../observability/logger.js";
+import { sanitizeLogUrl } from "./requestLogger.js";
 
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction): void {
   const requestId = req.id ?? "unknown";
 
   if (err instanceof AppError) {
+    const safeAppMessage = redactSecretsString(err.message);
     logger.warn({
       requestId,
       statusCode: err.statusCode,
-      message: err.message,
+      message: safeAppMessage,
     });
     res.status(err.statusCode).json({
-      error: err.message,
+      error: safeAppMessage,
       requestId,
       statusCode: err.statusCode,
     });
     return;
   }
 
-  const message = err instanceof Error ? err.message : "Internal Server Error";
-  const stack = err instanceof Error ? err.stack : undefined;
+  const rawMessage = err instanceof Error ? err.message : "Internal Server Error";
+  const rawStack = err instanceof Error ? err.stack : undefined;
+  const safeMessage = redactSecretsString(rawMessage);
+  const safeStack = rawStack ? redactSecretsString(rawStack) : undefined;
 
   logger.error({
     requestId,
-    url: req.originalUrl,
+    url: sanitizeLogUrl(req.originalUrl || req.url),
     method: req.method,
-    message,
-    stack,
+    message: safeMessage,
+    stack: safeStack,
   });
 
   const statusCode =
@@ -35,8 +39,11 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
       ? (err as { status: number }).status
       : 500;
 
+  // Never return raw 500 errors to client responses to prevent internal or upstream secret leakage
+  const clientMessage = statusCode >= 500 ? "Internal Server Error" : safeMessage;
+
   res.status(statusCode).json({
-    error: message,
+    error: clientMessage,
     requestId,
     statusCode,
   });

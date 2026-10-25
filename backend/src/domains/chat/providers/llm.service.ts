@@ -10,7 +10,7 @@ import {
   type ChatMessage,
 } from "@charan-interiors/contracts";
 import { isValidApiKey } from "../../../platform/config/index.js";
-import { logEvent } from "../../../platform/observability/logger.js";
+import { logEvent, redactSecretsString } from "../../../platform/observability/logger.js";
 
 export interface LlmGenerateParams {
   modelId: string;
@@ -42,9 +42,8 @@ async function consumeSseResponse(
 ): Promise<string> {
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new Error(
-      `Provider API error (${response.status}): ${body.slice(0, 1000) || response.statusText}`
-    );
+    const safeBody = redactSecretsString(body.slice(0, 1000) || response.statusText);
+    throw new Error(`Provider API error (${response.status}): ${safeBody}`);
   }
   if (!response.body) throw new Error("Provider returned no streaming body.");
   const reader = response.body.getReader();
@@ -349,10 +348,12 @@ export async function generateMultiProviderChatStream(
   const modelUsed = upstreamModelId;
   const allImages = resolveAllImages(params);
 
+  const cleanApiKey = apiKey.replace(/[^\x21-\x7E]/g, "");
+
   if (provider === "google") {
     const contents = buildGeminiContents(params.messages, allImages);
     const ai = new GoogleGenAI({
-      apiKey,
+      apiKey: cleanApiKey,
       httpOptions: { baseUrl, apiVersion: "", fetch: fetchProviderFromSdk },
     });
     const stream = await ai.models.generateContentStream({
@@ -381,7 +382,7 @@ export async function generateMultiProviderChatStream(
       ...(params.signal ? { signal: params.signal } : {}),
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
+        "x-api-key": cleanApiKey,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -406,7 +407,7 @@ export async function generateMultiProviderChatStream(
     const response = await fetchProvider(`${baseUrl.replace(/\/+$/, "")}/chat/completions`, {
       method: "POST",
       ...(params.signal ? { signal: params.signal } : {}),
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cleanApiKey}` },
       body: JSON.stringify({
         model: upstreamModelId,
         stream: true,
@@ -700,6 +701,29 @@ function fetchProviderFromSdk(input: RequestInfo | URL, init?: RequestInit): Pro
   return fetchProvider(url, requestOptions);
 }
 
+export function normalizeBaseUrl(rawUrl: string): string {
+  const trimmed = (rawUrl || "").trim();
+  if (!trimmed) {
+    throw new Error("Provider base URL cannot be empty.");
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error("Provider base URL must be a valid URL.");
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error("Provider URL must use HTTPS.");
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error("Provider URL must not contain credentials.");
+  }
+  if (!parsed.hostname || parsed.hostname.trim() === "") {
+    throw new Error("Provider URL must specify a valid hostname.");
+  }
+  return trimmed.replace(/\/+$/, "");
+}
+
 /** Chat generation accepts only a key supplied for this user/request. */
 export function resolveProviderCredentials(
   modelId: string,
@@ -714,17 +738,24 @@ export function resolveProviderCredentials(
   baseUrl: string;
 } {
   if (!MODEL_REGISTRY[modelId]) {
-    throw new Error(`UNKNOWN_MODEL:${modelId}:The requested model is not in the model catalog.`);
+    const safeModelId = redactSecretsString(
+      String(modelId).replace(/[^\x21-\x7E]/g, "").slice(0, 64)
+    );
+    throw new Error(`UNKNOWN_MODEL:${safeModelId}:The requested model is not in the model catalog.`);
   }
   if (modelId === "custom-model" && !customModel?.trim()) {
     throw new Error("MISSING_CUSTOM_MODEL:Enter a model ID for the custom provider.");
   }
   const modelMeta = getModelMeta(modelId);
+  const resolvedProvider =
+    modelId === "custom-model" && customProvider && customProvider in PROVIDER_CATALOG
+      ? customProvider
+      : modelMeta.provider;
   const meta =
     modelId === "custom-model" && customModel
       ? {
           ...modelMeta,
-          provider: customProvider || modelMeta.provider,
+          provider: resolvedProvider,
           upstreamModelId: customModel.trim(),
         }
       : modelMeta;
@@ -732,11 +763,15 @@ export function resolveProviderCredentials(
 
   // 1. Check client-supplied BYOK key
   if (isValidApiKey(injectedApiKey)) {
+    const rawBase = injectedBaseUrl?.trim();
+    const baseUrl = rawBase
+      ? normalizeBaseUrl(rawBase)
+      : providerMeta.defaultBaseUrl.replace(/\/+$/, "");
     return {
       provider: meta.provider,
       upstreamModelId: meta.upstreamModelId,
       apiKey: injectedApiKey.trim(),
-      baseUrl: injectedBaseUrl?.trim() || providerMeta.defaultBaseUrl,
+      baseUrl,
     };
   }
 
@@ -745,7 +780,7 @@ export function resolveProviderCredentials(
   );
 }
 
-function resolveEffort(effort?: string): "low" | "medium" | "high" | "xhigh" | "max" {
+export function resolveEffort(effort?: string): "low" | "medium" | "high" | "xhigh" | "max" {
   switch (effort) {
     case "Low":
       return "low";
@@ -761,8 +796,12 @@ function resolveEffort(effort?: string): "low" | "medium" | "high" | "xhigh" | "
   }
 }
 
-function resolveOpenAiEffort(effort: "low" | "medium" | "high" | "xhigh" | "max") {
-  return effort === "max" ? "xhigh" : effort;
+export function resolveOpenAiEffort(
+  effort: "low" | "medium" | "high" | "xhigh" | "max"
+): "low" | "medium" | "high" {
+  if (effort === "low") return "low";
+  if (effort === "medium") return "medium";
+  return "high";
 }
 
 function maxOutputTokensForEffort(effort: "low" | "medium" | "high" | "xhigh" | "max") {
@@ -784,13 +823,14 @@ async function callAnthropic(params: {
   signal?: AbortSignal | undefined;
 }): Promise<string> {
   const images = params.images || [];
+  const cleanApiKey = params.apiKey.replace(/[^\x21-\x7E]/g, "");
   const endpoint = `${params.baseUrl.replace(/\/+$/, "")}/messages`;
   const response = await fetchProvider(endpoint, {
     method: "POST",
     ...(params.signal ? { signal: params.signal } : {}),
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": params.apiKey,
+      "x-api-key": cleanApiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
@@ -803,7 +843,8 @@ async function callAnthropic(params: {
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => "");
-    throw new Error(`Anthropic API error (${response.status}): ${errBody || response.statusText}`);
+    const safeErr = redactSecretsString(errBody || response.statusText);
+    throw new Error(`Anthropic API error (${response.status}): ${safeErr}`);
   }
 
   const data = (await response.json()) as {
@@ -829,13 +870,14 @@ async function callOpenAICompatible(params: {
   signal?: AbortSignal | undefined;
 }): Promise<string> {
   const images = params.images || [];
+  const cleanApiKey = params.apiKey.replace(/[^\x21-\x7E]/g, "");
   const endpoint = `${params.baseUrl.replace(/\/+$/, "")}/chat/completions`;
   const response = await fetchProvider(endpoint, {
     method: "POST",
     ...(params.signal ? { signal: params.signal } : {}),
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${params.apiKey}`,
+      Authorization: `Bearer ${cleanApiKey}`,
     },
     body: JSON.stringify({
       model: params.model,
@@ -856,7 +898,8 @@ async function callOpenAICompatible(params: {
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => "");
-    throw new Error(`Provider API error (${response.status}): ${errBody || response.statusText}`);
+    const safeErr = redactSecretsString(errBody || response.statusText);
+    throw new Error(`Provider API error (${response.status}): ${safeErr}`);
   }
 
   const data = (await response.json()) as {
@@ -881,9 +924,10 @@ async function callGoogleGemini(params: {
 }): Promise<{ text: string; modelUsed: string }> {
   const images = params.images || [];
   const contents = buildGeminiContents(params.messages, images);
+  const cleanApiKey = params.apiKey.replace(/[^\x21-\x7E]/g, "");
 
   const ai = new GoogleGenAI({
-    apiKey: params.apiKey,
+    apiKey: cleanApiKey,
     httpOptions: {
       baseUrl: params.baseUrl,
       apiVersion: "",

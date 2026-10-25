@@ -28,7 +28,35 @@ export const FALLBACK_MODELS: readonly string[] = [
 export function isValidApiKey(val: unknown): val is string {
   if (typeof val !== "string") return false;
   const trimmed = val.trim();
-  return trimmed.length > 0 && !PLACEHOLDER_API_KEYS.has(trimmed);
+  if (trimmed.length === 0 || trimmed.length > 4096 || PLACEHOLDER_API_KEYS.has(trimmed)) {
+    return false;
+  }
+  // Enforce visible ASCII characters only (no spaces, newlines, tabs, or control characters)
+  return /^[\x21-\x7E]+$/.test(trimmed);
+}
+
+export function sanitizeApiKey(val: unknown): string | undefined {
+  if (typeof val !== "string") return undefined;
+  const trimmed = val.trim();
+  if (trimmed.length === 0 || trimmed.length > 4096) return undefined;
+  if (!/^[\x21-\x7E]+$/.test(trimmed)) return undefined;
+  if (PLACEHOLDER_API_KEYS.has(trimmed)) return undefined;
+  return trimmed;
+}
+
+export function sanitizeBaseUrl(val: unknown): string | undefined {
+  if (typeof val !== "string") return undefined;
+  const trimmed = val.trim();
+  if (trimmed.length === 0 || trimmed.length > 2048) return undefined;
+  // Disallow newlines, carriage returns, or control characters by requiring printable characters
+  if (!/^[\x20-\x7E]+$/.test(trimmed)) return undefined;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+    return trimmed;
+  } catch {
+    return undefined;
+  }
 }
 
 export function readDevEnvJson(): Record<string, unknown> {

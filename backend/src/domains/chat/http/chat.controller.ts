@@ -6,13 +6,13 @@ import type {
 } from "@charan-interiors/contracts";
 import { processChat, processChatStream } from "../application/chat.service.js";
 import { answerChapterQuestion } from "../application/chapterChat.service.js";
-import { isValidApiKey } from "../../../platform/config/index.js";
+import { isValidApiKey, sanitizeApiKey, sanitizeBaseUrl } from "../../../platform/config/index.js";
 import {
   runAgenticWorkspaceTools,
   getWorkspaceRules,
   saveWorkspaceRules,
 } from "../application/tools.service.js";
-import { logEvent } from "../../../platform/observability/logger.js";
+import { logEvent, redactSecretsString } from "../../../platform/observability/logger.js";
 import { getModelMeta, PROVIDER_CATALOG, type ProviderId } from "@charan-interiors/contracts";
 import { getProviderCredential } from "../../credentials/application/credentialVault.js";
 import { SKILLS } from "../application/skillRegistry.js";
@@ -22,17 +22,15 @@ function extractHeaderCredential(req: Request): {
   headerApiKey: string | undefined;
   headerBaseUrl: string | undefined;
 } {
-  const rawKey = req.headers["x-provider-key"];
-  const headerApiKey =
-    typeof rawKey === "string" && rawKey.trim().length > 0 && rawKey.trim().length <= 4096
-      ? rawKey.trim()
-      : undefined;
+  const rawKey = Array.isArray(req.headers["x-provider-key"])
+    ? req.headers["x-provider-key"][0]
+    : req.headers["x-provider-key"];
+  const headerApiKey = sanitizeApiKey(rawKey);
 
-  const rawUrl = req.headers["x-provider-base-url"];
-  const headerBaseUrl =
-    typeof rawUrl === "string" && rawUrl.trim().length > 0 && rawUrl.trim().length <= 2048
-      ? rawUrl.trim()
-      : undefined;
+  const rawUrl = Array.isArray(req.headers["x-provider-base-url"])
+    ? req.headers["x-provider-base-url"][0]
+    : req.headers["x-provider-base-url"];
+  const headerBaseUrl = sanitizeBaseUrl(rawUrl);
 
   return { headerApiKey, headerBaseUrl };
 }
@@ -47,7 +45,14 @@ function requestProviderCredential(
     payload.model === "custom-model"
       ? payload.customProvider || "custom"
       : (getModelMeta(payload.model || "gemini-3.8-flash").provider as ProviderId);
-  const savedCredential = req.principal ? getProviderCredential(req.principal.uid, provider) : null;
+  let savedCredential = null;
+  if (req.principal) {
+    try {
+      savedCredential = getProviderCredential(req.principal.uid, provider);
+    } catch {
+      savedCredential = null;
+    }
+  }
   const apiKey = headerApiKey?.trim() || savedCredential?.apiKey;
   const baseUrl = headerBaseUrl?.trim() || savedCredential?.baseUrl;
   return { apiKey, baseUrl };
@@ -110,9 +115,8 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
       message.includes("does not support image analysis") ||
       message.includes("does not accept PDF page images");
     const status = message.startsWith("MISSING_API_KEY:") ? 401 : isBadRequest ? 400 : 500;
-    res
-      .status(status)
-      .json({ error: status === 500 ? publicProviderError(message) : message, requestId: req.id });
+    const errorText = status === 500 ? publicProviderError(message) : redactSecretsString(message);
+    res.status(status).json({ error: errorText, requestId: req.id });
   }
 }
 
@@ -241,9 +245,8 @@ export async function handleChapterChat(
       message.includes("does not support image analysis") ||
       message.includes("does not accept PDF page images");
     const status = isBadRequest ? 400 : 500;
-    res
-      .status(status)
-      .json({ error: status === 500 ? publicProviderError(message) : message, requestId: req.id });
+    const errorText = status === 500 ? publicProviderError(message) : redactSecretsString(message);
+    res.status(status).json({ error: errorText, requestId: req.id });
   }
 }
 

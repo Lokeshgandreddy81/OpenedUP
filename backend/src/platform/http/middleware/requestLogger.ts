@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
-import { logger } from "../../observability/logger.js";
+import { logger, redactSecretsString } from "../../observability/logger.js";
 
-function sanitizeLogUrl(rawUrl: string): string {
+export function sanitizeLogUrl(rawUrl: string): string {
   try {
     const dummy = new URL(rawUrl, "http://localhost");
     for (const key of Array.from(dummy.searchParams.keys())) {
@@ -11,14 +11,19 @@ function sanitizeLogUrl(rawUrl: string): string {
         lower.includes("token") ||
         lower.includes("secret") ||
         lower.includes("password") ||
-        lower.includes("auth")
+        lower.includes("auth") ||
+        lower.includes("credential")
       ) {
         dummy.searchParams.set(key, "[REDACTED]");
       }
     }
-    return dummy.pathname + dummy.search;
+    return redactSecretsString(dummy.pathname + dummy.search);
   } catch {
-    return rawUrl.replace(/(?:key|token|secret|password|auth)=([^&\s]+)/gi, "$1=[REDACTED]");
+    const cleaned = rawUrl.replace(
+      /(?:key|token|secret|password|auth|credential)=([^&\s]+)/gi,
+      (match, val) => match.replace(val, "[REDACTED]")
+    );
+    return redactSecretsString(cleaned);
   }
 }
 
