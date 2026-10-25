@@ -31,8 +31,10 @@ export async function processChat(
   const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort, images } = payload;
 
   const meta = getModelMeta(model);
+  const imagePages = (payload as { imagePages?: import("../providers/llm.service.js").LlmGenerateParams["imagePages"] }).imagePages;
+  const hasImages = Boolean(images?.length || imagePages?.length);
   if (
-    images?.length &&
+    hasImages &&
     meta.inputModalities &&
     !meta.inputModalities.includes("image")
   ) {
@@ -53,6 +55,7 @@ export async function processChat(
     systemInstruction: `${toolTraces.enrichedSystemInstruction}\n${skills.instructions}`,
     effort,
     images,
+    imagePages,
     injectedApiKey: options?.injectedApiKey,
     injectedBaseUrl: options?.injectedBaseUrl,
     signal: options?.signal,
@@ -85,8 +88,10 @@ export async function processChatStream(
   const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort, images } = payload;
 
   const meta = getModelMeta(model);
+  const imagePages = (payload as { imagePages?: import("../providers/llm.service.js").LlmGenerateParams["imagePages"] }).imagePages;
+  const hasImages = Boolean(images?.length || imagePages?.length);
   if (
-    images?.length &&
+    hasImages &&
     meta.inputModalities &&
     !meta.inputModalities.includes("image")
   ) {
@@ -106,6 +111,7 @@ export async function processChatStream(
       systemInstruction: `${toolTraces.enrichedSystemInstruction}\n${skills.instructions}`,
       effort,
       images,
+      imagePages,
       injectedApiKey: options?.injectedApiKey,
       injectedBaseUrl: options?.injectedBaseUrl,
       signal: options?.signal,

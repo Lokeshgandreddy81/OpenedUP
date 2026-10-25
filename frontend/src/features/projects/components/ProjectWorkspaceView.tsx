@@ -362,7 +362,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveFile(file.id)}
+                      onClick={() => file.id && handleRemoveFile(file.id)}
                       className="text-neutral-400 hover:text-rose-600 cursor-pointer transition-colors"
                     >
                       <X size={13} />

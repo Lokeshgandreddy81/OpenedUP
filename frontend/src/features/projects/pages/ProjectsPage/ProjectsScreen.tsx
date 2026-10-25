@@ -1104,7 +1104,7 @@ export const ProjectsScreen: React.FC<{
                           </div>
                           <button
                             type="button"
-                            onClick={() => handleRemoveModalFile(f.id)}
+                            onClick={() => f.id && handleRemoveModalFile(f.id)}
                             className="text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer p-0.5"
                           >
                             <X size={13} />

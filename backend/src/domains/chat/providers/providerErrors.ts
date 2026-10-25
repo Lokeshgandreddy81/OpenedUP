@@ -3,6 +3,12 @@ export function actionableProviderError(message: string): string {
   if (message.startsWith("MISSING_API_KEY:")) return message;
   if (message.startsWith("UNKNOWN_MODEL:") || message.startsWith("MISSING_CUSTOM_MODEL:"))
     return message;
+  if (
+    message.includes("does not support image analysis") ||
+    message.includes("does not accept PDF page images")
+  ) {
+    return message;
+  }
 
   if (/only available on agentic harnesses/i.test(message)) {
     return "This model's free OpenRouter endpoint is limited to supported agentic apps and cannot be used in standard chat. Choose another model.";

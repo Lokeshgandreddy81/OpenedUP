@@ -3,7 +3,7 @@ export interface ChatAttachmentFile {
   name: string;
   size: number;
   type?: string;
-  uploadedAt: number;
+  uploadedAt?: number;
   content?: string;
   base64Data?: string;
   mimeType?: string;
@@ -31,7 +31,7 @@ const IMAGE_TYPES = new Set([
 ]);
 
 function normalizeMimeType(mime: string): string {
-  const lower = (mime || "").toLowerCase().trim();
+  const lower = (mime || "").toLowerCase().split(";")[0].trim();
   if (lower === "image/jpg" || lower === "image/pjpeg" || lower === "image/jfif") return "image/jpeg";
   return lower || "image/jpeg";
 }
@@ -81,10 +81,11 @@ export async function readChatAttachments(files: File[], existing: ChatAttachmen
       errors.push(`${file.name}: you can attach up to 20 files per message.`);
       continue;
     }
-    const isImage = IMAGE_TYPES.has(file.type) || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
-    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    const normalizedType = (file.type || "").toLowerCase().split(";")[0].trim();
+    const isImage = IMAGE_TYPES.has(normalizedType) || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+    const isPdf = normalizedType === "application/pdf" || /\.pdf$/i.test(file.name);
     const isText =
-      TEXT_TYPES.has(file.type) || /\.(txt|md|csv|json|xml|ya?ml|log)$/i.test(file.name);
+      TEXT_TYPES.has(normalizedType) || /\.(txt|md|csv|json|xml|ya?ml|log)$/i.test(file.name);
 
     if (!isText && !isPdf && !isImage) {
       errors.push(
@@ -94,6 +95,13 @@ export async function readChatAttachments(files: File[], existing: ChatAttachmen
     }
 
     if (isImage) {
+      const currentImagesCount =
+        existing.filter((f) => Boolean(f.base64Data)).length +
+        attachments.filter((f) => Boolean(f.base64Data)).length;
+      if (currentImagesCount >= 10) {
+        errors.push(`${file.name}: you can attach up to 10 images per message.`);
+        continue;
+      }
       if (file.size > MAX_IMAGE_FILE_BYTES) {
         errors.push(`${file.name}: images must be 10 MB or smaller.`);
         continue;
@@ -101,16 +109,17 @@ export async function readChatAttachments(files: File[], existing: ChatAttachmen
       try {
         const dataUrl = await readFileDataUrl(file);
         const base64Data = dataUrl.replace(/^data:[^;]+;base64,/, "");
-        const mimeType = normalizeMimeType(
-          file.type ||
-          (/\.png$/i.test(file.name)
+        let detectedMime = normalizedType;
+        if (!IMAGE_TYPES.has(detectedMime)) {
+          detectedMime = /\.png$/i.test(file.name)
             ? "image/png"
             : /\.webp$/i.test(file.name)
               ? "image/webp"
               : /\.gif$/i.test(file.name)
                 ? "image/gif"
-                : "image/jpeg")
-        );
+                : "image/jpeg";
+        }
+        const mimeType = normalizeMimeType(detectedMime);
         attachments.push({
           id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: file.name,
@@ -211,9 +220,10 @@ export function chatAttachmentsForContext(files: ChatAttachmentFile[] = []) {
 export function chatImageAttachments(files: ChatAttachmentFile[] = []) {
   return files
     .filter((file) => Boolean(file.base64Data))
+    .slice(0, 10)
     .map(({ name, mimeType, type, base64Data }) => ({
       name,
       mimeType: normalizeMimeType(mimeType || type || "image/jpeg"),
-      base64Data: base64Data || "",
+      base64Data: (base64Data || "").replace(/^data:[^;]+;base64,/, ""),
     }));
 }

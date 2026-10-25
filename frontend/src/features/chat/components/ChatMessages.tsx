@@ -7,6 +7,7 @@ import {
   Clock3,
   Copy,
   FileText,
+  ImageIcon,
   KeyRound,
   LoaderCircle,
   Pencil,
@@ -246,18 +247,36 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           {message.attachments && message.attachments.length > 0 && (
                             <div className="mb-2 flex flex-wrap gap-2">
                               {message.attachments.map((file, index) => {
+                                const previewUrl =
+                                  file.previewUrl ||
+                                  (file.base64Data
+                                    ? `data:${file.mimeType || file.type || "image/jpeg"};base64,${file.base64Data}`
+                                    : undefined);
                                 const isImg =
-                                  Boolean(file.previewUrl) || file.type?.startsWith("image/");
-                                if (isImg && file.previewUrl) {
+                                  Boolean(previewUrl) ||
+                                  file.type?.startsWith("image/") ||
+                                  /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+
+                                if (isImg && previewUrl) {
                                   return (
                                     <div
                                       key={file.id ?? `${file.name}-${index}`}
-                                      className="relative rounded-xl overflow-hidden border border-slate-200/80 bg-white shadow-2xs"
+                                      className="relative rounded-xl overflow-hidden border border-slate-200/80 bg-white shadow-2xs group/img"
                                     >
                                       <img
-                                        src={file.previewUrl}
+                                        src={previewUrl}
                                         alt={file.name}
-                                        className="max-h-60 max-w-xs rounded-xl object-contain block"
+                                        className="max-h-60 max-w-xs rounded-xl object-contain block cursor-pointer transition-transform duration-150 hover:scale-[1.01]"
+                                        onClick={() => {
+                                          const win = window.open();
+                                          if (win) {
+                                            win.document.write(
+                                              `<img src="${previewUrl}" alt="${file.name}" style="max-width:100%;height:auto;display:block;margin:auto;" />`
+                                            );
+                                            win.document.title = file.name;
+                                          }
+                                        }}
+                                        title={`Click to view full size: ${file.name}`}
                                       />
                                     </div>
                                   );
@@ -268,11 +287,19 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                                     className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/75 px-2.5 py-1.5 text-[12px] leading-4 text-slate-600"
                                     title={`${file.name} · ${formatFileSize(file.size)}`}
                                   >
-                                    <FileText
-                                      size={13}
-                                      className="shrink-0 text-slate-500"
-                                      aria-hidden="true"
-                                    />
+                                    {isImg ? (
+                                      <ImageIcon
+                                        size={13}
+                                        className="shrink-0 text-slate-500"
+                                        aria-hidden="true"
+                                      />
+                                    ) : (
+                                      <FileText
+                                        size={13}
+                                        className="shrink-0 text-slate-500"
+                                        aria-hidden="true"
+                                      />
+                                    )}
                                     <span className="max-w-56 truncate">{file.name}</span>
                                     <span className="shrink-0 text-slate-400">
                                       {formatFileSize(file.size)}

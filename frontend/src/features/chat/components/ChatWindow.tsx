@@ -399,13 +399,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         timestamp: new Date().toISOString(),
         ...(attachments.length > 0
           ? {
-              attachments: attachments.map(({ id, name, size, type, previewUrl }) => ({
-                id,
-                name,
-                size,
-                type,
-                previewUrl,
-              })),
+              attachments: attachments.map(
+                ({ id, name, size, type, previewUrl, base64Data, mimeType }) => ({
+                  id: id || `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                  name,
+                  size,
+                  type,
+                  previewUrl:
+                    previewUrl ||
+                    (base64Data
+                      ? `data:${mimeType || type || "image/jpeg"};base64,${base64Data}`
+                      : undefined),
+                  base64Data,
+                  mimeType,
+                })
+              ),
             }
           : {}),
       };
@@ -814,6 +822,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     async (messageId: string, newContent: string) => {
       const messageIndex = currentMessages.findIndex((message) => message.id === messageId);
       if (messageIndex < 0) return;
+      const messageToEdit = currentMessages[messageIndex];
       const priorMessages = currentMessages.slice(0, messageIndex);
       if (isTemporaryChat) {
         setTemporaryMessages(priorMessages);
@@ -832,7 +841,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           ).catch(() => undefined);
         }
       }
-      await handleSendMessage(newContent, selectedModel, "Medium", priorMessages);
+      const attachmentsToPass: ChatAttachmentFile[] | undefined =
+        messageToEdit?.attachments?.map((a) => ({
+          id: a.id || `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: a.name,
+          size: a.size,
+          type: a.type,
+          uploadedAt: a.uploadedAt,
+          content: a.content,
+          base64Data: a.base64Data,
+          mimeType: a.mimeType,
+          previewUrl: a.previewUrl,
+        }));
+      await handleSendMessage(
+        newContent,
+        selectedModel,
+        "Medium",
+        priorMessages,
+        attachmentsToPass
+      );
     },
     [activeConversation, currentMessages, handleSendMessage, isTemporaryChat, selectedModel, user]
   );

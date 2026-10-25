@@ -22,6 +22,8 @@ export interface ProviderMetadata {
   defaultBaseUrl: string;
 }
 
+export type InputModality = "text" | "image" | "video" | "audio";
+
 export interface ModelMetadata {
   id: string;
   name: string;
@@ -33,7 +35,7 @@ export interface ModelMetadata {
   isFree?: boolean;
   isChatModel?: boolean;
   contextWindowTokens?: number;
-  inputModalities?: string[];
+  inputModalities?: InputModality[];
   supportsReasoning?: boolean;
 }
 
@@ -348,6 +350,8 @@ export function getModelMeta(modelId: string): ModelMetadata {
       provider: "google",
       upstreamModelId: "gemini-3.8-flash",
       envKeyName: "GEMINI_API_KEY",
+      isChatModel: true,
+      inputModalities: ["text", "image"],
     }
   );
 }

@@ -4,8 +4,13 @@ import { PROVIDER_IDS } from "../types/models.js";
 export const PhotoInputSchema = z.object({
   globalIndex: z.number().int().positive(),
   totalPhotos: z.number().int().positive(),
-  mimeType: z.string().default("image/jpeg"),
-  base64Data: z.string().min(1, "base64Data cannot be empty"),
+  mimeType: z
+    .string()
+    .trim()
+    .max(100)
+    .regex(/^image\/[a-zA-Z0-9.+-]+$/i, "Invalid image MIME type")
+    .default("image/jpeg"),
+  base64Data: z.string().min(1, "base64Data cannot be empty").max(20_000_000),
 });
 
 export const ReadReceiptsRequestSchema = z.object({
@@ -31,21 +36,21 @@ export const CheckDuplicatesRequestSchema = z.object({
 });
 
 export const ParsePdfChaptersRequestSchema = z.object({
-  mimeType: z.string().optional().default("application/pdf"),
-  base64Data: z.string().min(1, "base64Data is required"),
-  fileName: z.string().optional(),
+  mimeType: z.string().trim().max(100).optional().default("application/pdf"),
+  base64Data: z.string().min(1, "base64Data is required").max(50_000_000),
+  fileName: z.string().max(300).optional(),
 });
 
 export const ChatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.string().min(1, "Message content cannot be empty").max(40_000),
+  content: z.string().max(40_000),
 });
 
 export const ChatRequestSchema = z.object({
   messages: z.array(ChatMessageSchema).min(1, "At least one message is required").max(100),
   context: z
     .object({
-      docTitle: z.string().optional(),
+      docTitle: z.string().max(500).optional(),
       projectInstructions: z.string().max(20_000).optional(),
       projectFiles: z
         .array(
@@ -89,11 +94,19 @@ export const ChatRequestSchema = z.object({
     .array(
       z.object({
         name: z.string().max(200).optional(),
-        mimeType: z.string().max(100),
+        mimeType: z
+          .string()
+          .trim()
+          .max(100)
+          .regex(/^image\/[a-zA-Z0-9.+-]+$/i, "Invalid image MIME type"),
         base64Data: z.string().min(1).max(20_000_000),
       })
     )
     .max(10)
+    .refine(
+      (imgs) => imgs.reduce((sum, img) => sum + img.base64Data.length, 0) <= 60_000_000,
+      "Total image data exceeds the 60 MB request limit."
+    )
     .optional(),
 });
 

@@ -285,11 +285,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (isThinking || isReadingFiles || isSendDisabled) return;
     const trimmed = text.trim();
     if (!trimmed && attachments.length === 0) return;
-    onSendMessage(
-      trimmed ||
-        (attachments.some((a) => Boolean(a.base64Data))
+    const imageCount = attachments.filter((a) => Boolean(a.base64Data)).length;
+    const fallbackText =
+      imageCount > 1
+        ? "Please analyze these images."
+        : imageCount === 1
           ? "Please analyze this image."
-          : "Please review the attached file(s)."),
+          : "Please review the attached file(s).";
+    onSendMessage(
+      trimmed || fallbackText,
       selectedModel,
       supportsEffort ? selectedEffort : undefined,
       attachments
@@ -311,7 +315,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setAttachments((current) => [...current, ...result.files]);
       setFileError(result.errors.join(" "));
     } catch {
-      setFileError("One or more files could not be read. Try again with a PDF or text file.");
+      setFileError("One or more files could not be read. Try again with an image, PDF, or text file.");
     } finally {
       setIsReadingFiles(false);
     }
@@ -321,6 +325,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     selectedModel === "custom-model" && customModelId
       ? customModelId
       : AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.name || AVAILABLE_MODELS[0].name;
+
+  const modelMeta = selectedModel !== "custom-model" ? getModelMeta(selectedModel) : null;
+  const selectedModelSupportsImages =
+    !modelMeta || !modelMeta.inputModalities || modelMeta.inputModalities.includes("image");
+  const hasImageAttachments = attachments.some((a) => Boolean(a.base64Data));
+  const selectedInMore = MORE_MODELS.find((m) => m.id === selectedModel);
 
   return (
     <>
@@ -380,42 +390,49 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           {(attachments.length > 0 || isReadingFiles) && (
             <div className="flex flex-wrap gap-2 px-1" aria-label="Attached files">
-              {attachments.map((file) => (
-                <div
-                  key={file.id}
-                  className="inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 py-1.5 pl-2.5 pr-1.5 text-left"
-                >
-                  {file.previewUrl ? (
-                    <img
-                      src={file.previewUrl}
-                      alt={file.name}
-                      className="w-7 h-7 rounded-md object-cover shrink-0 border border-slate-200"
-                    />
-                  ) : (
-                    <FileText size={15} className="shrink-0 text-slate-500" aria-hidden="true" />
-                  )}
-                  <span
-                    className="min-w-0 truncate text-[13px] font-medium text-slate-700"
-                    title={file.name}
+              {attachments.map((file) => {
+                const previewUrl =
+                  file.previewUrl ||
+                  (file.base64Data
+                    ? `data:${file.mimeType || file.type || "image/jpeg"};base64,${file.base64Data}`
+                    : undefined);
+                return (
+                  <div
+                    key={file.id}
+                    className="inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 py-1.5 pl-2.5 pr-1.5 text-left"
                   >
-                    {file.name}
-                  </span>
-                  <span className="shrink-0 text-[12px] text-slate-500">
-                    {formatFileSize(file.size)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAttachments((current) => current.filter((item) => item.id !== file.id))
-                    }
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                    aria-label={`Remove ${file.name}`}
-                    title={`Remove ${file.name}`}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt={file.name}
+                        className="w-7 h-7 rounded-md object-cover shrink-0 border border-slate-200"
+                      />
+                    ) : (
+                      <FileText size={15} className="shrink-0 text-slate-500" aria-hidden="true" />
+                    )}
+                    <span
+                      className="min-w-0 truncate text-[13px] font-medium text-slate-700"
+                      title={file.name}
+                    >
+                      {file.name}
+                    </span>
+                    <span className="shrink-0 text-[12px] text-slate-500">
+                      {formatFileSize(file.size)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((current) => current.filter((item) => item.id !== file.id))
+                      }
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                      aria-label={`Remove ${file.name}`}
+                      title={`Remove ${file.name}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                );
+              })}
               {isReadingFiles && (
                 <div
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-500"
@@ -430,6 +447,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {fileError && (
             <p role="alert" className="px-1 text-xs leading-5 text-amber-700">
               {fileError}
+            </p>
+          )}
+          {hasImageAttachments && !selectedModelSupportsImages && (
+            <p role="alert" className="px-1 text-xs leading-5 text-amber-700">
+              ⚠️ {currentModelName} does not support image analysis. Please select a multimodal vision model (in More models) to analyze this image.
             </p>
           )}
 
@@ -524,7 +546,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                           className="text-slate-600 group-hover:text-slate-900 shrink-0"
                         />
                         <span className="text-[13px] text-slate-800 font-normal">
-                          Add files (PDF or text)
+                          Add files or images
                         </span>
                       </div>
                       <span className="text-[11px] font-mono text-slate-400 shrink-0 tracking-tight">
@@ -709,6 +731,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
                     {/* Main Model Card */}
                     <div className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-[0_20px_48px_-16px_rgba(15,23,42,0.28)] p-2.5 text-[14px] text-slate-800 shrink-0 select-none">
+                      {selectedInMore && (
+                        <>
+                          <div className="px-2.5 pt-2 pb-1.5">
+                            <span className="text-[12px] font-bold uppercase tracking-wider text-slate-400">
+                              Active Model
+                            </span>
+                          </div>
+                          <div className="mb-2">
+                            <div className="w-full text-left px-3.5 py-2.5 rounded-xl flex items-center justify-between bg-slate-100/90 text-slate-950 font-semibold ring-1 ring-inset ring-slate-200/80">
+                              <span className="truncate text-[14px] font-semibold text-slate-950">
+                                {selectedInMore.name}
+                              </span>
+                              <Check size={14} className="text-slate-700 shrink-0 stroke-[2.25]" />
+                            </div>
+                          </div>
+                          <div className="my-1.5 border-t border-slate-200" />
+                        </>
+                      )}
                       <div className="px-2.5 pt-2 pb-2.5">
                         <span className="text-[14px] font-bold tracking-wide text-slate-950">
                           Free

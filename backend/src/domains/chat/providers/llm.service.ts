@@ -76,7 +76,27 @@ async function consumeSseResponse(
           onDelta(delta);
         }
       }
-      if (done) break;
+      if (done) {
+        if (pending.trim()) {
+          const data = pending
+            .split(/\r?\n/)
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trim())
+            .join("\n");
+          if (data && data !== "[DONE]") {
+            try {
+              const delta = extract(JSON.parse(data));
+              if (delta) {
+                full += delta;
+                onDelta(delta);
+              }
+            } catch {
+              // Ignore malformed SSE chunk
+            }
+          }
+        }
+        break;
+      }
     }
   } finally {
     reader.releaseLock();
@@ -84,13 +104,25 @@ async function consumeSseResponse(
   return full;
 }
 
-function normalizeMimeType(mime: string): string {
+export function normalizeMimeType(mime: string): string {
   const lower = (mime || "").toLowerCase().trim();
-  if (lower === "image/jpg" || lower === "image/pjpeg" || lower === "image/jfif") return "image/jpeg";
-  return lower || "image/jpeg";
+  const base = lower.split(";")[0]?.trim() || "";
+  if (
+    base === "image/jpg" ||
+    base === "image/pjpeg" ||
+    base === "image/jfif" ||
+    base === "jpg" ||
+    base === "jpeg"
+  ) {
+    return "image/jpeg";
+  }
+  if (base === "png" || base === "image/png") return "image/png";
+  if (base === "webp" || base === "image/webp") return "image/webp";
+  if (base === "gif" || base === "image/gif") return "image/gif";
+  return base || "image/jpeg";
 }
 
-function normalizeAnthropicMediaType(
+export function normalizeAnthropicMediaType(
   mime: string
 ): "image/jpeg" | "image/png" | "image/gif" | "image/webp" {
   const normalized = normalizeMimeType(mime);
@@ -103,6 +135,201 @@ function normalizeAnthropicMediaType(
     return normalized;
   }
   return "image/jpeg";
+}
+
+export interface PreparedImage {
+  mimeType: string;
+  base64Data: string;
+}
+
+export function cleanBase64Data(raw: string): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  const stripped = trimmed.replace(/^data:[^;]{1,128};base64,/i, "");
+  return stripped.trim().replace(/\s+/g, "");
+}
+
+export function resolveAllImages(params: {
+  images?: Array<{ name?: string | undefined; mimeType: string; base64Data: string }> | undefined;
+  imagePages?: Array<{ pageNumber: number; mimeType: string; base64Data: string }> | undefined;
+}): PreparedImage[] {
+  return [
+    ...(params.images || []).map((img) => ({
+      mimeType: normalizeMimeType(img.mimeType),
+      base64Data: cleanBase64Data(img.base64Data),
+    })),
+    ...(params.imagePages || []).map((image) => ({
+      mimeType: normalizeMimeType(image.mimeType),
+      base64Data: cleanBase64Data(image.base64Data),
+    })),
+  ];
+}
+
+export function normalizeMessages(messages: ChatMessage[], hasImages: boolean): ChatMessage[] {
+  const list = messages?.length ? [...messages] : [];
+  if (list.length === 0) {
+    return [
+      {
+        role: "user",
+        content: hasImages ? "Please analyze the attached image(s)." : "Hello",
+      },
+    ];
+  }
+  const hasUser = list.some((m) => m.role === "user");
+  if (!hasUser) {
+    list.push({
+      role: "user",
+      content: hasImages ? "Please analyze the attached image(s)." : "Hello",
+    });
+  }
+  return list;
+}
+
+export function buildGeminiContents(
+  rawMessages: ChatMessage[],
+  allImages: PreparedImage[]
+): Array<{
+  role: "user" | "model";
+  parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>;
+}> {
+  const messages = normalizeMessages(rawMessages, allImages.length > 0);
+  const lastUserIndex = messages.map((m) => m.role).lastIndexOf("user");
+
+  return messages.map((m, index) => {
+    const isTargetUser = index === lastUserIndex;
+    const textContent = isTargetUser
+      ? m.content?.trim() || (allImages.length ? "Please analyze the attached image(s)." : " ")
+      : m.content?.trim() || " ";
+
+    return {
+      role: m.role === "assistant" ? ("model" as const) : ("user" as const),
+      parts: [
+        { text: textContent },
+        ...(isTargetUser
+          ? allImages.map((image) => ({
+              inlineData: { mimeType: normalizeMimeType(image.mimeType), data: image.base64Data },
+            }))
+          : []),
+      ],
+    };
+  });
+}
+
+export function buildAnthropicMessages(
+  rawMessages: ChatMessage[],
+  allImages: PreparedImage[]
+): Array<{
+  role: "user" | "assistant";
+  content:
+    | string
+    | Array<
+        | { type: "text"; text: string }
+        | {
+            type: "image";
+            source: {
+              type: "base64";
+              media_type: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+              data: string;
+            };
+          }
+      >;
+}> {
+  const messages = normalizeMessages(rawMessages, allImages.length > 0);
+  const lastUserIndex = messages.map((m) => m.role).lastIndexOf("user");
+
+  return messages.map((m, index) => {
+    const isTargetUser = index === lastUserIndex;
+    if (isTargetUser && allImages.length) {
+      return {
+        role: m.role,
+        content: [
+          {
+            type: "text" as const,
+            text: m.content?.trim() || "Please analyze the attached image(s).",
+          },
+          ...allImages.map((image) => ({
+            type: "image" as const,
+            source: {
+              type: "base64" as const,
+              media_type: normalizeAnthropicMediaType(image.mimeType),
+              data: image.base64Data,
+            },
+          })),
+        ],
+      };
+    }
+    return {
+      role: m.role,
+      content: m.content?.trim() || (m.role === "user" ? "Continue." : "..."),
+    };
+  });
+}
+
+export function buildOpenAiMessages(
+  rawMessages: ChatMessage[],
+  allImages: PreparedImage[],
+  provider: ProviderId,
+  systemInstruction?: string
+): Array<{
+  role: "system" | "user" | "assistant";
+  content:
+    | string
+    | Array<
+        | { type: "text"; text: string }
+        | {
+            type: "image_url";
+            image_url: {
+              url: string;
+              detail?: "high";
+            };
+          }
+      >;
+}> {
+  const messages = normalizeMessages(rawMessages, allImages.length > 0);
+  const lastUserIndex = messages.map((m) => m.role).lastIndexOf("user");
+
+  const formattedMessages = messages.map((m, index) => {
+    const isTargetUser = index === lastUserIndex;
+    if (isTargetUser && allImages.length) {
+      return {
+        role: m.role,
+        content: [
+          {
+            type: "text" as const,
+            text: m.content?.trim() || "Please analyze the attached image(s).",
+          },
+          ...allImages.map((image) => ({
+            type: "image_url" as const,
+            image_url: {
+              url: `data:${normalizeMimeType(image.mimeType)};base64,${image.base64Data}`,
+              ...(provider === "openai" || provider === "xai" ? { detail: "high" as const } : {}),
+            },
+          })),
+        ],
+      };
+    }
+    return {
+      role: m.role,
+      content: m.content?.trim() || (m.role === "user" ? "Continue." : "..."),
+    };
+  });
+
+  return [
+    ...(systemInstruction?.trim()
+      ? [{ role: "system" as const, content: systemInstruction.trim() }]
+      : []),
+    ...formattedMessages,
+  ];
+}
+
+export function resolveGeminiThinkingLevel(
+  effort: "low" | "medium" | "high" | "xhigh" | "max"
+): ThinkingLevel {
+  return effort === "low"
+    ? ThinkingLevel.LOW
+    : effort === "medium"
+      ? ThinkingLevel.MEDIUM
+      : ThinkingLevel.HIGH;
 }
 
 export async function generateMultiProviderChatStream(
@@ -120,35 +347,10 @@ export async function generateMultiProviderChatStream(
   const maxTokens = maxOutputTokensForEffort(effort);
   let text: string;
   const modelUsed = upstreamModelId;
-
-  const allImages = [
-    ...(params.images || []).map((img) => ({
-      mimeType: normalizeMimeType(img.mimeType),
-      base64Data: img.base64Data.replace(/^data:[^;]+;base64,/, ""),
-    })),
-    ...(params.imagePages || []).map((image) => ({
-      mimeType: normalizeMimeType(image.mimeType),
-      base64Data: image.base64Data.replace(/^data:[^;]+;base64,/, ""),
-    })),
-  ];
+  const allImages = resolveAllImages(params);
 
   if (provider === "google") {
-    const contents = params.messages.map((m) => {
-      const isLastUser = m.role === "user" && m === params.messages.at(-1);
-      const textContent =
-        m.content?.trim() || (isLastUser && allImages.length ? "Please analyze the attached image(s)." : "");
-      return {
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [
-          ...(textContent ? [{ text: textContent }] : []),
-          ...(isLastUser
-            ? allImages.map((image) => ({
-                inlineData: { mimeType: normalizeMimeType(image.mimeType), data: image.base64Data },
-              }))
-            : []),
-        ],
-      };
-    });
+    const contents = buildGeminiContents(params.messages, allImages);
     const ai = new GoogleGenAI({
       apiKey,
       httpOptions: { baseUrl, apiVersion: "", fetch: fetchProviderFromSdk },
@@ -161,12 +363,7 @@ export async function generateMultiProviderChatStream(
         maxOutputTokens: maxTokens,
         systemInstruction: params.systemInstruction,
         thinkingConfig: {
-          thinkingLevel:
-            effort === "low"
-              ? ThinkingLevel.LOW
-              : effort === "medium"
-                ? ThinkingLevel.MEDIUM
-                : ThinkingLevel.HIGH,
+          thinkingLevel: resolveGeminiThinkingLevel(effort),
         },
       },
     });
@@ -192,26 +389,7 @@ export async function generateMultiProviderChatStream(
         max_tokens: maxTokens,
         stream: true,
         system: params.systemInstruction,
-        messages: params.messages.map((m) => ({
-          role: m.role,
-          content:
-            m.role === "user" && m === params.messages.at(-1) && allImages.length
-              ? [
-                  {
-                    type: "text",
-                    text: m.content?.trim() || "Please analyze the attached image(s).",
-                  },
-                  ...allImages.map((image) => ({
-                    type: "image",
-                    source: {
-                      type: "base64",
-                      media_type: normalizeAnthropicMediaType(image.mimeType),
-                      data: image.base64Data,
-                    },
-                  })),
-                ]
-              : m.content,
-        })),
+        messages: buildAnthropicMessages(params.messages, allImages),
       }),
     });
     text = await consumeSseResponse(
@@ -235,34 +413,12 @@ export async function generateMultiProviderChatStream(
         ...(provider === "openai"
           ? { reasoning_effort: resolveOpenAiEffort(effort), max_completion_tokens: maxTokens }
           : { temperature: 0.2, max_tokens: maxTokens }),
-        messages: [
-          { role: "system", content: params.systemInstruction },
-          ...params.messages.map((m) => {
-            const isLastUser = m.role === "user" && m === params.messages.at(-1);
-            if (isLastUser && allImages.length) {
-              return {
-                role: m.role,
-                content: [
-                  {
-                    type: "text",
-                    text: m.content?.trim() || "Please analyze the attached image(s).",
-                  },
-                  ...allImages.map((image) => ({
-                    type: "image_url",
-                    image_url: {
-                      url: `data:${normalizeMimeType(image.mimeType)};base64,${image.base64Data}`,
-                      ...(provider === "openai" || provider === "xai" ? { detail: "high" } : {}),
-                    },
-                  })),
-                ],
-              };
-            }
-            return {
-              role: m.role,
-              content: m.content,
-            };
-          }),
-        ],
+        messages: buildOpenAiMessages(
+          params.messages,
+          allImages,
+          provider,
+          params.systemInstruction
+        ),
       }),
     });
     text = await consumeSseResponse(
@@ -284,28 +440,181 @@ export async function generateMultiProviderChatStream(
   return { text: text || "No response content returned.", modelUsed, providerUsed: provider };
 }
 
-function isPrivateAddress(address: string): boolean {
-  const normalized = address.toLowerCase().split("%")[0] || address.toLowerCase();
-  if (normalized.startsWith("::ffff:")) {
-    const mappedV4 = normalized.slice("::ffff:".length);
-    if (isIP(mappedV4) === 4) return isPrivateAddress(mappedV4);
+function parseIpv4(ip: string): [number, number, number, number] | null {
+  const parts = ip.split(".");
+  if (parts.length !== 4) return null;
+  const nums: number[] = [];
+  for (const p of parts) {
+    if (!/^\d{1,3}$/.test(p)) return null;
+    const n = Number(p);
+    if (n < 0 || n > 255) return null;
+    nums.push(n);
   }
-  if (isIP(normalized) === 4) {
-    const [a = 0, b = 0] = normalized.split(".").map(Number);
-    return (
-      a === 0 ||
-      a === 10 ||
-      a === 127 ||
-      (a === 100 && b >= 64 && b <= 127) ||
-      (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && [0, 2, 88, 168].includes(b)) ||
-      (a === 198 && [18, 19, 51].includes(b)) ||
-      (a === 203 && b === 0) ||
-      a >= 224
-    );
+  return [nums[0]!, nums[1]!, nums[2]!, nums[3]!];
+}
+
+function isPrivateIpv4(a: number, b: number, c: number, _d: number): boolean {
+  return (
+    a === 0 || // 0.0.0.0/8
+    a === 10 || // 10.0.0.0/8
+    a === 127 || // 127.0.0.0/8
+    (a === 100 && b >= 64 && b <= 127) || // 100.64.0.0/10
+    (a === 169 && b === 254) || // 169.254.0.0/16
+    (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
+    (a === 192 && b === 0 && c === 0) || // 192.0.0.0/24
+    (a === 192 && b === 0 && c === 2) || // 192.0.2.0/24
+    (a === 192 && b === 88 && c === 99) || // 192.88.99.0/24
+    (a === 192 && b === 168) || // 192.168.0.0/16
+    (a === 198 && (b === 18 || b === 19)) || // 198.18.0.0/15
+    (a === 198 && b === 51 && c === 100) || // 198.51.100.0/24
+    (a === 203 && b === 0 && c === 113) || // 203.0.113.0/24
+    a >= 224 // 224.0.0.0/4 (Multicast, Reserved, Broadcast)
+  );
+}
+
+function parseIpv6(ip: string): number[] | null {
+  const cleanIp = (ip.split("%")[0] ?? ip).toLowerCase();
+  let normalized = cleanIp;
+
+  // Handle embedded IPv4 dotted quad at the end if present (e.g., ::ffff:192.168.1.1 or ::192.168.1.1)
+  const lastColon = cleanIp.lastIndexOf(":");
+  if (lastColon !== -1) {
+    const afterColon = cleanIp.slice(lastColon + 1);
+    if (afterColon.includes(".")) {
+      const v4 = parseIpv4(afterColon);
+      if (!v4) return null;
+      const hex1 = (((v4[0] << 8) | v4[1]) >>> 0).toString(16);
+      const hex2 = (((v4[2] << 8) | v4[3]) >>> 0).toString(16);
+      normalized = cleanIp.slice(0, lastColon) + ":" + hex1 + ":" + hex2;
+    }
   }
-  return normalized === "::" || normalized === "::1" || /^(fc|fd|fe[89ab]|ff)/.test(normalized);
+
+  const halves = normalized.split("::");
+  if (halves.length > 2) return null;
+
+  let words: string[];
+  if (halves.length === 2) {
+    const left = halves[0] ? halves[0].split(":") : [];
+    const right = halves[1] ? halves[1].split(":") : [];
+    const fill = 8 - (left.length + right.length);
+    if (fill < 0) return null;
+    words = [...left, ...Array(fill).fill("0"), ...right];
+  } else {
+    words = normalized.split(":");
+    if (words.length !== 8) return null;
+  }
+
+  if (words.length !== 8) return null;
+  const parsed: number[] = [];
+  for (const w of words) {
+    if (!/^[0-9a-f]{1,4}$/.test(w)) return null;
+    parsed.push(parseInt(w, 16));
+  }
+  return parsed;
+}
+
+function isPrivateIpv6(words: number[]): boolean {
+  // 1. :: (Unspecified)
+  if (words.every((w) => w === 0)) return true;
+
+  // 2. ::1 (Loopback)
+  if (words.slice(0, 7).every((w) => w === 0) && words[7] === 1) return true;
+
+  // 3. IPv4-mapped IPv6 (::ffff:0:0/96, e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1)
+  if (words.slice(0, 5).every((w) => w === 0) && words[5] === 0xffff) {
+    const a = (words[6]! >> 8) & 0xff;
+    const b = words[6]! & 0xff;
+    const c = (words[7]! >> 8) & 0xff;
+    const d = words[7]! & 0xff;
+    return isPrivateIpv4(a, b, c, d);
+  }
+
+  // 4. IPv4-translated (::ffff:0:0:0/96)
+  if (words.slice(0, 4).every((w) => w === 0) && words[4] === 0xffff && words[5] === 0) {
+    const a = (words[6]! >> 8) & 0xff;
+    const b = words[6]! & 0xff;
+    const c = (words[7]! >> 8) & 0xff;
+    const d = words[7]! & 0xff;
+    return isPrivateIpv4(a, b, c, d);
+  }
+
+  // 5. IPv4-compatible (::/96 deprecated RFC 4291)
+  if (words.slice(0, 6).every((w) => w === 0)) {
+    const a = (words[6]! >> 8) & 0xff;
+    const b = words[6]! & 0xff;
+    const c = (words[7]! >> 8) & 0xff;
+    const d = words[7]! & 0xff;
+    if (a !== 0 || b !== 0 || c !== 0 || d !== 1) {
+      return isPrivateIpv4(a, b, c, d);
+    }
+  }
+
+  // 6. NAT64 Well-Known Prefix (64:ff9b::/96)
+  if (words[0] === 0x0064 && words[1] === 0xff9b && words.slice(2, 6).every((w) => w === 0)) {
+    const a = (words[6]! >> 8) & 0xff;
+    const b = words[6]! & 0xff;
+    const c = (words[7]! >> 8) & 0xff;
+    const d = words[7]! & 0xff;
+    return isPrivateIpv4(a, b, c, d);
+  }
+
+  // 7. 6to4 (2002::/16) - embeds IPv4 in words[1] and words[2]
+  if (words[0] === 0x2002) {
+    const a = (words[1]! >> 8) & 0xff;
+    const b = words[1]! & 0xff;
+    const c = (words[2]! >> 8) & 0xff;
+    const d = words[2]! & 0xff;
+    return isPrivateIpv4(a, b, c, d);
+  }
+
+  // 8. Unique Local Address ULA (fc00::/7 -> fc00..fdff)
+  if ((words[0]! & 0xfe00) === 0xfc00) return true;
+
+  // 9. Link-Local Unicast (fe80::/10 -> fe80..febf)
+  if ((words[0]! & 0xffc0) === 0xfe80) return true;
+
+  // 10. Site-Local Unicast (fec0::/10 deprecated)
+  if ((words[0]! & 0xffc0) === 0xfec0) return true;
+
+  // 11. Multicast (ff00::/8)
+  if ((words[0]! & 0xff00) === 0xff00) return true;
+
+  // 12. Discard prefix (100::/64)
+  if (words[0] === 0x0100 && words[1] === 0 && words[2] === 0 && words[3] === 0) return true;
+
+  // 13. Documentation prefix (2001:db8::/32)
+  if (words[0] === 0x2001 && words[1] === 0x0db8) return true;
+
+  // 14. Benchmarking (2001:2::/48)
+  if (words[0] === 0x2001 && words[1] === 0x0002 && words[2] === 0) return true;
+
+  // 15. ORCHID / ORCHIDv2 (2001:10::/28 and 2001:20::/28)
+  if (words[0] === 0x2001 && ((words[1]! & 0xfff0) === 0x0010 || (words[1]! & 0xfff0) === 0x0020)) {
+    return true;
+  }
+
+  // 16. TEREDO (2001:0000::/32) - client IPv4 in words[6] and words[7] XOR 0xffff
+  if (words[0] === 0x2001 && words[1] === 0x0000) {
+    const w6 = words[6]! ^ 0xffff;
+    const w7 = words[7]! ^ 0xffff;
+    const a = (w6 >> 8) & 0xff;
+    const b = w6 & 0xff;
+    const c = (w7 >> 8) & 0xff;
+    const d = w7 & 0xff;
+    return isPrivateIpv4(a, b, c, d);
+  }
+
+  return false;
+}
+
+export function isPrivateAddress(address: string): boolean {
+  const clean = (address.split("%")[0] ?? address).trim().toLowerCase();
+  const v4 = parseIpv4(clean);
+  if (v4) return isPrivateIpv4(v4[0], v4[1], v4[2], v4[3]);
+  const v6 = parseIpv6(clean);
+  if (v6) return isPrivateIpv6(v6);
+  // Default deny: treat malformed or unparseable IPs as private/unsafe
+  return true;
 }
 
 async function fetchProvider(url: string, init: RequestInit): Promise<Response> {
@@ -314,6 +623,8 @@ async function fetchProvider(url: string, init: RequestInit): Promise<Response> 
   if (parsed.protocol !== "https:") throw new Error("Provider URL must use HTTPS.");
   if (parsed.username || parsed.password)
     throw new Error("Provider URL must not contain credentials.");
+  if (!parsed.hostname || parsed.hostname.trim() === "")
+    throw new Error("Provider URL must specify a valid hostname.");
   const addresses = isIP(hostAddress)
     ? [{ address: hostAddress, family: isIP(hostAddress) }]
     : await lookup(parsed.hostname, { all: true, verbatim: true });
@@ -323,10 +634,13 @@ async function fetchProvider(url: string, init: RequestInit): Promise<Response> 
   const pinnedAddress = addresses[0]!;
   const pinnedLookup = ((
     _hostname: string,
-    options: number | { all?: boolean } | undefined,
-    callback: (...args: unknown[]) => void
+    optionsOrCallback: number | { all?: boolean } | ((...args: unknown[]) => void) | undefined,
+    maybeCallback?: (...args: unknown[]) => void
   ) => {
-    if (typeof options === "object" && options?.all) callback(null, [pinnedAddress]);
+    const callback = typeof optionsOrCallback === "function" ? optionsOrCallback : maybeCallback;
+    const options = typeof optionsOrCallback === "object" ? optionsOrCallback : undefined;
+    if (!callback) return;
+    if (options?.all) callback(null, [pinnedAddress]);
     else callback(null, pinnedAddress.address, pinnedAddress.family);
   }) as LookupFunction;
   const dispatcher = new Agent({ connect: { lookup: pinnedLookup } });
@@ -466,12 +780,14 @@ async function callAnthropic(params: {
   systemInstruction: string;
   effort: "low" | "medium" | "high" | "xhigh" | "max";
   maxTokens: number;
-  images?: Array<{ mimeType: string; base64Data: string }>;
+  images?: PreparedImage[];
+  signal?: AbortSignal | undefined;
 }): Promise<string> {
   const images = params.images || [];
   const endpoint = `${params.baseUrl.replace(/\/+$/, "")}/messages`;
   const response = await fetchProvider(endpoint, {
     method: "POST",
+    ...(params.signal ? { signal: params.signal } : {}),
     headers: {
       "Content-Type": "application/json",
       "x-api-key": params.apiKey,
@@ -480,29 +796,8 @@ async function callAnthropic(params: {
     body: JSON.stringify({
       model: params.model,
       max_tokens: params.maxTokens,
-      thinking: { type: "adaptive" },
-      output_config: { effort: params.effort },
       system: params.systemInstruction,
-      messages: params.messages.map((m) => ({
-        role: m.role,
-        content:
-          m.role === "user" && m === params.messages.at(-1) && images.length
-            ? [
-                {
-                  type: "text",
-                  text: m.content?.trim() || "Please analyze the attached image(s).",
-                },
-                ...images.map((image) => ({
-                  type: "image",
-                  source: {
-                    type: "base64",
-                    media_type: normalizeAnthropicMediaType(image.mimeType),
-                    data: image.base64Data,
-                  },
-                })),
-              ]
-            : m.content,
-      })),
+      messages: buildAnthropicMessages(params.messages, images),
     }),
   });
 
@@ -530,12 +825,14 @@ async function callOpenAICompatible(params: {
   effort: "low" | "medium" | "high" | "xhigh" | "max";
   maxTokens: number;
   provider: ProviderId;
-  images?: Array<{ mimeType: string; base64Data: string }>;
+  images?: PreparedImage[];
+  signal?: AbortSignal | undefined;
 }): Promise<string> {
   const images = params.images || [];
   const endpoint = `${params.baseUrl.replace(/\/+$/, "")}/chat/completions`;
   const response = await fetchProvider(endpoint, {
     method: "POST",
+    ...(params.signal ? { signal: params.signal } : {}),
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${params.apiKey}`,
@@ -548,36 +845,12 @@ async function callOpenAICompatible(params: {
             max_completion_tokens: params.maxTokens,
           }
         : { temperature: 0.2, max_tokens: params.maxTokens }),
-      messages: [
-        { role: "system", content: params.systemInstruction },
-        ...params.messages.map((m) => {
-          const isLastUser = m.role === "user" && m === params.messages.at(-1);
-          if (isLastUser && images.length) {
-            return {
-              role: m.role,
-              content: [
-                {
-                  type: "text",
-                  text: m.content?.trim() || "Please analyze the attached image(s).",
-                },
-                ...images.map((image) => ({
-                  type: "image_url",
-                  image_url: {
-                    url: `data:${normalizeMimeType(image.mimeType)};base64,${image.base64Data}`,
-                    ...(params.provider === "openai" || params.provider === "xai"
-                      ? { detail: "high" }
-                      : {}),
-                  },
-                })),
-              ],
-            };
-          }
-          return {
-            role: m.role,
-            content: m.content,
-          };
-        }),
-      ],
+      messages: buildOpenAiMessages(
+        params.messages,
+        images,
+        params.provider,
+        params.systemInstruction
+      ),
     }),
   });
 
@@ -603,25 +876,11 @@ async function callGoogleGemini(params: {
   systemInstruction: string;
   effort: "low" | "medium" | "high" | "xhigh" | "max";
   allowFallback: boolean;
-  images?: Array<{ mimeType: string; base64Data: string }>;
+  images?: PreparedImage[];
+  signal?: AbortSignal | undefined;
 }): Promise<{ text: string; modelUsed: string }> {
   const images = params.images || [];
-  const contents = params.messages.map((m) => {
-    const isLastUser = m.role === "user" && m === params.messages.at(-1);
-    const textContent =
-      m.content?.trim() || (isLastUser && images.length ? "Please analyze the attached image(s)." : "");
-    return {
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [
-        ...(textContent ? [{ text: textContent }] : []),
-        ...(isLastUser
-          ? images.map((image) => ({
-              inlineData: { mimeType: normalizeMimeType(image.mimeType), data: image.base64Data },
-            }))
-          : []),
-      ],
-    };
-  });
+  const contents = buildGeminiContents(params.messages, images);
 
   const ai = new GoogleGenAI({
     apiKey: params.apiKey,
@@ -640,19 +899,13 @@ async function callGoogleGemini(params: {
     try {
       const response = await ai.models.generateContent({
         model: candidateModel,
-        contents: `${contents}\n\nAssistant:`,
+        contents,
         config: {
+          ...(params.signal ? { abortSignal: params.signal } : {}),
           systemInstruction: params.systemInstruction,
           maxOutputTokens: maxOutputTokensForEffort(params.effort),
           thinkingConfig: {
-            thinkingLevel:
-              params.effort === "xhigh" || params.effort === "max"
-                ? ThinkingLevel.HIGH
-                : params.effort === "high"
-                  ? ThinkingLevel.HIGH
-                  : params.effort === "medium"
-                    ? ThinkingLevel.MEDIUM
-                    : ThinkingLevel.LOW,
+            thinkingLevel: resolveGeminiThinkingLevel(params.effort),
           },
         },
       });
@@ -686,17 +939,7 @@ export async function generateMultiProviderChat(
 
   const effort = resolveEffort(params.effort);
   const maxTokens = maxOutputTokensForEffort(effort);
-
-  const allImages = [
-    ...(params.images || []).map((img) => ({
-      mimeType: normalizeMimeType(img.mimeType),
-      base64Data: img.base64Data.replace(/^data:[^;]+;base64,/, ""),
-    })),
-    ...(params.imagePages || []).map((image) => ({
-      mimeType: normalizeMimeType(image.mimeType),
-      base64Data: image.base64Data.replace(/^data:[^;]+;base64,/, ""),
-    })),
-  ];
+  const allImages = resolveAllImages(params);
 
   logEvent(`Dispatching BYOK chat -> provider=${provider} model=${upstreamModelId}`);
 
@@ -710,6 +953,7 @@ export async function generateMultiProviderChat(
       effort,
       maxTokens,
       images: allImages,
+      signal: params.signal,
     });
     return { text, modelUsed: upstreamModelId, providerUsed: provider };
   }
@@ -724,6 +968,7 @@ export async function generateMultiProviderChat(
       effort,
       allowFallback: params.modelId !== "custom-model",
       images: allImages,
+      signal: params.signal,
     });
     return { text, modelUsed, providerUsed: provider };
   }
@@ -739,6 +984,7 @@ export async function generateMultiProviderChat(
     maxTokens,
     provider,
     images: allImages,
+    signal: params.signal,
   });
 
   return { text, modelUsed: upstreamModelId, providerUsed: provider };

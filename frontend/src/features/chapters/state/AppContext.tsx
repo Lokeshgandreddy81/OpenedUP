@@ -35,7 +35,6 @@ import {
   isPdfFile,
   isSupportedImageFile,
   processPhotoInBrowser,
-  processPhotosConcurrently,
   stripFileExtension,
 } from "../services/imageProcessor";
 import {

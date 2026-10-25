@@ -1,5 +1,17 @@
 import type { ChatAttachmentFile } from "../../../app/files/chatAttachments";
 
+export type ChatMessageAttachment = {
+  id?: string;
+  name: string;
+  size: number;
+  type?: string;
+  uploadedAt?: number;
+  content?: string;
+  base64Data?: string;
+  mimeType?: string;
+  previewUrl?: string;
+};
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -9,7 +21,7 @@ export interface ChatMessage {
   actionChips?: string[];
   isThinking?: boolean;
   isStreaming?: boolean;
-  attachments?: Array<{ id?: string; name: string; size: number; type?: string; previewUrl?: string }>;
+  attachments?: ChatMessageAttachment[];
   generationStatus?: "stopped" | "error";
   retryPayload?: {
     prompt: string;

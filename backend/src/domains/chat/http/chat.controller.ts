@@ -18,6 +18,25 @@ import { getProviderCredential } from "../../credentials/application/credentialV
 import { SKILLS } from "../application/skillRegistry.js";
 import { actionableProviderError } from "../providers/providerErrors.js";
 
+function extractHeaderCredential(req: Request): {
+  headerApiKey: string | undefined;
+  headerBaseUrl: string | undefined;
+} {
+  const rawKey = req.headers["x-provider-key"];
+  const headerApiKey =
+    typeof rawKey === "string" && rawKey.trim().length > 0 && rawKey.trim().length <= 4096
+      ? rawKey.trim()
+      : undefined;
+
+  const rawUrl = req.headers["x-provider-base-url"];
+  const headerBaseUrl =
+    typeof rawUrl === "string" && rawUrl.trim().length > 0 && rawUrl.trim().length <= 2048
+      ? rawUrl.trim()
+      : undefined;
+
+  return { headerApiKey, headerBaseUrl };
+}
+
 function requestProviderCredential(
   req: Request,
   payload: Pick<ChatRequest, "model" | "customModel" | "customProvider">,
@@ -29,9 +48,9 @@ function requestProviderCredential(
       ? payload.customProvider || "custom"
       : (getModelMeta(payload.model || "gemini-3.8-flash").provider as ProviderId);
   const savedCredential = req.principal ? getProviderCredential(req.principal.uid, provider) : null;
-  if (headerApiKey)
-    return { apiKey: headerApiKey, baseUrl: headerBaseUrl || savedCredential?.baseUrl };
-  return savedCredential || {};
+  const apiKey = headerApiKey?.trim() || savedCredential?.apiKey;
+  const baseUrl = headerBaseUrl?.trim() || savedCredential?.baseUrl;
+  return { apiKey, baseUrl };
 }
 
 function isLoopbackRequest(req: Request): boolean {
@@ -67,12 +86,7 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
   const startTime = Date.now();
   try {
     const payload = req.body as ChatRequest;
-    const headerApiKey =
-      typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
-    const headerBaseUrl =
-      typeof req.headers["x-provider-base-url"] === "string"
-        ? req.headers["x-provider-base-url"]
-        : undefined;
+    const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
 
     const credential = requestProviderCredential(req, payload, headerApiKey, headerBaseUrl);
     if (!requireUserCredential(req, res, payload, credential.apiKey)) return;
@@ -90,11 +104,12 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
       model: (req.body as ChatRequest | undefined)?.model,
       elapsedMs,
     });
-    const status = message.startsWith("MISSING_API_KEY:")
-      ? 401
-      : message.startsWith("UNKNOWN_MODEL:") || message.startsWith("MISSING_CUSTOM_MODEL:")
-        ? 400
-        : 500;
+    const isBadRequest =
+      message.startsWith("UNKNOWN_MODEL:") ||
+      message.startsWith("MISSING_CUSTOM_MODEL:") ||
+      message.includes("does not support image analysis") ||
+      message.includes("does not accept PDF page images");
+    const status = message.startsWith("MISSING_API_KEY:") ? 401 : isBadRequest ? 400 : 500;
     res
       .status(status)
       .json({ error: status === 500 ? publicProviderError(message) : message, requestId: req.id });
@@ -108,12 +123,7 @@ export async function handleChatStream(
 ): Promise<void> {
   const startTime = Date.now();
   const payload = req.body as ChatRequest;
-  const headerApiKey =
-    typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
-  const headerBaseUrl =
-    typeof req.headers["x-provider-base-url"] === "string"
-      ? req.headers["x-provider-base-url"]
-      : undefined;
+  const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
   let credential: ReturnType<typeof requestProviderCredential>;
   try {
     credential = requestProviderCredential(req, payload, headerApiKey, headerBaseUrl);
@@ -129,6 +139,16 @@ export async function handleChatStream(
     return;
   }
   if (!requireUserCredential(req, res, payload, credential.apiKey)) return;
+
+  const modelId = payload.model || "gemini-3.8-flash";
+  const meta = getModelMeta(modelId);
+  if (payload.images?.length && meta.inputModalities && !meta.inputModalities.includes("image")) {
+    res.status(400).json({
+      error: `${meta.name} does not support image analysis. Please select a multimodal vision model (such as Claude Opus/Fable, GPT-6, Gemini, Grok, Kimi K3.1, or Qwen 3.8 Max) to analyze images.`,
+      requestId: req.id,
+    });
+    return;
+  }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -192,12 +212,7 @@ export async function handleChapterChat(
   _next: NextFunction
 ): Promise<void> {
   const request = req.body as ChapterChatRequest;
-  const headerApiKey =
-    typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
-  const headerBaseUrl =
-    typeof req.headers["x-provider-base-url"] === "string"
-      ? req.headers["x-provider-base-url"]
-      : undefined;
+  const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
 
   let credential: ReturnType<typeof requestProviderCredential>;
   try {
@@ -220,10 +235,12 @@ export async function handleChapterChat(
       errorType: error instanceof Error ? error.name : "UnknownError",
       model: request.model,
     });
-    const status =
-      message.startsWith("UNKNOWN_MODEL:") || message.startsWith("MISSING_CUSTOM_MODEL:")
-        ? 400
-        : 500;
+    const isBadRequest =
+      message.startsWith("UNKNOWN_MODEL:") ||
+      message.startsWith("MISSING_CUSTOM_MODEL:") ||
+      message.includes("does not support image analysis") ||
+      message.includes("does not accept PDF page images");
+    const status = isBadRequest ? 400 : 500;
     res
       .status(status)
       .json({ error: status === 500 ? publicProviderError(message) : message, requestId: req.id });
@@ -236,12 +253,7 @@ export async function handleChapterChatStream(
   _next: NextFunction
 ): Promise<void> {
   const request = req.body as ChapterChatRequest;
-  const headerApiKey =
-    typeof req.headers["x-provider-key"] === "string" ? req.headers["x-provider-key"] : undefined;
-  const headerBaseUrl =
-    typeof req.headers["x-provider-base-url"] === "string"
-      ? req.headers["x-provider-base-url"]
-      : undefined;
+  const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
 
   let credential: ReturnType<typeof requestProviderCredential>;
   try {
@@ -251,6 +263,17 @@ export async function handleChapterChatStream(
     return;
   }
   if (!requireUserCredential(req, res, request, credential.apiKey)) return;
+
+  if (
+    request.imagePages?.length &&
+    !getModelMeta(request.model).inputModalities?.includes("image")
+  ) {
+    res.status(400).json({
+      error: "The selected model does not accept PDF page images.",
+      requestId: req.id,
+    });
+    return;
+  }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");

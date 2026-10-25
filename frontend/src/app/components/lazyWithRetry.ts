@@ -5,6 +5,7 @@ import { lazy, type ComponentType } from "react";
  * If a module fails to load (e.g. after a rebuild/deployment or MIME type mismatch),
  * it reloads the page once to pull the updated HTML and new chunk hashes.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function lazyWithRetry<T extends ComponentType<any>>(
   componentImport: () => Promise<{ default: T }>
 ) {
@@ -19,14 +20,15 @@ export function lazyWithRetry<T extends ComponentType<any>>(
         window.sessionStorage.removeItem(sessionKey);
       }
       return component;
-    } catch (error: any) {
-      const errorMessage = String(error?.message || error || "");
+    } catch (error: unknown) {
+      const err = error as { message?: string; name?: string } | null;
+      const errorMessage = String(err?.message || error || "");
       const isChunkOrMimeError =
         errorMessage.includes("MIME type") ||
         errorMessage.includes("Failed to fetch dynamically imported module") ||
         errorMessage.includes("Importing a module script failed") ||
         errorMessage.includes("error loading dynamically imported module") ||
-        error?.name === "ChunkLoadError";
+        err?.name === "ChunkLoadError";
 
       if (typeof window !== "undefined" && !alreadyRetried && isChunkOrMimeError) {
         window.sessionStorage.setItem(sessionKey, "true");

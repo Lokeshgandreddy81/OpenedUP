@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -257,7 +257,7 @@ export const AiAndDataScientistPage: React.FC<AiAndDataScientistPageProps> = ({
     }
   };
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (onBack) {
       onBack();
     } else if (window.history.length > 1) {
@@ -265,7 +265,7 @@ export const AiAndDataScientistPage: React.FC<AiAndDataScientistPageProps> = ({
     } else {
       navigate("/roadmap");
     }
-  };
+  }, [navigate, onBack]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -275,7 +275,7 @@ export const AiAndDataScientistPage: React.FC<AiAndDataScientistPageProps> = ({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [handleBack]);
 
   return (
     <div className="min-h-full w-full bg-white font-sans text-[#0F172A]">

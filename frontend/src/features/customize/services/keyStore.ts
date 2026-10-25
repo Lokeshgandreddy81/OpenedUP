@@ -13,14 +13,24 @@ export type StoredKeysMap = Partial<Record<ProviderId, string>>;
 export type StoredUrlsMap = Partial<Record<ProviderId, string>>;
 
 let memoryKeys: StoredKeysMap = {};
-let legacyKeysToImport: StoredKeysMap = {};
+const legacyKeysToImport: StoredKeysMap = {};
 if (typeof window !== "undefined") {
   try {
-    const legacy = JSON.parse(window.localStorage.getItem(KEYS_STORAGE_KEY) || "{}");
-    if (legacy && typeof legacy === "object") legacyKeysToImport = legacy as StoredKeysMap;
+    const raw = window.localStorage.getItem(KEYS_STORAGE_KEY);
+    if (raw) {
+      const legacy = JSON.parse(raw);
+      if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
+        for (const [k, v] of Object.entries(legacy)) {
+          if (k in PROVIDER_CATALOG && typeof v === "string" && v.trim().length > 0) {
+            legacyKeysToImport[k as ProviderId] = v.trim();
+          }
+        }
+      }
+    }
   } catch {
     /* malformed legacy key cache */
   }
+  // Ensure sensitive API keys are immediately purged from persistent browser storage
   window.localStorage.removeItem(KEYS_STORAGE_KEY);
 }
 
@@ -40,7 +50,16 @@ export function getStoredBaseUrls(): StoredUrlsMap {
     const raw = window.localStorage.getItem(URLS_STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const sanitized: StoredUrlsMap = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (k in PROVIDER_CATALOG && typeof v === "string" && v.trim().length > 0) {
+          sanitized[k as ProviderId] = v.trim();
+        }
+      }
+      return sanitized;
+    }
+    return {};
   } catch {
     return {};
   }
@@ -66,13 +85,13 @@ export function getCustomModelProvider(): ProviderId {
 }
 
 export function saveCustomModelProvider(provider: ProviderId): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !(provider in PROVIDER_CATALOG)) return;
   window.localStorage.setItem(CUSTOM_PROVIDER_STORAGE_KEY, provider);
   window.dispatchEvent(new CustomEvent(SYNC_EVENT));
 }
 
 export function saveStoredKey(provider: ProviderId, apiKey: string, baseUrl?: string): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !(provider in PROVIDER_CATALOG)) return;
   const trimmedKey = apiKey.trim();
   const currentKeys = { ...getStoredKeys() };
 
@@ -99,7 +118,7 @@ export function saveStoredKey(provider: ProviderId, apiKey: string, baseUrl?: st
 }
 
 export function removeStoredKey(provider: ProviderId): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !(provider in PROVIDER_CATALOG)) return;
   delete legacyKeysToImport[provider];
   const currentKeys = { ...getStoredKeys() };
   delete currentKeys[provider];
@@ -159,7 +178,7 @@ export function getProviderChatRequestConfig(modelId: string): {
     providerName,
     modelName,
     customModelFields: {
-      customModel: getCustomModelId(),
+      ...(getCustomModelId() ? { customModel: getCustomModelId() } : {}),
       customProvider: getCustomModelProvider(),
     },
   };
