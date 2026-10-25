@@ -1053,16 +1053,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 </span>
               </button>
 
-              {/* Profile / Auth Avatar */}
-              <button
-                type="button"
-                onClick={user ? undefined : signIn}
-                title={user ? `${accountLabel} (${user.email || "Active"})` : "Sign in to save history"}
-                aria-label={user ? `${accountLabel} profile` : "Sign in"}
-                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-800 flex items-center justify-center text-[12px] font-semibold transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-slate-400/40 shrink-0"
-              >
-                {accountInitial}
-              </button>
             </div>
           </header>
 
