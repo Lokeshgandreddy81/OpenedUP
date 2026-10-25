@@ -6,6 +6,7 @@ import { RoadmapPageSkeleton } from "../pages/RoadmapPage/LoadingSkeleton";
 
 interface RoadmapExplorerProps {
   onBack: () => void;
+  isEmbedded?: boolean;
 }
 
 interface CatalogRoadmap {
@@ -126,7 +127,7 @@ const ALL_ROADMAPS = [...ROLE_ROADMAPS, ...SKILL_ROADMAPS, ...BEST_PRACTICE_ROAD
 const ROADMAP_GRID_CLASS =
   "mt-6 grid grid-cols-1 gap-x-8 gap-y-1.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
-export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack }) => {
+export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbedded = false }) => {
   const [query, setQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedRoadmap, setSelectedRoadmap] = useState<CatalogRoadmap | null>(null);
@@ -157,13 +158,13 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack }) => {
       if (event.key !== "Escape") return;
       if (selectedRoadmap) {
         setSelectedRoadmap(null);
-      } else {
+      } else if (!isEmbedded) {
         onBack();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedRoadmap, onBack]);
+  }, [selectedRoadmap, isEmbedded, onBack]);
 
   const renderRoadmapCard = (roadmap: CatalogRoadmap) => {
     return (
@@ -198,17 +199,27 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="explore-screen fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A] animate-in fade-in duration-150">
-      <button
-        type="button"
-        onClick={onBack}
-        className="fixed left-5 top-5 z-20 inline-flex h-8 items-center gap-1.5 px-3 rounded-md text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-      >
-        <ArrowLeft size={14} />
-        Back
-      </button>
+    <div
+      className={
+        isEmbedded
+          ? "explore-screen flex-1 w-full h-full min-w-0 relative overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A]"
+          : "explore-screen fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A] animate-in fade-in duration-150"
+      }
+    >
+      {!isEmbedded && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="fixed left-5 top-5 z-20 inline-flex h-8 items-center gap-1.5 px-3 rounded-md text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+        >
+          <ArrowLeft size={14} />
+          Back
+        </button>
+      )}
 
-      <div className="mx-auto w-full max-w-[1360px] px-6 sm:px-10 pb-28 pt-14 sm:pt-20">
+      <div
+        className={`mx-auto w-full max-w-[1360px] px-6 sm:px-10 pb-28 ${isEmbedded ? "pt-8 sm:pt-10" : "pt-14 sm:pt-20"}`}
+      >
         <div className="relative flex items-center justify-center">
           <h1 className="font-serif text-4xl sm:text-5xl font-normal text-slate-900 tracking-tight leading-tight">
             Roadmaps

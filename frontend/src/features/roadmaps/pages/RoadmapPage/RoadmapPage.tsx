@@ -6,15 +6,11 @@ import { RoadmapPageErrorBoundary } from "./ErrorBoundary";
 export const RoadmapPageContent: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleClose = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/chat");
-    }
-  };
+  React.useEffect(() => {
+    navigate("/chat?view=roadmaps", { replace: true });
+  }, [navigate]);
 
-  return <RoadmapsScreen onBack={handleClose} />;
+  return <RoadmapsScreen isEmbedded={true} />;
 };
 
 export const RoadmapPage: React.FC = () => {

@@ -12,10 +12,17 @@ import { BenchmarkCatalogView } from "./catalog/BenchmarkCatalogView";
 
 export interface BenchmarksViewProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
+  isEmbedded?: boolean;
+  hideBackButton?: boolean;
 }
 
-export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ isOpen, onClose }) => {
+export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
+  isOpen,
+  onClose,
+  isEmbedded = false,
+  hideBackButton = false,
+}) => {
   const [activeTab, setActiveTab] = useState<BenchmarkCategory>("overview");
   const [selectedModel, setSelectedModel] = useState<AIModelBenchmark | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,7 +43,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ isOpen, onClose 
       if (e.key === "Escape") {
         if (isModalOpen) {
           setIsModalOpen(false);
-        } else {
+        } else if (!isEmbedded && onClose) {
           onClose();
         }
       } else if (e.key === "/" && !isModalOpen) {
@@ -50,7 +57,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ isOpen, onClose 
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isModalOpen, onClose]);
+  }, [isOpen, isModalOpen, isEmbedded, onClose]);
 
   // Model selection handler
   const handleSelectModel = (model: AIModelBenchmark) => {
@@ -98,27 +105,34 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({ isOpen, onClose 
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
+      {...(!isEmbedded ? { role: "dialog", "aria-modal": true } : {})}
       aria-label="Artificial Analysis Benchmarks"
-      className="fixed inset-0 z-50 bg-[#FBFBFC] flex flex-col font-sans select-none overflow-hidden text-neutral-900 animate-in fade-in duration-150"
+      className={
+        isEmbedded
+          ? "flex-1 w-full h-full min-w-0 bg-[#FBFBFC] flex flex-col font-sans select-none overflow-hidden text-neutral-900"
+          : "fixed inset-0 z-50 bg-[#FBFBFC] flex flex-col font-sans select-none overflow-hidden text-neutral-900 animate-in fade-in duration-150"
+      }
     >
       {/* ========================================================
           TOP NAVIGATION HEADER (Artificial Analysis Official Bar)
           ======================================================== */}
-      <header className="w-full h-14 bg-white border-b border-transparent px-4 md:px-6 relative flex items-center justify-between shrink-0 z-20">
-        {/* Left: Back to document */}
-        <div className="flex items-center z-10">
-          <button
-            type="button"
-            onClick={onClose}
-            title="Back to Document (Esc)"
-            aria-label="Back to document"
-            className="text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer shrink-0"
-          >
-            <ArrowLeft size={18} strokeWidth={2} />
-          </button>
-        </div>
+      <header className="w-full h-14 bg-white border-b border-neutral-200/70 px-4 md:px-6 relative flex items-center justify-between shrink-0 z-20">
+        {/* Left: Back to document (hidden when embedded or hideBackButton) */}
+        {!isEmbedded && !hideBackButton && onClose ? (
+          <div className="flex items-center z-10">
+            <button
+              type="button"
+              onClick={onClose}
+              title="Back to Document (Esc)"
+              aria-label="Back to document"
+              className="text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer shrink-0"
+            >
+              <ArrowLeft size={18} strokeWidth={2} />
+            </button>
+          </div>
+        ) : (
+          <div className="w-6 shrink-0" />
+        )}
 
         {/* Center: Main Navigation Tabs (Desktop) */}
         <nav

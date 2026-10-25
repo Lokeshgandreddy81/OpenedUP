@@ -11,7 +11,18 @@ interface ChatPageProps {
 export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
-  const initialView = params.get("view") === "customize" ? "customize" : "chat";
+  const viewParam = params.get("view");
+  const validViews = [
+    "chat",
+    "projects",
+    "artifacts",
+    "customize",
+    "plugins",
+    "benchmarks",
+    "chapters",
+    "roadmaps",
+  ];
+  const initialView = validViews.includes(viewParam || "") ? (viewParam as any) : "chat";
   const initialCustomizeCategory =
     params.get("category") === "Providers" ? "Providers" : "Connectors";
 
@@ -40,8 +51,6 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
   ) => {
     if (view === "chapters") {
       navigate("/results");
-    } else if (view === "roadmaps") {
-      navigate("/roadmap");
     }
   };
 

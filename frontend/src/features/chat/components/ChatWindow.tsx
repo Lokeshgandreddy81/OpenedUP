@@ -127,14 +127,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }
       return;
     }
-    if (initialView === "roadmaps") {
-      if (onViewChange) {
-        onViewChange("roadmaps");
-      } else {
-        navigate("/roadmap");
-      }
-      return;
-    }
     setActiveView((current) => (current === initialView ? current : initialView));
   }, [initialView, onViewChange, navigate]);
 
@@ -159,14 +151,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }
       return;
     }
-    if (view === "roadmaps") {
-      if (onViewChange) {
-        onViewChange("roadmaps");
-      } else {
-        navigate("/roadmap");
-      }
-      return;
-    }
     if (view === "projects") {
       setProjectsNavKey((k) => k + 1);
     }
@@ -175,6 +159,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setCustomizeInitialCategory("Connectors");
     }
     setActiveView(view);
+    try {
+      const url = new URL(window.location.href);
+      if (view === "chat") {
+        url.searchParams.delete("view");
+      } else {
+        url.searchParams.set("view", view);
+      }
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      // ignore
+    }
     onViewChange?.(view);
   };
 

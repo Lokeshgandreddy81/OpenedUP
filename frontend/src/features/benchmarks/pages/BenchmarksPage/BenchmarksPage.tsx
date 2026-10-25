@@ -6,17 +6,13 @@ import { BenchmarksPageErrorBoundary } from "./ErrorBoundary";
 export const BenchmarksPageContent: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleClose = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/results");
-    }
-  };
+  React.useEffect(() => {
+    navigate("/chat?view=benchmarks", { replace: true });
+  }, [navigate]);
 
   return (
     <div className="w-screen h-screen">
-      <BenchmarksView isOpen={true} onClose={handleClose} />
+      <BenchmarksView isOpen={true} isEmbedded={true} hideBackButton={true} />
     </div>
   );
 };
