@@ -380,6 +380,123 @@ export const ProviderEndpointRequestSchema = z.object({
   baseUrl: z.string().trim().min(1).max(2048),
 });
 
+const ScheduledRecurrenceSchema = z.object({
+  frequency: z.enum(["daily", "weekdays", "weekly", "monthly"]),
+  time: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+  timezone: z.string().min(1).max(100),
+  dayOfWeek: z.number().int().min(0).max(6).optional(),
+  dayOfMonth: z.number().int().min(1).max(31).optional(),
+});
+
+export const ScheduledTaskInputSchema = z
+  .object({
+    title: z.string().trim().min(1).max(200),
+    prompt: z.string().trim().min(1).max(40_000),
+    icon: z.string().max(32).default("⏱️"),
+    ...ScheduledRecurrenceSchema.shape,
+    isActive: z.boolean().default(true),
+    model: z.string().trim().min(1).max(120),
+    effort: z.enum(["Low", "Medium", "High"]).default("Medium"),
+    notifications: z.enum(["Important updates", "Failed runs only"]).default("Important updates"),
+    startInNewChat: z.boolean().default(false),
+    apiKey: z.string().trim().max(1000).optional(),
+  })
+  .superRefine((task, context) => {
+    if (task.frequency === "weekly" && task.dayOfWeek === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "A weekday is required for weekly tasks.",
+        path: ["dayOfWeek"],
+      });
+    }
+    if (task.frequency !== "weekly" && task.dayOfWeek !== undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "A weekday is only valid for weekly tasks.",
+        path: ["dayOfWeek"],
+      });
+    }
+    if (task.frequency === "monthly" && task.dayOfMonth === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "A day of month is required for monthly tasks.",
+        path: ["dayOfMonth"],
+      });
+    }
+    if (task.frequency !== "monthly" && task.dayOfMonth !== undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "A day of month is only valid for monthly tasks.",
+        path: ["dayOfMonth"],
+      });
+    }
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: task.timezone });
+    } catch {
+      context.addIssue({
+        code: "custom",
+        message: "Timezone must be a valid IANA timezone.",
+        path: ["timezone"],
+      });
+    }
+  });
+
+export const UpdateScheduledTaskRequestSchema = ScheduledTaskInputSchema;
+
+export const ImportScheduledTasksRequestSchema = z
+  .object({
+    tasks: z
+      .array(
+        ScheduledTaskInputSchema.extend({
+          legacyId: z.string().trim().min(1).max(200),
+          createdAt: z.number().int().nonnegative(),
+          legacyFrequency: z.enum(["daily", "weekdays", "weekly", "custom"]).optional(),
+        })
+      )
+      .max(500),
+  })
+  .superRefine((request, context) => {
+    if (JSON.stringify(request).length > 5_000_000) {
+      context.addIssue({
+        code: "custom",
+        message: "Scheduled task import exceeds the 5 MB limit.",
+        path: ["tasks"],
+      });
+    }
+    const legacyIds = request.tasks.map((task) => task.legacyId);
+    if (new Set(legacyIds).size !== legacyIds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Legacy task IDs must be unique within an import.",
+        path: ["tasks"],
+      });
+    }
+  });
+
+export const ScheduledTaskSchema = ScheduledTaskInputSchema.extend({
+  id: z.string().uuid(),
+  createdAt: z.number().int().nonnegative(),
+  updatedAt: z.number().int().nonnegative(),
+  lastRunAt: z.number().int().nonnegative().nullable(),
+  nextRunAt: z.number().int().nonnegative().nullable(),
+});
+
+export const ScheduledTaskRunSchema = z.object({
+  id: z.string().uuid(),
+  taskId: z.string().uuid(),
+  trigger: z.enum(["scheduled", "manual"]),
+  status: z.enum(["queued", "running", "succeeded", "failed"]),
+  scheduledFor: z.number().int().nonnegative().nullable(),
+  createdAt: z.number().int().nonnegative(),
+  startedAt: z.number().int().nonnegative().nullable(),
+  finishedAt: z.number().int().nonnegative().nullable(),
+  output: z.string().max(100_000).nullable(),
+  error: z.string().max(4_000).nullable(),
+  modelUsed: z.string().nullable(),
+  providerUsed: z.string().nullable(),
+  conversationId: z.string().uuid().nullable(),
+});
+
 export type PhotoInput = z.infer<typeof PhotoInputSchema>;
 export type ReadReceiptsRequest = z.infer<typeof ReadReceiptsRequestSchema>;
 export type ReceiptRowInput = z.infer<typeof ReceiptRowInputSchema>;
@@ -402,3 +519,8 @@ export type ReplaceProjectsRequest = z.infer<typeof ReplaceProjectsRequestSchema
 export type ImportProjectsRequest = z.infer<typeof ImportProjectsRequestSchema>;
 export type ProviderCredentialRequest = z.infer<typeof ProviderCredentialRequestSchema>;
 export type ProviderEndpointRequest = z.infer<typeof ProviderEndpointRequestSchema>;
+export type ScheduledTaskInput = z.infer<typeof ScheduledTaskInputSchema>;
+export type UpdateScheduledTaskRequest = z.infer<typeof UpdateScheduledTaskRequestSchema>;
+export type ImportScheduledTasksRequest = z.infer<typeof ImportScheduledTasksRequestSchema>;
+export type ScheduledTaskRecord = z.infer<typeof ScheduledTaskSchema>;
+export type ScheduledTaskRunRecord = z.infer<typeof ScheduledTaskRunSchema>;

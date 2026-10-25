@@ -141,6 +141,10 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
         <PageRoute name="Scheduled tasks" fallback={<ChatScreenLoading name="Scheduled tasks" />}>
           <ScheduledTasksScreen
             onClose={onCloseScheduledTasks}
+            onNavigateToProviders={() => {
+              onCloseScheduledTasks();
+              onOpenProviders();
+            }}
             onNavigateToChat={(prompt) => {
               onCloseScheduledTasks();
               onNavigateToChat(prompt);

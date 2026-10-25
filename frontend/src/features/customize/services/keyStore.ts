@@ -245,6 +245,9 @@ export function useProviderKeys() {
         delete memoryKeys[provider];
         if (!cachedAccountProviders.includes(provider))
           cachedAccountProviders = [...cachedAccountProviders, provider];
+        // Other mounted views (such as Scheduled Tasks) use their own hook
+        // instance and need the updated account-backed provider status too.
+        window.dispatchEvent(new CustomEvent(SYNC_EVENT));
       }
       if (apiKey.trim()) delete legacyKeysToImport[provider];
       refresh();
@@ -306,6 +309,22 @@ export function useProviderKeys() {
     [accountProviders]
   );
 
+  const hasAccountKey = useCallback(
+    (provider: ProviderId) => accountProviders.includes(provider),
+    [accountProviders]
+  );
+
+  const refreshAccountProviders = useCallback(async (): Promise<ProviderId[]> => {
+    if (!currentUserId) return [];
+    const response = await authenticatedChatFetch("/api/credentials");
+    if (!response.ok) throw new Error("Could not verify saved provider keys.");
+    const data = (await response.json()) as { providers: ProviderId[] };
+    cachedAccountProviders = data.providers;
+    setAccountProviders(data.providers);
+    window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+    return data.providers;
+  }, [currentUserId]);
+
   const allProviderIds = Object.keys(PROVIDER_CATALOG) as ProviderId[];
   const connectedCount = allProviderIds.filter((id) => hasKey(id)).length;
 
@@ -321,5 +340,7 @@ export function useProviderKeys() {
     setProviderEndpoint,
     deleteProviderKey,
     hasKey,
+    hasAccountKey,
+    refreshAccountProviders,
   };
 }

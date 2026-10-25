@@ -2377,6 +2377,11 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
       {isScheduledTasksOpen && (
         <ScheduledTasksView
           isOpen={isScheduledTasksOpen}
+          onNavigateToProviders={() => {
+            setIsScheduledTasksOpen(false);
+            setChatInitialView("customize");
+            setIsChatOpen(true);
+          }}
           onClose={() => {
             setIsScheduledTasksOpen(false);
             setActiveNavTab("chapters");

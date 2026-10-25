@@ -1,4 +1,4 @@
-export type TaskFrequency = "daily" | "weekdays" | "weekly" | "monthly" | "custom";
+export type TaskFrequency = "daily" | "weekdays" | "weekly" | "monthly";
 
 export interface ScheduledTask {
   id: string;
@@ -8,15 +8,17 @@ export interface ScheduledTask {
   frequency: TaskFrequency;
   time: string;
   dayOfWeek?: string;
+  dayOfMonth?: number;
+  timezone?: string;
   isActive: boolean;
   createdAt: number;
   lastRun?: string;
   nextRun?: string;
-  runOnComputer?: boolean;
   notifications?: "Important updates" | "Failed runs only";
   startInNewChat?: boolean;
   model?: string;
   effort?: "Low" | "Medium" | "High";
+  apiKey?: string;
 }
 
 export interface TaskTemplate {

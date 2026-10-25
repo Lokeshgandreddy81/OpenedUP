@@ -18,12 +18,17 @@ export const ScheduledPageContent: React.FC = () => {
     navigate("/chat" + (prompt ? `?prompt=${encodeURIComponent(prompt)}` : ""));
   };
 
+  const handleNavigateToProviders = () => {
+    navigate("/chat?view=customize&category=Providers");
+  };
+
   return (
     <div className="w-screen h-screen">
       <ScheduledTasksView
         isOpen={true}
         onClose={handleClose}
         onNavigateToChat={handleNavigateToChat}
+        onNavigateToProviders={handleNavigateToProviders}
       />
     </div>
   );

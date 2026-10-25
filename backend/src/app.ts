@@ -16,6 +16,7 @@ import { conversationRouter } from "./domains/conversations/http/conversation.ro
 import { artifactRouter } from "./domains/artifacts/http/artifact.routes.js";
 import { credentialRouter } from "./domains/credentials/http/credential.routes.js";
 import { projectRouter } from "./domains/projects/http/project.routes.js";
+import { scheduledTaskRouter } from "./domains/scheduled/http/scheduledTask.routes.js";
 
 export function createApp(): Express {
   const app = express();
@@ -32,6 +33,7 @@ export function createApp(): Express {
   app.use(healthRouter);
 
   // API domain routes
+  app.use("/api/scheduled-tasks", scheduledTaskRouter);
   app.use("/api", attachOptionalFirebaseUser);
   app.use("/api", authRouter);
   app.use("/api", analyticsRouter);

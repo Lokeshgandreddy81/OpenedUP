@@ -2,7 +2,7 @@
 
 ## Provider and model routing
 
-`backend/contracts/src/types/models.ts` owns the provider catalog and selectable model registry. The frontend model pickers derive their options from this registry, and the backend resolves the selected public model ID to a provider and upstream model ID. Unknown model IDs are rejected. The `custom-model` entry uses a model ID entered by the user.
+`backend/contracts/src/types/models.ts` owns the provider catalog and model metadata. Frontend pickers may offer curated subsets while resolving labels from these canonical IDs; the backend resolves a selected ID to its provider and upstream model ID. Unknown model IDs are rejected. The `custom-model` entry uses a model ID entered by the user.
 
 The shared provider request configuration keeps the main chat and project sessions on the same selected model, key, and endpoint. Chat generation always requires a user-supplied provider key; server environment/config keys are never used as chat fallbacks. Signed-in accounts can save provider credentials to `/api/credentials`; AES-256-GCM encrypts them at rest and the API only returns configured provider IDs. Signed-out users can keep keys in browser memory for the current session. Endpoint-only updates preserve a signed-in user's saved key without returning it to the browser. `BYOK_ENCRYPTION_KEY` must be a base64-encoded 32-byte key in hosted deployments. Provider endpoints are stored with the selected provider’s settings. Provider requests require HTTPS, reject redirects, resolve only to public addresses, and pin the connection to the address that passed validation.
 
@@ -13,6 +13,8 @@ Chapter chat is a separate, chapter-scoped flow. The browser extracts selectable
 ## State and persistence
 
 Firebase ID tokens are verified against the configured Firebase project; the verified UID owns conversation, artifact, project, and credential rows. Conversations persist in SQLite and are queried by owner. Projects persist as bounded JSON snapshots keyed by `(user_id, project_id)`; their nested sessions, messages, and extracted files have one canonical owner. Existing browser projects import idempotently for the first account claiming that browser snapshot, excluding the demo fixture; after import, project data is read from the account store and is not copied back to the shared anonymous localStorage key. Signed-out projects remain browser-local. The database is single-instance and its container volume must be kept persistent. Existing browser artifacts import idempotently after sign-in; private artifacts are owner-only and shared artifacts are readable by signed-in users while sharing remains enabled. Artifact edits and renames are owner-scoped, exports are browser downloads, and the latest 50 pre-edit snapshots are available for restore. Anonymous and temporary chats remain transient. Existing local conversation history did not exist to migrate.
+
+Scheduled tasks persist recurrence in local wall time plus an IANA timezone, and the backend worker claims due occurrences transactionally from SQLite. The worker starts with the API process, so production must keep one backend instance running and mount its database volume persistently. Missed occurrences are coalesced to one run after restart; execution uses only the task owner's encrypted saved provider key. Run status, output, safe errors, and linked conversation IDs persist in owner-scoped run history. Browser-local schedules import once into the first signed-in account and the local snapshot is retained. Notification preference is stored, but server-to-browser push/email delivery is not configured; run results are available through the authenticated run-history API and the created conversations.
 
 The plugin catalog currently installs only bundled, allowlisted chat capabilities backed by the three server-owned skills. Install state is browser-local and installed capabilities appear in the chat skill picker. Permission labels state the supplied context each capability reads; the system has no third-party plugin code execution or remote connector installation.
 
@@ -28,6 +30,7 @@ The chat router exposes:
 - `GET /api/chat/skills` for the versioned built-in skill catalog.
 - Authenticated `/api/conversations`, `/api/artifacts`, and `/api/projects` for account-scoped state; `/api/credentials` stores provider secrets and allows endpoint changes without returning those secrets.
 - `POST /api/chat/verify-key` for provider connection checks.
+- `/api/scheduled-tasks` for durable schedule CRUD, idempotent browser import, immediate manual runs, background worker execution, and run history. Unauthenticated requests default to user `"default"`.
 - `GET` and `POST /api/chat/rules` for reading and saving workspace instructions. Writes are restricted to loopback and non-production.
 
 The OpenAPI contract is maintained in `docs/api/openapi.yaml`.

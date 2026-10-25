@@ -638,8 +638,178 @@ paths:
         "200": { description: Imported and skipped project counts. }
         "400": { description: Invalid or oversized project snapshot. }
 
+  /api/scheduled-tasks:
+    get:
+      summary: List scheduled tasks
+      description: Returns schedules with server-calculated next run times. Unauthenticated callers default to user "default".
+      security: []
+      responses:
+        "200": { description: Scheduled tasks with server-calculated next run times. }
+    post:
+      summary: Create a scheduled task
+      description: Persists a scheduled task. Executes autonomously on the background worker using saved credentials, custom task key, or fallback env keys.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScheduledTaskInput" }
+      responses:
+        "201": { description: Created schedule. }
+        "400": { description: Invalid schedule or unknown model ID. }
+  /api/scheduled-tasks/import:
+    post:
+      summary: Idempotently import browser schedules
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tasks]
+              properties:
+                tasks:
+                  type: array
+                  maxItems: 500
+                  items: { $ref: "#/components/schemas/ScheduledTaskImport" }
+      responses:
+        "200": { description: Imported and skipped task counts. }
+        "400": { description: Invalid task data. }
+  /api/scheduled-tasks/{id}:
+    put:
+      summary: Replace a scheduled task
+      security: []
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScheduledTaskInput" }
+      responses:
+        "200": { description: Updated task. }
+        "404": { description: Task not found. }
+    delete:
+      summary: Delete a scheduled task and its run history
+      security: []
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Task deleted. }
+        "404": { description: Task not found. }
+  /api/scheduled-tasks/{id}/run:
+    post:
+      summary: Queue an immediate task run
+      security: []
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "202": { description: Queued run; instantly dispatched to background worker. }
+        "404": { description: Task not found. }
+  /api/scheduled-tasks/{id}/runs:
+    get:
+      summary: List recent runs for one task
+      security: []
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Recent run records with outputs and durations. }
+        "404": { description: Task not found. }
+  /api/scheduled-tasks/runs/{runId}:
+    get:
+      summary: Read a task run
+      security: []
+      parameters:
+        - { in: path, name: runId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Run status, model output, or safe error. }
+        "404": { description: Run not found. }
+
 components:
   schemas:
+    ScheduledTaskInput:
+      type: object
+      required:
+        [
+          title,
+          prompt,
+          icon,
+          frequency,
+          time,
+          timezone,
+          isActive,
+          model,
+          effort,
+          notifications,
+          startInNewChat,
+        ]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        prompt: { type: string, minLength: 1, maxLength: 40000 }
+        icon: { type: string, maxLength: 32 }
+        frequency: { type: string, enum: [daily, weekdays, weekly, monthly] }
+        time: { type: string, pattern: '^(?:[01]\d|2[0-3]):[0-5]\d$' }
+        timezone: { type: string, maxLength: 100, example: Asia/Kolkata }
+        dayOfWeek:
+          {
+            type: integer,
+            minimum: 0,
+            maximum: 6,
+            description: Sunday is 0. Required for weekly schedules.,
+          }
+        dayOfMonth:
+          {
+            type: integer,
+            minimum: 1,
+            maximum: 31,
+            description: Required for monthly schedules; shorter months clamp to their last day.,
+          }
+        isActive: { type: boolean }
+        model: { type: string, description: Canonical model ID from the model registry. }
+        effort: { type: string, enum: [Low, Medium, High] }
+        notifications: { type: string, enum: [Important updates, Failed runs only] }
+        startInNewChat: { type: boolean }
+    ScheduledTaskImport:
+      allOf:
+        - { $ref: "#/components/schemas/ScheduledTaskInput" }
+        - type: object
+          required: [legacyId, createdAt]
+          properties:
+            legacyId: { type: string, minLength: 1, maxLength: 200 }
+            createdAt: { type: integer, minimum: 0 }
+    ScheduledTaskRun:
+      type: object
+      required:
+        [
+          id,
+          taskId,
+          trigger,
+          status,
+          scheduledFor,
+          createdAt,
+          startedAt,
+          finishedAt,
+          output,
+          error,
+          modelUsed,
+          providerUsed,
+          conversationId,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        taskId: { type: string, format: uuid }
+        trigger: { type: string, enum: [scheduled, manual] }
+        status: { type: string, enum: [queued, running, succeeded, failed] }
+        scheduledFor: { type: integer, nullable: true }
+        createdAt: { type: integer }
+        startedAt: { type: integer, nullable: true }
+        finishedAt: { type: integer, nullable: true }
+        output: { type: string, nullable: true }
+        error: { type: string, nullable: true }
+        modelUsed: { type: string, nullable: true }
+        providerUsed: { type: string, nullable: true }
+        conversationId: { type: string, format: uuid, nullable: true }
     ChapterChatRequest:
       type: object
       additionalProperties: false

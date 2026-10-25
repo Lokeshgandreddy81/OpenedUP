@@ -12,7 +12,7 @@ Document intelligence, spend reconciliation, and AI chat platform for receipt au
 
 ## Architecture Overview
 
-For provider selection, BYOK credential storage, and chat session behavior, see [Chat architecture](docs/chat-architecture.md). The current HTTP contract is maintained in [OpenAPI](docs/api/openapi.yaml).
+For provider selection, BYOK credential storage, and chat session behavior, see [Chat architecture](docs/chat-architecture.md). The current HTTP contract is maintained in [OpenAPI](docs/api/openapi.yaml). Scheduled task recurrence, ownership, and deployment decisions are in the [scheduled tasks notes](specs/scheduled-tasks/README.md).
 
 ```mermaid
 graph TD

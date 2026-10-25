@@ -225,6 +225,16 @@ export async function getFirebaseIdToken(): Promise<string | null> {
   return auth.currentUser ? auth.currentUser.getIdToken() : null;
 }
 
+export function waitForChatAuth(): Promise<User | null> {
+  return new Promise((resolve) => {
+    let unsubscribe: () => void = () => {};
+    unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+}
+
 export function subscribeToChatAuth(callback: (user: User | null) => void): () => void {
   return onAuthStateChanged(auth, callback);
 }

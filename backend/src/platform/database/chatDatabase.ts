@@ -92,9 +92,62 @@ CREATE TABLE IF NOT EXISTS project_snapshots (
 CREATE INDEX IF NOT EXISTS project_snapshots_owner_updated
   ON project_snapshots(user_id, updated_at DESC);
 
+CREATE TABLE IF NOT EXISTS scheduled_tasks (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  legacy_id TEXT,
+  title TEXT NOT NULL,
+  prompt TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  frequency TEXT NOT NULL CHECK(frequency IN ('daily', 'weekdays', 'weekly', 'monthly')),
+  time TEXT NOT NULL,
+  timezone TEXT NOT NULL,
+  day_of_week INTEGER,
+  day_of_month INTEGER,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  model_id TEXT NOT NULL,
+  effort TEXT NOT NULL CHECK(effort IN ('Low', 'Medium', 'High')),
+  notifications TEXT NOT NULL CHECK(notifications IN ('Important updates', 'Failed runs only')),
+  start_in_new_chat INTEGER NOT NULL DEFAULT 0,
+  conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  last_run_at INTEGER,
+  next_run_at INTEGER,
+  UNIQUE(user_id, legacy_id)
+);
+CREATE INDEX IF NOT EXISTS scheduled_tasks_due
+  ON scheduled_tasks(is_active, next_run_at);
+CREATE INDEX IF NOT EXISTS scheduled_tasks_owner_updated
+  ON scheduled_tasks(user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS scheduled_task_runs (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  trigger TEXT NOT NULL CHECK(trigger IN ('scheduled', 'manual')),
+  status TEXT NOT NULL CHECK(status IN ('queued', 'running', 'succeeded', 'failed')),
+  scheduled_for INTEGER,
+  created_at INTEGER NOT NULL,
+  started_at INTEGER,
+  finished_at INTEGER,
+  lease_until INTEGER,
+  output TEXT,
+  error TEXT,
+  model_used TEXT,
+  provider_used TEXT,
+  conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+  FOREIGN KEY(task_id) REFERENCES scheduled_tasks(id) ON DELETE CASCADE,
+  UNIQUE(task_id, scheduled_for)
+);
+CREATE INDEX IF NOT EXISTS scheduled_task_runs_owner_task
+  ON scheduled_task_runs(user_id, task_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS scheduled_task_runs_queue
+  ON scheduled_task_runs(status, lease_until, created_at);
+
 `;
 
-function migrateArtifactOrganization(database: ChatDatabase): void {
+function migrateChatDatabase(database: ChatDatabase): void {
   const columns = database.pragma("table_info(chat_artifacts)") as Array<{ name: string }>;
   const names = new Set(columns.map((column) => column.name));
   if (!names.has("is_favorite")) {
@@ -106,7 +159,14 @@ function migrateArtifactOrganization(database: ChatDatabase): void {
   if (!names.has("tags_json")) {
     database.exec("ALTER TABLE chat_artifacts ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'");
   }
-  database.exec("PRAGMA user_version = 3;");
+  const runColumns = database.pragma("table_info(scheduled_task_runs)") as Array<{ name: string }>;
+  const runColumnNames = new Set(runColumns.map((column) => column.name));
+  if (runColumns.length > 0 && !runColumnNames.has("conversation_id")) {
+    database.exec(
+      "ALTER TABLE scheduled_task_runs ADD COLUMN conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL"
+    );
+  }
+  database.exec("PRAGMA user_version = 4;");
 }
 
 function defaultDatabasePath(): string {
@@ -122,7 +182,7 @@ export function openChatDatabase(databasePath = defaultDatabasePath()): ChatData
   database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
   if (databasePath !== ":memory:") database.exec("PRAGMA journal_mode = WAL;");
   database.exec(SCHEMA);
-  migrateArtifactOrganization(database);
+  migrateChatDatabase(database);
   return database;
 }
 

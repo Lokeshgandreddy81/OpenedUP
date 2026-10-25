@@ -83,6 +83,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     setCustomProvider,
     deleteProviderKey,
     hasKey,
+    hasAccountKey,
   } = useProviderKeys();
   const { user } = useChatAuth();
 
@@ -92,9 +93,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   const [savedFeedbackMap, setSavedFeedbackMap] = useState<Partial<Record<ProviderId, boolean>>>(
     {}
   );
-  const [sessionKeyNoticeMap, setSessionKeyNoticeMap] = useState<
-    Partial<Record<ProviderId, boolean>>
-  >({});
   const [saveErrorMap, setSaveErrorMap] = useState<Partial<Record<ProviderId, string>>>({});
 
   useEffect(() => {
@@ -131,7 +129,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
       delete next[providerId];
       return next;
     });
-    setSessionKeyNoticeMap((prev) => ({ ...prev, [providerId]: !user && Boolean(rawKey.trim()) }));
     setSavedFeedbackMap((prev) => ({ ...prev, [providerId]: true }));
     setTimeout(() => {
       setSavedFeedbackMap((prev) => ({ ...prev, [providerId]: false }));
@@ -351,6 +348,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
             <div className="flex flex-col gap-3">
               {filteredProviders.map((provider) => {
                 const isConnected = hasKey(provider.id);
+                const isAccountConnected = hasAccountKey(provider.id);
                 const savedKey = keys[provider.id] || "";
                 const currentInput =
                   draftKeys[provider.id] !== undefined ? draftKeys[provider.id]! : savedKey;
@@ -389,10 +387,18 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           </span>
                           <span
                             className={`mt-0.5 inline-flex items-center text-[12.5px] ${
-                              isConnected ? "text-emerald-700" : "text-neutral-600"
+                              isAccountConnected
+                                ? "text-emerald-700"
+                                : isConnected
+                                  ? "text-amber-700"
+                                  : "text-neutral-600"
                             }`}
                           >
-                            {isConnected ? "Connected" : "Not connected"}
+                            {isAccountConnected
+                              ? "Connected"
+                              : isConnected
+                                ? "Browser session only"
+                                : "Not connected"}
                           </span>
                         </span>
                       </button>
@@ -481,7 +487,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                 <>
                                   <Check size={13} />
                                   <span>
-                                    {sessionKeyNoticeMap[provider.id] ? "Connected" : "Saved"}
+                                    {hasAccountKey(provider.id) ? "Saved" : "Saved for session"}
                                   </span>
                                 </>
                               ) : (
@@ -515,10 +521,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                               {saveError}
                             </p>
                           )}
-                          {sessionKeyNoticeMap[provider.id] && (
+                          {isConnected && !isAccountConnected && (
                             <p className="text-[11px] text-neutral-500">
-                              Available for this browser session. Sign in to save this key to your
-                              account.
+                              This key is only available in this browser. {user
+                                ? "Click Update to save it to your account for scheduled tasks and across devices."
+                                : "Sign in, then click Update to save it to your account for scheduled tasks and across devices."}
                             </p>
                           )}
 

@@ -207,6 +207,13 @@ describe("Backend API Integration Tests", () => {
       }
     });
 
+    it("allows unauthenticated access to scheduled tasks", async () => {
+      const response = await request(app).get("/api/scheduled-tasks");
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty("tasks");
+      expect(Array.isArray(response.body.tasks)).toBe(true);
+    });
+
     it("exposes only the registered bounded chat skills", async () => {
       const response = await request(app).get("/api/chat/skills");
       expect(response.status).toBe(200);
