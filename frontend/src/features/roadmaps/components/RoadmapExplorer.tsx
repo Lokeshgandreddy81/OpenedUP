@@ -186,16 +186,34 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
 
     if (CustomRoadmapPage) {
       return (
-        <Suspense fallback={<RoadmapPageSkeleton />}>
-          <CustomRoadmapPage
-            onBack={() => setSelectedRoadmap(null)}
-            onSelectRoadmap={handleSelectRoadmap}
-          />
-        </Suspense>
+        <div
+          className={
+            isEmbedded
+              ? "flex-1 w-full h-full min-w-0 relative overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A]"
+              : "fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A] animate-in fade-in duration-150"
+          }
+        >
+          <Suspense fallback={<RoadmapPageSkeleton />}>
+            <CustomRoadmapPage
+              onBack={() => setSelectedRoadmap(null)}
+              onSelectRoadmap={handleSelectRoadmap}
+            />
+          </Suspense>
+        </div>
       );
     }
 
-    return <RoadmapPage roadmap={selectedRoadmap} onBack={() => setSelectedRoadmap(null)} />;
+    return (
+      <div
+        className={
+          isEmbedded
+            ? "flex-1 w-full h-full min-w-0 relative overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A]"
+            : "fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A] animate-in fade-in duration-150"
+        }
+      >
+        <RoadmapPage roadmap={selectedRoadmap} onBack={() => setSelectedRoadmap(null)} />
+      </div>
+    );
   }
 
   return (

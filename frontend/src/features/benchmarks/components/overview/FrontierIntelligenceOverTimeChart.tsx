@@ -470,6 +470,16 @@ export const TIMELINE_MODELS_DATA: TimelineModelPoint[] = [
     displayDate: "September 3, 2026",
     score: 53,
   },
+  {
+    id: "openai-gpt-6-1-sol-14",
+    name: "GPT-6.1 Sol (Max)",
+    creatorId: "openai",
+    creatorName: "OpenAI",
+    color: "#1f1f1f",
+    dateStr: "2026-09-29",
+    displayDate: "September 29, 2026",
+    score: 52,
+  },
 
   // ── Google (#34A853) ──
   {

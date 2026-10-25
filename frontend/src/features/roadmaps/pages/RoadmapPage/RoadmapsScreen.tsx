@@ -9,6 +9,10 @@ export interface RoadmapsScreenProps {
 export const RoadmapsScreen: React.FC<RoadmapsScreenProps> = ({
   onBack = () => {},
   isEmbedded = true,
-}) => <RoadmapExplorer onBack={onBack} isEmbedded={isEmbedded} />;
+}) => (
+  <div className="flex-1 w-full h-full min-w-0 overflow-hidden flex flex-col">
+    <RoadmapExplorer onBack={onBack} isEmbedded={isEmbedded} />
+  </div>
+);
 
 export default RoadmapsScreen;
