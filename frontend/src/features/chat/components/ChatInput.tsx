@@ -286,7 +286,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const trimmed = text.trim();
     if (!trimmed && attachments.length === 0) return;
     onSendMessage(
-      trimmed || "Please review the attached file(s).",
+      trimmed ||
+        (attachments.some((a) => Boolean(a.base64Data))
+          ? "Please analyze this image."
+          : "Please review the attached file(s)."),
       selectedModel,
       supportsEffort ? selectedEffort : undefined,
       attachments
@@ -368,7 +371,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             className="hidden"
             disabled={isReadingFiles}
             multiple
-            accept=".pdf,.txt,.md,.csv,.json,.xml,.yaml,.yml,.log,application/pdf,text/plain,text/markdown,text/csv,application/json,application/xml"
+            accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.csv,.json,.xml,.yaml,.yml,.log,image/*,application/pdf,text/plain,text/markdown,text/csv,application/json,application/xml"
             onChange={(e) => {
               void handleFilesSelected(e.target.files);
               e.target.value = "";
@@ -382,7 +385,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   key={file.id}
                   className="inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 py-1.5 pl-2.5 pr-1.5 text-left"
                 >
-                  <FileText size={15} className="shrink-0 text-slate-500" aria-hidden="true" />
+                  {file.previewUrl ? (
+                    <img
+                      src={file.previewUrl}
+                      alt={file.name}
+                      className="w-7 h-7 rounded-md object-cover shrink-0 border border-slate-200"
+                    />
+                  ) : (
+                    <FileText size={15} className="shrink-0 text-slate-500" aria-hidden="true" />
+                  )}
                   <span
                     className="min-w-0 truncate text-[13px] font-medium text-slate-700"
                     title={file.name}

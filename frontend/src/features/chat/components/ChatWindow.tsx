@@ -10,6 +10,7 @@ import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
 import {
   chatAttachmentsForContext,
+  chatImageAttachments,
   type ChatAttachmentFile,
 } from "../../../app/files/chatAttachments";
 import type { ChatConversation, ChatMessage, AiModelId, EffortLevel } from "./chatTypes";
@@ -398,11 +399,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         timestamp: new Date().toISOString(),
         ...(attachments.length > 0
           ? {
-              attachments: attachments.map(({ id, name, size, type }) => ({
+              attachments: attachments.map(({ id, name, size, type, previewUrl }) => ({
                 id,
                 name,
                 size,
                 type,
+                previewUrl,
               })),
             }
           : {}),
@@ -498,6 +500,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const providerConfig = getProviderChatRequestConfig(model);
         const { providerName, modelName } = providerConfig;
 
+        const imageAttachments = chatImageAttachments(attachments);
         const body = JSON.stringify({
           messages: [...priorMessages, userMessage].map((message) => ({
             role: message.role,
@@ -512,6 +515,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               pageRange: `Page ${chapter.printed_total || 1}`,
             })),
           },
+          ...(imageAttachments.length > 0 ? { images: imageAttachments } : {}),
           model,
           ...providerConfig.customModelFields,
           effort,

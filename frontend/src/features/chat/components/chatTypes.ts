@@ -9,7 +9,7 @@ export interface ChatMessage {
   actionChips?: string[];
   isThinking?: boolean;
   isStreaming?: boolean;
-  attachments?: Array<{ id?: string; name: string; size: number; type?: string }>;
+  attachments?: Array<{ id?: string; name: string; size: number; type?: string; previewUrl?: string }>;
   generationStatus?: "stopped" | "error";
   retryPayload?: {
     prompt: string;

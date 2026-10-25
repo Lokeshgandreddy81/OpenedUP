@@ -17,6 +17,7 @@ export interface LlmGenerateParams {
   customModel?: string | undefined;
   messages: ChatMessage[];
   imagePages?: Array<{ pageNumber: number; mimeType: string; base64Data: string }> | undefined;
+  images?: Array<{ name?: string | undefined; mimeType: string; base64Data: string }> | undefined;
   systemInstruction: string;
   effort?: string | undefined;
   injectedApiKey?: string | undefined;
@@ -98,13 +99,25 @@ export async function generateMultiProviderChatStream(
   const maxTokens = maxOutputTokensForEffort(effort);
   let text: string;
   const modelUsed = upstreamModelId;
+
+  const allImages = [
+    ...(params.images || []).map((img) => ({
+      mimeType: img.mimeType,
+      base64Data: img.base64Data.replace(/^data:[^;]+;base64,/, ""),
+    })),
+    ...(params.imagePages || []).map((image) => ({
+      mimeType: image.mimeType,
+      base64Data: image.base64Data.replace(/^data:[^;]+;base64,/, ""),
+    })),
+  ];
+
   if (provider === "google") {
     const contents = params.messages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [
         { text: m.content },
         ...(m.role === "user" && m === params.messages.at(-1)
-          ? (params.imagePages || []).map((image) => ({
+          ? allImages.map((image) => ({
               inlineData: { mimeType: image.mimeType, data: image.base64Data },
             }))
           : []),
@@ -156,14 +169,18 @@ export async function generateMultiProviderChatStream(
         messages: params.messages.map((m) => ({
           role: m.role,
           content:
-            m.role === "user" && m === params.messages.at(-1)
+            m.role === "user" && m === params.messages.at(-1) && allImages.length
               ? [
                   { type: "text", text: m.content },
-                  ...(params.imagePages || []).map((image) => ({
+                  ...allImages.map((image) => ({
                     type: "image",
                     source: {
                       type: "base64",
-                      media_type: image.mimeType,
+                      media_type: image.mimeType as
+                        | "image/jpeg"
+                        | "image/png"
+                        | "image/gif"
+                        | "image/webp",
                       data: image.base64Data,
                     },
                   })),
@@ -198,10 +215,10 @@ export async function generateMultiProviderChatStream(
           ...params.messages.map((m) => ({
             role: m.role,
             content:
-              m.role === "user" && m === params.messages.at(-1) && params.imagePages?.length
+              m.role === "user" && m === params.messages.at(-1) && allImages.length
                 ? [
                     { type: "text", text: m.content },
-                    ...params.imagePages.map((image) => ({
+                    ...allImages.map((image) => ({
                       type: "image_url",
                       image_url: {
                         url: `data:${image.mimeType};base64,${image.base64Data}`,

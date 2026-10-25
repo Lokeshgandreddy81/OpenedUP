@@ -85,6 +85,16 @@ export const ChatRequestSchema = z.object({
     .max(3)
     .refine((ids) => new Set(ids).size === ids.length, "Skill IDs must be unique.")
     .optional(),
+  images: z
+    .array(
+      z.object({
+        name: z.string().max(200).optional(),
+        mimeType: z.string().max(100),
+        base64Data: z.string().min(1).max(20_000_000),
+      })
+    )
+    .max(10)
+    .optional(),
 });
 
 export const ChapterChatRequestSchema = z

@@ -69,7 +69,7 @@ export async function processChatStream(
   onDelta: (delta: string) => void
 ) {
   const startTime = Date.now();
-  const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort } = payload;
+  const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort, images } = payload;
   const toolTraces = options?.toolTraces ?? runAgenticWorkspaceTools(payload);
   const skills = executeSkills(payload);
   const generated = await generateMultiProviderChatStream(
@@ -80,6 +80,7 @@ export async function processChatStream(
       messages,
       systemInstruction: `${toolTraces.enrichedSystemInstruction}\n${skills.instructions}`,
       effort,
+      images,
       injectedApiKey: options?.injectedApiKey,
       injectedBaseUrl: options?.injectedBaseUrl,
       signal: options?.signal,

@@ -5,10 +5,14 @@ export interface ChatAttachmentFile {
   type?: string;
   uploadedAt: number;
   content?: string;
+  base64Data?: string;
+  mimeType?: string;
+  previewUrl?: string;
 }
 
 const MAX_TEXT_FILE_BYTES = 100_000;
 const MAX_PDF_FILE_BYTES = 5_000_000;
+const MAX_IMAGE_FILE_BYTES = 10_000_000;
 const MAX_CONTEXT_CHARS = 120_000;
 const MAX_PDF_PAGES = 50;
 const TEXT_TYPES = new Set([
@@ -17,6 +21,13 @@ const TEXT_TYPES = new Set([
   "text/csv",
   "application/json",
   "application/xml",
+]);
+const IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
 ]);
 
 async function readFileText(file: File) {
@@ -42,6 +53,15 @@ async function readFileBytes(file: File): Promise<ArrayBuffer> {
   });
 }
 
+async function readFileDataUrl(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error || new Error("Could not read file."));
+    reader.readAsDataURL(file);
+  });
+}
+
 export async function readChatAttachments(files: File[], existing: ChatAttachmentFile[] = []) {
   let remaining = Math.max(
     0,
@@ -55,15 +75,53 @@ export async function readChatAttachments(files: File[], existing: ChatAttachmen
       errors.push(`${file.name}: you can attach up to 20 files per message.`);
       continue;
     }
+    const isImage = IMAGE_TYPES.has(file.type) || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
     const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
     const isText =
       TEXT_TYPES.has(file.type) || /\.(txt|md|csv|json|xml|ya?ml|log)$/i.test(file.name);
-    if (!isText && !isPdf) {
+
+    if (!isText && !isPdf && !isImage) {
       errors.push(
-        `${file.name}: supported formats are PDF, text, Markdown, CSV, JSON, XML, YAML, or log files.`
+        `${file.name}: supported formats are images (PNG, JPG, WebP, GIF), PDF, text, Markdown, CSV, JSON, XML, YAML, or log files.`
       );
       continue;
     }
+
+    if (isImage) {
+      if (file.size > MAX_IMAGE_FILE_BYTES) {
+        errors.push(`${file.name}: images must be 10 MB or smaller.`);
+        continue;
+      }
+      try {
+        const dataUrl = await readFileDataUrl(file);
+        const base64Data = dataUrl.replace(/^data:[^;]+;base64,/, "");
+        const mimeType =
+          file.type ||
+          (/\.png$/i.test(file.name)
+            ? "image/png"
+            : /\.webp$/i.test(file.name)
+              ? "image/webp"
+              : /\.gif$/i.test(file.name)
+                ? "image/gif"
+                : "image/jpeg");
+        attachments.push({
+          id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: file.name,
+          size: file.size,
+          type: mimeType,
+          mimeType,
+          uploadedAt: Date.now(),
+          base64Data,
+          previewUrl: dataUrl,
+          content: `[Attached image: ${file.name}]`,
+        });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Could not read image.";
+        errors.push(`${file.name}: could not load image (${reason}).`);
+      }
+      continue;
+    }
+
     const maxFileBytes = isPdf ? MAX_PDF_FILE_BYTES : MAX_TEXT_FILE_BYTES;
     if (file.size > maxFileBytes) {
       errors.push(
@@ -139,6 +197,16 @@ export async function readChatAttachments(files: File[], existing: ChatAttachmen
 
 export function chatAttachmentsForContext(files: ChatAttachmentFile[] = []) {
   return files
-    .filter((file) => Boolean(file.content?.trim()))
+    .filter((file) => Boolean(file.content?.trim()) && !file.base64Data)
     .map(({ name, content }) => ({ name, content: content || "" }));
+}
+
+export function chatImageAttachments(files: ChatAttachmentFile[] = []) {
+  return files
+    .filter((file) => Boolean(file.base64Data))
+    .map(({ name, mimeType, type, base64Data }) => ({
+      name,
+      mimeType: mimeType || type || "image/jpeg",
+      base64Data: base64Data || "",
+    }));
 }

@@ -244,24 +244,42 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       <>
                         <div className="max-w-full rounded-[24px] bg-[#f2f2f0] px-5 py-3 text-[16px] font-normal leading-[1.6] text-slate-800 select-text break-words whitespace-pre-wrap">
                           {message.attachments && message.attachments.length > 0 && (
-                            <div className="mb-2 flex flex-wrap gap-1.5">
-                              {message.attachments.map((file, index) => (
-                                <span
-                                  key={file.id ?? `${file.name}-${index}`}
-                                  className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/75 px-2.5 py-1.5 text-[12px] leading-4 text-slate-600"
-                                  title={`${file.name} · ${formatFileSize(file.size)}`}
-                                >
-                                  <FileText
-                                    size={13}
-                                    className="shrink-0 text-slate-500"
-                                    aria-hidden="true"
-                                  />
-                                  <span className="max-w-56 truncate">{file.name}</span>
-                                  <span className="shrink-0 text-slate-400">
-                                    {formatFileSize(file.size)}
+                            <div className="mb-2 flex flex-wrap gap-2">
+                              {message.attachments.map((file, index) => {
+                                const isImg =
+                                  Boolean(file.previewUrl) || file.type?.startsWith("image/");
+                                if (isImg && file.previewUrl) {
+                                  return (
+                                    <div
+                                      key={file.id ?? `${file.name}-${index}`}
+                                      className="relative rounded-xl overflow-hidden border border-slate-200/80 bg-white shadow-2xs"
+                                    >
+                                      <img
+                                        src={file.previewUrl}
+                                        alt={file.name}
+                                        className="max-h-60 max-w-xs rounded-xl object-contain block"
+                                      />
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <span
+                                    key={file.id ?? `${file.name}-${index}`}
+                                    className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/75 px-2.5 py-1.5 text-[12px] leading-4 text-slate-600"
+                                    title={`${file.name} · ${formatFileSize(file.size)}`}
+                                  >
+                                    <FileText
+                                      size={13}
+                                      className="shrink-0 text-slate-500"
+                                      aria-hidden="true"
+                                    />
+                                    <span className="max-w-56 truncate">{file.name}</span>
+                                    <span className="shrink-0 text-slate-400">
+                                      {formatFileSize(file.size)}
+                                    </span>
                                   </span>
-                                </span>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                           {message.content}
