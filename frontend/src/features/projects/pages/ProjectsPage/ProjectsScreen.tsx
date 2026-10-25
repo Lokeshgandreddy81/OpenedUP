@@ -694,18 +694,18 @@ export const ProjectsScreen: React.FC<{
 
   // ── Render Projects List / Empty State View ──
   return (
-    <div className="flex-1 w-full h-full bg-[#fcfbf9] flex flex-col items-center font-sans select-none overflow-y-auto">
+    <div className="flex-1 w-full h-full bg-[#fcfcfb] flex flex-col font-sans select-none overflow-y-auto">
       {projectSyncNotice}
-      <div className="w-full max-w-[1440px] px-5 sm:px-8 lg:px-12 flex flex-col min-h-full">
+      <div className="w-full px-6 sm:px-8 md:px-10 lg:px-12 pt-7 md:pt-8 pb-12 flex flex-col min-h-full">
         {/* ── Top Header Bar ── */}
-        <header className="w-full pt-8 pb-5 flex items-center justify-between gap-4 shrink-0 border-b border-[#eeece8]">
+        <header className="w-full flex items-center justify-between gap-4 shrink-0 border-b border-neutral-200/70 pb-4 md:pb-5">
           {/* Left: Projects Title in Editorial Serif */}
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-[27px] md:text-[30px] font-serif text-neutral-900 tracking-tight font-normal">
+              <h1 className="text-[28px] md:text-[30px] font-serif text-neutral-900 tracking-tight font-normal">
                 Projects
               </h1>
-              <p className="mt-1 text-[13px] text-neutral-500">
+              <p className="mt-1 text-sm text-neutral-500">
                 A focused space for your work and conversations
               </p>
             </div>
@@ -716,22 +716,22 @@ export const ProjectsScreen: React.FC<{
             {/* Search Toggle / Input */}
             <div className="relative flex items-center">
               {isSearchOpen ? (
-                <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-[#e9e6e1] transition-all duration-150 animate-in fade-in zoom-in-95 shadow-sm">
-                  <Search size={14} className="text-neutral-500 shrink-0" />
+                <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-1.5 border border-neutral-200/90 transition-all duration-150 animate-in fade-in zoom-in-95 shadow-sm">
+                  <Search size={14} className="text-neutral-400 shrink-0" />
                   <input
                     ref={searchInputRef}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search projects..."
-                    className="bg-transparent text-[13px] text-neutral-800 placeholder-neutral-400 outline-none w-36 md:w-56"
+                    className="bg-transparent text-[13px] text-neutral-900 placeholder-neutral-400 outline-none w-36 md:w-56"
                   />
                   {searchQuery ? (
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
                       aria-label="Clear project search"
-                      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/30"
+                      className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/10"
                     >
                       <X size={13} />
                     </button>
@@ -740,7 +740,7 @@ export const ProjectsScreen: React.FC<{
                       type="button"
                       onClick={() => setIsSearchOpen(false)}
                       aria-label="Close project search"
-                      className="cursor-pointer rounded-md px-1.5 py-1 text-[11px] font-medium text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/30"
+                      className="cursor-pointer rounded-md px-1.5 py-0.5 text-[11px] font-medium text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/10"
                     >
                       esc
                     </button>
@@ -752,9 +752,9 @@ export const ProjectsScreen: React.FC<{
                   onClick={() => setIsSearchOpen(true)}
                   title="Search projects (⌘K)"
                   aria-label="Search projects"
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-neutral-600 transition-colors hover:bg-[#f2f0ec] hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/30"
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/10"
                 >
-                  <Search size={17} strokeWidth={1.8} />
+                  <Search size={16} strokeWidth={1.8} />
                 </button>
               )}
             </div>
@@ -768,13 +768,13 @@ export const ProjectsScreen: React.FC<{
                 aria-label="Sort projects"
                 aria-expanded={isSortMenuOpen}
                 aria-controls="project-sort-options"
-                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/30 ${
+                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/10 ${
                   isSortMenuOpen
-                    ? "bg-neutral-100 text-neutral-950"
-                    : "text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80"
+                    ? "bg-neutral-100 text-neutral-900"
+                    : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100"
                 }`}
               >
-                <ArrowUpDown size={16} strokeWidth={1.8} />
+                <ArrowUpDown size={15} strokeWidth={1.8} />
               </button>
 
               {/* Sort Popover Dropdown */}
@@ -783,7 +783,7 @@ export const ProjectsScreen: React.FC<{
                   id="project-sort-options"
                   role="group"
                   aria-label="Sort projects by"
-                  className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-[#e8e3da] bg-white py-1.5 text-[13px] shadow-[0_18px_42px_-22px_rgba(35,28,18,0.24)] animate-in fade-in duration-100"
+                  className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-neutral-200 bg-white py-1.5 text-[13px] shadow-[0_14px_36px_rgba(15,23,42,0.12)] animate-in fade-in duration-100"
                 >
                   <div className="px-3 py-1 text-[11px] font-medium text-neutral-400 uppercase tracking-wider">
                     Sort by
@@ -795,7 +795,7 @@ export const ProjectsScreen: React.FC<{
                       setSortBy("updated");
                       setIsSortMenuOpen(false);
                     }}
-                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-[#f8f6f3] hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-[#f8f6f3]"
+                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-50"
                   >
                     <span>Recently updated</span>
                     {sortBy === "updated" && <Check size={14} className="text-neutral-900" />}
@@ -807,7 +807,7 @@ export const ProjectsScreen: React.FC<{
                       setSortBy("created");
                       setIsSortMenuOpen(false);
                     }}
-                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-[#f8f6f3] hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-[#f8f6f3]"
+                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-50"
                   >
                     <span>Date created</span>
                     {sortBy === "created" && <Check size={14} className="text-neutral-900" />}
@@ -819,7 +819,7 @@ export const ProjectsScreen: React.FC<{
                       setSortBy("name");
                       setIsSortMenuOpen(false);
                     }}
-                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-[#f8f6f3] hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-[#f8f6f3]"
+                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-50"
                   >
                     <span>Name (A to Z)</span>
                     {sortBy === "name" && <Check size={14} className="text-neutral-900" />}
@@ -834,7 +834,7 @@ export const ProjectsScreen: React.FC<{
               onClick={handleOpenCreateModal}
               title="Create new project"
               aria-label="New project"
-              className="bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-4 py-2.5 rounded-xl transition-colors duration-150 cursor-pointer shadow-sm flex items-center justify-center shrink-0"
+              className="inline-flex h-9 sm:h-10 items-center justify-center rounded-xl bg-neutral-950 px-4 text-[13px] font-medium text-white transition-colors duration-150 hover:bg-neutral-800 cursor-pointer shadow-xs shrink-0"
             >
               New project
             </button>
@@ -872,7 +872,7 @@ export const ProjectsScreen: React.FC<{
               <button
                 type="button"
                 onClick={handleOpenCreateModal}
-                className="mt-4 px-4 py-1.5 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 text-[13.5px] font-medium shadow-sm transition-all duration-150 cursor-pointer active:scale-98"
+                className="mt-4 px-4 py-2 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium shadow-sm transition-all duration-150 cursor-pointer active:scale-98"
               >
                 New project
               </button>
@@ -896,14 +896,12 @@ export const ProjectsScreen: React.FC<{
           ) : (
             /* Project cards */
             <div className="w-full flex flex-col flex-1 pt-6 animate-in fade-in duration-200">
-              <div
-                className={`mx-auto grid w-full max-w-5xl grid-cols-1 gap-4 pb-12 ${filteredProjects.length > 1 ? "lg:grid-cols-2" : ""}`}
-              >
+              <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 pb-12">
                 {filteredProjects.map((project) => {
                   return (
                     <article
                       key={project.id}
-                      className="relative flex min-h-[156px] cursor-pointer select-none flex-col justify-between gap-4 rounded-2xl border border-[#e8e3da] bg-white p-5 shadow-[0_1px_3px_rgba(38,32,23,0.035)] sm:p-6"
+                      className="group relative flex min-h-[160px] cursor-pointer select-none flex-col justify-between rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-200 hover:border-neutral-300 hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)] sm:p-5"
                     >
                       <button
                         type="button"
@@ -912,22 +910,22 @@ export const ProjectsScreen: React.FC<{
                           setActiveProjectId(project.id);
                           setViewState("workspace");
                         }}
-                        className="absolute inset-0 z-0 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#806b4f]"
+                        className="absolute inset-0 z-0 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900"
                       />
-                      <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between gap-4 pointer-events-none">
-                        <div className="flex min-w-0 items-start justify-between gap-4">
+                      <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between pointer-events-none">
+                        <div className="flex min-w-0 items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <h3 className="truncate font-serif text-[20px] leading-tight text-neutral-900">
+                            <h3 className="truncate font-serif text-[18px] sm:text-[19px] leading-snug font-normal text-neutral-900 transition-colors group-hover:text-neutral-950">
                               {project.name}
                             </h3>
                             {project.description && (
-                              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-neutral-500">
+                              <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-neutral-500">
                                 {project.description}
                               </p>
                             )}
                             {project.customInstructions && (
-                              <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
-                                <Sparkles size={12} className="text-[#8a765c]" />
+                              <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
+                                <Sparkles size={12} className="text-neutral-500" />
                                 <span>Custom instructions</span>
                               </div>
                             )}
@@ -947,21 +945,21 @@ export const ProjectsScreen: React.FC<{
                               }}
                               onKeyDown={(event) => event.stopPropagation()}
                               aria-label={`Actions for ${project.name}`}
-                              className="-mr-2 -mt-2 flex h-9 w-9 items-center justify-center rounded-xl text-neutral-500 transition-colors hover:bg-[#f5f3ef] hover:text-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-neutral-400"
+                              className="-mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-neutral-400"
                             >
-                              <MoreVertical size={16} />
+                              <MoreVertical size={15} />
                             </button>
 
                             {cardMenuOpenId === project.id && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full z-30 mt-1 w-40 rounded-xl border border-neutral-200/80 bg-white py-1.5 text-xs shadow-lg animate-in fade-in duration-100"
+                                className="absolute right-0 top-full z-30 mt-1 w-40 rounded-xl border border-neutral-200 bg-white py-1.5 text-xs shadow-[0_12px_28px_rgba(0,0,0,0.08)] animate-in fade-in duration-100"
                               >
                                 <button
                                   type="button"
                                   onClick={(e) => handleDeleteProject(project.id, e)}
                                   onKeyDown={(event) => event.stopPropagation()}
-                                  className="flex w-full cursor-pointer items-center gap-2 px-3.5 py-2 text-left text-rose-600 hover:bg-rose-50"
+                                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-rose-600 transition-colors hover:bg-rose-50"
                                 >
                                   <Trash2 size={13} />
                                   <span>Delete project</span>
@@ -971,7 +969,7 @@ export const ProjectsScreen: React.FC<{
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between border-t border-[#f0eeea] pt-3 text-[12px] text-neutral-500">
+                        <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[12px] text-neutral-500">
                           <span className="font-medium text-neutral-600">
                             {project.sessions?.length ?? 0}{" "}
                             {(project.sessions?.length ?? 0) === 1 ? "session" : "sessions"}
@@ -998,7 +996,7 @@ export const ProjectsScreen: React.FC<{
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[570px] rounded-[24px] border border-[#e8e3da] bg-white p-6 shadow-[0_28px_80px_-36px_rgba(25,20,12,0.38)] flex flex-col animate-in zoom-in-95 duration-150 select-none sm:p-7"
+            className="w-full max-w-[570px] rounded-2xl sm:rounded-[22px] border border-neutral-200/80 bg-white p-6 shadow-[0_24px_64px_rgba(15,23,42,0.14)] flex flex-col animate-in zoom-in-95 duration-150 select-none sm:p-7"
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-6">
@@ -1008,7 +1006,7 @@ export const ProjectsScreen: React.FC<{
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
               >
                 <X size={18} strokeWidth={1.8} />
               </button>
@@ -1028,7 +1026,7 @@ export const ProjectsScreen: React.FC<{
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Name your project"
-                  className="w-full rounded-xl border border-[#e6e2dc] bg-white px-3.5 py-2.5 text-[14px] text-neutral-900 placeholder-neutral-400 outline-none transition-[border-color,box-shadow] focus:border-[#b9aa95] focus:ring-2 focus:ring-[#806b4f]/10"
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-[14px] text-neutral-900 placeholder-neutral-400 outline-none transition-[border-color,box-shadow] focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900/10"
                 />
               </div>
 
@@ -1042,7 +1040,7 @@ export const ProjectsScreen: React.FC<{
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="Describe your project, goals, subject, etc..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#e6e2dc] hover:border-[#d7d0c6] focus:border-[#b9aa95] focus:ring-2 focus:ring-[#806b4f]/10 text-[14px] text-neutral-900 placeholder-neutral-400 outline-none transition-all resize-y min-h-[96px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 hover:border-neutral-300 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900/10 text-[14px] text-neutral-900 placeholder-neutral-400 outline-none transition-all resize-y min-h-[96px]"
                 />
               </div>
 
@@ -1059,7 +1057,7 @@ export const ProjectsScreen: React.FC<{
                     <button
                       type="button"
                       onClick={() => modalFileInputRef.current?.click()}
-                      className="text-xs text-[#806b4f] hover:text-[#705c43] font-medium cursor-pointer"
+                      className="text-xs text-neutral-700 hover:text-neutral-900 font-medium cursor-pointer"
                     >
                       + Add more files
                     </button>
@@ -1084,7 +1082,7 @@ export const ProjectsScreen: React.FC<{
                   <button
                     type="button"
                     onClick={() => modalFileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 text-[13.5px] font-normal shadow-2xs transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 text-[13px] font-normal shadow-2xs transition-colors cursor-pointer"
                   >
                     <Plus size={14} className="text-neutral-700 stroke-[2.2]" />
                     <span>Add context</span>

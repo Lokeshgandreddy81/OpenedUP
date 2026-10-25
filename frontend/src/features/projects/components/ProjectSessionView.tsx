@@ -294,7 +294,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
   };
 
   return (
-    <div className="flex-1 w-full h-full bg-[#fcfbf9] flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-150">
+    <div className="flex-1 w-full h-full bg-[#fcfcfb] flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-150">
       {/* Session navigation */}
       <header className="w-full shrink-0 bg-white">
         <div className="flex h-14 w-full items-center justify-start gap-4 px-4 sm:px-5">
