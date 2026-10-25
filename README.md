@@ -12,7 +12,7 @@ Document intelligence, spend reconciliation, and AI chat platform for receipt au
 
 ## Architecture Overview
 
-For provider selection, BYOK credential storage, and chat session behavior, see [Chat architecture](packages/docs/chat-architecture.md). The current HTTP contract is maintained in [OpenAPI](packages/docs/api/openapi.yaml).
+The current HTTP API contract is maintained in [OpenAPI](packages/docs/api/openapi.yaml). Chat sessions use client-selected BYOK keys encrypted with AES-256-GCM at rest, with zero fallback to server environment secrets.
 
 ```mermaid
 graph TD
