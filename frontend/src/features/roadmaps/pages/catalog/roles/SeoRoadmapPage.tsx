@@ -298,12 +298,11 @@ export const SeoRoadmapPage: React.FC<SeoRoadmapPageProps> = ({
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/95 px-6 py-3 backdrop-blur-xs">
         <button
           type="button"
-          onClick={handleBack}
           aria-label="Back to roadmaps"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          onClick={handleBack}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={14} />
-          <span>Back</span>
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
 
         <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">

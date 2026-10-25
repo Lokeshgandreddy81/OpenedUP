@@ -72,7 +72,7 @@ export const BenchmarkCatalogView: React.FC<BenchmarkCatalogViewProps> = ({
           ======================================================== */}
       <section
         aria-label="Benchmark evaluations"
-        className="rounded-lg border border-transparent bg-white p-6 md:p-8"
+        className="rounded-lg border border-transparent bg-[#fcfcfb] p-6 md:p-8"
       >
         <div className="grid grid-cols-12 gap-6 lg:gap-12">
           {/* Left: title, description, category chips */}

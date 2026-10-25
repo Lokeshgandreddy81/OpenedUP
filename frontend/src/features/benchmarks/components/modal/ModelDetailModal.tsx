@@ -281,8 +281,8 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
               <div className="space-y-3 pt-2">
                 {[
                   {
-                    label: "MMLU-Pro (Multi-discipline Reasoning)",
-                    val: model.quality.mmluPro,
+                    label: "SWE-bench Verified (Software Engineering)",
+                    val: model.quality.sweBenchVerified,
                     max: 100,
                     unit: "%",
                   },
@@ -293,8 +293,50 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                     unit: "%",
                   },
                   {
-                    label: "SWE-bench Verified (Software Engineering)",
-                    val: model.quality.sweBenchVerified,
+                    label: "MMLU-Pro (Multi-discipline Reasoning)",
+                    val: model.quality.mmluPro,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "Terminal-Bench 4.0 (Terminal & Agentic Coding)",
+                    val: model.quality.terminalBench40,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "FrontierCode 1.1 (Repository Engineering)",
+                    val: model.quality.frontierCode11,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "AA-Briefcase v1.1 (Agentic Knowledge Work)",
+                    val: model.quality.briefcaseV11,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "GDPval-AA v2.1 (Real-world Work Tasks)",
+                    val: model.quality.gdpvalAa,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "AutomationBench-AA (SaaS Workflow Automation)",
+                    val: model.quality.automationBenchAa,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "AA-AnalystAgent (Quantitative & Document Analysis)",
+                    val: model.quality.analystAgentAa,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "ITBench-AA (Kubernetes Incident Root Cause)",
+                    val: model.quality.itBenchAa,
                     max: 100,
                     unit: "%",
                   },
@@ -321,6 +363,12 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                     val: model.quality.omniscienceNonHallucination,
                     max: 100,
                     unit: "%",
+                  },
+                  {
+                    label: "LMSYS Chatbot Arena Elo",
+                    val: model.quality.chatbotArenaElo,
+                    max: 1600,
+                    unit: "Elo",
                   },
                 ]
                   .filter((item) => item.val > 0)

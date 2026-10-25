@@ -68,6 +68,8 @@ interface ResultsViewProps {
   onChangeCostCenter?: (rowId: string, newCostCenter: string) => void;
   onAddFiles?: (files: FileList | File[]) => void;
   onNewPile: () => void;
+  onBack?: () => void;
+  isEmbedded?: boolean;
 }
 
 export type GroupingMode = "tile" | "category" | "source" | "cost_center";
@@ -199,6 +201,8 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   onChangeCostCenter,
   onAddFiles,
   onNewPile,
+  onBack,
+  isEmbedded = false,
 }) => {
   const navigate = useNavigate();
   const reducedMotion = usePrefersReducedMotion();
@@ -207,8 +211,12 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   const lastOpenTileIdRef = useRef<string | null>(null);
 
   const handleBackToChat = useCallback(() => {
+    if (onBack) {
+      onBack();
+      return;
+    }
     navigate("/chat");
-  }, [navigate]);
+  }, [navigate, onBack]);
 
   // On arrival, the largest merchant opens in the sidebar, as in ad1_results.png (A5 Step 3)
   const [openTileId, setOpenTileId] = useState<string | null>(() =>
@@ -1344,7 +1352,22 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   };
 
   return (
-    <div className="w-full h-dvh min-h-dvh md:h-screen flex flex-col bg-white overflow-hidden animate-view-fade">
+    <div
+      className="w-full h-dvh min-h-dvh md:h-screen flex flex-col bg-[#fcfcfb] overflow-hidden animate-view-fade"
+      onDragOver={(e) => {
+        if (onAddFiles) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      onDrop={(e) => {
+        if (onAddFiles && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          onAddFiles(e.dataTransfer.files);
+        }
+      }}
+    >
       {onAddFiles && (
         <input
           ref={addFilesInputRef}
@@ -1381,7 +1404,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                   ? "clamp(220px, 16.72vw, 274px)"
                   : `${SIDEBAR_WIDTH_PERCENT}%`,
                 "--sidebar-min-w": isPdfDocument ? "213px" : "200px",
-                borderRight: isPdfDocument ? "1px solid transparent" : undefined,
+                borderRight: isPdfDocument ? "1px solid rgba(226, 232, 240, 0.7)" : undefined,
                 visibility:
                   isChaptersDrawerOpen || sidebarAnimPhase !== "closed" ? "visible" : "hidden",
                 pointerEvents: isChaptersDrawerOpen ? "auto" : "none",
@@ -1396,7 +1419,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                 className={`absolute inset-0 ${
                   activeOpenTile.isForeign && groupingMode === "tile" ? "hatch-white" : ""
                 }`}
-                style={{ backgroundColor: isPdfDocument ? "#FFFFFF" : "var(--blue-900)" }}
+                style={{ backgroundColor: isPdfDocument ? "#fcfcfb" : "var(--blue-900)" }}
               />
 
               {/* FLIP counter-scaled content wrapper with inline-size container query */}
@@ -1411,17 +1434,20 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
               >
                 {isPdfDocument ? (
                   /* Minimalist Sidebar Header styled exactly like screenshot */
-                  <div className="shrink-0 mb-3 flex items-center justify-between px-1 pt-1 pb-1 select-none">
+                  <>
+                    <div className="shrink-0 mb-3 flex items-center justify-between px-1 pt-1 pb-1 select-none">
                     <div className="flex min-w-0 items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={handleBackToChat}
-                        title="Back to chat"
-                        aria-label="Back to chat"
-                        className="w-7 h-7 -ml-1 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer shrink-0"
-                      >
-                        <ArrowLeft size={16} strokeWidth={2} aria-hidden={true} />
-                      </button>
+                      {!isEmbedded && (
+                        <button
+                          type="button"
+                          onClick={handleBackToChat}
+                          title="Back to chat"
+                          aria-label="Back to chat"
+                          className="w-7 h-7 -ml-1 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer shrink-0"
+                        >
+                          <ArrowLeft size={16} strokeWidth={2} aria-hidden={true} />
+                        </button>
+                      )}
                       <span className="shrink-0 text-[15px] font-semibold tracking-tight text-slate-900">
                         Chapters
                       </span>
@@ -1470,7 +1496,18 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                       </button>
                     </div>
                   </div>
-                ) : (
+                  {readingPhase !== "idle" && (
+                    <div className="w-full px-1 mb-2 shrink-0 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between text-[11px] font-medium text-slate-500 mb-1">
+                        <span className="animate-pulse">Parsing chapters…</span>
+                      </div>
+                      <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#0047FF] rounded-full animate-sweep" />
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
                   /* Legacy Receipt Audit Mode Header */
                   <>
                     <div className="mb-2 flex flex-col gap-1.5 shrink-0">
@@ -1994,7 +2031,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
           className="flex-1 min-w-0 min-h-[420px] md:min-h-0 md:h-full relative overflow-hidden"
           style={{
             backgroundColor: isPdfDocument
-              ? "#FFFFFF"
+              ? "#fcfcfb"
               : arrivalStage >= 2
                 ? "var(--blue-900)"
                 : "var(--white)",
@@ -2073,21 +2110,37 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
               />
             </ErrorBoundary>
           ) : isPdfDocument ? (
-            <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-8 text-center bg-[#F8FAFC] select-none">
-              <div className="w-14 h-14 flex items-center justify-center mb-4 text-black border border-transparent shadow-none">
-                <BookOpen size={30} strokeWidth={1.8} className="text-black" />
-              </div>
-              <h3 className="text-[19px] font-medium text-slate-800 m-0 mb-5 tracking-tight">
-                No PDF loaded
-              </h3>
-              <button
-                type="button"
-                onClick={() => addFilesInputRef.current?.click()}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-none bg-black hover:bg-neutral-800 active:bg-neutral-900 text-white text-[13.5px] font-medium tracking-tight transition-colors cursor-pointer select-none"
-              >
-                <Plus size={16} strokeWidth={2} />
-                <span>Add PDF</span>
-              </button>
+            <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-8 text-center bg-[#fcfcfb] select-none">
+              {readingPhase !== "idle" ? (
+                <div className="flex flex-col items-center justify-center gap-3.5 max-w-sm animate-in fade-in duration-200">
+                  <div className="w-10 h-10 border-2 border-slate-200 border-t-[#0047FF] rounded-full animate-spin" />
+                  <div className="space-y-1">
+                    <h3 className="text-[17px] font-semibold text-slate-900 tracking-tight">
+                      Analyzing PDF &amp; extracting chapters...
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Reading document structure and table of contents
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="w-14 h-14 flex items-center justify-center mb-4 text-black border border-transparent shadow-none">
+                    <BookOpen size={30} strokeWidth={1.8} className="text-black" />
+                  </div>
+                  <h3 className="text-[19px] font-medium text-slate-800 m-0 mb-5 tracking-tight">
+                    No PDF loaded
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => addFilesInputRef.current?.click()}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-none bg-black hover:bg-neutral-800 active:bg-neutral-900 text-white text-[13.5px] font-medium tracking-tight transition-colors cursor-pointer select-none"
+                  >
+                    <Plus size={16} strokeWidth={2} />
+                    <span>Add PDF</span>
+                  </button>
+                </>
+              )}
             </div>
           ) : positionedTiles.length === 0 ? (
             <div

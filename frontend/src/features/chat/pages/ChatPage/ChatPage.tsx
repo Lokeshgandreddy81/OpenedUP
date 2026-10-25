@@ -39,7 +39,7 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
   };
 
   const handleViewChange = (
-    view:
+    _view:
       | "chat"
       | "projects"
       | "artifacts"
@@ -49,9 +49,7 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
       | "chapters"
       | "roadmaps"
   ) => {
-    if (view === "chapters") {
-      navigate("/results");
-    }
+    // Keep views inside ChatWindow
   };
 
   return (

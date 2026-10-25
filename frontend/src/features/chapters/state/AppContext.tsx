@@ -358,21 +358,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       : verifiedRows;
     rowsRef.current = finalVerifiedRows;
     setRows(finalVerifiedRows);
-
-    if (typeof window !== "undefined" && window.location.pathname === "/results") {
-      setReadingPhase("idle");
-      return;
-    }
-
-    await new Promise((r) => window.setTimeout(r, reducedMotion ? 80 : 200));
-    if (pipelineRunIdRef.current !== runId) return;
-
-    setReadingPhase("transitioning_out");
-    await new Promise((r) => window.setTimeout(r, reducedMotion ? 80 : 440));
-    if (pipelineRunIdRef.current !== runId) return;
-
-    navigate("/results");
     setReadingPhase("idle");
+
+    if (
+      typeof window !== "undefined" &&
+      !window.location.pathname.includes("/chat") &&
+      !window.location.search.includes("view=chapters") &&
+      window.location.pathname !== "/results"
+    ) {
+      navigate("/chat?view=chapters");
+    }
   };
 
   const runBatchesPipeline = useCallback(
@@ -654,8 +649,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       if (newFailedBatches.length > 0) {
         setFailedBatches(newFailedBatches);
         if (
-          (typeof window !== "undefined" && window.location.pathname === "/results") ||
-          receiptsByPhotoIdRef.current.size > 0
+          (typeof window !== "undefined" &&
+            (window.location.pathname === "/results" ||
+              window.location.search.includes("view=chapters") ||
+              window.location.pathname === "/chat")) ||
+          receiptsByPhotoIdRef.current.size > 0 ||
+          rowsRef.current.length > 0
         ) {
           await finalizeMergedReceiptsAndTransition(runId, allPhotosSnapshot);
         } else {
@@ -708,37 +707,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     photosRef.current = combined;
     setPhotos(combined);
 
-    if (typeof window !== "undefined" && window.location.pathname === "/results") {
-      const pendingPhotos = combined.filter(
-        (p) => p.status !== "done" || !receiptsByPhotoIdRef.current.has(p.id)
-      );
-      void runBatchesPipelineRef.current(
-        pendingPhotos.length > 0 ? pendingPhotos : combined.slice(startIdx),
-        combined.length,
-        combined
-      );
-      return;
-    }
-
-    void processPhotosConcurrently(newlyAdded, 4, (processed) => {
-      setPhotos((prev) => {
-        const next = prev.map((p) =>
-          p.id === processed.id
-            ? {
-                ...p,
-                objectUrl: processed.objectUrl,
-                base64Data: processed.base64Data,
-                mimeType: processed.mimeType,
-                width: processed.width,
-                height: processed.height,
-                byteSize: processed.byteSize,
-              }
-            : p
-        );
-        photosRef.current = next;
-        return next;
-      });
-    }).catch(() => {});
+    const pendingPhotos = combined.filter(
+      (p) => p.status !== "done" || !receiptsByPhotoIdRef.current.has(p.id)
+    );
+    void runBatchesPipelineRef.current(
+      pendingPhotos.length > 0 ? pendingPhotos : combined.slice(startIdx),
+      combined.length,
+      combined
+    );
   }, []);
 
   const handleIngestWorkspaceFiles = useCallback((items: IngestedWorkspaceFile[]) => {
@@ -774,33 +750,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setPhotos(combined);
     setPrivacyAccepted(true);
 
-    if (typeof window !== "undefined" && window.location.pathname === "/results") {
-      const pendingPhotos = combined.filter(
-        (p) => p.status !== "done" || !receiptsByPhotoIdRef.current.has(p.id)
-      );
-      void runBatchesPipelineRef.current(
-        pendingPhotos.length > 0 ? pendingPhotos : combined.slice(startIdx),
-        combined.length,
-        combined
-      );
-    } else {
-      const donePhotoIds = new Set(combined.filter((p) => p.status === "done").map((p) => p.id));
-      Array.from(receiptsByPhotoIdRef.current.keys()).forEach((k) => {
-        if (!donePhotoIds.has(k)) {
-          receiptsByPhotoIdRef.current.delete(k);
-        }
-      });
-      if (donePhotoIds.size === 0) {
-        setTotalReceiptsFound(0);
-        setRecentDiscoveries([]);
-      }
-      const pendingPhotos = combined.filter((p) => p.status !== "done");
-      void runBatchesPipelineRef.current(
-        pendingPhotos.length > 0 ? pendingPhotos : combined,
-        combined.length,
-        combined
-      );
-    }
+    const pendingPhotos = combined.filter(
+      (p) => p.status !== "done" || !receiptsByPhotoIdRef.current.has(p.id)
+    );
+    void runBatchesPipelineRef.current(
+      pendingPhotos.length > 0 ? pendingPhotos : combined.slice(startIdx),
+      combined.length,
+      combined
+    );
   }, []);
 
   const handleRemovePhoto = useCallback((id: string) => {

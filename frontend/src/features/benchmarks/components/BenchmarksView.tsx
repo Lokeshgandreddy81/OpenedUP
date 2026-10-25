@@ -3,9 +3,9 @@ import { ArrowLeft, BarChart3, Layers, Code2, GitCompare } from "lucide-react";
 import type { AIModelBenchmark, BenchmarkCategory } from "./types";
 import { BENCHMARK_MODELS, getModelById } from "./data/benchmarkModels";
 import { ModelComparator } from "./comparator/ModelComparator";
-import { ProviderLeaderboard } from "./providers/ProviderLeaderboard";
 import { ModelDetailModal } from "./modal/ModelDetailModal";
 import { CodingAgentsView } from "./coding/CodingAgentsView";
+import { resolveCodingAgentToModelId } from "./data/codingAgentBenchmarks";
 import { LLMLeaderboardView } from "./leaderboard/LLMLeaderboardView";
 import { ModelsOverviewView } from "./overview/ModelsOverviewView";
 import { BenchmarkCatalogView } from "./catalog/BenchmarkCatalogView";
@@ -17,23 +17,67 @@ export interface BenchmarksViewProps {
   hideBackButton?: boolean;
 }
 
+const VALID_BENCHMARK_TABS: BenchmarkCategory[] = [
+  "overview",
+  "benchmarks",
+  "coding-agents",
+  "leaderboard",
+  "compare",
+];
+
+function getInitialBenchmarkTab(): BenchmarkCategory {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab") as BenchmarkCategory;
+    if (tabParam && VALID_BENCHMARK_TABS.includes(tabParam)) {
+      return tabParam;
+    }
+  } catch {
+    // fallback
+  }
+  return "overview";
+}
+
 export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
   isOpen,
   onClose,
   isEmbedded = false,
   hideBackButton = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<BenchmarkCategory>("overview");
+  const [activeTab, setActiveTab] = useState<BenchmarkCategory>(getInitialBenchmarkTab);
   const [selectedModel, setSelectedModel] = useState<AIModelBenchmark | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [providerModelId, setProviderModelId] = useState<string>("llama-3-3-70b-instruct");
 
   const [compareModelIds, setCompareModelIds] = useState<string[]>([
-    "claude-3-7-sonnet-thinking",
-    "gpt-4o",
-    "deepseek-r1",
+    "claude-opus-5-5-max-with-fallback",
+    "gpt-6-astra-max",
+    "deepseek-v4-1-flash-max",
   ]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync tab with URL query parameter
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (activeTab === "overview") {
+        url.searchParams.delete("tab");
+      } else {
+        url.searchParams.set("tab", activeTab);
+      }
+      window.history.replaceState({}, "", url.toString());
+    } catch {
+      // ignore in environments without browser history
+    }
+  }, [activeTab]);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      setActiveTab(getInitialBenchmarkTab());
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Global Keyboard Navigation (Esc to close, / to search)
   useEffect(() => {
@@ -70,15 +114,9 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
   const handleCompareSingle = (model: AIModelBenchmark) => {
     setCompareModelIds((prev) => {
       if (prev.includes(model.id)) return prev;
-      return [prev[0] || "claude-3-7-sonnet-thinking", model.id];
+      return [prev[0] || "claude-opus-5-5-max-with-fallback", model.id];
     });
     setActiveTab("compare");
-  };
-
-  // Navigate to providers with specific model selected
-  const handleNavigateToProviders = (modelId: string) => {
-    setProviderModelId(modelId);
-    setActiveTab("providers");
   };
 
   if (!isOpen) return null;
@@ -101,7 +139,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
     { id: "compare", label: "Compare", icon: GitCompare },
   ];
 
-  const isLeaderboardSection = ["leaderboard", "providers", "compare"].includes(activeTab);
+  const isLeaderboardSection = ["leaderboard", "compare"].includes(activeTab);
 
   return (
     <div
@@ -109,14 +147,14 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       aria-label="Artificial Analysis Benchmarks"
       className={
         isEmbedded
-          ? "flex-1 w-full h-full min-w-0 bg-[#FBFBFC] flex flex-col font-sans select-none overflow-hidden text-neutral-900"
-          : "fixed inset-0 z-50 bg-[#FBFBFC] flex flex-col font-sans select-none overflow-hidden text-neutral-900 animate-in fade-in duration-150"
+          ? "flex-1 w-full h-full min-w-0 bg-[#fcfcfb] flex flex-col font-sans select-none overflow-hidden text-neutral-900"
+          : "fixed inset-0 z-50 bg-[#fcfcfb] flex flex-col font-sans select-none overflow-hidden text-neutral-900 animate-in fade-in duration-150"
       }
     >
       {/* ========================================================
           TOP NAVIGATION HEADER (Artificial Analysis Official Bar)
           ======================================================== */}
-      <header className="w-full h-14 bg-white border-b border-neutral-200/70 px-4 md:px-6 relative flex items-center justify-between shrink-0 z-20">
+      <header className="w-full h-14 bg-[#fcfcfb] border-b border-transparent px-4 md:px-6 relative flex items-center justify-between shrink-0 z-20">
         {/* Left: Back to document (hidden when embedded or hideBackButton) */}
         {!isEmbedded && !hideBackButton && onClose ? (
           <div className="flex items-center z-10">
@@ -207,7 +245,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       </header>
 
       {/* Mobile Responsive Pill Bar */}
-      <div className="flex h-11 lg:hidden items-center px-3 bg-white border-b border-transparent gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+      <div className="flex h-11 lg:hidden items-center px-3 bg-[#fcfcfb] border-b border-transparent gap-1.5 overflow-x-auto no-scrollbar shrink-0">
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeTab === cat.id;
@@ -230,7 +268,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       </div>
 
       {/* Main Viewport Content Area */}
-      <main className="flex-1 w-full overflow-y-auto no-scrollbar relative p-4 md:p-8 flex flex-col gap-10 bg-white">
+      <main className="flex-1 w-full overflow-y-auto no-scrollbar relative p-4 md:p-8 flex flex-col gap-10 bg-[#fcfcfb]">
         {/* VIEW: BENCHMARKS (evaluation catalog with score charts) */}
         {activeTab === "benchmarks" && <BenchmarkCatalogView onSelectModel={handleSelectModel} />}
 
@@ -241,14 +279,14 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
         {activeTab === "coding-agents" && (
           <CodingAgentsView
             onSelectModel={(modelId) => {
-              const m = getModelById(modelId);
+              const m = getModelById(modelId) || getModelById(resolveCodingAgentToModelId(modelId));
               if (m) handleSelectModel(m);
             }}
             onBackToOverview={() => setActiveTab("overview")}
           />
         )}
 
-        {/* LEADERBOARD SECTIONS (LLM, Providers, Head-to-Head Compare) */}
+        {/* LEADERBOARD SECTIONS (LLM, Head-to-Head Compare) */}
         {isLeaderboardSection && (
           <div
             className={`flex flex-col gap-6 w-full animate-in fade-in duration-150 ${
@@ -277,16 +315,6 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
               />
             )}
 
-            {activeTab === "providers" && (
-              <ProviderLeaderboard
-                initialModelId={providerModelId}
-                onSelectModel={(modelId) => {
-                  const found = getModelById(modelId);
-                  if (found) handleSelectModel(found);
-                }}
-              />
-            )}
-
             {activeTab === "compare" && (
               <ModelComparator models={BENCHMARK_MODELS} initialModelIds={compareModelIds} />
             )}
@@ -300,7 +328,6 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onCompare={handleCompareSingle}
-        onNavigateToProviders={handleNavigateToProviders}
       />
     </div>
   );

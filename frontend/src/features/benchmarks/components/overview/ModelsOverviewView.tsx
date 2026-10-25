@@ -47,6 +47,13 @@ export const LANGUAGE_MODELS_DATA: {
         color: "#CC785C",
       },
       {
+        name: "Kimi K3.1 Pro",
+        creator: "kimi",
+        value: 55,
+        label: "55",
+        color: "#047AFE",
+      },
+      {
         name: "Claude Fable\n5.1 (max with\nfallback)",
         creator: "anthropic",
         value: 53,
@@ -107,6 +114,13 @@ export const LANGUAGE_MODELS_DATA: {
       },
       { name: "GPT-6\nAstra (max)", creator: "openai", value: 65, label: "65", color: "#171717" },
       { name: "GPT-6.1\nSol (max)", creator: "openai", value: 64, label: "64", color: "#171717" },
+      {
+        name: "Kimi K3.1 Pro",
+        creator: "kimi",
+        value: 58,
+        label: "58",
+        color: "#047AFE",
+      },
       { name: "MiMo-V2.6-Pro", creator: "xiaomi", value: 48, label: "48", color: "#FF6900" },
     ],
   },
@@ -139,6 +153,13 @@ export const LANGUAGE_MODELS_DATA: {
         color: "#34A853",
       },
       { name: "GLM-5.3 (max)", creator: "zai", value: 2.01, label: "$2.01", color: "#2563EB" },
+      {
+        name: "Kimi K3.1 Pro",
+        creator: "kimi",
+        value: 2.11,
+        label: "$2.11",
+        color: "#047AFE",
+      },
       {
         name: "GPT-6\nAstra (max)",
         creator: "openai",
@@ -178,775 +199,6 @@ export const LANGUAGE_MODELS_DATA: {
   },
 };
 
-export const IMAGE_MODELS_DATA: {
-  textToImage: MetricCardConfig;
-  textToImageCost: MetricCardConfig;
-  imageEditing: MetricCardConfig;
-} = {
-  textToImage: {
-    title: "Text to Image",
-    subtitle: "Image Arena Elo",
-    accentColor: "#736CD3",
-    metricLabel: "Higher is better",
-    items: [
-      {
-        name: "GPT Image 2.5\nSunburst (max)",
-        creator: "openai",
-        value: 1220,
-        label: "1220",
-        color: "#171717",
-        ciLower: 1205,
-        ciUpper: 1235,
-      },
-      {
-        name: "GPT Image\n2.5 Flare (max)",
-        creator: "openai",
-        value: 1207,
-        label: "1207",
-        color: "#171717",
-        ciLower: 1195,
-        ciUpper: 1219,
-      },
-      {
-        name: "GPT Image\n2 (high)",
-        creator: "openai",
-        value: 1186,
-        label: "1186",
-        color: "#171717",
-        ciLower: 1172,
-        ciUpper: 1200,
-      },
-      {
-        name: "Nano\nBanana 2.1",
-        creator: "google",
-        value: 1152,
-        label: "1152",
-        color: "#34A853",
-        ciLower: 1139,
-        ciUpper: 1165,
-      },
-      {
-        name: "Grok Imagine\nImage 2.0",
-        creator: "spacexai",
-        value: 1144,
-        label: "1144",
-        color: "#736CD3",
-        ciLower: 1130,
-        ciUpper: 1158,
-      },
-      {
-        name: "MAI-Image-2.6",
-        creator: "mistral",
-        value: 1138,
-        label: "1138",
-        color: "#54382A",
-        ciLower: 1125,
-        ciUpper: 1151,
-      },
-      {
-        name: "Nano Banana\n2 (Gemini 3.1\nFlash Image)",
-        creator: "google",
-        value: 1131,
-        label: "1131",
-        color: "#34A853",
-        ciLower: 1118,
-        ciUpper: 1144,
-      },
-      {
-        name: "Muse Image",
-        creator: "meta",
-        value: 1127,
-        label: "1127",
-        color: "#0084FF",
-        ciLower: 1115,
-        ciUpper: 1139,
-      },
-      {
-        name: "GPT Image\n1.5 (high)",
-        creator: "openai",
-        value: 1123,
-        label: "1123",
-        color: "#171717",
-        ciLower: 1110,
-        ciUpper: 1136,
-      },
-      {
-        name: "MAI-Image-\n2.6-Flash",
-        creator: "mistral",
-        value: 1119,
-        label: "1119",
-        color: "#54382A",
-        ciLower: 1106,
-        ciUpper: 1132,
-      },
-    ],
-  },
-  textToImageCost: {
-    title: "Text to Image Cost",
-    subtitle: "API price per 1,000 Images (USD)",
-    accentColor: "#F97316",
-    metricLabel: "Lower is better",
-    items: [
-      { name: "Muse Image", creator: "meta", value: 10, label: "$10", color: "#0084FF" },
-      {
-        name: "MAI-Image-\n2.6-Flash",
-        creator: "mistral",
-        value: 19.5,
-        label: "$19.5",
-        color: "#54382A",
-      },
-      {
-        name: "Nano\nBanana 2.1",
-        creator: "google",
-        value: 33.6,
-        label: "$33.6",
-        color: "#34A853",
-      },
-      { name: "MAI-Image-2.6", creator: "mistral", value: 38.9, label: "$38.9", color: "#54382A" },
-      {
-        name: "Grok Imagine\nImage 2.0",
-        creator: "spacexai",
-        value: 60,
-        label: "$60",
-        color: "#736CD3",
-      },
-      {
-        name: "Nano Banana\n2 (Gemini 3.1\nFlash Image)",
-        creator: "google",
-        value: 67,
-        label: "$67",
-        color: "#34A853",
-      },
-      {
-        name: "GPT Image\n1.5 (high)",
-        creator: "openai",
-        value: 133,
-        label: "$133",
-        color: "#171717",
-      },
-      {
-        name: "GPT Image 2.5\nSunburst (max)",
-        creator: "openai",
-        value: 210.7,
-        label: "$210.7",
-        color: "#171717",
-      },
-      {
-        name: "GPT Image\n2.5 Flare (max)",
-        creator: "openai",
-        value: 210.7,
-        label: "$210.7",
-        color: "#171717",
-      },
-      {
-        name: "GPT Image\n2 (high)",
-        creator: "openai",
-        value: 211,
-        label: "$211",
-        color: "#171717",
-      },
-    ],
-  },
-  imageEditing: {
-    title: "Image Editing",
-    subtitle: "Image Arena Elo",
-    accentColor: "#EAB308",
-    metricLabel: "Higher is better",
-    items: [
-      {
-        name: "GPT Image 2.5\nSunburst (max)",
-        creator: "openai",
-        value: 1199,
-        label: "1199",
-        color: "#171717",
-        ciLower: 1185,
-        ciUpper: 1213,
-      },
-      {
-        name: "GPT Image\n2.5 Flare (max)",
-        creator: "openai",
-        value: 1182,
-        label: "1182",
-        color: "#171717",
-        ciLower: 1169,
-        ciUpper: 1195,
-      },
-      {
-        name: "Nano\nBanana 2.1",
-        creator: "google",
-        value: 1152,
-        label: "1152",
-        color: "#34A853",
-        ciLower: 1139,
-        ciUpper: 1165,
-      },
-      {
-        name: "MAI-Image-2.6",
-        creator: "mistral",
-        value: 1152,
-        label: "1152",
-        color: "#54382A",
-        ciLower: 1139,
-        ciUpper: 1165,
-      },
-      {
-        name: "MAI-Image-\n2.6-Flash",
-        creator: "mistral",
-        value: 1144,
-        label: "1144",
-        color: "#54382A",
-        ciLower: 1131,
-        ciUpper: 1157,
-      },
-      {
-        name: "GPT Image\n2 (high)",
-        creator: "openai",
-        value: 1138,
-        label: "1138",
-        color: "#171717",
-        ciLower: 1125,
-        ciUpper: 1151,
-      },
-      {
-        name: "Seedream\n5.0 Pro",
-        creator: "bytedance",
-        value: 1133,
-        label: "1133",
-        color: "#3B82F6",
-        ciLower: 1120,
-        ciUpper: 1146,
-      },
-      {
-        name: "Muse Image",
-        creator: "meta",
-        value: 1131,
-        label: "1131",
-        color: "#0084FF",
-        ciLower: 1118,
-        ciUpper: 1144,
-      },
-      {
-        name: "MAI-Image-2.5",
-        creator: "mistral",
-        value: 1128,
-        label: "1128",
-        color: "#54382A",
-        ciLower: 1115,
-        ciUpper: 1141,
-      },
-      {
-        name: "Nano Banana\n2 (Gemini 3.1\nFlash Image)",
-        creator: "google",
-        value: 1124,
-        label: "1124",
-        color: "#34A853",
-        ciLower: 1111,
-        ciUpper: 1137,
-      },
-    ],
-  },
-};
-
-export const VIDEO_MODELS_DATA: {
-  textToVideo: MetricCardConfig;
-  imageToVideo: MetricCardConfig;
-  videoEditing: MetricCardConfig;
-} = {
-  textToVideo: {
-    title: "Text to Video",
-    subtitle: "Video Arena Elo",
-    accentColor: "#736CD3",
-    metricLabel: "Higher is better",
-    items: [
-      {
-        name: "Wan 3.0",
-        creator: "alibaba",
-        value: 1174,
-        label: "1174",
-        color: "#FF6900",
-        ciLower: 1160,
-        ciUpper: 1188,
-      },
-      {
-        name: "Utopai X",
-        creator: "openai",
-        value: 1169,
-        label: "1169",
-        color: "#171717",
-        ciLower: 1155,
-        ciUpper: 1183,
-      },
-      {
-        name: "Dreamina\nSeedance 2.5",
-        creator: "bytedance",
-        value: 1160,
-        label: "1160",
-        color: "#3B82F6",
-        ciLower: 1148,
-        ciUpper: 1172,
-      },
-      {
-        name: "MiniMax\nH3 (768p)",
-        creator: "minimax",
-        value: 1159,
-        label: "1159",
-        color: "#EC4899",
-        ciLower: 1147,
-        ciUpper: 1171,
-      },
-      {
-        name: "MiniMax\nH3 Max",
-        creator: "minimax",
-        value: 1155,
-        label: "1155",
-        color: "#FF4500",
-        ciLower: 1143,
-        ciUpper: 1167,
-      },
-      {
-        name: "FLUX 3",
-        creator: "blackforestlabs",
-        value: 1146,
-        label: "1146",
-        color: "#171717",
-        ciLower: 1134,
-        ciUpper: 1158,
-      },
-      {
-        name: "Dreamina\nSeedance 2.0",
-        creator: "bytedance",
-        value: 1136,
-        label: "1136",
-        color: "#3B82F6",
-        ciLower: 1124,
-        ciUpper: 1148,
-      },
-      {
-        name: "Gemini Omni\nFlash 1.1",
-        creator: "google",
-        value: 1132,
-        label: "1132",
-        color: "#34A853",
-        ciLower: 1120,
-        ciUpper: 1144,
-      },
-      {
-        name: "Agnes-\nVideo-2.5",
-        creator: "anthropic",
-        value: 1068,
-        label: "1068",
-        color: "#1E3A8A",
-        ciLower: 1055,
-        ciUpper: 1081,
-      },
-      {
-        name: "Grok Imagine\nVideo 1.5",
-        creator: "spacexai",
-        value: 1060,
-        label: "1060",
-        color: "#736CD3",
-        ciLower: 1047,
-        ciUpper: 1073,
-      },
-    ],
-  },
-  imageToVideo: {
-    title: "Image to Video",
-    subtitle: "Video Arena Elo",
-    accentColor: "#EAB308",
-    metricLabel: "Higher is better",
-    items: [
-      {
-        name: "MiniMax\nH3 (768p)",
-        creator: "minimax",
-        value: 1140,
-        label: "1140",
-        color: "#EC4899",
-        ciLower: 1128,
-        ciUpper: 1152,
-      },
-      {
-        name: "Dreamina\nSeedance 2.5",
-        creator: "bytedance",
-        value: 1138,
-        label: "1138",
-        color: "#3B82F6",
-        ciLower: 1126,
-        ciUpper: 1150,
-      },
-      {
-        name: "Gemini Omni\nFlash 1.1",
-        creator: "google",
-        value: 1132,
-        label: "1132",
-        color: "#34A853",
-        ciLower: 1120,
-        ciUpper: 1144,
-      },
-      {
-        name: "Wan 3.0",
-        creator: "alibaba",
-        value: 1127,
-        label: "1127",
-        color: "#FF6900",
-        ciLower: 1115,
-        ciUpper: 1139,
-      },
-      {
-        name: "MiniMax\nH3 Max",
-        creator: "minimax",
-        value: 1125,
-        label: "1125",
-        color: "#FF4500",
-        ciLower: 1113,
-        ciUpper: 1137,
-      },
-      {
-        name: "Dreamina\nSeedance 2.0",
-        creator: "bytedance",
-        value: 1121,
-        label: "1121",
-        color: "#3B82F6",
-        ciLower: 1109,
-        ciUpper: 1133,
-      },
-      {
-        name: "FLUX 3",
-        creator: "blackforestlabs",
-        value: 1086,
-        label: "1086",
-        color: "#171717",
-        ciLower: 1074,
-        ciUpper: 1098,
-      },
-      {
-        name: "Grok Imagine\nVideo 1.5",
-        creator: "spacexai",
-        value: 1067,
-        label: "1067",
-        color: "#736CD3",
-        ciLower: 1055,
-        ciUpper: 1079,
-      },
-      {
-        name: "HappyHorse-1.1",
-        creator: "alibaba",
-        value: 1061,
-        label: "1061",
-        color: "#FF6900",
-        ciLower: 1049,
-        ciUpper: 1073,
-      },
-      {
-        name: "MAGI-2\nPreview",
-        creator: "stability",
-        value: 1046,
-        label: "1046",
-        color: "#EAB308",
-        ciLower: 1034,
-        ciUpper: 1058,
-      },
-    ],
-  },
-  videoEditing: {
-    title: "Video Editing",
-    subtitle: "Video Arena Elo",
-    accentColor: "#F97316",
-    metricLabel: "Higher is better",
-    items: [
-      {
-        name: "Wan 3.0",
-        creator: "alibaba",
-        value: 1200,
-        label: "1200",
-        color: "#FF6900",
-        ciLower: 1188,
-        ciUpper: 1212,
-      },
-      {
-        name: "Dreamina\nSeedance 2.5",
-        creator: "bytedance",
-        value: 1155,
-        label: "1155",
-        color: "#3B82F6",
-        ciLower: 1143,
-        ciUpper: 1167,
-      },
-      {
-        name: "Gemini Omni\nFlash 1.1",
-        creator: "google",
-        value: 1149,
-        label: "1149",
-        color: "#34A853",
-        ciLower: 1137,
-        ciUpper: 1161,
-      },
-      {
-        name: "MiniMax\nH3 (768p)",
-        creator: "minimax",
-        value: 1125,
-        label: "1125",
-        color: "#EC4899",
-        ciLower: 1113,
-        ciUpper: 1137,
-      },
-      {
-        name: "HappyHorse-1.0",
-        creator: "alibaba",
-        value: 1092,
-        label: "1092",
-        color: "#FF6900",
-        ciLower: 1080,
-        ciUpper: 1104,
-      },
-      {
-        name: "Dreamina\nSeedance 2.0",
-        creator: "bytedance",
-        value: 1079,
-        label: "1079",
-        color: "#3B82F6",
-        ciLower: 1067,
-        ciUpper: 1091,
-      },
-      {
-        name: "Wan 2.7",
-        creator: "alibaba",
-        value: 1078,
-        label: "1078",
-        color: "#FF6900",
-        ciLower: 1066,
-        ciUpper: 1090,
-      },
-      {
-        name: "Aleph 2.0",
-        creator: "openai",
-        value: 1014,
-        label: "1014",
-        color: "#171717",
-        ciLower: 1004,
-        ciUpper: 1024,
-      },
-      {
-        name: "Kling 3.0 Omni\n1080p (Pro)",
-        creator: "kuaishou",
-        value: 1000,
-        label: "1000",
-        color: "#EF4444",
-        ciLower: 990,
-        ciUpper: 1010,
-      },
-    ],
-  },
-};
-
-export const SPEECH_MODELS_DATA: {
-  speechToText: MetricCardConfig;
-  textToSpeech: MetricCardConfig;
-  speechToSpeech: MetricCardConfig;
-} = {
-  speechToText: {
-    title: "Speech to Text",
-    subtitle: "AA-WER v2 · % of words transcribed incorrectly",
-    accentColor: "#736CD3",
-    metricLabel: "Lower is better",
-    items: [
-      {
-        name: "Fun-Realtime-\nASR-preview",
-        creator: "alibaba",
-        value: 1.7,
-        label: "1.7%",
-        color: "#FF6900",
-      },
-      { name: "MAI-\nTranscribe-2", creator: "mistral", value: 2.0, label: "2%", color: "#54382A" },
-      { name: "Scribe v2", creator: "elevenlabs", value: 2.2, label: "2.2%", color: "#10B981" },
-      {
-        name: "Grok Voice\nTranscribe 2.0",
-        creator: "spacexai",
-        value: 2.3,
-        label: "2.3%",
-        color: "#736CD3",
-      },
-      { name: "StepAudio\n3 ASR", creator: "stepfun", value: 2.5, label: "2.5%", color: "#06B6D4" },
-      {
-        name: "Gemini 3.5\nTranscribe",
-        creator: "google",
-        value: 2.6,
-        label: "2.6%",
-        color: "#34A853",
-      },
-      { name: "Voxtral Small", creator: "mistral", value: 2.8, label: "2.8%", color: "#EF4444" },
-      {
-        name: "Universal-\n3.5 Pro",
-        creator: "assemblyai",
-        value: 3.0,
-        label: "3%",
-        color: "#3B82F6",
-      },
-      {
-        name: "Solaria-\n3, Gladia",
-        creator: "deepgram",
-        value: 3.2,
-        label: "3.2%",
-        color: "#4C1D95",
-      },
-      { name: "GPT Transcribe", creator: "openai", value: 3.3, label: "3.3%", color: "#171717" },
-    ],
-  },
-  textToSpeech: {
-    title: "Text to Speech",
-    subtitle: "Controlled Voice Arena Preference Elo",
-    accentColor: "#EAB308",
-    metricLabel: "Higher is better",
-    items: [
-      {
-        name: "HeyGen Voice",
-        creator: "heygen",
-        value: 1198,
-        label: "1198",
-        color: "#06B6D4",
-        ciLower: 1184,
-        ciUpper: 1212,
-      },
-      {
-        name: "Qwen-Audio-\n3.1-TTS-Plus",
-        creator: "alibaba",
-        value: 1186,
-        label: "1186",
-        color: "#FF6900",
-        ciLower: 1172,
-        ciUpper: 1200,
-      },
-      {
-        name: "Eleven v4 Turbo",
-        creator: "elevenlabs",
-        value: 1162,
-        label: "1162",
-        color: "#10B981",
-        ciLower: 1148,
-        ciUpper: 1176,
-      },
-      {
-        name: "Eleven v4",
-        creator: "elevenlabs",
-        value: 1159,
-        label: "1159",
-        color: "#10B981",
-        ciLower: 1145,
-        ciUpper: 1173,
-      },
-      {
-        name: "Sonic 3.6",
-        creator: "cartesia",
-        value: 1149,
-        label: "1149",
-        color: "#064E3B",
-        ciLower: 1135,
-        ciUpper: 1163,
-      },
-      {
-        name: "Realtime TTS-2",
-        creator: "openai",
-        value: 1144,
-        label: "1144",
-        color: "#022C22",
-        ciLower: 1130,
-        ciUpper: 1158,
-      },
-      {
-        name: "Sonic 3.5",
-        creator: "cartesia",
-        value: 1118,
-        label: "1118",
-        color: "#171717",
-        ciLower: 1104,
-        ciUpper: 1132,
-      },
-      {
-        name: "Simba 3.2",
-        creator: "playht",
-        value: 1086,
-        label: "1086",
-        color: "#3B82F6",
-        ciLower: 1072,
-        ciUpper: 1100,
-      },
-      {
-        name: "StepAudio\n2.5 TTS",
-        creator: "stepfun",
-        value: 1078,
-        label: "1078",
-        color: "#06B6D4",
-        ciLower: 1064,
-        ciUpper: 1092,
-      },
-      {
-        name: "Eleven v3",
-        creator: "elevenlabs",
-        value: 1073,
-        label: "1073",
-        color: "#10B981",
-        ciLower: 1059,
-        ciUpper: 1087,
-      },
-    ],
-  },
-  speechToSpeech: {
-    title: "Speech to Speech",
-    subtitle:
-      "Weighted average of Speech Reasoning, Agentic Performance, Arena Preference, and Task Success Rate results",
-    accentColor: "#F97316",
-    metricLabel: "Higher is better",
-    items: [
-      { name: "Grok Voice 3.0", creator: "spacexai", value: 86.9, label: "86.9", color: "#736CD3" },
-      {
-        name: "GPT-Live-1\n(Astra, medium)",
-        creator: "openai",
-        value: 83.2,
-        label: "83.2",
-        color: "#171717",
-      },
-      {
-        name: "Gemini 3.8 Live\nExtend...",
-        creator: "google",
-        value: 82.6,
-        label: "82.6",
-        color: "#34A853",
-      },
-      { name: "Grok Voice 2.0", creator: "spacexai", value: 81.3, label: "81.3", color: "#736CD3" },
-      {
-        name: "GPT-Live-1\n(Sol, low)",
-        creator: "openai",
-        value: 80.1,
-        label: "80.1",
-        color: "#171717",
-      },
-      { name: "Gemini 3.8 Live", creator: "google", value: 76.0, label: "76.0", color: "#34A853" },
-      {
-        name: "GPT-Realtime-\n2.1 High",
-        creator: "openai",
-        value: 75.2,
-        label: "75.2",
-        color: "#171717",
-      },
-      { name: "Grok Voice 1.0", creator: "spacexai", value: 73.7, label: "73.7", color: "#736CD3" },
-      {
-        name: "GPT-Realtime-2\n(High)",
-        creator: "openai",
-        value: 73.6,
-        label: "73.6",
-        color: "#171717",
-      },
-      {
-        name: "Gemini 3.1\nFlash Live High",
-        creator: "google",
-        value: 72.0,
-        label: "72.0",
-        color: "#34A853",
-      },
-    ],
-  },
-};
-
 // ─── Full 26-Model Intelligence Index Dataset (from screenshot) ─────────────
 
 export interface FullIndexModelItem {
@@ -979,6 +231,15 @@ export const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
     weights: "proprietary",
     modality: "multimodal",
     country: "us",
+  },
+  {
+    name: "Kimi K3.1 Pro",
+    creator: "kimi",
+    score: 55,
+    color: "#047AFE",
+    weights: "open_restricted",
+    modality: "multimodal",
+    country: "cn",
   },
   {
     name: "Claude Fable\n5.1 (max with\nfallback)",
@@ -1066,15 +327,6 @@ export const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
     creator: "stepfun",
     score: 44,
     color: "#06B6D4",
-    weights: "open_restricted",
-    modality: "multimodal",
-    country: "cn",
-  },
-  {
-    name: "Kimi K3 (max)",
-    creator: "kimi",
-    score: 44,
-    color: "#0084FF",
     weights: "open_restricted",
     modality: "multimodal",
     country: "cn",
@@ -1600,18 +852,6 @@ export const TASK_COST_MODELS: TaskCostModelItem[] = [
     ],
   },
   {
-    name: "Kimi K3 (max)",
-    creator: "kimi",
-    color: "#0084FF",
-    totalCost: 2.0,
-    totalLabel: "$2.00",
-    segments: [
-      { value: 0.71, label: "", opacity: 0.72 },
-      { value: 0.49, label: "$0.49", opacity: 0.85 },
-      { value: 0.8, label: "$0.80", opacity: 1.0 },
-    ],
-  },
-  {
     name: "GLM-5.3 (max)",
     creator: "zai",
     color: "#2563EB",
@@ -1620,6 +860,18 @@ export const TASK_COST_MODELS: TaskCostModelItem[] = [
     segments: [
       { value: 0.49, label: "", opacity: 0.82 },
       { value: 1.52, label: "$1.52", opacity: 1.0 },
+    ],
+  },
+  {
+    name: "Kimi K3.1 Pro",
+    creator: "kimi",
+    color: "#047AFE",
+    totalCost: 2.11,
+    totalLabel: "$2.11",
+    segments: [
+      { value: 0.75, label: "", opacity: 0.72 },
+      { value: 0.52, label: "$0.52", opacity: 0.85 },
+      { value: 0.84, label: "$0.84", opacity: 1.0 },
     ],
   },
   {
@@ -1731,13 +983,13 @@ export const TASK_TIME_MODELS: TaskTimeModelItem[] = [
   },
   { name: "Mistral Large\n4 Preview", creator: "mistral", color: "#EF4444", minutes: 12.2 },
   { name: "Grok 4.7 (xhigh)", creator: "spacexai", color: "#736CD3", minutes: 13.6 },
+  { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", minutes: 14.2 },
   {
     name: "Claude Sonnet\n5.5 (max\nwith fallback)",
     creator: "anthropic",
     color: "#CC785C",
     minutes: 14.8,
   },
-  { name: "Kimi K3 (max)", creator: "kimi", color: "#0084FF", minutes: 17.2 },
   { name: "MiMo-V2.6-Pro", creator: "xiaomi", color: "#FF6900", minutes: 20.4 },
   { name: "Qwen 3.6\n27B (xhigh)", creator: "alibaba", color: "#FF6900", minutes: 21.1 },
   { name: "Qwen 3.6\nMax (0902)", creator: "alibaba", color: "#FF6900", minutes: 35.9 },
@@ -1801,9 +1053,9 @@ export const TASK_TOKENS_MODELS: TaskTokensModelItem[] = [
     answerK: 22,
   },
   {
-    name: "Kimi K3 (max)",
+    name: "Kimi K3.1 Pro",
     creator: "kimi",
-    color: "#0084FF",
+    color: "#047AFE",
     totalK: 48,
     totalLabel: "48k",
     reasoningK: 16,
@@ -2120,7 +1372,7 @@ export const TokenUseFullSection: React.FC = () => {
       </div>
 
       {/* Index Card */}
-      <div className="rounded-lg border border-transparent bg-white overflow-hidden">
+      <div className="rounded-lg border border-transparent bg-[#fcfcfb] overflow-hidden">
         {/* View Tabs */}
         <div className="flex items-center gap-1 px-5 pt-3 pb-3 overflow-x-auto no-scrollbar">
           {viewTabs.map((tab) => (
@@ -2351,7 +1603,7 @@ export const CostFullSection: React.FC = () => {
       </div>
 
       {/* Index Card */}
-      <div className="rounded-lg border border-transparent bg-white overflow-hidden">
+      <div className="rounded-lg border border-transparent bg-[#fcfcfb] overflow-hidden">
         {/* View Tabs */}
         <div className="flex items-center gap-1 px-5 pt-3 pb-3 overflow-x-auto no-scrollbar">
           {viewTabs.map((tab) => (
@@ -2558,7 +1810,7 @@ export interface ContextWindowModelItem {
 export const TASK_CONTEXT_MODELS: ContextWindowModelItem[] = [
   { name: "Muse Spark\nOpen (xhigh)", creator: "meta", color: "#0084FF", tokens: 1000000 },
   { name: "Beam 1.0", creator: "reflection", color: "#14532D", tokens: 1000000 },
-  { name: "Kimi K3 (max)", creator: "kimi", color: "#0084FF", tokens: 1000000 },
+  { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", tokens: 1000000 },
   { name: "Muse\nWonder (max)", creator: "meta", color: "#0084FF", tokens: 1000000 },
   { name: "Step 5 Preview", creator: "stepfun", color: "#06B6D4", tokens: 1000000 },
   { name: "Inkling (xhigh)", creator: "thinkingmachines", color: "#52525B", tokens: 1000000 },
@@ -2630,7 +1882,7 @@ export const ContextWindowFullSection: React.FC = () => {
       </div>
 
       {/* Index Card */}
-      <div className="rounded-lg border border-transparent bg-white overflow-hidden">
+      <div className="rounded-lg border border-transparent bg-[#fcfcfb] overflow-hidden">
         {/* View Tabs */}
         <div className="flex items-center gap-1 px-5 pt-3 pb-3 overflow-x-auto no-scrollbar">
           {viewTabs.map((tab) => (
@@ -2837,6 +2089,14 @@ export const TASK_RESPONSE_MODELS: ResponseTimeModelItem[] = [
     input: 0,
   },
   {
+    name: "Kimi K3.1 Pro",
+    creator: "kimi",
+    color: "#047AFE",
+    total: 15.2,
+    ttft: 4.3,
+    input: 0.2,
+  },
+  {
     name: "Muse Spark\nOpen (xhigh)",
     creator: "meta",
     color: "#0084FF",
@@ -2908,14 +2168,6 @@ export const TASK_RESPONSE_MODELS: ResponseTimeModelItem[] = [
     total: 58.31,
     ttft: 53.17,
     input: 0.17,
-  },
-  {
-    name: "Kimi K3 (max)",
-    creator: "kimi",
-    color: "#0084FF",
-    total: 61.69,
-    ttft: 46.4,
-    input: 3.67,
   },
   {
     name: "Qwen 3.6\n27B (xhigh)",
@@ -3088,7 +2340,7 @@ export const ResponseTimeFullSection: React.FC = () => {
       </div>
 
       {/* Index Card */}
-      <div className="rounded-lg border border-transparent bg-white overflow-hidden">
+      <div className="rounded-lg border border-transparent bg-[#fcfcfb] overflow-hidden">
         {/* View Tabs */}
         <div className="flex items-center gap-1 px-5 pt-3 pb-3 overflow-x-auto no-scrollbar">
           {viewTabs.map((tab) => (
@@ -3627,7 +2879,7 @@ const MODELS_FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: "What are the top AI models?",
-    a: "The top AI models by Intelligence Index are: 1. Claude Opus 5.5 (max with fallback) (58), 2. Claude Sonnet 5.5 (max with fallback) (56), 3. Claude Opus 5.5 (xhigh with fallback) (56), 4. Muse Wonder Full (max) (56), and 5. Claude Opus 5.5 (high with fallback) (54).",
+    a: "The top AI models by Intelligence Index are: 1. Claude Opus 5.5 (max with fallback) (58), 2. Claude Sonnet 5.5 (max with fallback) (56), 3. Muse Wonder Full (max) (56), 4. Kimi K3.1 Pro (55), and 5. Claude Opus 5.5 (high with fallback) (54).",
   },
   {
     q: "Which is the fastest AI model?",
@@ -3707,199 +2959,92 @@ const ModelsOverviewFaq: React.FC = () => {
 
 // ─── Main Models Overview View ────────────────────────────────────────────────
 
-export type OverviewTabId = "language" | "image" | "video" | "speech";
-
 export const ModelsOverviewView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<OverviewTabId>("language");
-
-  const tabs: { id: OverviewTabId; label: string }[] = [
-    { id: "language", label: "Language Models" },
-    { id: "image", label: "Image" },
-    { id: "video", label: "Video" },
-    { id: "speech", label: "Speech" },
-  ];
-
   return (
     <div className="flex flex-col items-center gap-12 w-full max-w-[1560px] mx-auto pb-16 animate-in fade-in duration-150 px-2 sm:px-6">
-      {/* Top Segmented Pill Filter Bar (Clean in-flow placement) */}
-      <div className="flex justify-center w-full pt-1 pb-2">
-        <div className="flex items-center gap-1.5 bg-neutral-100/90 p-1 rounded-full border border-transparent">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-black text-white shadow-xs"
-                    : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Alternating Staggered Layout (+10% width): Left 55% -> Right 55% -> Left 55% */}
       <div className="w-full flex flex-col gap-16">
-        {activeTab === "language" && (
-          <>
-            {/* 1. Intelligence: 55% width on the left */}
-            <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
-              <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.intelligence} align="left" />
-            </div>
+        {/* 1. Intelligence: 55% width on the left */}
+        <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
+          <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.intelligence} align="left" />
+        </div>
 
-            <div className="w-full border-b border-neutral-100" />
+            <div className="w-full border-b border-transparent" />
 
             {/* 2. Speed: 55% width on the right */}
             <div className="w-full lg:w-[55%] self-end pl-0 lg:pl-6">
               <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.speed} align="right" />
             </div>
 
-            <div className="w-full border-b border-neutral-100" />
+            <div className="w-full border-b border-transparent" />
 
             {/* 3. Cost per Task: 55% width concurrent back on the left */}
             <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
               <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.cost} align="left" />
             </div>
 
-            <div className="w-full border-b border-neutral-100" />
+            <div className="w-full border-b border-transparent" />
 
             {/* 4. Artificial Analysis Intelligence Index */}
             <div className="w-full max-w-[1560px] mx-auto flex justify-center">
               <IntelligenceIndexFullChart />
             </div>
 
-            <div className="w-full border-b border-neutral-100" />
+            <div className="w-full border-b border-transparent" />
 
             {/* 5. Task Metrics for the Intelligence Index: Down after intelligence */}
             <div className="w-full max-w-[1560px] mx-auto flex justify-center">
               <IntelligenceTaskMetricsFullChart />
             </div>
 
-            <div className="w-full border-b border-neutral-100 my-6" />
+            <div className="w-full border-b border-transparent my-6" />
 
             {/* 6. Frontier Language Model Intelligence, Over Time */}
             <div className="w-full max-w-[1560px] mx-auto flex justify-center">
               <FrontierIntelligenceOverTimeChart />
             </div>
 
-            <div className="w-full border-b border-neutral-100 my-6" />
+            <div className="w-full border-b border-transparent my-6" />
 
             {/* 7. Artificial Analysis Coding Agent Indexes */}
             <div className="w-full max-w-[1560px] mx-auto flex justify-center">
               <CodingAgentIndexesFullChart />
             </div>
 
-            <div className="w-full border-b border-neutral-100 my-6" />
+            <div className="w-full border-b border-transparent my-6" />
 
             {/* 8. Capability Indexes (Finance & Accounting, Strategy & Ops, Legal, Healthcare & Medical, Engineering, Economics) */}
             <div className="w-full">
               <CapabilityIndexesSection />
             </div>
 
-            <div className="w-full border-b border-neutral-100 my-6" />
+            <div className="w-full border-b border-transparent my-6" />
 
             {/* 9. Token Use */}
             <div className="w-full">
               <TokenUseFullSection />
             </div>
 
-            <div className="w-full border-b border-neutral-100 my-6" />
+            <div className="w-full border-b border-transparent my-6" />
 
             {/* 10. Cost */}
             <div className="w-full">
               <CostFullSection />
             </div>
 
-            <div className="w-full border-b border-neutral-100 my-6" />
+            <div className="w-full border-b border-transparent my-6" />
 
             {/* 11. Context Window */}
             <div className="w-full">
               <ContextWindowFullSection />
             </div>
 
-            <div className="w-full border-b border-neutral-100 my-6" />
+            <div className="w-full border-b border-transparent my-6" />
 
             {/* 12. End-to-End Response Time */}
             <div className="w-full">
               <ResponseTimeFullSection />
             </div>
-          </>
-        )}
-
-        {activeTab === "image" && (
-          <>
-            {/* 1. Text to Image: 55% width on the left */}
-            <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
-              <BenchmarkBarCard config={IMAGE_MODELS_DATA.textToImage} align="left" />
-            </div>
-
-            <div className="w-full border-b border-neutral-100" />
-
-            {/* 2. Text to Image Cost: 55% width on the right */}
-            <div className="w-full lg:w-[55%] self-end pl-0 lg:pl-6">
-              <BenchmarkBarCard config={IMAGE_MODELS_DATA.textToImageCost} align="right" />
-            </div>
-
-            <div className="w-full border-b border-neutral-100" />
-
-            {/* 3. Image Editing: 55% width back on the left */}
-            <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
-              <BenchmarkBarCard config={IMAGE_MODELS_DATA.imageEditing} align="left" />
-            </div>
-          </>
-        )}
-
-        {activeTab === "video" && (
-          <>
-            {/* 1. Text to Video: 55% width on the left */}
-            <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
-              <BenchmarkBarCard config={VIDEO_MODELS_DATA.textToVideo} align="left" />
-            </div>
-
-            <div className="w-full border-b border-neutral-100" />
-
-            {/* 2. Image to Video: 55% width on the right */}
-            <div className="w-full lg:w-[55%] self-end pl-0 lg:pl-6">
-              <BenchmarkBarCard config={VIDEO_MODELS_DATA.imageToVideo} align="right" />
-            </div>
-
-            <div className="w-full border-b border-neutral-100" />
-
-            {/* 3. Video Editing: 55% width back on the left */}
-            <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
-              <BenchmarkBarCard config={VIDEO_MODELS_DATA.videoEditing} align="left" />
-            </div>
-          </>
-        )}
-
-        {activeTab === "speech" && (
-          <>
-            {/* 1. Speech to Text: 55% width on the left */}
-            <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
-              <BenchmarkBarCard config={SPEECH_MODELS_DATA.speechToText} align="left" />
-            </div>
-
-            <div className="w-full border-b border-neutral-100" />
-
-            {/* 2. Text to Speech: 55% width on the right */}
-            <div className="w-full lg:w-[55%] self-end pl-0 lg:pl-6">
-              <BenchmarkBarCard config={SPEECH_MODELS_DATA.textToSpeech} align="right" />
-            </div>
-
-            <div className="w-full border-b border-neutral-100" />
-
-            {/* 3. Speech to Speech: 55% width back on the left */}
-            <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
-              <BenchmarkBarCard config={SPEECH_MODELS_DATA.speechToSpeech} align="left" />
-            </div>
-          </>
-        )}
       </div>
 
       <ModelsOverviewFaq />

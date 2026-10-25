@@ -18,6 +18,7 @@ export type CreatorId =
   | "mistral"
   | "xai"
   | "spacexai"
+  | "kimi"
   | "cohere"
   | "alibaba"
   | "microsoft"
@@ -235,15 +236,11 @@ export interface ParetoOptions {
 // --- UI Navigation, Filtering & Sorting ---
 
 export type BenchmarkCategory =
-  | "benchmarks"
   | "overview"
+  | "benchmarks"
   | "coding-agents"
-  | "quality-index"
-  | "speed-latency"
-  | "price-performance"
   | "leaderboard"
-  | "compare"
-  | "providers";
+  | "compare";
 
 export interface ImageModelBenchmark {
   id: string;

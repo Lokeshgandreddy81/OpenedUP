@@ -141,8 +141,8 @@ export const ALL_CODING_AGENT_MODELS: CodingAgentModelItem[] = [
     agentColor: "#0084FF",
     providerDisplay: "(Meta)",
     indexScore: 68,
-    costUsd: null,
-    costDisplay: "N/A",
+    costUsd: 2.1,
+    costDisplay: "$2.10",
     executionTimeMinutes: 28.8,
     timeDisplay: "28.8m",
     turnsPerTask: 34,
@@ -306,6 +306,31 @@ export const ALL_CODING_AGENT_MODELS: CodingAgentModelItem[] = [
     isDefault15: true,
   },
   {
+    id: "kimi-code-kimi-k3-1-pro",
+    name: "Kimi K3.1 Pro",
+    modelLines: ["Kimi K3.1", "Pro"],
+    agentName: "Kimi Code CLI",
+    creatorId: "kimi",
+    creatorName: "Moonshot AI",
+    modelColor: "#047AFE",
+    agentColor: "#047AFE",
+    providerDisplay: "(Moonshot AI)",
+    indexScore: 61,
+    costUsd: 4.12,
+    costDisplay: "$4.12",
+    executionTimeMinutes: 42,
+    timeDisplay: "42.0m",
+    turnsPerTask: 54,
+    deepSweRate: 64.8,
+    terminalBenchRate: 67.2,
+    sweAtlasRate: 66.4,
+    inputTokens: 0.25,
+    cachedInputTokens: 12,
+    outputTokens: 0.18,
+    safetyRefusals: ZERO_SAFETY_REFUSALS,
+    isDefault15: true,
+  },
+  {
     id: "codex-gpt-6-1-sol",
     name: "GPT-6.1 Sol (max)",
     modelLines: ["GPT-6.1 Sol", "(max)"],
@@ -408,7 +433,7 @@ export const ALL_CODING_AGENT_MODELS: CodingAgentModelItem[] = [
     cachedInputTokens: 8,
     outputTokens: 0.2,
     safetyRefusals: ZERO_SAFETY_REFUSALS,
-    isDefault15: true,
+    isDefault15: false,
   },
   {
     id: "muse-code-spark-open",
@@ -476,8 +501,8 @@ export const ALL_CODING_AGENT_MODELS: CodingAgentModelItem[] = [
     agentColor: "#1A5428",
     providerDisplay: "(reflection)",
     indexScore: 28,
-    costUsd: null,
-    costDisplay: "N/A",
+    costUsd: 1.5,
+    costDisplay: "$1.50",
     executionTimeMinutes: 42.4,
     timeDisplay: "42.4m",
     turnsPerTask: 52,
@@ -489,6 +514,94 @@ export const ALL_CODING_AGENT_MODELS: CodingAgentModelItem[] = [
     outputTokens: 0.1,
     safetyRefusals: ZERO_SAFETY_REFUSALS,
     isDefault15: true,
+  },
+  {
+    id: "cursor-claude-3-7",
+    name: "Claude 3.7 Sonnet (Thinking)",
+    modelLines: ["Claude 3.7", "Sonnet"],
+    agentName: "Cursor Agent",
+    creatorId: "anthropic",
+    creatorName: "Anthropic",
+    modelColor: "#CC785C",
+    agentColor: "#10B981",
+    providerDisplay: "[Anthropic]",
+    indexScore: 53,
+    costUsd: 6.2,
+    costDisplay: "$6.20",
+    executionTimeMinutes: 27.5,
+    timeDisplay: "27.5m",
+    turnsPerTask: 26,
+    deepSweRate: 61.2,
+    terminalBenchRate: 68.4,
+    sweAtlasRate: 65.0,
+    safetyRefusals: ZERO_SAFETY_REFUSALS,
+    isDefault15: false,
+  },
+  {
+    id: "windsurf-claude-3-7",
+    name: "Claude 3.7 Sonnet",
+    modelLines: ["Claude 3.7", "Sonnet"],
+    agentName: "Windsurf",
+    creatorId: "anthropic",
+    creatorName: "Anthropic",
+    modelColor: "#CC785C",
+    agentColor: "#06B6D4",
+    providerDisplay: "[Anthropic]",
+    indexScore: 51,
+    costUsd: 6.1,
+    costDisplay: "$6.10",
+    executionTimeMinutes: 29.0,
+    timeDisplay: "29.0m",
+    turnsPerTask: 27,
+    deepSweRate: 59.8,
+    terminalBenchRate: 66.5,
+    sweAtlasRate: 63.8,
+    safetyRefusals: ZERO_SAFETY_REFUSALS,
+    isDefault15: false,
+  },
+  {
+    id: "copilot-claude-3-7",
+    name: "Claude 3.7 Sonnet",
+    modelLines: ["Claude 3.7", "Sonnet"],
+    agentName: "Copilot Edits",
+    creatorId: "anthropic",
+    creatorName: "Anthropic",
+    modelColor: "#CC785C",
+    agentColor: "#6366F1",
+    providerDisplay: "[GitHub]",
+    indexScore: 49,
+    costUsd: 5.8,
+    costDisplay: "$5.80",
+    executionTimeMinutes: 30.5,
+    timeDisplay: "30.5m",
+    turnsPerTask: 29,
+    deepSweRate: 57.5,
+    terminalBenchRate: 64.2,
+    sweAtlasRate: 61.9,
+    safetyRefusals: ZERO_SAFETY_REFUSALS,
+    isDefault15: false,
+  },
+  {
+    id: "cline-deepseek-r1",
+    name: "DeepSeek R1",
+    modelLines: ["DeepSeek R1"],
+    agentName: "Cline",
+    creatorId: "deepseek",
+    creatorName: "DeepSeek",
+    modelColor: "#2243E6",
+    agentColor: "#8B5CF6",
+    providerDisplay: "[DeepSeek]",
+    indexScore: 48,
+    costUsd: 2.1,
+    costDisplay: "$2.10",
+    executionTimeMinutes: 33.0,
+    timeDisplay: "33.0m",
+    turnsPerTask: 32,
+    deepSweRate: 56.4,
+    terminalBenchRate: 62.8,
+    sweAtlasRate: 60.1,
+    safetyRefusals: ZERO_SAFETY_REFUSALS,
+    isDefault15: false,
   },
   {
     id: "aider-claude-3-7",
@@ -981,3 +1094,26 @@ export const ALL_CODING_AGENT_MODELS: CodingAgentModelItem[] = [
 export const DEFAULT_CODING_AGENT_MODEL_IDS: string[] = ALL_CODING_AGENT_MODELS.filter(
   (m) => m.isDefault15
 ).map((m) => m.id);
+
+/**
+ * Resolves a coding agent benchmark item to its underlying AI foundation model
+ */
+export function resolveCodingAgentToModelId(agentModelId: string): string {
+  if (agentModelId.includes("sonnet-5-5")) return "claude-sonnet-5-5-max-with-fallback";
+  if (agentModelId.includes("opus-5-5")) return "claude-opus-5-5-max-with-fallback";
+  if (agentModelId.includes("fable-5-1")) return "claude-fable-5-1-max-with-fallback";
+  if (agentModelId.includes("haiku-5-5")) return "claude-haiku-5-5-max";
+  if (agentModelId.includes("gpt-6-astra")) return "gpt-6-astra-max";
+  if (agentModelId.includes("gpt-6-1-sol")) return "gpt-6-1-sol-max";
+  if (agentModelId.includes("gemini-4-argon")) return "gemini-4-argon-high";
+  if (agentModelId.includes("grok-4-7")) return "grok-4-7-xhigh";
+  if (agentModelId.includes("glm-5-3")) return "glm-5-3-max";
+  if (agentModelId.includes("kimi-k3-1") || agentModelId.includes("kimi-k3.1")) return "kimi-k3-1-pro";
+  if (agentModelId.includes("kimi-k3")) return "kimi-k3-max";
+  if (agentModelId.includes("muse-wonder-full")) return "muse-wonder-full-max";
+  if (agentModelId.includes("muse-wonder")) return "muse-wonder-max";
+  if (agentModelId.includes("muse-spark-open")) return "muse-spark-open-xhigh";
+  if (agentModelId.includes("beam-1-0")) return "beam-1-0";
+  if (agentModelId.includes("deepseek-v4-1")) return "deepseek-v4-1-flash-max";
+  return agentModelId;
+}

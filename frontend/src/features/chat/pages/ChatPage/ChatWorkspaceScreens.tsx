@@ -16,6 +16,9 @@ const BenchmarksScreen = lazyWithRetry(() =>
 const RoadmapsScreen = lazyWithRetry(() =>
   import("../../../roadmaps").then((feature) => ({ default: feature.RoadmapsScreen }))
 );
+const ChaptersScreen = lazyWithRetry(() =>
+  import("../../../chapters").then((feature) => ({ default: feature.ChatChaptersScreen }))
+);
 const ScheduledTasksScreen = lazyWithRetry(() =>
   import("../../../scheduled").then((feature) => ({ default: feature.ChatScheduledTasksScreen }))
 );
@@ -128,6 +131,17 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
           fallback={<ChatScreenLoading name="Roadmaps" />}
         >
           <RoadmapsScreen onBack={() => onSelectView("chat")} />
+        </PageRoute>
+      );
+      break;
+    case "chapters":
+      screen = (
+        <PageRoute
+          key={activeView}
+          name="Chapters"
+          fallback={<ChatScreenLoading name="Chapters" />}
+        >
+          <ChaptersScreen onClose={() => onSelectView("chat")} />
         </PageRoute>
       );
       break;

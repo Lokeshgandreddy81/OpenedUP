@@ -29,6 +29,49 @@ export interface BenchmarkEvaluation {
 
 export const BENCHMARK_EVALUATIONS: BenchmarkEvaluation[] = [
   {
+    id: "swe-bench-verified",
+    name: "SWE-bench Verified",
+    category: "Coding",
+    subtitle: "Real-world GitHub issues software engineering resolve rate",
+    unit: "percent",
+    badge: "Gold Standard",
+    metric: (model) => model.quality.sweBenchVerified,
+  },
+  {
+    id: "gpqa-diamond",
+    name: "GPQA Diamond",
+    category: "Reasoning",
+    subtitle: "Graduate-level expert scientific QA accuracy",
+    unit: "percent",
+    badge: "Frontier",
+    metric: (model) => model.quality.gpqaDiamond,
+  },
+  {
+    id: "mmlu-pro",
+    name: "MMLU-Pro",
+    category: "Knowledge",
+    subtitle: "Complex multi-task reasoning & professional understanding",
+    unit: "percent",
+    metric: (model) => model.quality.mmluPro,
+  },
+  {
+    id: "math-500",
+    name: "MATH-500",
+    category: "Mathematics",
+    subtitle: "Competition-level mathematics problem solving",
+    unit: "percent",
+    metric: (model) => model.quality.math500,
+  },
+  {
+    id: "chatbot-arena-elo",
+    name: "LMSYS Chatbot Arena Elo",
+    category: "Preference",
+    subtitle: "Crowdsourced blind head-to-head human preference rating",
+    unit: "elo",
+    badge: "Community",
+    metric: (model) => model.quality.chatbotArenaElo,
+  },
+  {
     id: "aa-briefcase-v1-1",
     name: "AA-Briefcase v1.1",
     category: "Agentic",
@@ -116,8 +159,11 @@ export const BENCHMARK_EVALUATIONS: BenchmarkEvaluation[] = [
 export const EVALUATION_CATEGORIES: EvaluationCategory[] = [
   "Knowledge",
   "Reasoning",
+  "Coding",
+  "Mathematics",
   "Factuality",
   "Agentic",
+  "Preference",
 ];
 
 export function formatEvaluationValue(evaluation: BenchmarkEvaluation, value: number): string {

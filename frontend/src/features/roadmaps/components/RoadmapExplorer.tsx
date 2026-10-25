@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Star } from "lucide-react";
 import { RoadmapPage } from "./RoadmapPage";
 import { getRoadmapPageById } from "../pages/catalog/index";
 import { RoadmapPageSkeleton } from "../pages/RoadmapPage/LoadingSkeleton";
@@ -13,19 +13,20 @@ interface CatalogRoadmap {
   id: string;
   title: string;
   isNew?: boolean;
+  isStarred?: boolean;
 }
 
 const ROLE_ROADMAPS: CatalogRoadmap[] = [
   { id: "frontend", title: "Frontend" },
-  { id: "backend", title: "Backend" },
-  { id: "full-stack", title: "Full Stack" },
+  { id: "backend", title: "Backend", isStarred: true },
+  { id: "full-stack", title: "Full Stack", isStarred: true },
   { id: "android", title: "Android" },
-  { id: "devops", title: "DevOps" },
+  { id: "devops", title: "DevOps", isStarred: true },
   { id: "devsecops", title: "DevSecOps" },
   { id: "data-analyst", title: "Data Analyst" },
   { id: "seo", title: "SEO", isNew: true },
   { id: "inference-engineering", title: "Inference Engineering", isNew: true },
-  { id: "ai-engineer", title: "AI Engineer" },
+  { id: "ai-engineer", title: "AI Engineer", isStarred: true },
   { id: "ai-and-data-scientist", title: "AI and Data Scientist" },
   { id: "data-engineer", title: "Data Engineer" },
   { id: "machine-learning", title: "Machine Learning" },
@@ -49,11 +50,11 @@ const ROLE_ROADMAPS: CatalogRoadmap[] = [
   { id: "developer-relations", title: "Developer Relations" },
   { id: "bi-analyst", title: "BI Analyst" },
   { id: "network-engineer", title: "Network Engineer" },
-  { id: "forward-deployed-engineer", title: "FDE Roadmap" },
+  { id: "forward-deployed-engineer", title: "FDE" },
 ];
 
 const SKILL_ROADMAPS: CatalogRoadmap[] = [
-  { id: "skill-ai-agents", title: "AI Agents" },
+  { id: "skill-ai-agents", title: "AI Agents", isStarred: true },
   { id: "skill-ai-product-builders", title: "AI Product Builders" },
   { id: "skill-ai-red-teaming", title: "AI Red Teaming" },
   { id: "skill-angular", title: "Angular" },
@@ -67,7 +68,7 @@ const SKILL_ROADMAPS: CatalogRoadmap[] = [
   { id: "skill-code-review", title: "Code Review" },
   { id: "skill-computer-science", title: "Computer Science" },
   { id: "skill-css", title: "CSS" },
-  { id: "skill-dsa", title: "Data Structures & Algorithms" },
+  { id: "skill-dsa", title: "Data Structures & Algorithms", isStarred: true },
   { id: "skill-design-architecture", title: "Design and Architecture" },
   { id: "skill-design-system", title: "Design System" },
   { id: "skill-django", title: "Django" },
@@ -81,7 +82,7 @@ const SKILL_ROADMAPS: CatalogRoadmap[] = [
   { id: "skill-java", title: "Java" },
   { id: "skill-javascript", title: "JavaScript" },
   { id: "skill-kotlin", title: "Kotlin" },
-  { id: "skill-kubernetes", title: "Kubernetes" },
+  { id: "skill-kubernetes", title: "Kubernetes", isStarred: true },
   { id: "skill-laravel", title: "Laravel" },
   { id: "skill-leetcode", title: "LeetCode" },
   { id: "skill-linux", title: "Linux" },
@@ -92,7 +93,7 @@ const SKILL_ROADMAPS: CatalogRoadmap[] = [
   { id: "skill-php", title: "PHP" },
   { id: "skill-power-bi", title: "Power BI" },
   { id: "skill-prompt-engineering", title: "Prompt Engineering" },
-  { id: "skill-python", title: "Python" },
+  { id: "skill-python", title: "Python", isStarred: true },
   { id: "skill-python-data-analysis", title: "Python for Data Analysis" },
   { id: "skill-r-programming", title: "R Programming" },
   { id: "skill-react", title: "React" },
@@ -106,7 +107,7 @@ const SKILL_ROADMAPS: CatalogRoadmap[] = [
   { id: "skill-spring-boot", title: "Spring Boot" },
   { id: "skill-sql", title: "SQL" },
   { id: "skill-swift", title: "Swift & Swift UI" },
-  { id: "skill-system-design", title: "System Design" },
+  { id: "skill-system-design", title: "System Design", isStarred: true },
   { id: "skill-terraform", title: "Terraform" },
   { id: "skill-typescript", title: "TypeScript" },
   { id: "skill-vibe-coding", title: "Vibe Coding" },
@@ -117,7 +118,7 @@ const SKILL_ROADMAPS: CatalogRoadmap[] = [
 const BEST_PRACTICE_ROADMAPS: CatalogRoadmap[] = [
   { id: "best-practice-aws", title: "AWS" },
   { id: "best-practice-api-security", title: "API Security" },
-  { id: "best-practice-backend-performance", title: "Backend Performance" },
+  { id: "best-practice-backend-performance", title: "Backend Performance", isStarred: true },
   { id: "best-practice-frontend-performance", title: "Frontend Performance" },
   { id: "best-practice-code-review", title: "Code Review" },
 ];
@@ -174,9 +175,24 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
         onClick={() => setSelectedRoadmap(roadmap)}
         className="group flex min-h-[38px] items-center justify-start rounded-md px-2.5 -mx-2.5 text-left text-[13.5px] font-medium leading-snug text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 active:bg-slate-200/60 transition-colors duration-150 cursor-pointer"
       >
-        <span className="truncate group-hover:translate-x-0.5 transition-transform duration-150">
-          {roadmap.title}
-        </span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="truncate group-hover:translate-x-0.5 transition-transform duration-150">
+            {roadmap.title}
+          </span>
+          {roadmap.isStarred && (
+            <span title="High-impact skill to crack big jobs" className="inline-flex shrink-0">
+              <Star
+                size={12.5}
+                className="fill-black text-black group-hover:scale-110 transition-transform duration-150"
+              />
+            </span>
+          )}
+          {roadmap.isNew && (
+            <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600">
+              New
+            </span>
+          )}
+        </div>
       </button>
     );
   };
@@ -228,10 +244,10 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
         <button
           type="button"
           onClick={onBack}
-          className="fixed left-5 top-5 z-20 inline-flex h-8 items-center gap-1.5 px-3 rounded-md text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          aria-label="Back"
+          className="fixed left-5 top-5 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={14} />
-          Back
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
       )}
 

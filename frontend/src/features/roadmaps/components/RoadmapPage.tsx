@@ -26,9 +26,10 @@ export const RoadmapPage: React.FC<RoadmapPageProps> = ({ roadmap, onBack }) => 
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex h-8 items-center gap-1.5 px-3 text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          aria-label="Back"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={14} />
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
         <span className="text-[12px] font-medium text-slate-500 uppercase tracking-wider font-mono">
           Interactive Node Roadmap

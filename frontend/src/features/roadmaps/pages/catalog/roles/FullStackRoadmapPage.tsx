@@ -267,11 +267,11 @@ export const FullStackRoadmapPage: React.FC<FullStackRoadmapPageProps> = ({
       <div className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-100 bg-white/95 px-6 py-3 backdrop-blur-xs">
         <button
           type="button"
+          aria-label="Back to roadmaps"
           onClick={handleBack}
-          className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-[12px] font-semibold text-slate-800"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={14} />
-          Back to Roadmaps
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
         <span className="font-mono text-[12px] font-medium uppercase tracking-wider text-slate-400">
           Role

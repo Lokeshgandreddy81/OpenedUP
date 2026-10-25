@@ -119,16 +119,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   useEffect(() => {
     if (processedInitialViewRef.current === initialView) return;
     processedInitialViewRef.current = initialView;
-    if (initialView === "chapters") {
-      if (onViewChange) {
-        onViewChange("chapters");
-      } else {
-        navigate("/results");
-      }
-      return;
-    }
     setActiveView((current) => (current === initialView ? current : initialView));
-  }, [initialView, onViewChange, navigate]);
+  }, [initialView]);
 
   const [projectsNavKey, setProjectsNavKey] = useState(0);
 
@@ -143,14 +135,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       | "chapters"
       | "roadmaps"
   ) => {
-    if (view === "chapters") {
-      if (onViewChange) {
-        onViewChange("chapters");
-      } else {
-        navigate("/results");
-      }
-      return;
-    }
     if (view === "projects") {
       setProjectsNavKey((k) => k + 1);
     }

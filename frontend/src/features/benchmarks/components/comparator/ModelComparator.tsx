@@ -30,10 +30,10 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
       const found = models.find((m) => m.id === initialModelIds[0]);
       if (found) return found;
     }
-    // Default to Claude 3.7 Sonnet or highest intelligence model
+    // Default to Claude Opus 5.5, Claude Sonnet 5.5, or highest intelligence model
     return (
-      models.find((m) => m.id === "claude-3-7-sonnet-thinking") ||
-      models.find((m) => m.id === "claude-3-7-sonnet") ||
+      models.find((m) => m.id === "claude-opus-5-5-max-with-fallback") ||
+      models.find((m) => m.id === "claude-sonnet-5-5-max-with-fallback") ||
       models[0]
     );
   }, [models, initialModelIds]);
@@ -43,10 +43,11 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
       const found = models.find((m) => m.id === initialModelIds[1]);
       if (found) return found;
     }
-    // Default to GPT-4o or DeepSeek-R1
+    // Default to GPT-6 Astra, GPT-6.1 Sol, or DeepSeek V4.1
     return (
-      models.find((m) => m.id === "gpt-4o") ||
-      models.find((m) => m.id === "deepseek-r1") ||
+      models.find((m) => m.id === "gpt-6-astra-max") ||
+      models.find((m) => m.id === "gpt-6-1-sol-max") ||
+      models.find((m) => m.id === "deepseek-v4-1-flash-max") ||
       models[1] ||
       models[0]
     );
@@ -232,7 +233,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
   };
 
   return (
-    <div className="w-full bg-white flex flex-col font-sans select-none">
+    <div className="w-full bg-[#fcfcfb] flex flex-col font-sans select-none">
       {/* ========================================================
           1. MODEL SELECTION DOCK (senior UIUX redesign)
           ======================================================== */}

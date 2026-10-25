@@ -116,6 +116,30 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     hardwareType: "Wafer-Scale Engine CS-3 (900,000 AI Cores, 44GB SRAM)",
     modelSupport: [
       {
+        modelId: "deepseek-v4-1-flash-max",
+        medianTps: 385,
+        p90Tps: 450,
+        medianTtft: 0.22,
+        blendedPricePer1M: 0.44,
+        uptimePercent: 99.85,
+      },
+      {
+        modelId: "qwen3-8-max-0902",
+        medianTps: 280,
+        p90Tps: 320,
+        medianTtft: 0.28,
+        blendedPricePer1M: 0.65,
+        uptimePercent: 99.9,
+      },
+      {
+        modelId: "muse-wonder-max",
+        medianTps: 310,
+        p90Tps: 360,
+        medianTtft: 0.25,
+        blendedPricePer1M: 1.2,
+        uptimePercent: 99.85,
+      },
+      {
         modelId: "llama-3-3-70b-instruct",
         medianTps: 1420,
         p90Tps: 1650,
@@ -167,6 +191,30 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     hardwareType: "GroqChip 1 Tensor Streaming Processor (LPU)",
     modelSupport: [
       {
+        modelId: "deepseek-v4-1-flash-max",
+        medianTps: 385,
+        p90Tps: 450,
+        medianTtft: 0.22,
+        blendedPricePer1M: 0.44,
+        uptimePercent: 99.85,
+      },
+      {
+        modelId: "qwen3-8-max-0902",
+        medianTps: 280,
+        p90Tps: 320,
+        medianTtft: 0.28,
+        blendedPricePer1M: 0.65,
+        uptimePercent: 99.9,
+      },
+      {
+        modelId: "muse-wonder-max",
+        medianTps: 310,
+        p90Tps: 360,
+        medianTtft: 0.25,
+        blendedPricePer1M: 1.2,
+        uptimePercent: 99.85,
+      },
+      {
         modelId: "llama-3-3-70b-instruct",
         medianTps: 785,
         p90Tps: 840,
@@ -217,6 +265,30 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     name: "Together AI",
     hardwareType: "NVIDIA HGX H100 SXM5 80GB (FlashAttention-3)",
     modelSupport: [
+      {
+        modelId: "deepseek-v4-1-flash-max",
+        medianTps: 385,
+        p90Tps: 450,
+        medianTtft: 0.22,
+        blendedPricePer1M: 0.44,
+        uptimePercent: 99.85,
+      },
+      {
+        modelId: "qwen3-8-max-0902",
+        medianTps: 280,
+        p90Tps: 320,
+        medianTtft: 0.28,
+        blendedPricePer1M: 0.65,
+        uptimePercent: 99.9,
+      },
+      {
+        modelId: "muse-wonder-max",
+        medianTps: 310,
+        p90Tps: 360,
+        medianTtft: 0.25,
+        blendedPricePer1M: 1.2,
+        uptimePercent: 99.85,
+      },
       {
         modelId: "llama-3-3-70b-instruct",
         medianTps: 132,
@@ -277,6 +349,30 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     hardwareType: "NVIDIA H100 with FireAttention & Speculative Decoding",
     modelSupport: [
       {
+        modelId: "deepseek-v4-1-flash-max",
+        medianTps: 385,
+        p90Tps: 450,
+        medianTtft: 0.22,
+        blendedPricePer1M: 0.44,
+        uptimePercent: 99.85,
+      },
+      {
+        modelId: "qwen3-8-max-0902",
+        medianTps: 280,
+        p90Tps: 320,
+        medianTtft: 0.28,
+        blendedPricePer1M: 0.65,
+        uptimePercent: 99.9,
+      },
+      {
+        modelId: "muse-wonder-max",
+        medianTps: 310,
+        p90Tps: 360,
+        medianTtft: 0.25,
+        blendedPricePer1M: 1.2,
+        uptimePercent: 99.85,
+      },
+      {
         modelId: "llama-3-3-70b-instruct",
         medianTps: 165,
         p90Tps: 195,
@@ -327,6 +423,30 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     name: "DeepInfra",
     hardwareType: "High-Density NVIDIA H100 & A100 Clusters",
     modelSupport: [
+      {
+        modelId: "deepseek-v4-1-flash-max",
+        medianTps: 385,
+        p90Tps: 450,
+        medianTtft: 0.22,
+        blendedPricePer1M: 0.44,
+        uptimePercent: 99.85,
+      },
+      {
+        modelId: "qwen3-8-max-0902",
+        medianTps: 280,
+        p90Tps: 320,
+        medianTtft: 0.28,
+        blendedPricePer1M: 0.65,
+        uptimePercent: 99.9,
+      },
+      {
+        modelId: "muse-wonder-max",
+        medianTps: 310,
+        p90Tps: 360,
+        medianTtft: 0.25,
+        blendedPricePer1M: 1.2,
+        uptimePercent: 99.85,
+      },
       {
         modelId: "llama-3-3-70b-instruct",
         medianTps: 110,
@@ -387,6 +507,22 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     hardwareType: "AWS Trainium2 & NVIDIA H100 Enterprise Infrastructure",
     modelSupport: [
       {
+        modelId: "claude-opus-5-5-max-with-fallback",
+        medianTps: 102,
+        p90Tps: 125,
+        medianTtft: 0.65,
+        blendedPricePer1M: 5.98,
+        uptimePercent: 99.99,
+      },
+      {
+        modelId: "muse-wonder-max",
+        medianTps: 165,
+        p90Tps: 200,
+        medianTtft: 0.52,
+        blendedPricePer1M: 1.1,
+        uptimePercent: 99.99,
+      },
+      {
         modelId: "claude-3-7-sonnet",
         medianTps: 82,
         p90Tps: 94,
@@ -437,6 +573,22 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     name: "Azure OpenAI Service",
     hardwareType: "Microsoft Azure Supercomputing NVIDIA H100 Clusters",
     modelSupport: [
+      {
+        modelId: "gpt-6-astra-max",
+        medianTps: 115,
+        p90Tps: 140,
+        medianTtft: 0.6,
+        blendedPricePer1M: 3.26,
+        uptimePercent: 99.99,
+      },
+      {
+        modelId: "gpt-6-1-sol-max",
+        medianTps: 135,
+        p90Tps: 160,
+        medianTtft: 0.55,
+        blendedPricePer1M: 0.72,
+        uptimePercent: 99.99,
+      },
       {
         modelId: "gpt-4o",
         medianTps: 102,
@@ -496,6 +648,22 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     name: "Google Cloud Vertex AI",
     hardwareType: "Google Cloud TPU v5p & TPU v5e Pods",
     modelSupport: [
+      {
+        modelId: "gemini-4-argon-high",
+        medianTps: 145,
+        p90Tps: 175,
+        medianTtft: 0.48,
+        blendedPricePer1M: 1.99,
+        uptimePercent: 99.99,
+      },
+      {
+        modelId: "claude-opus-5-5-max-with-fallback",
+        medianTps: 98,
+        p90Tps: 118,
+        medianTtft: 0.68,
+        blendedPricePer1M: 5.98,
+        uptimePercent: 99.95,
+      },
       {
         modelId: "gemini-2-0-flash",
         medianTps: 240,
@@ -564,9 +732,17 @@ export interface ModelProviderMatch {
 
 export function getProvidersForModel(modelId: string): ModelProviderMatch[] {
   const matches: ModelProviderMatch[] = [];
+  const normalizedId =
+    modelId === "llama-3-3-70b"
+      ? "llama-3-3-70b-instruct"
+      : modelId === "llama-3-1-405b"
+        ? "llama-3-1-405b-instruct"
+        : modelId;
 
   for (const provider of BENCHMARK_PROVIDERS) {
-    const support = provider.modelSupport.find((s) => s.modelId === modelId);
+    const support = provider.modelSupport.find(
+      (s) => s.modelId === normalizedId || s.modelId === modelId
+    );
     if (support) {
       matches.push({
         provider,

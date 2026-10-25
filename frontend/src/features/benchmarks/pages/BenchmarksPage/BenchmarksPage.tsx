@@ -7,7 +7,11 @@ export const BenchmarksPageContent: React.FC = () => {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    navigate("/chat?view=benchmarks", { replace: true });
+    const search = window.location.search;
+    const dest = search
+      ? `/chat?view=benchmarks&${search.replace(/^\?/, "").replace(/view=[^&]*&?/, "")}`
+      : "/chat?view=benchmarks";
+    navigate(dest, { replace: true });
   }, [navigate]);
 
   return (

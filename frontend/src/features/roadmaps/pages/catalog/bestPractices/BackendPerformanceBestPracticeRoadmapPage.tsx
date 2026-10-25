@@ -234,10 +234,11 @@ export const BackendPerformanceBestPracticeRoadmapPage: React.FC<
       <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-white/95 backdrop-blur-xs">
         <button
           type="button"
+          aria-label="Back to roadmaps"
           onClick={handleBack}
-          className="inline-flex h-8 items-center gap-1.5 px-3 text-[12px] font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={14} />
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
         <span className="text-[12px] font-medium text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
           <Zap size={14} className="text-amber-500 fill-amber-500" />

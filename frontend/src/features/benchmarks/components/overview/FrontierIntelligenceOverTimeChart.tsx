@@ -10,7 +10,7 @@ const PLOT_BOTTOM = 355;
 const PLOT_WIDTH = PLOT_RIGHT - PLOT_LEFT;
 const PLOT_HEIGHT = PLOT_BOTTOM - PLOT_TOP;
 const T_MIN = new Date("2022-11-01T00:00:00Z").getTime();
-const T_MAX = new Date("2026-10-18T00:00:00Z").getTime();
+const T_MAX = new Date("2026-11-01T00:00:00Z").getTime();
 
 function getXCoordinate(dateStr: string): number {
   const t = new Date(dateStr + (dateStr.length === 10 ? "T00:00:00Z" : "")).getTime();
@@ -1043,6 +1043,16 @@ export const TIMELINE_MODELS_DATA: TimelineModelPoint[] = [
     dateStr: "2026-07-16",
     displayDate: "July 16, 2026",
     score: 44,
+  },
+  {
+    id: "kimi-kimi-k3-1-pro-6",
+    name: "Kimi K3.1 Pro",
+    creatorId: "kimi",
+    creatorName: "Moonshot AI",
+    color: "#047AFE",
+    dateStr: "2026-10-24",
+    displayDate: "October 24, 2026",
+    score: 55,
   },
 
   // ── DeepSeek (#2243e6) ──

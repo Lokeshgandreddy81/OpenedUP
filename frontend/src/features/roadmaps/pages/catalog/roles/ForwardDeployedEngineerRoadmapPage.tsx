@@ -277,9 +277,9 @@ export const ForwardDeployedEngineerRoadmapPage: React.FC<
           type="button"
           aria-label="Back to roadmaps"
           onClick={handleBack}
-          className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-[12px] font-semibold text-slate-800"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={14} />
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
         <span className="font-mono text-[12px] font-medium uppercase tracking-wider text-slate-400">
           Role
@@ -289,7 +289,7 @@ export const ForwardDeployedEngineerRoadmapPage: React.FC<
       <div className="mx-auto flex w-full max-w-[1180px] flex-1 flex-col px-6 pb-24 pt-12 sm:pt-[4rem]">
         <div className="relative flex items-center justify-center">
           <h1 className="text-center font-serif text-4xl font-normal leading-tight tracking-tight text-[#0F172A] sm:text-5xl">
-            FDE Roadmap
+            FDE
           </h1>
           <MarkerStack className="absolute right-0 top-1/2 hidden -translate-y-1/2 md:flex" />
         </div>

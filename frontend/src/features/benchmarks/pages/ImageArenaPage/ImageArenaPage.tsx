@@ -7,7 +7,7 @@ export const ImageArenaPageContent: React.FC = () => {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    navigate("/benchmarks");
+    navigate("/chat?view=benchmarks&tab=multimodal");
   };
 
   return (

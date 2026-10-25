@@ -7,7 +7,7 @@ export const CodingAgentsPageContent: React.FC = () => {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    navigate("/benchmarks");
+    navigate("/chat?view=benchmarks&tab=coding-agents");
   };
 
   return (

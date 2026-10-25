@@ -26,7 +26,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
     title: "Artificial Analysis Finance & Accounting Index",
     evaluations:
       "Incorporates 7 evaluations: AA-Omniscience, GDPval-AA v2.1, AA-Briefcase v1.1, Humanity's Last Exam, AutomationBench-AA, AA-LCR v1.1, GDP.pdf",
-    totalModels: 223,
+    totalModels: 273,
     models: [
       {
         name: "Claude Opus 5.5 (max with fallback)",
@@ -56,9 +56,9 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       },
       { name: "GPT-6.1 Sol (max)", creator: "openai", color: "#1f1f1f", value: 54 },
       { name: "Gemini 4 Argon (high)", creator: "google", color: "#34A853", value: 54 },
+      { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", value: 54 },
       { name: "Grok 4.7 (xhigh)", creator: "xai", color: "#736cd3", value: 52 },
       { name: "Muse Wonder (max)", creator: "meta", color: "#0089f4", value: 51 },
-      { name: "Kimi K3 (max)", creator: "kimi", color: "#047AFE", value: 47 },
       { name: "Gemini 3.8 Flash (high)", creator: "google", color: "#34A853", value: 47 },
       { name: "MiMo-V2.6-Pro", creator: "xiaomi", color: "#ff6900", value: 46 },
       { name: "Qwen3.8 Max (0902)", creator: "alibaba", color: "#ff7018", value: 46 },
@@ -84,7 +84,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
     title: "Artificial Analysis Strategy & Ops Index",
     evaluations:
       "Incorporates 6 evaluations: GDPval-AA v2.1, AA-Briefcase v1.1, AA-Omniscience, AutomationBench-AA, AA-LCR v1.1, GDP.pdf",
-    totalModels: 223,
+    totalModels: 273,
     models: [
       {
         name: "Claude Opus 5.5 (max with fallback)",
@@ -113,11 +113,11 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       },
       { name: "GPT-6 Astra (max)", creator: "openai", color: "#1f1f1f", value: 57 },
       { name: "GPT-6.1 Sol (max)", creator: "openai", color: "#1f1f1f", value: 57 },
+      { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", value: 57 },
       { name: "Gemini 4 Argon (high)", creator: "google", color: "#34A853", value: 56 },
       { name: "Muse Wonder (max)", creator: "meta", color: "#0089f4", value: 55 },
       { name: "Grok 4.7 (xhigh)", creator: "xai", color: "#736cd3", value: 54 },
       { name: "DeepSeek V4.1 Flash (max)", creator: "deepseek", color: "#2243e6", value: 52 },
-      { name: "Kimi K3 (max)", creator: "kimi", color: "#047AFE", value: 50 },
       { name: "Gemini 3.8 Flash (high)", creator: "google", color: "#34A853", value: 48 },
       { name: "MiMo-V2.6-Pro", creator: "xiaomi", color: "#ff6900", value: 48 },
       { name: "GLM-5.3 (max)", creator: "zai", color: "#1c7ff8", value: 48 },
@@ -142,7 +142,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
     title: "Artificial Analysis Legal Index",
     evaluations:
       "Incorporates 7 evaluations: AA-Omniscience, GDPval-AA v2.1, AA-Briefcase v1.1, Humanity's Last Exam, AA-LCR v1.1, GDP.pdf, AutomationBench-AA",
-    totalModels: 223,
+    totalModels: 273,
     models: [
       {
         name: "Claude Opus 5.5 (max with fallback)",
@@ -165,6 +165,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
         color: "#cc785c",
         value: 56,
       },
+      { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", value: 56 },
       {
         name: "Muse Wonder Full (max)",
         creator: "meta",
@@ -175,7 +176,6 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       { name: "Grok 4.7 (xhigh)", creator: "xai", color: "#736cd3", value: 54 },
       { name: "Muse Wonder (max)", creator: "meta", color: "#0089f4", value: 52 },
       { name: "Gemini 3.8 Flash (high)", creator: "google", color: "#34A853", value: 52 },
-      { name: "Kimi K3 (max)", creator: "kimi", color: "#047AFE", value: 49 },
       { name: "Step 5 Preview", creator: "stepfun", color: "#00F5E7", value: 46 },
       { name: "Qwen3.8 Max (0902)", creator: "alibaba", color: "#ff7018", value: 46 },
       { name: "MiMo-V2.6-Pro", creator: "xiaomi", color: "#ff6900", value: 45 },
@@ -222,9 +222,9 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       },
       { name: "GPT-6 Astra (max)", creator: "openai", color: "#1f1f1f", value: 52 },
       { name: "GPT-6.1 Sol (max)", creator: "openai", color: "#1f1f1f", value: 51 },
+      { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", value: 51 },
       { name: "Grok 4.7 (xhigh)", creator: "xai", color: "#736cd3", value: 47 },
       { name: "GLM-5.3 (max)", creator: "zai", color: "#1c7ff8", value: 47 },
-      { name: "Kimi K3 (max)", creator: "kimi", color: "#047AFE", value: 45 },
       { name: "GLM-5.3-Flash", creator: "zai", color: "#1c7ff8", value: 45 },
       { name: "Claude Haiku 5.5 (max)", creator: "anthropic", color: "#cc785c", value: 44 },
       { name: "MiMo-V2.6-Pro", creator: "xiaomi", color: "#ff6900", value: 42 },
@@ -245,7 +245,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
     title: "Artificial Analysis Engineering Index",
     evaluations:
       "Incorporates 6 evaluations: AA-Omniscience, Humanity's Last Exam, CritPt, GDPval-AA v2.1, AA-Briefcase v1.1, Terminal-Bench 4.0",
-    totalModels: 222,
+    totalModels: 273,
     models: [
       {
         name: "Claude Opus 5.5 (max with fallback)",
@@ -274,6 +274,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       },
       { name: "Gemini 4 Argon (high)", creator: "google", color: "#34A853", value: 55 },
       { name: "GPT-6 Astra (max)", creator: "openai", color: "#1f1f1f", value: 55 },
+      { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", value: 55 },
       { name: "GPT-6.1 Sol (max)", creator: "openai", color: "#1f1f1f", value: 54 },
       { name: "Muse Wonder (max)", creator: "meta", color: "#0089f4", value: 54 },
       { name: "Grok 4.7 (xhigh)", creator: "xai", color: "#736cd3", value: 47 },
@@ -283,7 +284,6 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       { name: "Step 5 Preview", creator: "stepfun", color: "#00F5E7", value: 45 },
       { name: "Claude Haiku 5.5 (max)", creator: "anthropic", color: "#cc785c", value: 45 },
       { name: "GLM-5.3-Flash", creator: "zai", color: "#1c7ff8", value: 44 },
-      { name: "Kimi K3 (max)", creator: "kimi", color: "#047AFE", value: 43 },
       { name: "Gemini 3.8 Flash (high)", creator: "google", color: "#34A853", value: 43 },
       { name: "Muse Spark Open (xhigh)", creator: "meta", color: "#0089f4", value: 40 },
       { name: "DeepSeek V4.1 Flash (max)", creator: "deepseek", color: "#2243e6", value: 39 },
@@ -303,7 +303,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
     title: "Artificial Analysis Economics Index",
     evaluations:
       "Incorporates 5 evaluations: AA-Omniscience, Humanity's Last Exam, GDPval-AA v2.1, AA-Briefcase v1.1, AA-LCR v1.1",
-    totalModels: 230,
+    totalModels: 273,
     models: [
       {
         name: "Claude Opus 5.5 (max with fallback)",
@@ -333,9 +333,9 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       { name: "Gemini 4 Argon (high)", creator: "google", color: "#34A853", value: 60 },
       { name: "GPT-6 Astra (max)", creator: "openai", color: "#1f1f1f", value: 60 },
       { name: "GPT-6.1 Sol (max)", creator: "openai", color: "#1f1f1f", value: 59 },
+      { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", value: 59 },
       { name: "Muse Wonder (max)", creator: "meta", color: "#0089f4", value: 58 },
       { name: "Grok 4.7 (xhigh)", creator: "xai", color: "#736cd3", value: 56 },
-      { name: "Kimi K3 (max)", creator: "kimi", color: "#047AFE", value: 53 },
       { name: "MiMo-V2.6-Pro", creator: "xiaomi", color: "#ff6900", value: 53 },
       { name: "Step 5 Preview", creator: "stepfun", color: "#00F5E7", value: 53 },
       { name: "Gemini 3.8 Flash (high)", creator: "google", color: "#34A853", value: 52 },

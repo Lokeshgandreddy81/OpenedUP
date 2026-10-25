@@ -109,18 +109,24 @@ export const ProviderLeaderboard: React.FC<ProviderLeaderboardProps> = ({
   // All distinct models available across all inference providers
   const allAvailableModels = useMemo(() => {
     const modelSet = new Set<string>();
+    POPULAR_MODELS.forEach((m) => modelSet.add(m.id));
     BENCHMARK_PROVIDERS.forEach((provider) => {
       provider.modelSupport.forEach((sup) => modelSet.add(sup.modelId));
     });
-    return Array.from(modelSet).map((id) => {
-      const benchmarkModel = getModelById(id);
-      return {
-        id,
-        name: benchmarkModel?.name ?? id,
-        creator: benchmarkModel?.creatorDisplayName ?? "Open Weights",
-        intelligence: benchmarkModel?.quality.intelligenceIndex ?? 0,
-      };
-    });
+    BENCHMARK_MODELS.slice(0, 30).forEach((m) => modelSet.add(m.id));
+
+    return Array.from(modelSet)
+      .map((id) => {
+        const benchmarkModel = getModelById(id);
+        const popular = POPULAR_MODELS.find((p) => p.id === id);
+        return {
+          id,
+          name: benchmarkModel?.name ?? popular?.label ?? id,
+          creator: benchmarkModel?.creatorDisplayName ?? "Inference Model",
+          intelligence: benchmarkModel?.quality.intelligenceIndex ?? 50,
+        };
+      })
+      .sort((a, b) => b.intelligence - a.intelligence);
   }, []);
 
   // Provider matches for the active model

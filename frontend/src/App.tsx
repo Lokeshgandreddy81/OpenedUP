@@ -12,7 +12,6 @@ import { BenchmarksPageSkeleton } from "./features/benchmarks/pages/BenchmarksPa
 import { ChatPageSkeleton } from "./features/chat/pages/ChatPage/loading";
 import { ProjectsPageSkeleton } from "./features/projects/pages/ProjectsPage/loading";
 import { ScheduledPageSkeleton } from "./features/scheduled/pages/ScheduledPage/loading";
-import { ImageArenaPageSkeleton } from "./features/benchmarks/pages/ImageArenaPage/loading";
 import { CodingAgentsPageSkeleton } from "./features/benchmarks/pages/CodingAgentsPage/loading";
 
 const LandingPage = lazyWithRetry(() =>
@@ -46,11 +45,6 @@ const ProjectsPage = lazyWithRetry(() =>
 const ScheduledPage = lazyWithRetry(() =>
   import("./features/scheduled/pages/ScheduledPage").then(({ ScheduledPage }) => ({
     default: ScheduledPage,
-  }))
-);
-const ImageArenaPage = lazyWithRetry(() =>
-  import("./features/benchmarks/pages/ImageArenaPage").then(({ ImageArenaPage }) => ({
-    default: ImageArenaPage,
   }))
 );
 const CodingAgentsPage = lazyWithRetry(() =>
@@ -130,11 +124,7 @@ export const AppShell: React.FC = () => {
         />
         <Route
           path="/image-arena"
-          element={
-            <PageRoute name="Image arena" fallback={<ImageArenaPageSkeleton />}>
-              <ImageArenaPage />
-            </PageRoute>
-          }
+          element={<Navigate to="/benchmarks" replace />}
         />
         <Route
           path="/coding-agents"

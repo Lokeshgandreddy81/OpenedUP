@@ -1,36 +1,17 @@
 import React from "react";
-import { ResultsView } from "../../components/ResultsView";
-import { useAppContext } from "../../state/AppContext";
+import { useNavigate } from "react-router-dom";
+import { ChatChaptersScreen } from "../ChatChaptersScreen";
 import { ResultsPageErrorBoundary } from "./ErrorBoundary";
+import { useAppContext } from "../../state/AppContext";
 
 export const ResultsPageContent: React.FC = () => {
-  const {
-    photos,
-    engineOutput,
-    readingPhase,
-    failedBatches,
-    handleRetryFailedBatches,
-    handleUpdateRow,
-    handleChangeCostCenter,
-    handleAddFiles,
-    handleNewPile,
-  } = useAppContext();
+  const navigate = useNavigate();
 
-  return (
-    <ResultsView
-      photos={photos}
-      computedRows={engineOutput.computedRows}
-      merchantTiles={engineOutput.merchantTiles}
-      reconciliation={engineOutput.reconciliation}
-      readingPhase={readingPhase}
-      failedBatches={failedBatches}
-      onRetryFailedBatches={handleRetryFailedBatches}
-      onUpdateRow={handleUpdateRow}
-      onChangeCostCenter={handleChangeCostCenter}
-      onAddFiles={handleAddFiles}
-      onNewPile={handleNewPile}
-    />
-  );
+  React.useEffect(() => {
+    navigate("/chat?view=chapters", { replace: true });
+  }, [navigate]);
+
+  return <ChatChaptersScreen />;
 };
 
 export const ResultsPage: React.FC = () => {

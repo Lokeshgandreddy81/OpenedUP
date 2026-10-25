@@ -59,27 +59,34 @@ function formatPrice(usd: number): string {
 }
 
 /**
- * Format latency TTFT in milliseconds with 2 decimals
+ * Format latency TTFT into human readable format (e.g. 450 ms, 2.3 s, 9m 17s)
  */
-function formatLatencyMs(ttftSec: number): string {
+function formatLatency(ttftSec: number): string {
   if (!ttftSec || ttftSec <= 0) return "—";
-  const ms = ttftSec * 1000;
-  return ms < 10 ? ms.toFixed(2) : ms.toFixed(2);
+  if (ttftSec < 1) {
+    return `${Math.round(ttftSec * 1000)} ms`;
+  }
+  if (ttftSec < 60) {
+    return `${ttftSec.toFixed(1)} s`;
+  }
+  const min = Math.floor(ttftSec / 60);
+  const sec = Math.round(ttftSec % 60);
+  return `${min}m ${sec}s`;
 }
 
 /**
- * Format 500-token end-to-end response time in milliseconds with 2 decimals
+ * Format 500-token end-to-end response time into human readable format
  */
-function format500TokenTimeMs(model: AIModelBenchmark): string {
+function format500TokenTime(model: AIModelBenchmark): string {
   const e2e = model.performance.endToEnd500TokensSec;
   if (e2e && e2e > 0) {
-    return (e2e * 1000).toFixed(2);
+    return formatLatency(e2e);
   }
   const ttft = model.performance.ttftSeconds.median;
   const speed = model.performance.outputSpeedTokensPerSec.median;
   if (ttft > 0 && speed > 0) {
-    const calc = (ttft + 500 / speed) * 1000;
-    return calc.toFixed(2);
+    const calc = ttft + 500 / speed;
+    return formatLatency(calc);
   }
   return "—";
 }
@@ -366,7 +373,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
   }, [filteredModels, sortField, sortDirection, activeLeaderboardMode]);
 
   return (
-    <div className="w-full min-h-screen bg-white text-neutral-900 font-sans flex flex-col selection:bg-[#0047FF]/15">
+    <div className="w-full min-h-screen bg-[#fcfcfb] text-neutral-900 font-sans flex flex-col selection:bg-[#0047FF]/15">
       {/* ========================================================
           1. HEADER SECTION (Newsreader Serif)
           ======================================================== */}
@@ -729,7 +736,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
                         <ArrowUpDown size={11} className="text-neutral-400" />
                       )}
                     </div>
-                    <span className="text-[11px] font-normal text-neutral-400">TTFT (ms)</span>
+                    <span className="text-[11px] font-normal text-neutral-400">TTFT</span>
                   </button>
                 </th>
 
@@ -837,12 +844,12 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
 
                     {/* 7. Latency TTFT */}
                     <td className="py-4 px-4 text-right font-mono text-sm text-neutral-700">
-                      {formatLatencyMs(m.performance.ttftSeconds.median)}
+                      {formatLatency(m.performance.ttftSeconds.median)}
                     </td>
 
                     {/* 8. Time to First Response (500-Token Time) */}
                     <td className="py-4 px-4 text-right font-mono text-sm text-neutral-700">
-                      {format500TokenTimeMs(m)}
+                      {format500TokenTime(m)}
                     </td>
 
                     {/* 9. Further Metrics: Model ↗ and Compare */}
@@ -975,7 +982,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
             },
             {
               q: "What are the top models on the LLM Leaderboard?",
-              a: "The top models by Intelligence Index are: 1. Claude Opus 5.5 (max with fallback) (58), 2. Claude Sonnet 5.5 (max with fallback) (56), 3. Claude Opus 5.5 (xhigh with fallback) (56), 4. Muse Wonder Full (max) (56), and 5. Claude Opus 5.5 (high with fallback) (54).",
+              a: "The top models by Intelligence Index are: 1. Claude Opus 5.5 (max with fallback) (58), 2. Claude Sonnet 5.5 (max with fallback) (56), 3. Muse Wonder Full (max) (56), 4. Kimi K3.1 Pro (55), and 5. Claude Opus 5.5 (high with fallback) (54).",
             },
             {
               q: "Which AI model has the fastest output speed?",
