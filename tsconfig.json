@@ -1,7 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "./backend/contracts" },
+    { "path": "./packages/contracts" },
     { "path": "./backend" },
     { "path": "./frontend" }
   ]

@@ -17,7 +17,7 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"],
-      "@charan-interiors/contracts": ["../backend/contracts/src/index.ts"]
+      "@charan-interiors/contracts": ["../packages/contracts/src/index.ts"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true,
@@ -27,7 +27,7 @@
   "include": ["src", "vite.config.ts", "vitest.config.ts"],
   "references": [
     {
-      "path": "../backend/contracts"
+      "path": "../packages/contracts"
     }
   ]
 }

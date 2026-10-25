@@ -9,7 +9,7 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
       "@charan-interiors/contracts": path.resolve(
         import.meta.dirname,
-        "../backend/contracts/src/index.ts"
+        "../packages/contracts/src/index.ts"
       ),
     },
   },
