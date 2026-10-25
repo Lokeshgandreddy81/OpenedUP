@@ -392,7 +392,7 @@ paths:
           description: Current project and global instruction text.
     post:
       summary: Save workspace instructions
-      description: Writes OPENEDUP.md or global AGENTS.md and is restricted to local development requests.
+      description: Writes project_rules.md or global AGENTS.md and is restricted to local development requests.
       requestBody:
         required: true
         content:

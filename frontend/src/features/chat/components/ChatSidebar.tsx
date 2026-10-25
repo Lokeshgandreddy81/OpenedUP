@@ -61,7 +61,8 @@ interface ChatSidebarProps {
     | "plugins"
     | "benchmarks"
     | "chapters"
-    | "roadmaps";
+    | "roadmaps"
+    | "scheduled";
   onSelectView?: (
     view:
       | "chat"
@@ -72,6 +73,7 @@ interface ChatSidebarProps {
       | "benchmarks"
       | "chapters"
       | "roadmaps"
+      | "scheduled"
   ) => void;
 }
 
@@ -163,7 +165,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           onClick={onOpenScheduledTasks}
           title="Scheduled tasks"
           aria-label="Scheduled tasks"
-          className="w-8 h-8 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+            activeView === "scheduled"
+              ? "bg-[#ECECF1] text-slate-950 font-medium"
+              : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+          }`}
         >
           <Clock size={16} strokeWidth={1.8} />
         </button>
@@ -299,7 +305,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <button
           type="button"
           onClick={onOpenScheduledTasks}
-          className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors cursor-pointer text-left"
+          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+            activeView === "scheduled"
+              ? "bg-[#ECECF1] text-slate-950 font-medium"
+              : "text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 font-normal"
+          }`}
         >
           <Clock size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
           <span className="truncate">Scheduled tasks</span>

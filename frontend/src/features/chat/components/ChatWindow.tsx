@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
-import { CHAT_PLUGINS, useInstalledPluginIds } from "../../plugins/publicApi";
+import { useInstalledPluginIds } from "../../plugins/publicApi";
 import type { CustomizeCategory } from "../../customize";
 import { ChatWorkspaceScreens } from "../pages/ChatPage/ChatWorkspaceScreens";
 import { getKeyForModel, getProviderChatRequestConfig } from "../../customize/publicApi";
@@ -58,7 +57,8 @@ export interface ChatWindowProps {
     | "plugins"
     | "benchmarks"
     | "chapters"
-    | "roadmaps";
+    | "roadmaps"
+    | "scheduled";
   onViewChange?: (
     view:
       | "chat"
@@ -69,6 +69,7 @@ export interface ChatWindowProps {
       | "benchmarks"
       | "chapters"
       | "roadmaps"
+      | "scheduled"
   ) => void;
 }
 
@@ -82,8 +83,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   initialView = "chat",
   onViewChange,
 }) => {
-  const navigate = useNavigate();
-  const { user, signIn, signInError } = useChatAuth();
+  const { user } = useChatAuth();
   const [activeView, setActiveView] = useState<
     | "chat"
     | "projects"
@@ -93,6 +93,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     | "benchmarks"
     | "chapters"
     | "roadmaps"
+    | "scheduled"
   >(initialView);
   const [customizeInitialCategory, setCustomizeInitialCategory] =
     useState<CustomizeCategory>(initialCustomizeCategory);
@@ -108,7 +109,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [artifactDraftPrompt, setArtifactDraftPrompt] = useState("");
   const [artifactActionError, setArtifactActionError] = useState("");
   const installedPluginIds = useInstalledPluginIds();
-  const [isSkillsMenuOpen, setIsSkillsMenuOpen] = useState(false);
 
   useEffect(() => {
     setSelectedSkillIds((current) =>
@@ -124,38 +124,42 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const [projectsNavKey, setProjectsNavKey] = useState(0);
 
-  const handleSelectView = (
-    view:
-      | "chat"
-      | "projects"
-      | "artifacts"
-      | "customize"
-      | "plugins"
-      | "benchmarks"
-      | "chapters"
-      | "roadmaps"
-  ) => {
-    if (view === "projects") {
-      setProjectsNavKey((k) => k + 1);
-    }
-    if (window.matchMedia("(max-width: 639px)").matches) setIsSidebarOpen(false);
-    if (view === "customize") {
-      setCustomizeInitialCategory("Connectors");
-    }
-    setActiveView(view);
-    try {
-      const url = new URL(window.location.href);
-      if (view === "chat") {
-        url.searchParams.delete("view");
-      } else {
-        url.searchParams.set("view", view);
+  const handleSelectView = useCallback(
+    (
+      view:
+        | "chat"
+        | "projects"
+        | "artifacts"
+        | "customize"
+        | "plugins"
+        | "benchmarks"
+        | "chapters"
+        | "roadmaps"
+        | "scheduled"
+    ) => {
+      if (view === "projects") {
+        setProjectsNavKey((k) => k + 1);
       }
-      window.history.replaceState({}, "", url.toString());
-    } catch {
-      // ignore
-    }
-    onViewChange?.(view);
-  };
+      if (window.matchMedia("(max-width: 639px)").matches) setIsSidebarOpen(false);
+      if (view === "customize") {
+        setCustomizeInitialCategory("Connectors");
+      }
+      setActiveView(view);
+      try {
+        const url = new URL(window.location.href);
+        if (view === "chat") {
+          url.searchParams.delete("view");
+        } else {
+          url.searchParams.set("view", view);
+        }
+        window.history.replaceState({}, "", url.toString());
+      } catch {
+        // ignore
+      }
+      onViewChange?.(view);
+    },
+    [onViewChange]
+  );
 
   const handleOpenProvidersTab = useCallback(() => {
     setCustomizeInitialCategory("Providers");
@@ -165,9 +169,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleOpenScheduledTasks = useCallback(() => {
     if (window.matchMedia("(max-width: 639px)").matches) setIsSidebarOpen(false);
-    if (onOpenScheduledTasks) onOpenScheduledTasks();
-    else setIsScheduledTasksInternalOpen(true);
-  }, [onOpenScheduledTasks]);
+    if (onOpenScheduledTasks) {
+      onOpenScheduledTasks();
+    } else {
+      handleSelectView("scheduled");
+    }
+  }, [onOpenScheduledTasks, handleSelectView]);
 
   const [isThinking, setIsThinking] = useState(false);
   const [isResponding, setIsResponding] = useState(false);
@@ -868,13 +875,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       {/* Left History & Navigation Drawer with Back button returning to main sidebar */}
       <ChatSidebar
         conversations={conversations}
-        activeConversationId={activeConversationId}
+        activeConversationId={isTemporaryChat ? "" : activeConversationId}
         onSelectConversation={(id) => {
+          setIsTemporaryChat(false);
+          setTemporaryMessages([]);
           setActiveConversationId(id);
           const conversation = conversations.find((item) => item.id === id);
           if (conversation?.model) setSelectedModel(getSelectableChatModel(conversation.model));
         }}
-        onNewChat={handleNewChat}
+        onNewChat={() => {
+          setIsTemporaryChat(false);
+          setTemporaryMessages([]);
+          void handleNewChat();
+        }}
         onBack={onClose}
         isOpen={isSidebarOpen}
         onToggleOpen={() => setIsSidebarOpen((v) => !v)}
@@ -941,86 +954,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               </p>
             </div>
             <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
-              {user ? (
-                <span className="hidden max-w-48 truncate text-xs text-slate-500 sm:inline">
-                  {user.displayName || user.email || "Signed in"}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void signIn()}
-                  className="text-xs font-medium text-slate-700 hover:text-slate-950"
-                >
-                  Sign in to save chats
-                </button>
-              )}
-              {signInError && (
-                <span
-                  role="alert"
-                  className="max-w-64 truncate text-[11px] text-rose-600"
-                  title={signInError}
-                >
-                  {signInError}
-                </span>
-              )}
-              <div className="relative">
-                <button
-                  type="button"
-                  aria-expanded={isSkillsMenuOpen}
-                  onClick={() => setIsSkillsMenuOpen((open) => !open)}
-                  className="h-8 px-2.5 rounded-lg text-xs text-slate-600 hover:bg-slate-100"
-                >
-                  Skills{selectedSkillIds.length ? ` · ${selectedSkillIds.length}` : ""}
-                </button>
-                {isSkillsMenuOpen && (
-                  <div className="absolute right-0 top-10 z-50 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
-                    <p className="mb-2 text-xs font-semibold text-slate-800">
-                      Run skills with this chat
-                    </p>
-                    {CHAT_PLUGINS.filter((plugin) => installedPluginIds.includes(plugin.id)).map(
-                      (plugin) => (
-                        <label key={plugin.id} className="flex gap-2.5 py-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedSkillIds.includes(plugin.id)}
-                            onChange={() =>
-                              setSelectedSkillIds((current) =>
-                                current.includes(plugin.id)
-                                  ? current.filter((item) => item !== plugin.id)
-                                  : [...current, plugin.id]
-                              )
-                            }
-                          />
-                          <span>
-                            <span className="block text-xs font-medium text-slate-800">
-                              {plugin.name}
-                            </span>
-                            <span className="block text-[11px] leading-4 text-slate-500">
-                              {plugin.description}
-                            </span>
-                          </span>
-                        </label>
-                      )
-                    )}
-                    {installedPluginIds.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsSkillsMenuOpen(false);
-                          handleSelectView("plugins");
-                        }}
-                        className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white"
-                      >
-                        Install a plugin to enable a chat skill
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
               <button
                 type="button"
-                onClick={() => setIsTemporaryChat((v) => !v)}
-                title={isTemporaryChat ? "Temporary chat (Active)" : "Temporary chat"}
+                onClick={() => {
+                  setIsTemporaryChat((prev) => {
+                    setTemporaryMessages([]);
+                    return !prev;
+                  });
+                }}
+                title={isTemporaryChat ? "Turn off temporary chat" : "Turn on temporary chat"}
                 aria-label="Temporary chat"
                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                   isTemporaryChat
@@ -1035,18 +977,41 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Temporary Chat Info Banner */}
+          {isTemporaryChat && (
+            <div className="w-full bg-[#f6f6f4] border-b border-slate-200/70 px-4 py-2 flex items-center justify-center gap-2 text-xs text-slate-600 select-none animate-in fade-in duration-150">
+              <GhostIcon size={14} className="text-slate-600 shrink-0" />
+              <span>Temporary Chat is on. Messages are not saved to your history or used to train models.</span>
+            </div>
+          )}
+
           {isEmptyChat ? (
             <div className="flex-1 w-full flex flex-col items-center justify-center px-4 pb-16 select-none animate-in fade-in duration-200">
               <div className="w-full max-w-[880px] flex flex-col items-center">
-                {/* Hero Heading below the incognito bar */}
-                <div className="mb-7 text-center">
-                  <h2 className="text-[30px] font-medium tracking-[-0.035em] text-slate-900 md:text-[36px]">
-                    What can I help with?
-                  </h2>
-                  <p className="mt-2 text-[14px] text-slate-500">
-                    Ask a question or drop in a file to get started.
-                  </p>
-                </div>
+                {/* Hero Heading */}
+                {isTemporaryChat ? (
+                  <div className="mb-7 text-center">
+                    <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center mx-auto mb-3 shadow-xs">
+                      <GhostIcon size={22} className="text-white" />
+                    </div>
+                    <h2 className="text-[28px] font-medium tracking-[-0.035em] text-slate-900 md:text-[34px]">
+                      Temporary Chat
+                    </h2>
+                    <p className="mt-2 text-[14px] text-slate-500 max-w-md mx-auto">
+                      Chats in this mode won&apos;t be saved in your history, won&apos;t use memories, and disappear when you leave.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mb-7 text-center">
+                    <h2 className="text-[30px] font-medium tracking-[-0.035em] text-slate-900 md:text-[36px]">
+                      What can I help with?
+                    </h2>
+                    <p className="mt-2 text-[14px] text-slate-500">
+                      Ask a question or drop in a file to get started.
+                    </p>
+                  </div>
+                )}
 
                 {/* Centered Input Box */}
                 <div className="w-full">
@@ -1058,7 +1023,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     }}
                     isThinking={isThinking}
                     onStopThinking={stopGeneration}
-                    placeholder="Message Shoebox…"
+                    placeholder={isTemporaryChat ? "Message Temporary Chat…" : "Message Shoebox…"}
                     selectedModel={selectedModel}
                     onChangeModel={handleModelChange}
                     onOpenProjects={() => handleSelectView("projects")}
@@ -1142,7 +1107,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   }}
                   isThinking={isThinking}
                   onStopThinking={stopGeneration}
-                  placeholder="Message Shoebox…"
+                  placeholder={isTemporaryChat ? "Message Temporary Chat…" : "Message Shoebox…"}
                   selectedModel={selectedModel}
                   onChangeModel={handleModelChange}
                   onOpenProjects={() => handleSelectView("projects")}

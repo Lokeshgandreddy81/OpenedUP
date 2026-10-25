@@ -31,7 +31,8 @@ export type ChatWorkspaceView =
   | "plugins"
   | "benchmarks"
   | "chapters"
-  | "roadmaps";
+  | "roadmaps"
+  | "scheduled";
 
 export interface ChatWorkspaceScreensProps {
   activeView: ChatWorkspaceView;
@@ -145,6 +146,22 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
         </PageRoute>
       );
       break;
+    case "scheduled":
+      screen = (
+        <PageRoute
+          key={activeView}
+          name="Scheduled tasks"
+          fallback={<ChatScreenLoading name="Scheduled tasks" />}
+        >
+          <ScheduledTasksScreen
+            onClose={() => onSelectView("chat")}
+            onNavigateToProviders={onOpenProviders}
+            onNavigateToChat={onNavigateToChat}
+            isEmbedded={true}
+          />
+        </PageRoute>
+      );
+      break;
     default:
       break;
   }
@@ -152,7 +169,7 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
   return (
     <>
       {screen}
-      {isScheduledTasksOpen && (
+      {isScheduledTasksOpen && activeView !== "scheduled" && (
         <PageRoute name="Scheduled tasks" fallback={<ChatScreenLoading name="Scheduled tasks" />}>
           <ScheduledTasksScreen
             onClose={onCloseScheduledTasks}
@@ -164,6 +181,7 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
               onCloseScheduledTasks();
               onNavigateToChat(prompt);
             }}
+            isEmbedded={true}
           />
         </PageRoute>
       )}

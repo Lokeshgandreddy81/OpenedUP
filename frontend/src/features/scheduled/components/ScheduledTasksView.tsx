@@ -11,20 +11,19 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Check,
   Pencil,
   Copy,
   RotateCw,
   Calendar,
   Clock,
-  Bot,
   MessageSquarePlus,
   Activity,
   History,
   AlertCircle,
-  FileText,
   KeyRound,
-  ExternalLink,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   getModelMeta,
@@ -32,6 +31,7 @@ import {
   type ScheduledTaskRunRecord,
 } from "@charan-interiors/contracts";
 import { useProviderKeys, getKeyForModel } from "../../customize/publicApi";
+import { CreatorLogo } from "../../benchmarks/publicApi";
 import { ClockIcon } from "./ClockIcon";
 import { AssistantResponse } from "../../chat";
 import {
@@ -45,6 +45,7 @@ import {
   deleteScheduledTask,
   listScheduledTasks,
   listScheduledTaskRuns,
+  resolveModelCreator,
   runScheduledTask,
   scheduledModelName,
   scheduledRunMessage,
@@ -59,6 +60,7 @@ export interface ScheduledTasksViewProps {
   onNavigateToChat?: (initialPrompt?: string) => void;
   onNavigateToProviders: () => void;
   openedFromChat?: boolean;
+  isEmbedded?: boolean;
 }
 
 const REPEAT_OPTIONS: { label: string; value: TaskFrequency }[] = [
@@ -67,8 +69,6 @@ const REPEAT_OPTIONS: { label: string; value: TaskFrequency }[] = [
   { label: "Weekly", value: "weekly" },
   { label: "Monthly", value: "monthly" },
 ];
-
-const AVAILABLE_ICONS = ["⏱️", "☀️", "📰", "📊", "📧", "⚡", "🧠", "💻", "🎯", "🔔", "📝", "🚀"];
 
 // All 15-minute time increments from 12:00 AM to 11:45 PM (96 intervals)
 const TIME_OPTIONS: string[] = (() => {
@@ -83,14 +83,38 @@ const TIME_OPTIONS: string[] = (() => {
   return list;
 })();
 
+function getFriendlyTimezone(tz: string): string {
+  if (!tz) return "";
+  if (tz.includes("Calcutta") || tz.includes("Kolkata")) return "India Time";
+  if (tz.includes("New_York")) return "Eastern Time";
+  if (tz.includes("Chicago")) return "Central Time";
+  if (tz.includes("Denver")) return "Mountain Time";
+  if (tz.includes("Los_Angeles")) return "Pacific Time";
+  if (tz.includes("London")) return "UK Time";
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      timeZoneName: "longGeneric",
+    });
+    const part = formatter.formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value;
+    if (part && !part.startsWith("GMT") && !part.startsWith("UTC")) {
+      return part.replace("Standard Time", "Time");
+    }
+  } catch {
+    // Fall back to simple city label on formatting errors
+  }
+  return tz.replace(/_/g, " ").split("/").pop() || tz;
+}
+
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   isOpen,
   onClose,
-  onNavigateToChat,
+  onNavigateToChat: _onNavigateToChat,
   onNavigateToProviders,
   openedFromChat = false,
+  isEmbedded = false,
 }) => {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -137,6 +161,10 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
+  // Task actions dropdown menu state
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
+
   // Modal creation state
   const [modalTitle, setModalTitle] = useState("");
   const [modalPrompt, setModalPrompt] = useState("");
@@ -151,6 +179,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
 
   // Advanced settings state
+  const [runOnThisComputer, setRunOnThisComputer] = useState(true);
   const [notificationsMode, setNotificationsMode] = useState<
     "Important updates" | "Failed runs only"
   >("Important updates");
@@ -182,6 +211,10 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     }
   }, []);
 
+  const friendlyTimezone = useMemo(() => {
+    return getFriendlyTimezone(timezoneLabel);
+  }, [timezoneLabel]);
+
   // Keyboard navigation: Escape key closes modal or window
   useEffect(() => {
     if (!isOpen) return;
@@ -209,18 +242,21 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     }
   }, [isSearchOpen]);
 
-  // Close filter menu on outside click
+  // Close filter menu and actions menu on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (filterMenuRef.current && !filterMenuRef.current.contains(e.target as Node)) {
         setIsFilterMenuOpen(false);
       }
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) {
+        setIsActionsMenuOpen(false);
+      }
     };
-    if (isFilterMenuOpen) {
+    if (isFilterMenuOpen || isActionsMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isFilterMenuOpen]);
+  }, [isFilterMenuOpen, isActionsMenuOpen]);
 
   // Auto-focus instructions input when modal opens
   useEffect(() => {
@@ -309,8 +345,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       .then((loaded) => {
         if (!active) return;
         setTasks(loaded);
-        if (loaded.length > 0 && !selectedTaskId) {
-          setSelectedTaskId(loaded[0].id);
+        if (loaded.length > 0) {
+          setSelectedTaskId((current) => current || loaded[0].id);
         }
       })
       .catch((error: unknown) => {
@@ -412,6 +448,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     setModalFrequency("daily");
     setModalTime("9:00 AM");
     setModalDay("Monday");
+    setRunOnThisComputer(true);
     setNotificationsMode("Important updates");
     setStartInNewChat(false);
     setSelectedModel("gpt-6-astra");
@@ -435,6 +472,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     setModalTime(task.time);
     setModalDay(task.dayOfWeek || "Monday");
     setModalDayOfMonth(task.dayOfMonth ?? new Date(task.createdAt).getDate());
+    setRunOnThisComputer(task.runOnThisComputer ?? true);
     setNotificationsMode(task.notifications || "Important updates");
     setStartInNewChat(Boolean(task.startInNewChat));
     setSelectedModel(task.model || "gpt-6-astra");
@@ -459,7 +497,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     const resolvedKey = modalApiKey.trim() || apiKey;
 
     if (!hasKey(provider) && !resolvedKey) {
-      showToast(`Connect your ${PROVIDER_CATALOG[provider].name} key or provide one below.`);
+      showToast(`Connect your ${PROVIDER_CATALOG[provider].name} key in Customize → Providers.`);
       return;
     }
 
@@ -481,6 +519,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       startInNewChat,
       model: selectedModel,
       effort: selectedEffort,
+      runOnThisComputer,
       ...(resolvedKey ? { apiKey: resolvedKey } : {}),
     };
 
@@ -548,6 +587,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     try {
       const { apiKey } = getKeyForModel(task.model || "gpt-6-astra");
       const effectiveKey = task.apiKey || apiKey;
+      if (!effectiveKey) {
+        const meta = getModelMeta(task.model || "gpt-6-astra");
+        const providerName = PROVIDER_CATALOG[meta.provider]?.name || "Provider";
+        throw new Error(
+          `Connect your ${providerName} key in Customize → Providers to run this task.`
+        );
+      }
       const run = await runScheduledTask(task.id, effectiveKey);
       setIsExecuting(false);
       setExecutionRunRecord(run);
@@ -567,10 +613,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
+      role="region"
       aria-label="Scheduled tasks"
-      className="fixed inset-0 z-50 bg-[#F9F9F7] flex font-sans select-none overflow-hidden text-slate-900 animate-in fade-in duration-150"
+      className={
+        isEmbedded
+          ? "relative flex-1 w-full h-full min-w-0 min-h-0 flex font-sans select-none overflow-hidden text-slate-900 bg-[#F9F9F7]"
+          : "fixed inset-0 z-50 bg-[#F9F9F7] flex font-sans select-none overflow-hidden text-slate-900 animate-in fade-in duration-150"
+      }
     >
       {/* Toast notification banner */}
       {toastMessage && (
@@ -580,38 +629,38 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
         </div>
       )}
 
-      {/* LEFT SIDEBAR: "Scheduled" with ample width (w-72 lg:w-80) to prevent any text clipping */}
+      {/* LEFT SIDEBAR: "Scheduled" - compact 2nd sidebar alongside main navbar */}
       <aside
         aria-label="Scheduled tasks sidebar"
-        className="w-72 lg:w-80 shrink-0 border-r border-[#EAEAE8] bg-[#F6F6F4] flex flex-col h-full select-none"
+        className="w-56 sm:w-60 shrink-0 border-r border-[#EAEAE8] bg-[#F6F6F4] flex flex-col h-full select-none"
       >
-        {/* Header row: "Scheduled" title + Count + Search icon */}
-        <div className="h-13 px-4 flex items-center justify-between border-b border-[#EAEAE8]/70 shrink-0">
-          <div className="flex items-center gap-2.5">
-            {openedFromChat && (
+        {/* Header row: "Scheduled Tasks" title + Count + Search icon */}
+        <div className="h-13 px-3 flex items-center justify-between border-b-0 shrink-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {openedFromChat && !isEmbedded && (
               <button
                 type="button"
                 onClick={onClose}
                 title="Back to chat"
                 aria-label="Back to chat"
-                className="w-7 h-7 -ml-1 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                className="w-7 h-7 -ml-1 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer shrink-0"
               >
                 <ArrowLeft size={15} strokeWidth={2} />
               </button>
             )}
-            <div className="flex items-center gap-2">
-              <h1 className="text-[14.5px] font-semibold text-slate-900 tracking-tight">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h1 className="text-[14px] font-semibold text-slate-900 tracking-tight truncate">
                 Scheduled Tasks
               </h1>
               {tasks.length > 0 && (
-                <span className="text-[11px] font-medium bg-slate-200/70 text-slate-600 px-1.5 py-0.5 rounded-full">
+                <span className="text-[12px] font-normal text-slate-500 shrink-0">
                   {tasks.length}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -620,13 +669,23 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               }}
               title="Search scheduled tasks"
               aria-label="Search scheduled tasks"
-              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+              className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
                 isSearchOpen || searchQuery
-                  ? "bg-slate-200 text-slate-900"
-                  : "text-slate-400 hover:text-slate-700 hover:bg-slate-200/60"
+                  ? "bg-[#ECECF1] text-slate-900"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-black/[0.04]"
               }`}
             >
-              <Search size={14} strokeWidth={1.8} />
+              <Search size={15} strokeWidth={1.8} />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenNewTask}
+              title="Create new task"
+              aria-label="Create new task"
+              className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer"
+            >
+              <Plus size={16} strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -657,21 +716,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
           </div>
         )}
 
-        {/* Action button: + New task */}
-        <div className="px-3 pt-3 pb-1 shrink-0">
-          <button
-            type="button"
-            onClick={handleOpenNewTask}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[13px] font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
-          >
-            <Plus size={14} strokeWidth={2.2} className="text-white shrink-0" />
-            <span>Create New Task</span>
-          </button>
-        </div>
-
         {/* Upcoming Section Header with Filter Icon */}
-        <div className="px-4 pt-3.5 pb-1.5 flex items-center justify-between shrink-0 relative">
-          <span className="text-[11.5px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="px-3 pt-2.5 pb-1 flex items-center justify-between shrink-0 relative">
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
             Tasks ({filteredTasks.length})
           </span>
 
@@ -683,8 +730,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               aria-label="Filter tasks"
               className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
                 filterMode !== "all"
-                  ? "text-blue-600 bg-blue-50 font-semibold"
-                  : "text-slate-400 hover:text-slate-700 hover:bg-slate-200/50"
+                  ? "text-slate-900 bg-[#ECECF1] font-semibold"
+                  : "text-slate-400 hover:text-slate-700 hover:bg-black/[0.04]"
               }`}
             >
               <SlidersHorizontal size={12} strokeWidth={1.8} />
@@ -717,21 +764,21 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
         </div>
 
         {/* Tasks List */}
-        <div className="flex-1 overflow-y-auto px-2.5 py-1.5 cool-scrollbar space-y-1.5">
+        <div className="flex-1 overflow-y-auto px-2 py-1 cool-scrollbar space-y-0.5">
           {isLoadingTasks ? (
             <div className="p-4 text-center text-xs text-slate-400">Loading scheduled tasks...</div>
           ) : filteredTasks.length === 0 ? (
             <div className="p-6 text-center">
-              <div className="w-10 h-10 rounded-full bg-slate-200/50 flex items-center justify-center mx-auto mb-2 text-slate-400">
-                <Clock size={18} />
+              <div className="flex items-center justify-center mx-auto mb-2 text-slate-950">
+                <Clock size={22} strokeWidth={2.4} />
               </div>
-              <p className="text-xs font-medium text-slate-600">
+              <p className="text-xs font-semibold text-slate-900">
                 {searchQuery ? "No matching tasks found" : "No scheduled tasks yet"}
               </p>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 {searchQuery
                   ? "Try a different search term."
-                  : "Click above to create your first task."}
+                  : "Click + above to create your first task."}
               </p>
             </div>
           ) : (
@@ -741,10 +788,10 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 <div
                   key={task.id}
                   onClick={() => setSelectedTaskId(task.id)}
-                  className={`group relative rounded-xl border p-2.5 transition-all duration-150 cursor-pointer ${
+                  className={`group relative rounded-lg px-2.5 py-1.5 transition-colors duration-150 cursor-pointer ${
                     isSelected
-                      ? "bg-white border-slate-300 shadow-xs ring-1 ring-slate-900/5"
-                      : "bg-white/60 border-slate-200/70 hover:bg-white hover:border-slate-300/80"
+                      ? "bg-[#ECECF1] text-slate-950 font-normal"
+                      : "hover:bg-black/[0.04] text-slate-700"
                   }`}
                   role="button"
                   tabIndex={0}
@@ -755,113 +802,87 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   }}
                   aria-label={`View scheduled task ${task.title}`}
                 >
-                  <div className="flex items-start gap-2.5">
-                    {/* Icon container */}
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[18px] border border-slate-200/60 mt-0.5">
-                      {task.icon}
-                    </span>
+                  <div className="flex items-center justify-between gap-1.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {/* Transparent icon */}
+                      <span className="text-[14px] shrink-0 select-none">
+                        {task.icon}
+                      </span>
 
-                    {/* Task Info with generous space */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="block truncate text-[13px] font-semibold text-slate-900 leading-snug">
+                      {/* Title & Frequency */}
+                      <div className="min-w-0 flex-1">
+                        <span
+                          className={`block truncate text-[13px] leading-tight ${
+                            isSelected ? "font-medium text-slate-950" : "font-normal text-slate-800"
+                          }`}
+                        >
                           {task.title}
                         </span>
-                        {/* Status dot */}
-                        <span
-                          className={`w-2 h-2 rounded-full shrink-0 ${
-                            task.isActive
-                              ? "bg-emerald-500 shadow-2xs shadow-emerald-500/50"
-                              : "bg-slate-300"
-                          }`}
-                          title={task.isActive ? "Active" : "Paused"}
-                        />
-                      </div>
-
-                      <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500">
-                        <span className="capitalize">{task.frequency}</span>
-                        <span>•</span>
-                        <span className="truncate">{task.time}</span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Quick Action bar underneath */}
-                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-slate-400">
-                    <span className="text-[10.5px] text-slate-400 truncate max-w-[130px]">
-                      {task.isActive
-                        ? task.nextRun
-                          ? `Next: ${task.nextRun}`
-                          : "Scheduled"
-                        : "Paused"}
-                    </span>
-
-                    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    {/* Subtle Action Buttons on Hover */}
+                    <div
+                      className={`flex items-center gap-0.5 shrink-0 ${
+                        isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      } transition-opacity`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         type="button"
                         onClick={(e) => handleRunTask(task, e)}
                         title="Run now"
                         aria-label={`Run ${task.title} now`}
-                        className="flex h-6.5 w-6.5 items-center justify-center rounded-md hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                        className="flex h-5 w-5 items-center justify-center rounded hover:bg-black/[0.08] text-slate-500 hover:text-slate-900 transition-colors"
                       >
-                        <Play size={11} className="fill-current" />
+                        <Play size={10} className="fill-current" />
                       </button>
                       <button
                         type="button"
                         onClick={(e) => handleToggleTaskActive(task.id, e)}
                         title={task.isActive ? "Pause task" : "Resume task"}
                         aria-label={task.isActive ? `Pause ${task.title}` : `Resume ${task.title}`}
-                        className="flex h-6.5 w-6.5 items-center justify-center rounded-md hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                        className="flex h-5 w-5 items-center justify-center rounded hover:bg-black/[0.08] text-slate-500 hover:text-slate-900 transition-colors"
                       >
-                        {task.isActive ? <Pause size={11} /> : <Play size={11} />}
+                        {task.isActive ? <Pause size={10} /> : <Play size={10} />}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleEditTask(task)}
                         title="Edit task"
                         aria-label={`Edit ${task.title}`}
-                        className="flex h-6.5 w-6.5 items-center justify-center rounded-md hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                        className="flex h-5 w-5 items-center justify-center rounded hover:bg-black/[0.08] text-slate-500 hover:text-slate-900 transition-colors"
                       >
-                        <Pencil size={11} />
+                        <Pencil size={10} />
                       </button>
                       <button
                         type="button"
                         onClick={() => setTaskPendingDelete(task)}
                         title="Delete task"
                         aria-label={`Delete ${task.title}`}
-                        className="flex h-6.5 w-6.5 items-center justify-center rounded-md hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                        className="flex h-5 w-5 items-center justify-center rounded hover:bg-rose-100/70 text-slate-500 hover:text-rose-600 transition-colors"
                       >
-                        <Trash2 size={11} />
+                        <Trash2 size={10} />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Subtitle / Next schedule */}
+                  <div className="mt-0.5 pl-5.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <span className="capitalize">{task.frequency}</span>
+                    <span>·</span>
+                    <span className="truncate">{task.time}</span>
+                    {!task.isActive && (
+                      <>
+                        <span>·</span>
+                        <span className="text-slate-400">Paused</span>
+                      </>
+                    )}
                   </div>
                 </div>
               );
             })
           )}
-        </div>
-
-        {/* Sidebar Footer info / Back button */}
-        <div className="p-3 border-t border-[#EAEAE8]/70 shrink-0 bg-[#F6F6F4] flex flex-col gap-2">
-          {selectedTaskId && (
-            <button
-              type="button"
-              onClick={() => setSelectedTaskId(null)}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-medium text-slate-700 hover:text-slate-900 transition-colors cursor-pointer shadow-2xs"
-            >
-              <Clock size={12} strokeWidth={2} />
-              <span>Browse Templates</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[12px] font-medium text-slate-700 hover:text-slate-900 transition-colors cursor-pointer shadow-2xs"
-          >
-            <ArrowLeft size={13} strokeWidth={2} />
-            <span>{openedFromChat ? "Back to chat" : "Back to document"}</span>
-          </button>
         </div>
       </aside>
 
@@ -870,404 +891,400 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
         aria-label="Schedule main canvas"
         className="flex-1 min-w-0 h-full flex flex-col bg-[#F9F9F7] relative overflow-y-auto cool-scrollbar"
       >
-        {/* Top-right close button */}
-        <div className="w-full h-13 px-6 flex items-center justify-between border-b border-[#EAEAE8]/60 shrink-0">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            {selectedTask ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTaskId(null)}
-                  className="hover:text-slate-900 font-medium transition-colors"
-                >
-                  Templates
-                </button>
-                <span>/</span>
-                <span className="text-slate-900 font-semibold truncate max-w-[240px]">
+        {/* Top Header Bar - Unified, professional SaaS/macOS Navbar */}
+        <div className="w-full h-13 px-5 lg:px-8 flex items-center justify-between border-b border-[#EAEAE8]/80 shrink-0 bg-[#F9F9F7]">
+          {selectedTask ? (
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSelectedTaskId(null)}
+                className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
+              >
+                Scheduled Tasks
+              </button>
+              <ChevronRight size={13} className="text-slate-400 shrink-0" />
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm select-none shrink-0">{selectedTask.icon}</span>
+                <span className="text-xs font-semibold text-slate-900 truncate max-w-[180px] sm:max-w-[320px]">
                   {selectedTask.title}
                 </span>
-              </>
-            ) : (
-              <span className="text-slate-800 font-medium">Task Template Catalog</span>
-            )}
-          </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs font-medium text-slate-500">Scheduled Tasks</span>
+              <ChevronRight size={13} className="text-slate-400 shrink-0" />
+              <span className="text-xs font-semibold text-slate-900">Browse Templates</span>
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={onClose}
-            title="Close (Esc)"
-            aria-label="Close"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200/50 transition-colors cursor-pointer"
-          >
-            <X size={16} strokeWidth={1.8} />
-          </button>
+          {/* Top-Right Action buttons when a task is selected */}
+          {selectedTask && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleRunTask(selectedTask)}
+                disabled={isExecuting && executingTask?.id === selectedTask.id}
+                className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                {isExecuting && executingTask?.id === selectedTask.id ? (
+                  <RotateCw size={12} className="animate-spin" />
+                ) : (
+                  <Play size={11} className="fill-current" />
+                )}
+                <span>Run Now</span>
+              </button>
+
+              {/* More options dropdown: Pause/Resume, Edit, Delete */}
+              <div className="relative" ref={actionsMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsActionsMenuOpen((v) => !v)}
+                  title="Task options"
+                  aria-label="Task options"
+                  className={`w-8 h-8 rounded-lg border border-slate-200/70 bg-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
+                    isActionsMenuOpen
+                      ? "bg-slate-100 text-slate-900 border-slate-300"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  <MoreHorizontal size={15} strokeWidth={1.8} />
+                </button>
+
+                {isActionsMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl shadow-xl border border-slate-200 p-1 z-30 text-xs animate-in fade-in duration-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsActionsMenuOpen(false);
+                        void handleToggleTaskActive(selectedTask.id);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                    >
+                      {selectedTask.isActive ? (
+                        <>
+                          <Pause size={13} className="text-slate-500" />
+                          <span>Pause Task</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play size={13} className="text-slate-500" />
+                          <span>Resume Task</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsActionsMenuOpen(false);
+                        handleEditTask(selectedTask);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                    >
+                      <Pencil size={13} className="text-slate-500" />
+                      <span>Edit Task</span>
+                    </button>
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsActionsMenuOpen(false);
+                        setTaskPendingDelete(selectedTask);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={13} className="text-rose-500" />
+                      <span>Delete Task</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dynamic Canvas View: Selected Task Dashboard OR Template Catalog */}
         {selectedTask ? (
           /* ========================================================
-             TASK DETAIL DASHBOARD
+             TASK DETAIL DASHBOARD - FLUID FULL-CANVAS RESPONSIVE
              ======================================================== */
-          <div className="w-full max-w-4xl px-6 sm:px-10 py-8 mx-auto flex flex-col gap-6 animate-in fade-in duration-200">
-            {/* Header with Title and Primary Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200/80">
-              <div className="flex items-start gap-4">
-                <span className="w-14 h-14 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center text-3xl shrink-0">
+          <div className="w-full px-5 lg:px-8 pb-8 flex flex-col gap-5 animate-in fade-in duration-200">
+            {/* Task Hero Header */}
+            <div className="group pt-4 pb-2">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl select-none leading-none shrink-0">
                   {selectedTask.icon}
                 </span>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                      {selectedTask.title}
-                    </h2>
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11.5px] font-medium border ${
-                        selectedTask.isActive
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200/70"
-                          : "bg-slate-100 text-slate-600 border-slate-200"
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          selectedTask.isActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
-                        }`}
-                      />
-                      {selectedTask.isActive ? "Active" : "Paused"}
-                    </span>
-                  </div>
 
-                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-                    <span>
-                      Created{" "}
-                      {new Date(selectedTask.createdAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                    <span>•</span>
-                    <span>Timezone: {selectedTask.timezone}</span>
-                  </p>
+                <div className="min-w-0 flex-1 flex items-center gap-2">
+                  <h2 className="text-xl sm:text-[22px] font-semibold text-slate-900 tracking-[-0.015em] leading-tight truncate">
+                    {selectedTask.title}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => handleEditTask(selectedTask)}
+                    title="Edit task"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-black/[0.05] text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    <Pencil size={13} />
+                  </button>
                 </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleRunTask(selectedTask)}
-                  disabled={isExecuting && executingTask?.id === selectedTask.id}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                >
-                  {isExecuting && executingTask?.id === selectedTask.id ? (
-                    <RotateCw size={13} className="animate-spin" />
-                  ) : (
-                    <Play size={13} className="fill-current" />
-                  )}
-                  <span>Run Now</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleToggleTaskActive(selectedTask.id)}
-                  className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                >
-                  {selectedTask.isActive ? (
-                    <>
-                      <Pause size={13} />
-                      <span>Pause</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play size={13} />
-                      <span>Resume</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleEditTask(selectedTask)}
-                  className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Pencil size={13} />
-                  <span>Edit</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTaskPendingDelete(selectedTask)}
-                  className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-400 transition-colors cursor-pointer shadow-2xs"
-                  title="Delete task"
-                >
-                  <Trash2 size={14} />
-                </button>
               </div>
             </div>
 
-            {/* 4 Stat Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+            {/* 4 Stat Cards: Clean, flat, seamlessly into the screen */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 py-1 border-b border-slate-200/50">
               {/* Schedule Card */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-400 mb-2">
+              <div className="rounded-xl border-0 bg-transparent p-3 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-400 mb-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Schedule
                   </span>
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <Calendar size={14} />
-                  </div>
+                  <Calendar size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
                 </div>
                 <div>
-                  <div className="text-[14px] font-semibold text-slate-900 capitalize">
+                  <div className="text-[14px] font-semibold text-slate-900 capitalize leading-snug">
                     {selectedTask.frequency}
                   </div>
-                  <div className="text-[11.5px] text-slate-500 mt-0.5 truncate">
+                  <div className="text-[12px] text-slate-500 mt-0.5 truncate">
                     {selectedTask.time} ({selectedTask.dayOfWeek || "Daily"})
                   </div>
                 </div>
               </div>
 
               {/* Model Card */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-400 mb-2">
+              <div className="rounded-xl border-0 bg-transparent p-3 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-400 mb-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Model
                   </span>
-                  <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                    <Bot size={14} />
-                  </div>
+                  <CreatorLogo creator={resolveModelCreator(selectedTask.model || "gpt-6-astra")} size={15} />
                 </div>
                 <div>
-                  <div className="text-[14px] font-semibold text-slate-900 truncate">
+                  <div className="text-[14px] font-semibold text-slate-900 truncate leading-snug">
                     {scheduledModelName(selectedTask.model || "gpt-6-astra")}
                   </div>
-                  <div className="text-[11.5px] text-slate-500 mt-0.5">
+                  <div className="text-[12px] text-slate-500 mt-0.5">
                     Effort: {selectedTask.effort || "Medium"}
                   </div>
                 </div>
               </div>
 
               {/* Delivery Card */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-400 mb-2">
+              <div className="rounded-xl border-0 bg-transparent p-3 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-400 mb-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Delivery
                   </span>
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <MessageSquarePlus size={14} />
-                  </div>
+                  <MessageSquarePlus size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
                 </div>
                 <div>
-                  <div className="text-[14px] font-semibold text-slate-900 truncate">
+                  <div className="text-[14px] font-semibold text-slate-900 truncate leading-snug">
                     {selectedTask.startInNewChat ? "New Chat" : "Thread"}
                   </div>
-                  <div className="text-[11.5px] text-slate-500 mt-0.5 truncate">
+                  <div className="text-[12px] text-slate-500 mt-0.5 truncate">
                     {selectedTask.notifications || "All updates"}
                   </div>
                 </div>
               </div>
 
               {/* Executions Card */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs flex flex-col justify-between">
-                <div className="flex items-center justify-between text-slate-400 mb-2">
+              <div className="rounded-xl border-0 bg-transparent p-3 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-slate-400 mb-1.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Activity
                   </span>
-                  <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <Activity size={14} />
-                  </div>
+                  <Activity size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
                 </div>
                 <div>
-                  <div className="text-[14px] font-semibold text-slate-900">
+                  <div className="text-[14px] font-semibold text-slate-900 leading-snug">
                     {runsForSelectedTask.length} execution
                     {runsForSelectedTask.length === 1 ? "" : "s"}
                   </div>
-                  <div className="text-[11.5px] text-slate-500 mt-0.5 truncate">
+                  <div className="text-[12px] text-slate-500 mt-0.5 truncate">
                     {selectedTask.lastRun ? `Last: ${selectedTask.lastRun}` : "Not run yet"}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Prompt & Instructions Card */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <FileText size={15} className="text-slate-400" />
-                  <h3 className="text-[13.5px] font-semibold text-slate-900 tracking-tight">
-                    Prompt & Instructions
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleCopyText(selectedTask.prompt, selectedTask.id, "prompt")}
-                  className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  {copiedPromptId === selectedTask.id ? (
-                    <>
-                      <Check size={12} className="text-emerald-600" />
-                      <span className="text-emerald-600">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={12} />
-                      <span>Copy Prompt</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-100 text-[13px] text-slate-800 font-sans whitespace-pre-wrap leading-relaxed select-text">
-                {selectedTask.prompt}
-              </div>
-            </div>
-
-            {/* Execution History Timeline */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <History size={15} className="text-slate-400" />
-                  <h3 className="text-[13.5px] font-semibold text-slate-900 tracking-tight">
-                    Execution History
-                  </h3>
-                  <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                    {runsForSelectedTask.length}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fetchTaskRuns(selectedTask.id)}
-                    disabled={isLoadingRuns}
-                    title="Refresh history"
-                    className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
-                  >
-                    <RotateCw size={13} className={isLoadingRuns ? "animate-spin" : ""} />
-                  </button>
-                </div>
-              </div>
-
-              {isLoadingRuns ? (
-                <div className="py-10 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                  <RotateCw size={16} className="animate-spin text-slate-500" />
-                  <span>Loading history...</span>
-                </div>
-              ) : runsForSelectedTask.length === 0 ? (
-                <div className="py-10 text-center flex flex-col items-center justify-center gap-2">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                    <History size={18} />
+            {/* Split Content: Left = Prompt / Instructions (38%), Right = Execution History (62%) across full canvas */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 items-start w-full pt-1">
+              {/* Left Column: Prompt & Instructions */}
+              <div className="lg:col-span-5 flex flex-col gap-3 lg:pr-8 lg:border-r border-slate-200/70">
+                <div className="p-0.5">
+                  <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200/60">
+                    <h3 className="text-[13.5px] font-semibold text-slate-900 tracking-tight">
+                      Prompt & Instructions
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(selectedTask.prompt, selectedTask.id, "prompt")}
+                      className="px-2 py-0.5 rounded text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      {copiedPromptId === selectedTask.id ? (
+                        <>
+                          <Check size={11} className="text-emerald-600" />
+                          <span className="text-emerald-600">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={11} />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                  <p className="text-xs font-medium text-slate-700">No executions recorded yet</p>
-                  <p className="text-[11.5px] text-slate-400 max-w-xs">
-                    Run this task manually with &quot;Run Now&quot; or wait for its scheduled
-                    trigger.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleRunTask(selectedTask)}
-                    className="mt-2 px-3.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition-colors cursor-pointer"
-                  >
-                    Run Task Now
-                  </button>
+
+                  <div className="text-[13px] text-slate-800 font-sans whitespace-pre-wrap leading-relaxed select-text pt-0.5">
+                    {selectedTask.prompt}
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-3.5">
-                  {runsForSelectedTask.map((run) => {
-                    const isSuccess = run.status === "succeeded";
-                    const isFailed = run.status === "failed";
-                    const isRunning = run.status === "running" || run.status === "queued";
-                    const durationSec =
-                      run.startedAt && run.finishedAt
-                        ? ((run.finishedAt - run.startedAt) / 1000).toFixed(1)
-                        : null;
+              </div>
 
-                    return (
-                      <div
-                        key={run.id}
-                        className="rounded-xl border border-slate-200/70 bg-[#FAFAFA] p-4 transition-all"
+              {/* Right Column: Execution History */}
+              <div className="lg:col-span-7 flex flex-col gap-3 lg:pl-8 mt-6 lg:mt-0">
+                <div className="p-1">
+                  <div className="flex items-center justify-between mb-2.5 pb-1.5 border-b border-slate-200/60">
+                    <div className="flex items-center gap-2">
+                      <History size={14} className="text-slate-500" />
+                      <h3 className="text-[13.5px] font-semibold text-slate-900 tracking-tight">
+                        Execution History
+                      </h3>
+                      <span className="text-[11.5px] font-normal text-slate-500">
+                        ({runsForSelectedTask.length})
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => fetchTaskRuns(selectedTask.id)}
+                        disabled={isLoadingRuns}
+                        title="Refresh history"
+                        className="p-1 rounded-md text-slate-400 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer"
                       >
-                        {/* Run header */}
-                        <div className="flex items-center justify-between flex-wrap gap-2 mb-2.5">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${
-                                isSuccess
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
-                                  : isFailed
-                                    ? "bg-rose-50 text-rose-700 border border-rose-200/80"
-                                    : "bg-amber-50 text-amber-700 border border-amber-200/80"
-                              }`}
-                            >
-                              {isSuccess && <CheckCircle2 size={12} />}
-                              {isFailed && <AlertCircle size={12} />}
-                              {isRunning && <RotateCw size={12} className="animate-spin" />}
-                              <span className="capitalize">{run.status}</span>
-                            </span>
+                        <RotateCw size={12} className={isLoadingRuns ? "animate-spin" : ""} />
+                      </button>
+                    </div>
+                  </div>
 
-                            <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md capitalize">
-                              {run.trigger} trigger
-                            </span>
-                          </div>
+                  {isLoadingRuns ? (
+                    <div className="py-12 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
+                      <RotateCw size={15} className="animate-spin text-slate-500" />
+                      <span>Loading history...</span>
+                    </div>
+                  ) : runsForSelectedTask.length === 0 ? (
+                    <div className="py-10 text-center flex flex-col items-center justify-center gap-2">
+                      <div className="flex items-center justify-center text-slate-950 mb-0.5">
+                        <History size={22} strokeWidth={2.4} />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-900">No executions recorded yet</p>
+                      <p className="text-[11.5px] text-slate-400 max-w-xs">
+                        Run this task manually with &quot;Run Now&quot; or wait for its scheduled trigger.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleRunTask(selectedTask)}
+                        className="mt-1 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        Run Task Now
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {runsForSelectedTask.map((run) => {
+                        const isSuccess = run.status === "succeeded";
+                        const isFailed = run.status === "failed";
+                        const isRunning = run.status === "running" || run.status === "queued";
+                        const durationSec =
+                          run.startedAt && run.finishedAt
+                            ? ((run.finishedAt - run.startedAt) / 1000).toFixed(1)
+                            : null;
 
-                          <div className="text-[11px] text-slate-500 flex items-center gap-2">
-                            {durationSec && <span>Duration: {durationSec}s</span>}
-                            <span>•</span>
-                            <span>
-                              {new Date(run.createdAt).toLocaleString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                        </div>
+                        return (
+                          <div
+                            key={run.id}
+                            className="pt-2 pb-3 border-b border-slate-200/50 last:border-b-0 transition-all"
+                          >
+                            {/* Run header */}
+                            <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-800">
+                                  {isSuccess && <CheckCircle2 size={12} className="text-slate-700" />}
+                                  {isFailed && <AlertCircle size={12} className="text-slate-700" />}
+                                  {isRunning && <RotateCw size={12} className="animate-spin text-slate-700" />}
+                                  <span className="capitalize">{run.status}</span>
+                                </span>
 
-                        {/* Run Output */}
-                        {run.output && (
-                          <div className="mt-2.5 pt-2.5 border-t border-slate-200/60">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
-                                Model Response
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopyText(run.output!, run.id, "output")}
-                                  className="px-2 py-1 rounded text-[11px] text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-colors flex items-center gap-1 cursor-pointer"
-                                >
-                                  {copiedRunOutputId === run.id ? (
-                                    <>
-                                      <Check size={11} className="text-emerald-600" />
-                                      <span className="text-emerald-600">Copied</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy size={11} />
-                                      <span>Copy</span>
-                                    </>
-                                  )}
-                                </button>
+                                <span className="text-[11px] text-slate-300">·</span>
+
+                                <span className="text-[11.5px] text-slate-500 capitalize">
+                                  {run.trigger} trigger
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                                {durationSec && <span>Duration: {durationSec}s</span>}
+                                <span>·</span>
+                                <span>
+                                  {new Date(run.createdAt).toLocaleString(undefined, {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
                               </div>
                             </div>
 
-                            <div className="p-3.5 bg-white border border-slate-200/80 rounded-xl text-xs text-slate-800 max-h-80 overflow-y-auto cool-scrollbar select-text leading-relaxed">
-                              <AssistantResponse content={run.output} isStreaming={false} />
-                            </div>
-                          </div>
-                        )}
+                            {/* Run Output */}
+                            {run.output && (
+                              <div className="mt-1.5">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                                    Model Response
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(run.output!, run.id, "output")}
+                                    className="px-1.5 py-0.5 rounded text-[11px] text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors flex items-center gap-1 cursor-pointer"
+                                  >
+                                    {copiedRunOutputId === run.id ? (
+                                      <>
+                                        <Check size={11} className="text-emerald-600" />
+                                        <span className="text-emerald-600">Copied</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={11} />
+                                        <span>Copy</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
 
-                        {run.error && (
-                          <div className="mt-2.5 p-3 bg-rose-50/70 border border-rose-200/70 rounded-xl text-xs text-rose-800 font-mono">
-                            {run.error}
+                                <div className="text-[13px] text-slate-800 select-text leading-relaxed">
+                                  <AssistantResponse content={run.output} isStreaming={false} />
+                                </div>
+                              </div>
+                            )}
+
+                            {run.error && (
+                              <div className="mt-2 p-2.5 bg-rose-50/50 rounded-md text-xs text-rose-800 font-mono">
+                                {run.error}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         ) : (
@@ -1351,15 +1368,12 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
             }
           }}
         >
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-zinc-200/80 w-full max-w-[580px] max-h-[90vh] overflow-y-auto cool-scrollbar p-6 sm:p-7 animate-in zoom-in-95 duration-150 relative text-left flex flex-col">
+          <div className="bg-white rounded-[26px] sm:rounded-[28px] shadow-2xl border border-zinc-200/80 w-full max-w-[560px] max-h-[90vh] overflow-y-auto cool-scrollbar p-6 sm:p-7 animate-in zoom-in-95 duration-150 relative text-left flex flex-col">
             {/* Header: Title + Close Icon */}
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <span className="text-2xl">{modalIcon}</span>
-                <h3 className="text-[18px] sm:text-[19px] font-semibold text-zinc-900 tracking-tight">
-                  {editingTaskId ? "Edit scheduled task" : "Schedule a task"}
-                </h3>
-              </div>
+              <h2 className="text-[19px] sm:text-[20px] font-semibold text-zinc-900 tracking-tight">
+                {editingTaskId ? "Edit scheduled task" : "Schedule a task"}
+              </h2>
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
@@ -1372,64 +1386,23 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
             </div>
 
             <form onSubmit={handleSaveTask} className="flex flex-col">
-              {/* Optional Title and Icon selection */}
-              <div className="mb-3.5">
-                <label className="block text-xs font-medium text-zinc-600 mb-1">
-                  Task Title & Icon (Optional)
-                </label>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xl shrink-0">
-                    {modalIcon}
-                  </div>
-                  <input
-                    type="text"
-                    value={modalTitle}
-                    onChange={(e) => setModalTitle(e.target.value)}
-                    placeholder="e.g. Daily Market Briefing"
-                    className="flex-1 px-3.5 py-2 rounded-xl border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-400 transition-colors"
-                  />
-                </div>
-                {/* Quick icon options */}
-                <div className="flex items-center gap-1.5 overflow-x-auto py-1 cool-scrollbar">
-                  {AVAILABLE_ICONS.map((icon) => (
-                    <button
-                      key={icon}
-                      type="button"
-                      onClick={() => setModalIcon(icon)}
-                      className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all cursor-pointer ${
-                        modalIcon === icon
-                          ? "bg-zinc-900 text-white shadow-xs scale-105"
-                          : "bg-zinc-100 hover:bg-zinc-200/70 text-zinc-700"
-                      }`}
-                    >
-                      {icon}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Instructions Textarea Box */}
-              <div className="mb-3">
-                <label className="block text-xs font-medium text-zinc-600 mb-1">
-                  Instructions & Prompt <span className="text-rose-500">*</span>
-                </label>
-                <div className="w-full rounded-xl border border-zinc-200/90 bg-white p-3.5 focus-within:border-zinc-400 transition-all shadow-2xs">
-                  <textarea
-                    ref={modalInputRef}
-                    rows={4}
-                    value={modalPrompt}
-                    onChange={(e) => setModalPrompt(e.target.value)}
-                    placeholder="Describe what you want the AI to do on this schedule..."
-                    className="w-full h-24 text-[13.5px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none resize-none leading-relaxed bg-transparent"
-                  />
-                </div>
+              <div className="w-full">
+                <textarea
+                  ref={modalInputRef}
+                  rows={4}
+                  value={modalPrompt}
+                  onChange={(e) => setModalPrompt(e.target.value)}
+                  placeholder="Instructions..."
+                  className="w-full min-h-[140px] rounded-2xl border border-zinc-200/90 bg-white p-4 sm:p-5 text-[14.5px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-400 leading-relaxed resize-none shadow-2xs transition-colors"
+                />
               </div>
 
               {/* Repeat & Time Container */}
-              <div className="mt-1 rounded-xl border border-zinc-200/90 bg-white overflow-visible divide-y divide-zinc-100 shadow-2xs">
+              <div className="mt-4 rounded-2xl border border-zinc-200/90 bg-white overflow-visible divide-y divide-zinc-100 shadow-2xs">
                 {/* Row 1: Repeat */}
-                <div className="relative px-4 py-3 flex items-center justify-between">
-                  <span className="text-[13.5px] font-normal text-zinc-800">Repeat</span>
+                <div className="relative px-4 sm:px-5 py-3.5 flex items-center justify-between">
+                  <span className="text-[14px] font-normal text-zinc-800">Repeat</span>
 
                   <div className="relative" ref={repeatDropdownRef}>
                     <button
@@ -1438,9 +1411,17 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                         setIsRepeatDropdownOpen((v) => !v);
                         setIsTimeDropdownOpen(false);
                       }}
-                      className="text-[13.5px] text-zinc-700 hover:text-zinc-950 flex items-center gap-1.5 transition-colors cursor-pointer select-none px-2.5 py-1 rounded-lg border border-zinc-200 bg-zinc-50/50"
+                      className="text-[14px] text-zinc-700 hover:text-zinc-950 flex items-center gap-1.5 transition-colors cursor-pointer select-none font-normal"
                     >
-                      <span className="capitalize">{modalFrequency}</span>
+                      <span className="capitalize">
+                        {modalFrequency === "daily"
+                          ? "Daily"
+                          : modalFrequency === "weekdays"
+                          ? "Weekdays"
+                          : modalFrequency === "weekly"
+                          ? "Weekly"
+                          : "Monthly"}
+                      </span>
                       <ChevronDown
                         size={14}
                         className={`text-zinc-400 transition-transform duration-200 ${
@@ -1451,10 +1432,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
                     {/* Dropdown Menu */}
                     {isRepeatDropdownOpen && (
-                      <div className="absolute right-0 top-full mt-1.5 w-48 sm:w-52 bg-white rounded-xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                        <div className="px-3 pt-1 pb-1.5 text-[11.5px] font-medium text-zinc-400 select-none">
-                          Interval
-                        </div>
+                      <div className="absolute right-0 top-full mt-2 w-48 sm:w-52 bg-white rounded-2xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 origin-top-right">
                         {REPEAT_OPTIONS.map((opt) => {
                           const isSelected = modalFrequency === opt.value;
                           return (
@@ -1473,7 +1451,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 }
                                 setIsRepeatDropdownOpen(false);
                               }}
-                              className={`w-full px-3 py-2 text-left flex items-center justify-between rounded-lg transition-colors cursor-pointer text-[13px] ${
+                              className={`w-full px-3.5 py-2 text-left flex items-center justify-between rounded-xl transition-colors cursor-pointer text-[13px] ${
                                 isSelected
                                   ? "bg-zinc-100 font-medium text-zinc-950"
                                   : "text-zinc-800 hover:bg-zinc-50"
@@ -1482,8 +1460,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                               <span>{opt.label}</span>
                               {isSelected && (
                                 <Check
-                                  size={15}
-                                  strokeWidth={1.8}
+                                  size={14}
+                                  strokeWidth={2}
                                   className="text-zinc-800 shrink-0"
                                 />
                               )}
@@ -1497,8 +1475,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
                 {/* Optional Weekly Day Selector */}
                 {modalFrequency === "weekly" && (
-                  <div className="relative z-20 px-4 py-2.5 bg-zinc-50/60 flex items-center justify-between border-t border-zinc-100">
-                    <span className="text-[13px] text-zinc-600">On day</span>
+                  <div className="relative px-4 sm:px-5 py-3 flex items-center justify-between bg-zinc-50/50">
+                    <span className="text-[13.5px] text-zinc-600 font-normal">Day of week</span>
                     <div className="relative" ref={dayDropdownRef}>
                       <button
                         type="button"
@@ -1509,16 +1487,12 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                           setIsRepeatDropdownOpen(false);
                           setIsTimeDropdownOpen(false);
                         }}
-                        className={`flex min-w-36 items-center justify-between gap-3 rounded-lg border bg-white px-3 py-1.5 text-[13px] shadow-2xs transition-colors ${
-                          isDayDropdownOpen
-                            ? "border-zinc-400 text-zinc-950"
-                            : "border-zinc-200 text-zinc-700 hover:border-zinc-300"
-                        }`}
+                        className="text-[13.5px] text-zinc-700 hover:text-zinc-950 flex items-center gap-1.5 cursor-pointer font-normal"
                       >
                         <span>Every {modalDay}</span>
                         <ChevronDown
                           size={14}
-                          className={`shrink-0 text-zinc-400 transition-transform ${
+                          className={`text-zinc-400 transition-transform ${
                             isDayDropdownOpen ? "rotate-180" : ""
                           }`}
                         />
@@ -1527,7 +1501,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                         <div
                           role="listbox"
                           aria-label="Repeat day"
-                          className="absolute right-0 top-full z-50 mt-1.5 max-h-60 w-48 overflow-y-auto rounded-xl border border-zinc-200/90 bg-white p-1.5 text-[13px] shadow-xl cool-scrollbar animate-in fade-in zoom-in-95 duration-100 origin-top-right"
+                          className="absolute right-0 top-full z-50 mt-1.5 max-h-60 w-48 overflow-y-auto rounded-2xl border border-zinc-200/90 bg-white p-1.5 text-[13px] shadow-xl cool-scrollbar animate-in fade-in zoom-in-95 duration-100 origin-top-right"
                         >
                           {DAYS_OF_WEEK.map((day) => {
                             const isSelected = modalDay === day;
@@ -1541,14 +1515,14 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                   setModalDay(day);
                                   setIsDayDropdownOpen(false);
                                 }}
-                                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors ${
+                                className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left transition-colors ${
                                   isSelected
                                     ? "bg-zinc-100 font-medium text-zinc-950"
                                     : "text-zinc-700 hover:bg-zinc-50"
                                 }`}
                               >
                                 <span>Every {day}</span>
-                                {isSelected && <Check size={15} className="shrink-0" />}
+                                {isSelected && <Check size={14} strokeWidth={2} className="shrink-0 text-zinc-800" />}
                               </button>
                             );
                           })}
@@ -1560,12 +1534,12 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
                 {/* Optional Monthly Day Selector */}
                 {modalFrequency === "monthly" && (
-                  <div className="relative z-20 px-4 py-2.5 bg-zinc-50/60 flex items-center justify-between border-t border-zinc-100">
-                    <span className="text-[13px] text-zinc-600">On day of month</span>
+                  <div className="relative px-4 sm:px-5 py-3 flex items-center justify-between bg-zinc-50/50">
+                    <span className="text-[13.5px] text-zinc-600 font-normal">Day of month</span>
                     <select
                       value={modalDayOfMonth}
                       onChange={(e) => setModalDayOfMonth(Number(e.target.value))}
-                      className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[13px] text-zinc-800 shadow-2xs focus:outline-none focus:border-zinc-400 cursor-pointer"
+                      className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-[13px] text-zinc-800 focus:outline-none cursor-pointer"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((dayNum) => (
                         <option key={dayNum} value={dayNum}>
@@ -1577,8 +1551,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 )}
 
                 {/* Row 2: Time */}
-                <div className="relative px-4 py-3 flex items-center justify-between">
-                  <span className="text-[13.5px] font-normal text-zinc-800">Time</span>
+                <div className="relative px-4 sm:px-5 py-3.5 flex items-center justify-between">
+                  <span className="text-[14px] font-normal text-zinc-800">Time</span>
 
                   <div className="relative" ref={timeDropdownRef}>
                     <button
@@ -1587,15 +1561,15 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                         setIsTimeDropdownOpen((v) => !v);
                         setIsRepeatDropdownOpen(false);
                       }}
-                      className="text-[13.5px] transition-colors cursor-pointer select-none rounded-lg flex items-center gap-1.5 px-2.5 py-1 border border-zinc-200 bg-zinc-50/50 text-zinc-800"
+                      className="text-[14px] text-zinc-700 hover:text-zinc-950 flex items-center gap-1.5 transition-colors cursor-pointer select-none font-normal"
                     >
                       <span>
-                        {modalTime} ({timezoneLabel})
+                        {modalTime} {friendlyTimezone}
                       </span>
                       <ChevronDown
                         size={14}
-                        className={`transition-transform duration-200 ${
-                          isTimeDropdownOpen ? "rotate-180 text-zinc-600" : "text-zinc-400"
+                        className={`text-zinc-400 transition-transform duration-200 ${
+                          isTimeDropdownOpen ? "rotate-180" : ""
                         }`}
                       />
                     </button>
@@ -1604,7 +1578,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                     {isTimeDropdownOpen && (
                       <div
                         ref={timeListRef}
-                        className="absolute right-0 top-full mt-1.5 w-52 sm:w-56 bg-white rounded-xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] max-h-60 overflow-y-auto cool-scrollbar animate-in fade-in zoom-in-95 duration-100 origin-top-right"
+                        className="absolute right-0 top-full mt-2 w-52 sm:w-56 bg-white rounded-2xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] max-h-60 overflow-y-auto cool-scrollbar animate-in fade-in zoom-in-95 duration-100 origin-top-right"
                       >
                         {TIME_OPTIONS.map((timeStr) => {
                           const isSelected = modalTime === timeStr;
@@ -1617,7 +1591,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 setModalTime(timeStr);
                                 setIsTimeDropdownOpen(false);
                               }}
-                              className={`w-full px-3 py-2 text-left rounded-lg transition-colors cursor-pointer text-[13px] ${
+                              className={`w-full px-3.5 py-2 text-left rounded-xl transition-colors cursor-pointer text-[13px] ${
                                 isSelected
                                   ? "bg-zinc-100 font-medium text-zinc-950"
                                   : "text-zinc-800 hover:bg-zinc-50"
@@ -1634,72 +1608,90 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               </div>
 
               {/* Advanced Accordion Toggle */}
-              <div className="mt-3.5 mb-2 px-0.5">
+              <div className="mt-4 mb-3 flex items-center">
                 <button
                   type="button"
                   onClick={() => setIsAdvancedOpen((v) => !v)}
-                  className="flex items-center gap-1.5 text-[12.5px] font-medium text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer select-none"
+                  className="flex items-center gap-1 text-[13.5px] text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer select-none font-normal"
                 >
-                  <span>Advanced Settings (Model & Execution)</span>
+                  <span>Advanced</span>
                   {isAdvancedOpen ? (
-                    <ChevronUp size={14} className="text-zinc-500" />
+                    <ChevronUp size={15} className="text-zinc-500" />
                   ) : (
-                    <ChevronDown size={14} className="text-zinc-500" />
+                    <ChevronDown size={15} className="text-zinc-500" />
                   )}
                 </button>
               </div>
 
               {/* Advanced Items Stack */}
               {isAdvancedOpen && (
-                <div className="flex flex-col gap-2.5 mb-1 animate-in fade-in duration-150">
-                  {/* Model */}
-                  <div className="relative w-full rounded-xl border border-zinc-200/90 bg-white px-4 py-2.5 flex items-center justify-between shadow-2xs">
-                    <span className="text-[13px] font-normal text-zinc-800">AI Model</span>
+                <div className="flex flex-col gap-2.5 animate-in fade-in duration-150">
+                  {/* Item 1: Run on this computer */}
+                  <div className="w-full rounded-2xl border border-zinc-200/90 bg-white px-4 sm:px-5 py-3 flex items-center justify-between shadow-2xs">
+                    <span className="text-[14px] font-normal text-zinc-800">
+                      Run on this computer
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={runOnThisComputer}
+                      onClick={() => setRunOnThisComputer((v) => !v)}
+                      className={`w-11 h-6.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                        runOnThisComputer ? "bg-[#C86D51]" : "bg-zinc-200"
+                      }`}
+                    >
+                      <div
+                        className={`w-5.5 h-5.5 rounded-full bg-white shadow-xs transition-transform absolute top-[2px] ${
+                          runOnThisComputer ? "translate-x-[20px]" : "translate-x-[2px]"
+                        }`}
+                      />
+                    </button>
+                  </div>
 
-                    <div className="relative" ref={modelDropdownRef}>
+                  {/* Item 2: Notifications */}
+                  <div className="relative w-full rounded-2xl border border-zinc-200/90 bg-white px-4 sm:px-5 py-3.5 flex items-center justify-between shadow-2xs">
+                    <span className="text-[14px] font-normal text-zinc-800">Notifications</span>
+
+                    <div className="relative" ref={notificationsDropdownRef}>
                       <button
                         type="button"
                         onClick={() => {
-                          setIsModelDropdownOpen((v) => !v);
-                          setIsNotificationsDropdownOpen(false);
+                          setIsNotificationsDropdownOpen((v) => !v);
+                          setIsModelDropdownOpen(false);
                           setIsEffortDropdownOpen(false);
                           setIsRepeatDropdownOpen(false);
                           setIsTimeDropdownOpen(false);
                         }}
-                        className="text-[13px] text-zinc-800 rounded-lg flex items-center gap-1.5 px-2.5 py-1 border border-zinc-200 bg-zinc-50/50"
+                        className="text-[14px] text-zinc-700 hover:text-zinc-950 flex items-center gap-1.5 cursor-pointer font-normal select-none"
                       >
-                        <span>{scheduledModelName(selectedModel)}</span>
+                        <span>{notificationsMode}</span>
                         <ChevronDown
-                          size={13}
-                          className={`transition-transform duration-200 ${
-                            isModelDropdownOpen ? "rotate-180 text-zinc-600" : "text-zinc-400"
+                          size={14}
+                          className={`text-zinc-400 transition-transform duration-200 ${
+                            isNotificationsDropdownOpen ? "rotate-180" : ""
                           }`}
                         />
                       </button>
 
-                      {/* Model Popover Menu */}
-                      {isModelDropdownOpen && (
-                        <div className="absolute right-0 bottom-full mb-2 w-64 max-h-72 overflow-y-auto bg-white rounded-xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 origin-bottom-right cool-scrollbar">
-                          <div className="px-3 pt-1 pb-1.5 text-[11.5px] font-medium text-zinc-400 select-none">
-                            Available Chat Models
-                          </div>
-                          {SCHEDULED_MODEL_IDS.map((modelId) => {
-                            const isSelected = selectedModel === modelId;
+                      {isNotificationsDropdownOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                          {(["Important updates", "Failed runs only"] as const).map((mode) => {
+                            const isSelected = notificationsMode === mode;
                             return (
                               <button
-                                key={modelId}
+                                key={mode}
                                 type="button"
                                 onClick={() => {
-                                  setIsModelDropdownOpen(false);
-                                  setSelectedModel(modelId);
+                                  setNotificationsMode(mode);
+                                  setIsNotificationsDropdownOpen(false);
                                 }}
-                                className={`w-full px-3 py-2 text-left flex items-center justify-between rounded-lg transition-colors cursor-pointer text-[13px] ${
+                                className={`w-full px-3.5 py-2 text-left flex items-center justify-between rounded-xl transition-colors cursor-pointer text-[13px] ${
                                   isSelected
                                     ? "bg-zinc-100 font-medium text-zinc-950"
                                     : "text-zinc-800 hover:bg-zinc-50"
                                 }`}
                               >
-                                <span>{scheduledModelName(modelId)}</span>
+                                <span>{mode}</span>
                                 {isSelected && (
                                   <Check
                                     size={14}
@@ -1715,9 +1707,97 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Reasoning Effort */}
-                  <div className="relative w-full rounded-xl border border-zinc-200/90 bg-white px-4 py-2.5 flex items-center justify-between shadow-2xs">
-                    <span className="text-[13px] font-normal text-zinc-800">Reasoning Effort</span>
+                  {/* Item 3: Start each run in new chat */}
+                  <div className="w-full rounded-2xl border border-zinc-200/90 bg-white px-4 sm:px-5 py-3 flex items-center justify-between shadow-2xs">
+                    <span className="text-[14px] font-normal text-zinc-800">
+                      Start each run in new chat
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={startInNewChat}
+                      onClick={() => setStartInNewChat((v) => !v)}
+                      className={`w-11 h-6.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                        startInNewChat ? "bg-[#C86D51]" : "bg-zinc-200"
+                      }`}
+                    >
+                      <div
+                        className={`w-5.5 h-5.5 rounded-full bg-white shadow-xs transition-transform absolute top-[2px] ${
+                          startInNewChat ? "translate-x-[20px]" : "translate-x-[2px]"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Item 4: Model */}
+                  <div className="relative w-full rounded-2xl border border-zinc-200/90 bg-white px-4 sm:px-5 py-3.5 flex items-center justify-between shadow-2xs">
+                    <span className="text-[14px] font-normal text-zinc-800">Model</span>
+
+                    <div className="relative" ref={modelDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsModelDropdownOpen((v) => !v);
+                          setIsNotificationsDropdownOpen(false);
+                          setIsEffortDropdownOpen(false);
+                          setIsRepeatDropdownOpen(false);
+                          setIsTimeDropdownOpen(false);
+                        }}
+                        className="text-[14px] text-zinc-700 hover:text-zinc-950 flex items-center gap-1.5 cursor-pointer font-normal select-none"
+                      >
+                        <span>{scheduledModelName(selectedModel)}</span>
+                        <ChevronDown
+                          size={14}
+                          className={`text-zinc-400 transition-transform duration-200 ${
+                            isModelDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+
+                      {/* Model Popover Menu */}
+                      {isModelDropdownOpen && (
+                        <div className="absolute right-0 bottom-full mb-2 w-64 max-h-72 overflow-y-auto bg-white rounded-2xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 origin-bottom-right cool-scrollbar">
+                          <div className="px-3 pt-1 pb-1.5 text-[11.5px] font-medium text-zinc-400 select-none">
+                            Available Models
+                          </div>
+                          {SCHEDULED_MODEL_IDS.map((modelId) => {
+                            const isSelected = selectedModel === modelId;
+                            return (
+                              <button
+                                key={modelId}
+                                type="button"
+                                onClick={() => {
+                                  setIsModelDropdownOpen(false);
+                                  setSelectedModel(modelId);
+                                }}
+                                className={`w-full px-3.5 py-2 text-left flex items-center justify-between rounded-xl transition-colors cursor-pointer text-[13px] ${
+                                  isSelected
+                                    ? "bg-zinc-100 font-medium text-zinc-950"
+                                    : "text-zinc-800 hover:bg-zinc-50"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <CreatorLogo creator={resolveModelCreator(modelId)} size={15} />
+                                  <span className="truncate">{scheduledModelName(modelId)}</span>
+                                </div>
+                                {isSelected && (
+                                  <Check
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="text-zinc-800 shrink-0"
+                                  />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Item 5: Effort */}
+                  <div className="relative w-full rounded-2xl border border-zinc-200/90 bg-white px-4 sm:px-5 py-3.5 flex items-center justify-between shadow-2xs">
+                    <span className="text-[14px] font-normal text-zinc-800">Effort</span>
 
                     <div className="relative" ref={effortDropdownRef}>
                       <button
@@ -1729,19 +1809,19 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                           setIsRepeatDropdownOpen(false);
                           setIsTimeDropdownOpen(false);
                         }}
-                        className="text-[13px] text-zinc-800 rounded-lg flex items-center gap-1.5 px-2.5 py-1 border border-zinc-200 bg-zinc-50/50"
+                        className="text-[14px] text-zinc-700 hover:text-zinc-950 flex items-center gap-1.5 cursor-pointer font-normal select-none"
                       >
                         <span>{selectedEffort}</span>
                         <ChevronDown
-                          size={13}
-                          className={`transition-transform duration-200 ${
-                            isEffortDropdownOpen ? "rotate-180 text-zinc-600" : "text-zinc-400"
+                          size={14}
+                          className={`text-zinc-400 transition-transform duration-200 ${
+                            isEffortDropdownOpen ? "rotate-180" : ""
                           }`}
                         />
                       </button>
 
                       {isEffortDropdownOpen && (
-                        <div className="absolute right-0 bottom-full mb-2 w-44 bg-white rounded-xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 origin-bottom-right">
+                        <div className="absolute right-0 bottom-full mb-2 w-44 bg-white rounded-2xl shadow-xl border border-zinc-200/90 p-1.5 z-50 text-[13px] animate-in fade-in zoom-in-95 duration-100 origin-bottom-right">
                           {(["Low", "Medium", "High"] as const).map((eff) => {
                             const isSelected = selectedEffort === eff;
                             return (
@@ -1752,7 +1832,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                   setSelectedEffort(eff);
                                   setIsEffortDropdownOpen(false);
                                 }}
-                                className={`w-full px-3 py-2 text-left flex items-center justify-between rounded-lg transition-colors cursor-pointer text-[13px] ${
+                                className={`w-full px-3.5 py-2 text-left flex items-center justify-between rounded-xl transition-colors cursor-pointer text-[13px] ${
                                   isSelected
                                     ? "bg-zinc-100 font-medium text-zinc-950"
                                     : "text-zinc-800 hover:bg-zinc-50"
@@ -1760,7 +1840,11 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                               >
                                 <span>{eff}</span>
                                 {isSelected && (
-                                  <Check size={14} className="text-zinc-800 shrink-0" />
+                                  <Check
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="text-zinc-800 shrink-0"
+                                  />
                                 )}
                               </button>
                             );
@@ -1769,75 +1853,28 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                       )}
                     </div>
                   </div>
-
-                  {/* Start in new chat toggle */}
-                  <div className="w-full rounded-xl border border-zinc-200/90 bg-white px-4 py-2.5 flex items-center justify-between shadow-2xs">
-                    <span className="text-[13px] font-normal text-zinc-800">
-                      Start each run in new chat
-                    </span>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={startInNewChat}
-                      onClick={() => setStartInNewChat((v) => !v)}
-                      className={`w-[40px] h-[24px] rounded-full transition-colors relative cursor-pointer shrink-0 ${
-                        startInNewChat ? "bg-slate-900" : "bg-zinc-200"
-                      }`}
-                    >
-                      <div
-                        className={`w-4.5 h-4.5 rounded-full bg-white shadow-xs transition-transform absolute top-[3px] ${
-                          startInNewChat ? "translate-x-[19px]" : "translate-x-[3px]"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Optional API Key Override */}
-                  <div className="w-full rounded-xl border border-zinc-200/90 bg-white p-3 shadow-2xs">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[12.5px] font-medium text-zinc-700 flex items-center gap-1.5">
-                        <KeyRound size={13} className="text-zinc-400" />
-                        <span>Custom API Key Override (Optional)</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={onNavigateToProviders}
-                        className="text-[11px] text-blue-600 hover:underline flex items-center gap-1"
-                      >
-                        <span>Manage Keys</span>
-                        <ExternalLink size={10} />
-                      </button>
-                    </div>
-                    <input
-                      type="password"
-                      value={modalApiKey}
-                      onChange={(e) => setModalApiKey(e.target.value)}
-                      placeholder="Leave blank to use default workspace key"
-                      className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-mono text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-400"
-                    />
-                  </div>
                 </div>
               )}
 
               {/* Bottom Footer Row: Cancel + Create pills on right */}
-              <div className="mt-6 flex items-center justify-end gap-2.5">
+              <div className="mt-6 sm:mt-7 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-[13px] font-medium text-zinc-700 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 rounded-full bg-zinc-100 hover:bg-zinc-200/80 text-[14px] font-medium text-zinc-800 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!modalPrompt.trim() || isSavingTask}
-                  className={`px-5 py-2 rounded-xl text-[13px] font-semibold transition-all ${
+                  className={`px-6 py-2.5 rounded-full text-[14px] font-medium transition-all ${
                     modalPrompt.trim() && !isSavingTask
-                      ? "bg-slate-900 hover:bg-slate-800 text-white cursor-pointer active:scale-95 shadow-xs"
-                      : "bg-slate-300 text-white cursor-not-allowed"
+                      ? "bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer active:scale-95 shadow-xs"
+                      : "bg-[#9E9E9E] text-white cursor-not-allowed"
                   }`}
                 >
-                  {isSavingTask ? "Saving…" : editingTaskId ? "Save changes" : "Schedule Task"}
+                  {isSavingTask ? "Creating…" : editingTaskId ? "Save" : "Create"}
                 </button>
               </div>
             </form>
@@ -1871,6 +1908,10 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                     {executingTask.title}
                   </h3>
                   <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+                    <CreatorLogo
+                      creator={resolveModelCreator(executingTask.model || "gpt-6-astra")}
+                      size={13}
+                    />
                     <span>{scheduledModelName(executingTask.model || "gpt-6-astra")}</span>
                     <span>•</span>
                     <span>{executingTask.frequency}</span>
@@ -1906,12 +1947,29 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               ) : (
                 <>
                   {/* Status metadata banner */}
-                  <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div
+                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${
+                      executionRunRecord?.status === "failed"
+                        ? "bg-rose-50/70 border border-rose-100/80"
+                        : "bg-slate-50 border border-slate-100"
+                    }`}
+                  >
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-xs font-semibold text-slate-800">
-                        Execution Completed
-                      </span>
+                      {executionRunRecord?.status === "failed" ? (
+                        <>
+                          <AlertCircle size={13} className="text-rose-600" />
+                          <span className="text-xs font-semibold text-rose-700">
+                            Execution Failed
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={13} className="text-slate-800" />
+                          <span className="text-xs font-semibold text-slate-800">
+                            Execution Completed
+                          </span>
+                        </>
+                      )}
                       {executionRunRecord?.finishedAt && executionRunRecord?.startedAt && (
                         <span className="text-[11px] text-slate-500">
                           in{" "}
@@ -1944,7 +2002,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   </div>
 
                   {/* Rendered Output with markdown support */}
-                  <div className="p-4 bg-white border border-slate-200/80 rounded-2xl text-xs text-slate-800 leading-relaxed shadow-2xs select-text">
+                  <div
+                    className={`p-4 bg-white border rounded-2xl text-xs leading-relaxed shadow-2xs select-text ${
+                      executionRunRecord?.status === "failed"
+                        ? "border-rose-200/80 text-rose-900"
+                        : "border-slate-200/80 text-slate-800"
+                    }`}
+                  >
                     <AssistantResponse content={executionOutput} isStreaming={false} />
                   </div>
                 </>
@@ -1959,6 +2023,20 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 </span>
 
                 <div className="flex items-center gap-2.5">
+                  {executionRunRecord?.status === "failed" &&
+                    executionOutput.includes("Customize → Providers") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExecutingTask(null);
+                          onNavigateToProviders();
+                        }}
+                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
+                      >
+                        <KeyRound size={12} />
+                        <span>Connect API Key</span>
+                      </button>
+                    )}
                   <button
                     type="button"
                     onClick={() => setExecutingTask(null)}

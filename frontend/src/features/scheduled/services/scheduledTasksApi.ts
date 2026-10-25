@@ -21,6 +21,51 @@ export function scheduledModelName(id: string): string {
   return MODEL_REGISTRY[id]?.name ?? id;
 }
 
+export function resolveModelCreator(modelId: string): string {
+  if (!modelId) return "openai";
+  const meta = MODEL_REGISTRY[modelId];
+
+  if (meta?.upstreamModelId) {
+    const prefix = meta.upstreamModelId.split("/")[0]?.toLowerCase();
+    if (prefix && prefix !== "custom-model") {
+      if (prefix === "nvidia") return "nvidia";
+      if (prefix === "anthropic") return "anthropic";
+      if (prefix === "openai") return "openai";
+      if (prefix === "google") return "google";
+      if (prefix === "meta") return "meta";
+      if (prefix === "deepseek") return "deepseek";
+      if (prefix === "mistral") return "mistral";
+      if (prefix === "moonshot" || prefix === "kimi") return "kimi";
+      if (prefix === "alibaba" || prefix === "qwen") return "alibaba";
+      if (prefix === "xai") return "xai";
+    }
+  }
+
+  if (meta?.provider && meta.provider !== "custom") {
+    if (meta.provider === "anthropic") return "anthropic";
+    if (meta.provider === "openai") return "openai";
+    if (meta.provider === "google") return "google";
+    if (meta.provider === "deepseek") return "deepseek";
+    if (meta.provider === "kimi") return "kimi";
+    if (meta.provider === "qwen") return "alibaba";
+    if (meta.provider === "xai") return "xai";
+  }
+
+  const id = modelId.toLowerCase();
+  if (id.includes("nemotron") || id.includes("nvidia")) return "nvidia";
+  if (id.includes("claude") || id.includes("anthropic") || id.includes("muse")) return "anthropic";
+  if (id.includes("gpt") || id.includes("openai")) return "openai";
+  if (id.includes("gemini") || id.includes("google")) return "google";
+  if (id.includes("deepseek")) return "deepseek";
+  if (id.includes("kimi") || id.includes("moonshot")) return "kimi";
+  if (id.includes("qwen") || id.includes("alibaba")) return "alibaba";
+  if (id.includes("grok") || id.includes("xai")) return "xai";
+  if (id.includes("llama") || id.includes("meta")) return "meta";
+  if (id.includes("mistral")) return "mistral";
+
+  return "openai";
+}
+
 function toDisplayTime(time: string): string {
   const [hourText, minute] = time.split(":");
   const hour = Number(hourText);
@@ -163,10 +208,14 @@ function legacyInput(raw: unknown, timezone: string) {
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok)
-    throw new Error(
-      typeof body.error === "string" ? body.error : "Scheduled tasks request failed."
-    );
+  if (!response.ok) {
+    const rawError =
+      typeof body.error === "string" ? body.error : "Scheduled tasks request failed.";
+    if (rawError.startsWith("MISSING_API_KEY:")) {
+      throw new Error(rawError.split(":").slice(2).join(":"));
+    }
+    throw new Error(rawError);
+  }
   return body as T;
 }
 

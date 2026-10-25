@@ -16,7 +16,7 @@ import {
   getProviderCredential,
   saveProviderCredential,
 } from "../../credentials/application/credentialVault.js";
-import { isValidApiKey, resolveApiKey } from "../../../platform/config/index.js";
+import { isValidApiKey } from "../../../platform/config/index.js";
 import { logEvent } from "../../../platform/observability/logger.js";
 import {
   ScheduledTaskRepository,
@@ -80,12 +80,19 @@ export class ScheduledTaskService {
     taskId: string,
     credential?: { apiKey: string; baseUrl?: string }
   ): ScheduledTaskRunRecord | null {
+    const task = this.tasks.get(userId, taskId);
+    if (!task) return null;
+    const provider = getModelMeta(task.model).provider as ProviderId;
     if (credential?.apiKey) {
-      const task = this.tasks.get(userId, taskId);
-      if (task) {
-        const provider = getModelMeta(task.model).provider as ProviderId;
-        saveProviderCredential(userId, provider, credential);
-      }
+      saveProviderCredential(userId, provider, credential);
+    }
+    const effectiveCredential = credential?.apiKey
+      ? credential
+      : this.loadCredential(userId, provider);
+    if (!effectiveCredential || !isValidApiKey(effectiveCredential.apiKey)) {
+      throw new Error(
+        `MISSING_API_KEY:${provider}:Connect your ${PROVIDER_CATALOG[provider].name} key in Customize → Providers to run this task.`
+      );
     }
     return this.tasks.createManualRun(userId, taskId);
   }
@@ -125,11 +132,8 @@ export class ScheduledTaskService {
       const model = MODEL_REGISTRY[task.model];
       if (!model?.isChatModel) throw new Error("The selected model is no longer available.");
       const provider = getModelMeta(task.model).provider as ProviderId;
-      const credential =
-        this.loadCredential(task.userId, provider) ||
-        (task.userId !== "default" ? this.loadCredential("default", provider) : null) ||
-        this.loadFallbackCredential(provider);
-      if (!credential?.apiKey.trim()) {
+      const credential = this.loadCredential(task.userId, provider);
+      if (!credential || !isValidApiKey(credential.apiKey)) {
         throw new Error(
           `MISSING_API_KEY:${provider}:Connect your ${PROVIDER_CATALOG[provider].name} key in Customize → Providers to run this task.`
         );
@@ -207,20 +211,5 @@ export class ScheduledTaskService {
       });
       return null;
     }
-  }
-
-  private loadFallbackCredential(
-    provider: ProviderId
-  ): { apiKey: string; baseUrl?: string } | null {
-    if (provider === "google") {
-      const key = resolveApiKey();
-      if (key) return { apiKey: key };
-    }
-    const envKeyName = PROVIDER_CATALOG[provider]?.envKeyName;
-    if (envKeyName) {
-      const envKey = process.env[envKeyName];
-      if (isValidApiKey(envKey)) return { apiKey: envKey.trim() };
-    }
-    return null;
   }
 }

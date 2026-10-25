@@ -19,6 +19,7 @@ export interface ScheduledTask {
   model?: string;
   effort?: "Low" | "Medium" | "High";
   apiKey?: string;
+  runOnThisComputer?: boolean;
 }
 
 export interface TaskTemplate {

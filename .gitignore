@@ -40,6 +40,14 @@ playwright-report/
 *.cert
 *.crt
 
+# Databases and local storage
+*.sqlite
+*.sqlite3
+*.db
+**/*.sqlite
+**/*.sqlite3
+**/*.db
+
 # Backup & temporary files
 *.bak
 **/*.bak

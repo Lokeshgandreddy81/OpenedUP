@@ -248,6 +248,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     | "benchmarks"
     | "chapters"
     | "roadmaps"
+    | "scheduled"
   >(() => {
     if (typeof window !== "undefined") {
       if (window.location.search.includes("tab=plugins")) return "plugins";

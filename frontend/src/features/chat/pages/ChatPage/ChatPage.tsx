@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { AppContextType } from "../../../chapters";
 import { ChatWindow } from "../../components/ChatWindow";
+import type { ChatWorkspaceView } from "./ChatWorkspaceScreens";
 import { ChatPageErrorBoundary } from "./ErrorBoundary";
 
 interface ChatPageProps {
@@ -21,8 +22,11 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
     "benchmarks",
     "chapters",
     "roadmaps",
+    "scheduled",
   ];
-  const initialView = validViews.includes(viewParam || "") ? (viewParam as any) : "chat";
+  const initialView = validViews.includes(viewParam || "")
+    ? (viewParam as ChatWorkspaceView)
+    : "chat";
   const initialCustomizeCategory =
     params.get("category") === "Providers" ? "Providers" : "Connectors";
 
@@ -35,7 +39,7 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
   };
 
   const handleOpenScheduledTasks = () => {
-    navigate("/scheduled");
+    navigate("/chat?view=scheduled");
   };
 
   const handleViewChange = (
@@ -48,6 +52,7 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
       | "benchmarks"
       | "chapters"
       | "roadmaps"
+      | "scheduled"
   ) => {
     // Keep views inside ChatWindow
   };

@@ -1,4 +1,4 @@
-# Openedup System Rules & Instructions
+# Architecture Boundaries & Guidelines
 
 - **Architecture Boundary**: The repository is organized into four clean directories:
   - `frontend/`: React 19 single-page application with modular feature pages and isolated screens.

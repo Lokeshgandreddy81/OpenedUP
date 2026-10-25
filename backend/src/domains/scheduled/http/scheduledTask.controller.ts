@@ -74,20 +74,30 @@ export function queueScheduledTaskRun(req: Request, res: Response): void {
     typeof req.headers["x-provider-base-url"] === "string"
       ? req.headers["x-provider-base-url"]
       : undefined;
-  const run = scheduledTasks.runNow(
-    getUserId(req),
-    req.params["id"]!,
-    headerKey
-      ? { apiKey: headerKey, ...(headerBaseUrl ? { baseUrl: headerBaseUrl } : {}) }
-      : undefined
-  );
-  if (!run) {
-    res.status(404).json({ error: "Scheduled task not found.", requestId: req.id });
-    return;
+
+  try {
+    const run = scheduledTasks.runNow(
+      getUserId(req),
+      req.params["id"]!,
+      headerKey
+        ? { apiKey: headerKey, ...(headerBaseUrl ? { baseUrl: headerBaseUrl } : {}) }
+        : undefined
+    );
+    if (!run) {
+      res.status(404).json({ error: "Scheduled task not found.", requestId: req.id });
+      return;
+    }
+    // Instantly trigger execution in the background so the user gets near-immediate results
+    void scheduledTasks.executeNext().catch(() => {});
+    res.status(202).json({ run });
+  } catch (error) {
+    const rawMessage = error instanceof Error ? error.message : "Scheduled task execution failed.";
+    if (rawMessage.startsWith("MISSING_API_KEY:")) {
+      res.status(401).json({ error: rawMessage, requestId: req.id });
+      return;
+    }
+    res.status(400).json({ error: rawMessage, requestId: req.id });
   }
-  // Instantly trigger execution in the background so the user gets near-immediate results
-  void scheduledTasks.executeNext().catch(() => {});
-  res.status(202).json({ run });
 }
 
 export function getScheduledTaskRun(req: Request, res: Response): void {

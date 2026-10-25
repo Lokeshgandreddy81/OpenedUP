@@ -1,45 +1,8 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { ScheduledTasksView } from "../../components/ScheduledTasksView";
-import { ScheduledPageErrorBoundary } from "./ErrorBoundary";
-
-export const ScheduledPageContent: React.FC = () => {
-  const navigate = useNavigate();
-
-  const handleClose = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/results");
-    }
-  };
-
-  const handleNavigateToChat = (prompt?: string) => {
-    navigate("/chat" + (prompt ? `?prompt=${encodeURIComponent(prompt)}` : ""));
-  };
-
-  const handleNavigateToProviders = () => {
-    navigate("/chat?view=customize&category=Providers");
-  };
-
-  return (
-    <div className="w-screen h-screen">
-      <ScheduledTasksView
-        isOpen={true}
-        onClose={handleClose}
-        onNavigateToChat={handleNavigateToChat}
-        onNavigateToProviders={handleNavigateToProviders}
-      />
-    </div>
-  );
-};
+import { Navigate } from "react-router-dom";
 
 export const ScheduledPage: React.FC = () => {
-  return (
-    <ScheduledPageErrorBoundary>
-      <ScheduledPageContent />
-    </ScheduledPageErrorBoundary>
-  );
+  return <Navigate to="/chat?view=scheduled" replace />;
 };
 
 export default ScheduledPage;
