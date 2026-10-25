@@ -55,7 +55,6 @@ export type AiModelId =
   | "claude-fable-5.1"
   | "gpt-6-astra"
   | "gemini-4-argon"
-  | "muse-wonder"
   | "gpt-6.1-sol"
   | "grok-4.7"
   | "deepseek-v4.1-flash"

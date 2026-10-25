@@ -166,15 +166,6 @@ export const MODEL_REGISTRY: Record<string, ModelMetadata> = {
     isChatModel: true,
     inputModalities: ["text", "image"],
   },
-  "muse-wonder": {
-    id: "muse-wonder",
-    name: "Muse Wonder",
-    provider: "anthropic",
-    upstreamModelId: "claude-haiku-5-5",
-    envKeyName: "ANTHROPIC_API_KEY",
-    isChatModel: true,
-    inputModalities: ["text", "image"],
-  },
   "gpt-6.1-sol": {
     id: "gpt-6.1-sol",
     name: "GPT-6.1 Sol",
