@@ -300,7 +300,7 @@ export const DevOpsRoadmapPage: React.FC<DevOpsRoadmapPageProps> = ({
           type="button"
           onClick={handleBack}
           aria-label="Back to roadmaps"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-slate-100 px-3 text-[12px] font-medium text-slate-700 transition-colors hover:bg-slate-200 cursor-pointer"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[12px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
         >
           <ArrowLeft size={14} />
           <span>Back</span>
