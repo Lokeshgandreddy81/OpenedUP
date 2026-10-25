@@ -1,7 +1,21 @@
-# Frontend
+# Frontend Client
 
-The frontend is a React single-page application. The app shell owns route composition and shared browser integrations; product screens, state, data, and UI belong to feature folders under `src/features/`. Feature-to-feature dependencies go through the owning feature's public entry point, and the browser imports shared schemas only from `backend/contracts/`.
+The frontend is a modern React 19 single-page application bundled with Vite.
 
-Route-level screens and large catalog entries should load on demand. Keep loading and error states at the boundary where a user can recover without losing unrelated work.
+## Architecture
 
-Run Vite from the repository root with `npm run dev:frontend`. The root [README](../README.md) documents setup and verification; [the repository modernization plan](../specs/repo-modernization/README.md) tracks unfinished boundary and performance work.
+- **App Shell (`src/app/`)**: Owns root navigation, shell layout, auth context, and shared browser integrations.
+- **Feature Modules (`src/features/`)**: Organized by domain (e.g. `artifacts`, `benchmarks`, `chapters`, `chat`, `customize`, `plugins`, `projects`, `roadmaps`, `scheduled`).
+  - Each screen is an individual, dedicated `.tsx` page inside the feature's `pages/` directory.
+  - Feature-to-feature dependencies are exported through public barrel entries.
+- **Shared Contracts**: Runtime-neutral types and Zod schemas are imported from `@charan-interiors/contracts` (`packages/contracts`).
+
+## Development
+
+Run the frontend development server from the repository root:
+
+```bash
+npm run dev:frontend
+```
+
+Verification workflows and overall monorepo guidelines are documented in the [root README](../README.md).

@@ -26,20 +26,18 @@ describe("Scheduled Tasks Unauthenticated HTTP API", () => {
     expect(listInitial.body.tasks).toEqual([]);
 
     // 2. Create task without auth
-    const createRes = await request(app)
-      .post("/api/scheduled-tasks")
-      .send({
-        title: "Daily summary",
-        prompt: "Summarize the day.",
-        icon: "☀️",
-        frequency: "daily",
-        time: "09:00",
-        timezone: "Asia/Kolkata",
-        model: "gpt-6-astra",
-        effort: "Medium",
-        notifications: "Important updates",
-        startInNewChat: true,
-      });
+    const createRes = await request(app).post("/api/scheduled-tasks").send({
+      title: "Daily summary",
+      prompt: "Summarize the day.",
+      icon: "☀️",
+      frequency: "daily",
+      time: "09:00",
+      timezone: "Asia/Kolkata",
+      model: "gpt-6-astra",
+      effort: "Medium",
+      notifications: "Important updates",
+      startInNewChat: true,
+    });
     expect(createRes.status).toBe(201);
     expect(createRes.body.task).toMatchObject({
       title: "Daily summary",
@@ -57,21 +55,19 @@ describe("Scheduled Tasks Unauthenticated HTTP API", () => {
     expect(listAfterCreate.body.tasks[0].id).toBe(taskId);
 
     // 4. Update task (toggle paused) without auth
-    const updateRes = await request(app)
-      .put(`/api/scheduled-tasks/${taskId}`)
-      .send({
-        title: "Daily summary",
-        prompt: "Summarize the day.",
-        icon: "☀️",
-        frequency: "daily",
-        time: "09:00",
-        timezone: "Asia/Kolkata",
-        model: "gpt-6-astra",
-        effort: "Medium",
-        notifications: "Important updates",
-        startInNewChat: true,
-        isActive: false,
-      });
+    const updateRes = await request(app).put(`/api/scheduled-tasks/${taskId}`).send({
+      title: "Daily summary",
+      prompt: "Summarize the day.",
+      icon: "☀️",
+      frequency: "daily",
+      time: "09:00",
+      timezone: "Asia/Kolkata",
+      model: "gpt-6-astra",
+      effort: "Medium",
+      notifications: "Important updates",
+      startInNewChat: true,
+      isActive: false,
+    });
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.task.isActive).toBe(false);
 

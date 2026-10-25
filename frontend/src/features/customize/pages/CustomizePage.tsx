@@ -523,7 +523,8 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           )}
                           {isConnected && !isAccountConnected && (
                             <p className="text-[11px] text-neutral-500">
-                              This key is only available in this browser. {user
+                              This key is only available in this browser.{" "}
+                              {user
                                 ? "Click Update to save it to your account for scheduled tasks and across devices."
                                 : "Sign in, then click Update to save it to your account for scheduled tasks and across devices."}
                             </p>

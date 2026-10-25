@@ -243,10 +243,10 @@ export async function runScheduledTask(
 ): Promise<ScheduledTaskRunRecord> {
   const headers = new Headers();
   if (apiKey) headers.set("x-provider-key", apiKey);
-  const response = await scheduledFetch(
-    `/api/scheduled-tasks/${encodeURIComponent(id)}/run`,
-    { method: "POST", headers }
-  );
+  const response = await scheduledFetch(`/api/scheduled-tasks/${encodeURIComponent(id)}/run`, {
+    method: "POST",
+    headers,
+  });
   const body = await parseResponse<{ run: ScheduledTaskRunRecord }>(response);
   let run = body.run;
   for (

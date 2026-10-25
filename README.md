@@ -12,7 +12,7 @@ Document intelligence, spend reconciliation, and AI chat platform for receipt au
 
 ## Architecture Overview
 
-For provider selection, BYOK credential storage, and chat session behavior, see [Chat architecture](docs/chat-architecture.md). The current HTTP contract is maintained in [OpenAPI](docs/api/openapi.yaml). Scheduled task recurrence, ownership, and deployment decisions are in the [scheduled tasks notes](specs/scheduled-tasks/README.md).
+For provider selection, BYOK credential storage, and chat session behavior, see [Chat architecture](packages/docs/chat-architecture.md). The current HTTP contract is maintained in [OpenAPI](packages/docs/api/openapi.yaml).
 
 ```mermaid
 graph TD
@@ -77,40 +77,43 @@ graph TD
 
 ## Monorepo Layout
 
-The two application roots are `frontend/` and `backend/`. Product code lives under those roots; runtime-neutral API contracts are a workspace package at `backend/contracts/` so the frontend does not depend on backend runtime modules.
+The repository is structured into four focused top-level directories:
 
 ```text
 .
-├── frontend/                       # React + Vite browser application
+├── frontend/                       # React 19 + Vite browser application
 │   ├── src/app/                    # Shell, routing, auth and shared integrations
 │   ├── src/features/               # Feature-owned pages, UI, state, services and data
-│   │   ├── chapters/               # Intake, document and results screens
 │   │   ├── artifacts/              # Artifact screen and persistence client
 │   │   ├── benchmarks/             # Benchmarks, image arena and coding-agent screens
+│   │   ├── chapters/               # Intake, document and results screens
 │   │   ├── chat/                   # Chat screen, session UI and chat orchestration
 │   │   ├── customize/              # Provider/model settings and key client
 │   │   ├── plugins/                # Plugin catalog and install state
 │   │   ├── projects/               # Projects, sessions and file context
 │   │   ├── roadmaps/               # Roadmap screens, renderer and catalog data
 │   │   └── scheduled/              # Scheduled task screens and UI
-│   ├── src/test/                   # Frontend tests
+│   ├── src/test/                   # Frontend unit and component tests
 │   ├── tests/e2e/                  # Playwright browser tests
 │   └── infra/docker/               # Frontend Nginx configuration
 ├── backend/                        # Single-process modular Express application
-│   ├── contracts/                  # Runtime-neutral schemas, types and helpers
 │   ├── src/app.ts                  # Middleware and domain composition root
 │   ├── src/domains/                # HTTP, application, provider and repository modules
 │   ├── src/platform/               # Auth, config, database, HTTP and observability
-│   ├── tests/                      # Backend unit and integration tests
-│   └── scripts/                    # Standalone PDF utilities
-├── docs/                           # Architecture decisions and OpenAPI contract
-├── specs/                          # Active implementation plans
+│   └── tests/                      # Backend unit and integration tests
+├── python/                         # Scalable Python document processing and chunking
+│   ├── src/                        # PDF chapter extractor & roadmap generator
+│   ├── pyproject.toml              # Ruff configuration
+│   └── requirements.txt            # Python dependencies
+├── packages/                       # Shared packages, configurations and documentation
+│   ├── contracts/                  # Runtime-neutral schemas, types and helpers
+│   └── docs/                       # Architecture decisions and OpenAPI contract
 ├── .github/                        # CI and repository configuration
 ├── docker-compose.yml              # Local multi-container orchestration
 └── package.json                    # npm workspace orchestration
 ```
 
-Each route/screen belongs to one feature and has its own `.tsx` page entry. Feature internals should be imported through that feature's public `index.ts` or explicitly named `publicApi.ts` when another feature needs them. Roadmap and benchmark catalogs remain data modules. The backend remains one deployable process with internal domain boundaries; these folders are not microservices.
+Each route/screen belongs to one feature and has its own `.tsx` page entry. Shared API schemas and models are defined in `@charan-interiors/contracts` (`packages/contracts/`) so that the frontend remains decoupled from backend runtime code.
 ---
 
 ## Quickstart
@@ -200,11 +203,7 @@ npm audit --audit-level=high
 
 ## Security
 
-Please report vulnerabilities directly via GitHub Private Vulnerability Reporting or review our [Security Policy](SECURITY.md).
-
-## Contributing
-
-Review the [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting contributions.
+Please report vulnerabilities directly via GitHub Private Vulnerability Reporting on the repository page.
 
 ## License
 

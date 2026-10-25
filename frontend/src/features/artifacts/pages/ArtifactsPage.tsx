@@ -1677,10 +1677,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                   </button>
                 ))}
               </div>
-              <div
-                className="inline-flex rounded-xl bg-neutral-100 p-1"
-                aria-label="Editor view"
-              >
+              <div className="inline-flex rounded-xl bg-neutral-100 p-1" aria-label="Editor view">
                 {(["Edit", "Preview"] as const).map((mode) => (
                   <button
                     key={mode}

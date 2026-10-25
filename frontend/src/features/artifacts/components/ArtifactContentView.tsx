@@ -125,7 +125,10 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
       }
       if (part.startsWith("`"))
         return (
-          <code key={key} className="rounded bg-[#f3f1ec] px-1.5 py-0.5 font-mono text-[0.9em] text-[#514a40]">
+          <code
+            key={key}
+            className="rounded bg-[#f3f1ec] px-1.5 py-0.5 font-mono text-[0.9em] text-[#514a40]"
+          >
             {part.slice(1, -1)}
           </code>
         );

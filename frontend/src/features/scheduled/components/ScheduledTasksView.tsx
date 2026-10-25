@@ -729,7 +729,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 {searchQuery ? "No matching tasks found" : "No scheduled tasks yet"}
               </p>
               <p className="text-[11px] text-slate-400 mt-1">
-                {searchQuery ? "Try a different search term." : "Click above to create your first task."}
+                {searchQuery
+                  ? "Try a different search term."
+                  : "Click above to create your first task."}
               </p>
             </div>
           ) : (
@@ -768,7 +770,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                         {/* Status dot */}
                         <span
                           className={`w-2 h-2 rounded-full shrink-0 ${
-                            task.isActive ? "bg-emerald-500 shadow-2xs shadow-emerald-500/50" : "bg-slate-300"
+                            task.isActive
+                              ? "bg-emerald-500 shadow-2xs shadow-emerald-500/50"
+                              : "bg-slate-300"
                           }`}
                           title={task.isActive ? "Active" : "Paused"}
                         />
@@ -785,7 +789,11 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   {/* Quick Action bar underneath */}
                   <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-slate-400">
                     <span className="text-[10.5px] text-slate-400 truncate max-w-[130px]">
-                      {task.isActive ? (task.nextRun ? `Next: ${task.nextRun}` : "Scheduled") : "Paused"}
+                      {task.isActive
+                        ? task.nextRun
+                          ? `Next: ${task.nextRun}`
+                          : "Scheduled"
+                        : "Paused"}
                     </span>
 
                     <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
@@ -930,7 +938,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
                   <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
                     <span>
-                      Created {new Date(selectedTask.createdAt).toLocaleDateString(undefined, {
+                      Created{" "}
+                      {new Date(selectedTask.createdAt).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
@@ -1070,7 +1079,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 </div>
                 <div>
                   <div className="text-[14px] font-semibold text-slate-900">
-                    {runsForSelectedTask.length} execution{runsForSelectedTask.length === 1 ? "" : "s"}
+                    {runsForSelectedTask.length} execution
+                    {runsForSelectedTask.length === 1 ? "" : "s"}
                   </div>
                   <div className="text-[11.5px] text-slate-500 mt-0.5 truncate">
                     {selectedTask.lastRun ? `Last: ${selectedTask.lastRun}` : "Not run yet"}
@@ -1150,7 +1160,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   </div>
                   <p className="text-xs font-medium text-slate-700">No executions recorded yet</p>
                   <p className="text-[11.5px] text-slate-400 max-w-xs">
-                    Run this task manually with &quot;Run Now&quot; or wait for its scheduled trigger.
+                    Run this task manually with &quot;Run Now&quot; or wait for its scheduled
+                    trigger.
                   </p>
                   <button
                     type="button"
@@ -1184,8 +1195,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 isSuccess
                                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
                                   : isFailed
-                                  ? "bg-rose-50 text-rose-700 border border-rose-200/80"
-                                  : "bg-amber-50 text-amber-700 border border-amber-200/80"
+                                    ? "bg-rose-50 text-rose-700 border border-rose-200/80"
+                                    : "bg-amber-50 text-amber-700 border border-amber-200/80"
                               }`}
                             >
                               {isSuccess && <CheckCircle2 size={12} />}
@@ -1276,7 +1287,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
             {/* Subtitle */}
             <p className="text-[13.5px] text-slate-500 text-center mt-1.5 mb-8 max-w-md leading-relaxed">
-              Set up automated background schedules to research, monitor, summarize, and draft on your time.
+              Set up automated background schedules to research, monitor, summarize, and draft on
+              your time.
             </p>
 
             {/* 6 High-Craft Cards in 2 columns */}
@@ -1469,7 +1481,11 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                             >
                               <span>{opt.label}</span>
                               {isSelected && (
-                                <Check size={15} strokeWidth={1.8} className="text-zinc-800 shrink-0" />
+                                <Check
+                                  size={15}
+                                  strokeWidth={1.8}
+                                  className="text-zinc-800 shrink-0"
+                                />
                               )}
                             </button>
                           );
@@ -1685,7 +1701,11 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                               >
                                 <span>{scheduledModelName(modelId)}</span>
                                 {isSelected && (
-                                  <Check size={14} strokeWidth={2} className="text-zinc-800 shrink-0" />
+                                  <Check
+                                    size={14}
+                                    strokeWidth={2}
+                                    className="text-zinc-800 shrink-0"
+                                  />
                                 )}
                               </button>
                             );
@@ -1739,7 +1759,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 }`}
                               >
                                 <span>{eff}</span>
-                                {isSelected && <Check size={14} className="text-zinc-800 shrink-0" />}
+                                {isSelected && (
+                                  <Check size={14} className="text-zinc-800 shrink-0" />
+                                )}
                               </button>
                             );
                           })}
@@ -1892,16 +1914,19 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                       </span>
                       {executionRunRecord?.finishedAt && executionRunRecord?.startedAt && (
                         <span className="text-[11px] text-slate-500">
-                          in {((executionRunRecord.finishedAt - executionRunRecord.startedAt) / 1000).toFixed(1)}s
+                          in{" "}
+                          {(
+                            (executionRunRecord.finishedAt - executionRunRecord.startedAt) /
+                            1000
+                          ).toFixed(1)}
+                          s
                         </span>
                       )}
                     </div>
 
                     <button
                       type="button"
-                      onClick={() =>
-                        handleCopyText(executionOutput, "executing-task", "output")
-                      }
+                      onClick={() => handleCopyText(executionOutput, "executing-task", "output")}
                       className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                       {copiedRunOutputId === "executing-task" ? (
@@ -1969,8 +1994,8 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Are you sure you want to remove &quot;{taskPendingDelete.title}&quot; from your schedule?
-              All future scheduled executions will be cancelled.
+              Are you sure you want to remove &quot;{taskPendingDelete.title}&quot; from your
+              schedule? All future scheduled executions will be cancelled.
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
