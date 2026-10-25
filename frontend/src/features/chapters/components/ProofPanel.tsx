@@ -12,6 +12,7 @@ import {
   formatCurrencyAmount,
   formatDisplayTitle,
   getCurrencySymbol,
+  isChapterItem,
   isCrossDocumentPair,
   sortChapterItems,
   splitDocumentName,
@@ -112,7 +113,9 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
     row.chapter_number !== undefined ||
     row.start_page !== undefined ||
     Boolean(row.content) ||
-    Boolean(row.extracted_text);
+    Boolean(row.extracted_text) ||
+    Boolean(row.chapter_title) ||
+    isChapterItem(row);
   const [chapterPdfUrl, setChapterPdfUrl] = useState<string | null>(null);
   const [chapterAspect, setChapterAspect] = useState<number | null>(null);
   const [chapterZoom, setChapterZoom] = useState(() =>
@@ -471,7 +474,11 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
         Math.min(1000, Math.round(((e.clientY - rect.top) / rect.height) * 1000))
       );
 
-      let [ymin, xmin, ymax, xmax] = draftBoxRef.current ?? row.box_2d;
+      const safeBox: [number, number, number, number] =
+        Array.isArray(row.box_2d) && row.box_2d.length === 4
+          ? (row.box_2d as [number, number, number, number])
+          : [0, 0, 1000, 1000];
+      let [ymin, xmin, ymax, xmax] = draftBoxRef.current ?? safeBox;
       const minSize = 25;
       if (draggingCorner === "nw") {
         ymin = Math.min(relY, ymax - minSize);
@@ -515,7 +522,11 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
     };
   }, [draggingCorner, row.row, row.box_2d, onUpdateRow]);
 
-  const [ymin, xmin, ymax, xmax] = draftBox ?? row.box_2d;
+  const safeBox: [number, number, number, number] =
+    Array.isArray(row.box_2d) && row.box_2d.length === 4
+      ? (row.box_2d as [number, number, number, number])
+      : [0, 0, 1000, 1000];
+  const [ymin, xmin, ymax, xmax] = draftBox ?? safeBox;
   const boxCenterX = (xmin + xmax) / 20; // 0..100%
   const boxCenterY = (ymin + ymax) / 20; // 0..100%
   const boxWPercent = Math.max(8, (xmax - xmin) / 10);
@@ -854,42 +865,57 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                 }}
               >
                 <div ref={imageContainerRef} className="relative inline-block">
-                  {photo.mimeType === "application/pdf" ||
-                  photo.name.toLowerCase().endsWith(".pdf") ? (
-                    <div className="w-[340px] sm:w-[440px] h-[30vh] lg:h-[36vh] bg-white border border-[#006EFF] flex flex-col overflow-hidden">
-                      <div className="px-3 py-1.5 bg-[#F5F9FF] border-b border-[#006EFF]/30 flex items-center justify-between gap-2 text-[12px] text-[#006EFF] shrink-0">
-                        <span className="font-mono-badge px-1.5 py-0.5 bg-[#006EFF] text-white">
+                  {photo?.mimeType === "application/pdf" ||
+                  Boolean(photo?.name?.toLowerCase().endsWith(".pdf")) ? (
+                    <div className="w-[340px] sm:w-[440px] h-[30vh] lg:h-[36vh] bg-white border border-slate-200 flex flex-col overflow-hidden">
+                      <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2 text-[12px] text-slate-700 shrink-0">
+                        <span className="font-mono-badge px-1.5 py-0.5 bg-slate-900 text-white text-[10px]">
                           DOCUMENT & CHAPTER VIEW
                         </span>
-                        <span className="truncate flex-1">{photo.name}</span>
-                        <a
-                          href={photo.objectUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shoebox-link text-[12px] shrink-0"
-                        >
-                          open pdf ↗
-                        </a>
+                        <span className="truncate flex-1">{photo?.name || "Document"}</span>
+                        {photo?.objectUrl && (
+                          <a
+                            href={photo.objectUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shoebox-link text-[12px] shrink-0"
+                          >
+                            open pdf ↗
+                          </a>
+                        )}
                       </div>
-                      <PdfCanvasPages
-                        url={photo.objectUrl}
-                        className="w-full flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white no-native-scrollbar no-scrollbar"
-                      />
+                      {photo?.objectUrl ? (
+                        <PdfCanvasPages
+                          url={photo.objectUrl}
+                          className="w-full flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white no-native-scrollbar no-scrollbar"
+                        />
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center p-4 text-xs text-slate-400 font-mono">
+                          Document preview loading...
+                        </div>
+                      )}
                     </div>
-                  ) : (
+                  ) : photo?.objectUrl ? (
                     <img
                       src={photo.objectUrl}
                       alt={`Receipt photo ${row.photo_index}`}
                       referrerPolicy="no-referrer"
                       className="block max-h-[32vh] lg:max-h-[38vh] w-auto max-w-full object-contain select-none pointer-events-none"
                     />
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center min-h-[160px] p-4 text-xs text-slate-400 font-mono">
+                      Image unavailable
+                    </div>
                   )}
 
                   {/* Other receipts on the same photo (click to select that row) */}
                   {allRowsInPhoto
                     .filter((other) => other.row !== row.row)
                     .map((other) => {
-                      const [oYmin, oXmin, oYmax, oXmax] = other.box_2d;
+                      const [oYmin, oXmin, oYmax, oXmax] =
+                        Array.isArray(other.box_2d) && other.box_2d.length === 4
+                          ? other.box_2d
+                          : [0, 0, 1000, 1000];
                       return (
                         <button
                           key={other.row}

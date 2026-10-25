@@ -5,9 +5,25 @@ const docCache = new Map<string, Promise<PDFDocumentProxy>>();
 const MAX_CACHED_PDF_DOCS = 8;
 
 export function clearPdfDocumentCache(urlKey?: string): void {
-  const entries = urlKey
-    ? [[urlKey.split("#")[0], docCache.get(urlKey.split("#")[0])] as const]
-    : [...docCache.entries()];
+  if (urlKey && typeof urlKey === "string") {
+    const key = urlKey.split("#")[0];
+    const promise = docCache.get(key);
+    if (promise) {
+      docCache.delete(key);
+      promise.then(
+        (doc) => {
+          try {
+            doc.destroy?.();
+          } catch {
+            // Ignore already-released PDF.js documents.
+          }
+        },
+        () => undefined
+      );
+    }
+    return;
+  }
+  const entries = [...docCache.entries()];
   for (const [key, promise] of entries) {
     if (!promise) continue;
     docCache.delete(key);
@@ -24,7 +40,10 @@ export function clearPdfDocumentCache(urlKey?: string): void {
   }
 }
 
-export function loadPdfDocument(url: string): Promise<PDFDocumentProxy> {
+export function loadPdfDocument(url?: string | null): Promise<PDFDocumentProxy> {
+  if (!url || typeof url !== "string") {
+    return Promise.reject(new Error("No valid PDF URL provided"));
+  }
   const key = url.split("#")[0];
   let cached = docCache.get(key);
   if (!cached) {

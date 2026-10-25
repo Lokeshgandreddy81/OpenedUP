@@ -47,6 +47,9 @@ export const PdfCanvasPages: React.FC<PdfCanvasPagesProps> = ({
     let active = true;
     setDoc(null);
     setFailed(false);
+    if (!url || typeof url !== "string") {
+      return;
+    }
     loadPdfDocument(url).then(
       (loaded) => {
         if (active) setDoc(loaded);

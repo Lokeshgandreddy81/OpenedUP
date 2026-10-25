@@ -270,7 +270,9 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
 
   const isInitialPdf =
     computedRows.some((r) => r.start_page !== undefined || r.chapter_number !== undefined) ||
-    photos.some((p) => p.mimeType === "application/pdf" || p.name.toLowerCase().endsWith(".pdf"));
+    photos.some(
+      (p) => p.mimeType === "application/pdf" || Boolean(p.name?.toLowerCase().endsWith(".pdf"))
+    );
 
   // Proof state: when a receipt row is tapped (or automatically for PDF documents or single merchant), cols 6-12 becomes ProofPanel
   const [selectedProofRow, setSelectedProofRow] = useState<number | null>(() =>
@@ -440,7 +442,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     const hasOnlyImageReceipts =
       photos.length > 0 &&
       photos.every(
-        (p) => p.mimeType !== "application/pdf" && !p.name.toLowerCase().endsWith(".pdf")
+        (p) => p.mimeType !== "application/pdf" && !p.name?.toLowerCase().endsWith(".pdf")
       ) &&
       computedRows.length > 0 &&
       computedRows.every((r) => r.start_page === undefined && r.chapter_number === undefined);
@@ -463,7 +465,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   // Study mode reads as an outline of the active document (or summary across multiple documents)
   const pdfDocTitle = useMemo(() => {
     const pdfPhotos = photos.filter(
-      (p) => p.mimeType === "application/pdf" || p.name.toLowerCase().endsWith(".pdf")
+      (p) => p.mimeType === "application/pdf" || Boolean(p.name?.toLowerCase().endsWith(".pdf"))
     );
     if (pdfPhotos.length === 0) return "";
     if (pdfPhotos.length === 1) {
@@ -974,7 +976,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     const docCount =
       reconciliation.totalDocuments ??
       photos.filter(
-        (p) => p.mimeType === "application/pdf" || p.name.toLowerCase().endsWith(".pdf")
+        (p) => p.mimeType === "application/pdf" || Boolean(p.name?.toLowerCase().endsWith(".pdf"))
       ).length;
     const prefix = isPdfDocument
       ? docCount > 1
@@ -1022,7 +1024,9 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   const activeProofPhoto = useMemo(
     () =>
       activeProofRowObj
-        ? photos.find((p) => p.globalIndex === activeProofRowObj.photo_index)
+        ? photos.find((p) => p.id === activeProofRowObj.source_photo_id) ||
+          photos.find((p) => p.globalIndex === activeProofRowObj.photo_index) ||
+          (photos.length === 1 ? photos[0] : undefined)
         : undefined,
     [activeProofRowObj, photos]
   );
