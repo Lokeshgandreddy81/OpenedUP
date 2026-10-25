@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ArrowDownAZ, Check, ChevronsUpDown } from "lucide-react";
 import type { AIModelBenchmark } from "../types";
 import { BENCHMARK_MODELS } from "../data/benchmarkModels";
@@ -24,6 +24,17 @@ export const BenchmarkCatalogView: React.FC<BenchmarkCatalogViewProps> = ({
   const [modelLimit, setModelLimit] = useState(20);
   const [sortAlphabetical, setSortAlphabetical] = useState(false);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
+
+  useEffect(() => {
+    if (!openMenu) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpenMenu(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [openMenu]);
 
   const evaluations = useMemo(() => {
     const filtered = BENCHMARK_EVALUATIONS.filter((evaluation) => visibleEvalIds[evaluation.id]);
@@ -148,7 +159,7 @@ export const BenchmarkCatalogView: React.FC<BenchmarkCatalogViewProps> = ({
                                 : "border-neutral-300 bg-white"
                             }`}
                           >
-                            {isOn && <Check size={11} strokeWidth={3} className="text-white" />}
+                            {isOn && <Check size={11} strokeWidth={1.75} className="text-white" />}
                           </span>
                           <span className="min-w-0 flex-1 truncate text-xs font-medium text-neutral-800">
                             {evaluation.name}

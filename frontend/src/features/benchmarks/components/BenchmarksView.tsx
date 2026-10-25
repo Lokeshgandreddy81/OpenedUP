@@ -165,7 +165,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
               aria-label="Back to document"
               className="text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer shrink-0"
             >
-              <ArrowLeft size={18} strokeWidth={2} />
+              <ArrowLeft size={18} strokeWidth={1.75} />
             </button>
           </div>
         ) : (
@@ -245,7 +245,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       </header>
 
       {/* Mobile Responsive Pill Bar */}
-      <div className="flex h-11 lg:hidden items-center px-3 bg-[#fcfcfb] border-b border-transparent gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+      <div className="flex h-12 lg:hidden items-center px-3 bg-[#fcfcfb] border-b border-transparent gap-2 overflow-x-auto no-scrollbar shrink-0">
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeTab === cat.id;
@@ -254,7 +254,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
               key={cat.id}
               type="button"
               onClick={() => setActiveTab(cat.id)}
-              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+              className={`px-3.5 py-1.5 min-h-[36px] rounded-full text-xs font-medium whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
                 isActive
                   ? "bg-black text-white font-semibold shadow-2xs"
                   : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200/80"
@@ -268,7 +268,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       </div>
 
       {/* Main Viewport Content Area */}
-      <main className="flex-1 w-full overflow-y-auto no-scrollbar relative p-4 md:p-8 flex flex-col gap-10 bg-[#fcfcfb]">
+      <main className="flex-1 w-full overflow-y-auto no-scrollbar relative p-3 sm:p-4 md:p-8 flex flex-col gap-6 sm:gap-10 bg-[#fcfcfb]">
         {/* VIEW: BENCHMARKS (evaluation catalog with score charts) */}
         {activeTab === "benchmarks" && <BenchmarkCatalogView onSelectModel={handleSelectModel} />}
 
@@ -293,7 +293,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
               activeTab === "leaderboard"
                 ? ""
                 : activeTab === "compare"
-                  ? "w-[70%] mx-auto"
+                  ? "w-full max-w-7xl mx-auto"
                   : "max-w-7xl mx-auto"
             }`}
           >

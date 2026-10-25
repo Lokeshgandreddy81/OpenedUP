@@ -122,6 +122,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 }) => {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [mobileShowTemplates, setMobileShowTemplates] = useState(false);
   const { hasKey } = useProviderKeys();
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -219,13 +220,31 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     return getFriendlyTimezone(timezoneLabel);
   }, [timezoneLabel]);
 
-  // Keyboard navigation: Escape key closes modal or window
+  // Keyboard navigation: Escape key closes active menus, dropdowns, modal or window
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (taskPendingDelete) {
           setTaskPendingDelete(null);
+        } else if (isFilterMenuOpen) {
+          setIsFilterMenuOpen(false);
+        } else if (isActionsMenuOpen) {
+          setIsActionsMenuOpen(false);
+        } else if (
+          isRepeatDropdownOpen ||
+          isDayDropdownOpen ||
+          isTimeDropdownOpen ||
+          isNotificationsDropdownOpen ||
+          isModelDropdownOpen ||
+          isEffortDropdownOpen
+        ) {
+          setIsRepeatDropdownOpen(false);
+          setIsDayDropdownOpen(false);
+          setIsTimeDropdownOpen(false);
+          setIsNotificationsDropdownOpen(false);
+          setIsModelDropdownOpen(false);
+          setIsEffortDropdownOpen(false);
         } else if (isCreateModalOpen) {
           setIsCreateModalOpen(false);
         } else if (executingTask) {
@@ -237,7 +256,21 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, isCreateModalOpen, executingTask, taskPendingDelete]);
+  }, [
+    isOpen,
+    onClose,
+    isCreateModalOpen,
+    executingTask,
+    taskPendingDelete,
+    isFilterMenuOpen,
+    isActionsMenuOpen,
+    isRepeatDropdownOpen,
+    isDayDropdownOpen,
+    isTimeDropdownOpen,
+    isNotificationsDropdownOpen,
+    isModelDropdownOpen,
+    isEffortDropdownOpen,
+  ]);
 
   // Focus search input
   useEffect(() => {
@@ -350,7 +383,10 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
         if (!active) return;
         setTasks(loaded);
         if (loaded.length > 0) {
-          setSelectedTaskId((current) => current || loaded[0].id);
+          setSelectedTaskId((current) => {
+            if (current) return current;
+            return typeof window !== "undefined" && window.innerWidth >= 768 ? loaded[0].id : null;
+          });
         }
       })
       .catch((error: unknown) => {
@@ -422,6 +458,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
   // Open modal pre-filled from template
   const handleOpenFromTemplate = (tmpl: TaskTemplate) => {
+    setMobileShowTemplates(false);
     setEditingTaskId(null);
     setModalTitle(tmpl.title);
     setModalPrompt(tmpl.description);
@@ -629,7 +666,11 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     >
       {/* Toast notification banner */}
       {toastMessage && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[80] bg-slate-900/95 backdrop-blur-md text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div
+          role="status"
+          aria-live="polite"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-[80] bg-slate-900/95 backdrop-blur-md text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200"
+        >
           <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -638,7 +679,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       {/* LEFT SIDEBAR: "Scheduled" - compact 2nd sidebar alongside main navbar */}
       <aside
         aria-label="Scheduled tasks sidebar"
-        className="w-56 sm:w-60 shrink-0 border-r border-[#EAEAE8] bg-[#F6F6F4] flex flex-col h-full select-none"
+        className={`${selectedTaskId || mobileShowTemplates ? "hidden md:flex" : "flex"} w-full md:w-60 shrink-0 border-r border-[#EAEAE8] bg-[#F6F6F4] flex-col h-full select-none`}
       >
         {/* Header row: "Scheduled Tasks" title + Count + Search icon */}
         <div className="h-13 px-3 flex items-center justify-between border-b-0 shrink-0">
@@ -649,9 +690,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 onClick={onClose}
                 title="Back to chat"
                 aria-label="Back to chat"
-                className="w-7 h-7 -ml-1 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer shrink-0"
+                className="w-9 h-9 sm:w-7 sm:h-7 -ml-1 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer shrink-0 min-h-[36px] min-w-[36px]"
               >
-                <ArrowLeft size={15} strokeWidth={2} />
+                <ArrowLeft size={15} strokeWidth={1.75} />
               </button>
             )}
             <div className="flex items-center gap-1.5 min-w-0">
@@ -659,7 +700,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 Scheduled Tasks
               </h1>
               {tasks.length > 0 && (
-                <span className="text-[12px] font-normal text-slate-500 shrink-0">
+                <span className="text-[12px] font-normal text-slate-500 shrink-0 tabular-nums font-mono">
                   {tasks.length}
                 </span>
               )}
@@ -675,13 +716,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               }}
               title="Search scheduled tasks"
               aria-label="Search scheduled tasks"
-              className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+              className={`w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer min-h-[36px] min-w-[36px] ${
                 isSearchOpen || searchQuery
                   ? "bg-[#ECECF1] text-slate-900"
                   : "text-slate-500 hover:text-slate-900 hover:bg-black/[0.04]"
               }`}
             >
-              <Search size={15} strokeWidth={1.8} />
+              <Search size={15} strokeWidth={1.75} />
             </button>
 
             <button
@@ -689,9 +730,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               onClick={handleOpenNewTask}
               title="Create new task"
               aria-label="Create new task"
-              className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer"
+              className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer min-h-[36px] min-w-[36px]"
             >
-              <Plus size={16} strokeWidth={2} />
+              <Plus size={16} strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -740,7 +781,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   : "text-slate-400 hover:text-slate-700 hover:bg-black/[0.04]"
               }`}
             >
-              <SlidersHorizontal size={12} strokeWidth={1.8} />
+              <SlidersHorizontal size={12} strokeWidth={1.75} />
             </button>
 
             {/* Filter Menu Popover */}
@@ -771,12 +812,22 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
         {/* Tasks List */}
         <div className="flex-1 overflow-y-auto px-2 py-1 cool-scrollbar space-y-0.5">
+          {/* Mobile shortcut to browse templates */}
+          <button
+            type="button"
+            onClick={() => setMobileShowTemplates(true)}
+            className="md:hidden w-full mb-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white rounded-xl border border-[#EAEAE8] flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer min-h-[38px]"
+          >
+            <Clock size={13} />
+            <span>Browse task templates</span>
+          </button>
+
           {isLoadingTasks ? (
             <div className="p-4 text-center text-xs text-slate-400">Loading scheduled tasks...</div>
           ) : filteredTasks.length === 0 ? (
             <div className="p-6 text-center">
               <div className="flex items-center justify-center mx-auto mb-2 text-slate-950">
-                <Clock size={22} strokeWidth={2.4} />
+                <Clock size={22} strokeWidth={1.75} />
               </div>
               <p className="text-xs font-semibold text-slate-900">
                 {searchQuery ? "No matching tasks found" : "No scheduled tasks yet"}
@@ -793,8 +844,11 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               return (
                 <div
                   key={task.id}
-                  onClick={() => setSelectedTaskId(task.id)}
-                  className={`group relative rounded-lg px-2.5 py-1.5 transition-colors duration-150 cursor-pointer ${
+                  onClick={() => {
+                    setSelectedTaskId(task.id);
+                    setMobileShowTemplates(false);
+                  }}
+                  className={`group relative rounded-lg px-2.5 py-2 transition-colors duration-150 cursor-pointer ${
                     isSelected
                       ? "bg-[#ECECF1] text-slate-950 font-normal"
                       : "hover:bg-black/[0.04] text-slate-700"
@@ -804,6 +858,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       setSelectedTaskId(task.id);
+                      setMobileShowTemplates(false);
                     }
                   }}
                   aria-label={`View scheduled task ${task.title}`}
@@ -829,7 +884,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
                     {/* Subtle Action Buttons on Hover */}
                     <div
-                      className={`flex items-center gap-0.5 shrink-0 ${
+                      className={`hidden md:flex items-center gap-0.5 shrink-0 ${
                         isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       } transition-opacity`}
                       onClick={(e) => e.stopPropagation()}
@@ -895,12 +950,21 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       {/* RIGHT MAIN CANVAS */}
       <main
         aria-label="Schedule main canvas"
-        className="flex-1 min-w-0 h-full flex flex-col bg-[#F9F9F7] relative overflow-y-auto cool-scrollbar"
+        className={`${!selectedTaskId && !mobileShowTemplates ? "hidden md:flex" : "flex"} flex-1 min-w-0 h-full flex-col bg-[#F9F9F7] relative overflow-y-auto cool-scrollbar`}
       >
         {/* Top Header Bar - Unified, professional SaaS/macOS Navbar */}
-        <div className="w-full h-13 px-5 lg:px-8 flex items-center justify-between border-b border-[#EAEAE8]/80 shrink-0 bg-[#F9F9F7]">
+        <div className="w-full h-13 px-4 sm:px-5 lg:px-8 flex items-center justify-between border-b border-[#EAEAE8]/80 shrink-0 bg-[#F9F9F7]">
           {selectedTask ? (
-            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSelectedTaskId(null)}
+                title="Back to task list"
+                aria-label="Back to task list"
+                className="md:hidden -ml-1 mr-0.5 w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer shrink-0 min-h-[36px] min-w-[36px]"
+              >
+                <ArrowLeft size={16} strokeWidth={2} />
+              </button>
               <button
                 type="button"
                 onClick={() => setSelectedTaskId(null)}
@@ -911,16 +975,25 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               <ChevronRight size={13} className="text-slate-400 shrink-0" />
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-sm select-none shrink-0">{selectedTask.icon}</span>
-                <span className="text-xs font-semibold text-slate-900 truncate max-w-[180px] sm:max-w-[320px]">
+                <span className="text-xs font-semibold text-slate-900 truncate max-w-[130px] sm:max-w-[320px]">
                   {selectedTask.title}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setMobileShowTemplates(false)}
+                title="Back to task list"
+                aria-label="Back to task list"
+                className="md:hidden -ml-1 mr-0.5 w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer shrink-0 min-h-[36px] min-w-[36px]"
+              >
+                <ArrowLeft size={16} strokeWidth={2} />
+              </button>
               <span className="text-xs font-medium text-slate-500">Scheduled Tasks</span>
               <ChevronRight size={13} className="text-slate-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-900">Browse Templates</span>
+              <span className="text-xs font-semibold text-slate-900 truncate">Browse Templates</span>
             </div>
           )}
 
@@ -931,7 +1004,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 type="button"
                 onClick={() => handleRunTask(selectedTask)}
                 disabled={isExecuting && executingTask?.id === selectedTask.id}
-                className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                className="h-9 px-3.5 sm:h-8 sm:px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50 min-h-[36px]"
               >
                 {isExecuting && executingTask?.id === selectedTask.id ? (
                   <RotateCw size={12} className="animate-spin" />
@@ -948,13 +1021,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   onClick={() => setIsActionsMenuOpen((v) => !v)}
                   title="Task options"
                   aria-label="Task options"
-                  className={`w-8 h-8 rounded-lg border border-slate-200/70 bg-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
+                  className={`w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-lg border border-slate-200/70 bg-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
                     isActionsMenuOpen
                       ? "bg-slate-100 text-slate-900 border-slate-300"
                       : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`}
                 >
-                  <MoreHorizontal size={15} strokeWidth={1.8} />
+                  <MoreHorizontal size={15} strokeWidth={1.75} />
                 </button>
 
                 {isActionsMenuOpen && (
@@ -1026,7 +1099,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 </span>
 
                 <div className="min-w-0 flex-1 flex items-center gap-2">
-                  <h2 className="text-xl sm:text-[22px] font-semibold text-slate-900 tracking-[-0.015em] leading-tight truncate">
+                  <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 tracking-tight leading-tight truncate">
                     {selectedTask.title}
                   </h2>
                   <button
@@ -1035,7 +1108,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                     title="Edit task"
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-black/[0.05] text-slate-400 hover:text-slate-700 cursor-pointer"
                   >
-                    <Pencil size={13} />
+                    <Pencil size={13} strokeWidth={1.75} />
                   </button>
                 </div>
               </div>
@@ -1049,7 +1122,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Schedule
                   </span>
-                  <Calendar size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+                  <Calendar size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
                 </div>
                 <div>
                   <div className="text-[14px] font-semibold text-slate-900 capitalize leading-snug">
@@ -1085,7 +1158,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Delivery
                   </span>
-                  <MessageSquarePlus size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+                  <MessageSquarePlus size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
                 </div>
                 <div>
                   <div className="text-[14px] font-semibold text-slate-900 truncate leading-snug">
@@ -1103,7 +1176,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Activity
                   </span>
-                  <Activity size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+                  <Activity size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
                 </div>
                 <div>
                   <div className="text-[14px] font-semibold text-slate-900 leading-snug">
@@ -1186,7 +1259,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   ) : runsForSelectedTask.length === 0 ? (
                     <div className="py-10 text-center flex flex-col items-center justify-center gap-2">
                       <div className="flex items-center justify-center text-slate-950 mb-0.5">
-                        <History size={22} strokeWidth={2.4} />
+                        <History size={22} strokeWidth={1.75} />
                       </div>
                       <p className="text-xs font-semibold text-slate-900">No executions recorded yet</p>
                       <p className="text-[11.5px] text-slate-400 max-w-xs">
@@ -1314,7 +1387,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
             </div>
 
             {/* Heading */}
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight text-center">
+            <h2 className="font-serif text-3xl md:text-4xl font-normal text-slate-900 tracking-tight text-center">
               Automate with Scheduled Tasks
             </h2>
 
@@ -1362,7 +1435,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 onClick={handleOpenNewTask}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
               >
-                <Plus size={14} strokeWidth={2.2} />
+                <Plus size={14} strokeWidth={1.75} />
                 <span>Create Custom Task from Scratch</span>
               </button>
             </div>
@@ -1387,7 +1460,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
           <div className="bg-white rounded-[26px] sm:rounded-[28px] shadow-2xl border border-zinc-200/80 w-full max-w-[560px] max-h-[90vh] overflow-y-auto cool-scrollbar p-6 sm:p-7 animate-in zoom-in-95 duration-150 relative text-left flex flex-col">
             {/* Header: Title + Close Icon */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[19px] sm:text-[20px] font-semibold text-zinc-900 tracking-tight">
+              <h2 className="font-serif text-xl sm:text-2xl font-normal text-zinc-900 tracking-tight">
                 {editingTaskId ? "Edit scheduled task" : "Schedule a task"}
               </h2>
               <button
@@ -1397,7 +1470,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                 aria-label="Close"
                 className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer -mr-1"
               >
-                <X size={18} strokeWidth={2} />
+                <X size={18} strokeWidth={1.75} />
               </button>
             </div>
 
@@ -1477,7 +1550,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                               {isSelected && (
                                 <Check
                                   size={14}
-                                  strokeWidth={2}
+                                  strokeWidth={1.75}
                                   className="text-zinc-800 shrink-0"
                                 />
                               )}
@@ -1538,7 +1611,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 }`}
                               >
                                 <span>Every {day}</span>
-                                {isSelected && <Check size={14} strokeWidth={2} className="shrink-0 text-zinc-800" />}
+                                {isSelected && <Check size={14} strokeWidth={1.75} className="shrink-0 text-zinc-800" />}
                               </button>
                             );
                           })}
@@ -1711,7 +1784,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 {isSelected && (
                                   <Check
                                     size={14}
-                                    strokeWidth={2}
+                                    strokeWidth={1.75}
                                     className="text-zinc-800 shrink-0"
                                   />
                                 )}
@@ -1799,7 +1872,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 {isSelected && (
                                   <Check
                                     size={14}
-                                    strokeWidth={2}
+                                    strokeWidth={1.75}
                                     className="text-zinc-800 shrink-0"
                                   />
                                 )}
@@ -1858,7 +1931,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 {isSelected && (
                                   <Check
                                     size={14}
-                                    strokeWidth={2}
+                                    strokeWidth={1.75}
                                     className="text-zinc-800 shrink-0"
                                   />
                                 )}

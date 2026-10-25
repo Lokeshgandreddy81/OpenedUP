@@ -17,6 +17,10 @@ export const AssistantResponse: React.FC<AssistantResponseProps> = ({ content, i
 };
 
 function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming: boolean }) {
+  if (!content.trim() && isStreaming) {
+    return <span className="assistant-streaming-caret" aria-hidden="true" />;
+  }
+
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const blocks: React.ReactNode[] = [];
   let index = 0;
@@ -58,6 +62,7 @@ function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming
         index += 1;
       }
       const [header, ...body] = tableRows;
+      const isLastBlock = index >= lines.length && isStreaming;
       blocks.push(
         <div key={`table-${index}`} className="assistant-table-scroll">
           <table>
@@ -82,6 +87,7 @@ function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming
               ))}
             </tbody>
           </table>
+          {isLastBlock && <span className="assistant-streaming-caret" aria-hidden="true" />}
         </div>
       );
       continue;
@@ -90,9 +96,11 @@ function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming
     const heading = /^(#{1,6})\s+(.+)$/.exec(line);
     if (heading) {
       const Tag = heading[1]?.length === 1 ? "h2" : heading[1]?.length === 2 ? "h3" : "h4";
+      const isLastBlock = index + 1 >= lines.length && isStreaming;
       blocks.push(
         <Tag key={`heading-${index}`}>
           <InlineMarkdown text={heading[2] ?? ""} />
+          {isLastBlock && <span className="assistant-streaming-caret" aria-hidden="true" />}
         </Tag>
       );
       index += 1;
@@ -111,13 +119,18 @@ function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming
         items.push((lines[index] ?? "").replace(/^\s*[-*+]\s+/, ""));
         index += 1;
       }
+      const isLastBlock = index >= lines.length && isStreaming;
       blocks.push(
         <ul key={`list-${index}`}>
-          {items.map((item, itemIndex) => (
-            <li key={itemIndex}>
-              <InlineMarkdown text={item} />
-            </li>
-          ))}
+          {items.map((item, itemIndex) => {
+            const isLastItem = isLastBlock && itemIndex === items.length - 1;
+            return (
+              <li key={itemIndex}>
+                <InlineMarkdown text={item} />
+                {isLastItem && <span className="assistant-streaming-caret" aria-hidden="true" />}
+              </li>
+            );
+          })}
         </ul>
       );
       continue;
@@ -129,13 +142,18 @@ function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming
         items.push((lines[index] ?? "").replace(/^\s*\d+[.)]\s+/, ""));
         index += 1;
       }
+      const isLastBlock = index >= lines.length && isStreaming;
       blocks.push(
         <ol key={`ordered-${index}`}>
-          {items.map((item, itemIndex) => (
-            <li key={itemIndex}>
-              <InlineMarkdown text={item} />
-            </li>
-          ))}
+          {items.map((item, itemIndex) => {
+            const isLastItem = isLastBlock && itemIndex === items.length - 1;
+            return (
+              <li key={itemIndex}>
+                <InlineMarkdown text={item} />
+                {isLastItem && <span className="assistant-streaming-caret" aria-hidden="true" />}
+              </li>
+            );
+          })}
         </ol>
       );
       continue;
@@ -147,9 +165,11 @@ function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming
         quote.push((lines[index] ?? "").slice(2));
         index += 1;
       }
+      const isLastBlock = index >= lines.length && isStreaming;
       blocks.push(
         <blockquote key={`quote-${index}`}>
           <InlineMarkdown text={quote.join("\n")} />
+          {isLastBlock && <span className="assistant-streaming-caret" aria-hidden="true" />}
         </blockquote>
       );
       continue;
@@ -161,9 +181,11 @@ function MarkdownBlocks({ content, isStreaming }: { content: string; isStreaming
       paragraph.push(lines[index] ?? "");
       index += 1;
     }
+    const isLastBlock = index >= lines.length && isStreaming;
     blocks.push(
       <p key={`paragraph-${index}`}>
         <InlineMarkdown text={paragraph.join("\n")} />
+        {isLastBlock && <span className="assistant-streaming-caret" aria-hidden="true" />}
       </p>
     );
   }
@@ -225,16 +247,18 @@ const AssistantCodeBlock = React.memo(function AssistantCodeBlock({
           <button
             type="button"
             onClick={copyCode}
-            aria-label={copied ? "Code copied" : "Copy code"}
-            title={copied ? "Copied" : "Copy code"}
-            className="assistant-code-copy"
+            aria-label={copied ? "Code copied to clipboard" : "Copy code"}
+            title={copied ? "Copied!" : "Copy code"}
+            className={`assistant-code-copy ${copied ? "!text-emerald-600 bg-emerald-50/80" : ""}`}
           >
             {copied ? (
-              <Check size={14} aria-hidden="true" />
+              <Check size={14} aria-hidden="true" strokeWidth={1.75} className="text-emerald-600" />
             ) : (
-              <Copy size={14} aria-hidden="true" />
+              <Copy size={14} aria-hidden="true" strokeWidth={1.75} />
             )}
-            <span>{copied ? "Copied" : "Copy code"}</span>
+            <span className={copied ? "text-emerald-700 font-medium" : ""}>
+              {copied ? "Copied" : "Copy code"}
+            </span>
           </button>
         )}
       </div>

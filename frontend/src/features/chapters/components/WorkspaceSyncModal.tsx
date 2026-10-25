@@ -553,7 +553,8 @@ export const WorkspaceSyncModal: React.FC<WorkspaceSyncModalProps> = ({
             type="button"
             disabled={isDownloading}
             onClick={handleTriggerClose}
-            className="shoebox-link text-white text-[17px] shrink-0 mt-1"
+            aria-label="Close sync modal"
+            className="shoebox-link text-white text-[17px] shrink-0 mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           >
             close ×
           </button>

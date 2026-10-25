@@ -29,7 +29,7 @@ const ProjectsIcon: React.FC<{ size?: number; className?: string }> = ({
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.8"
+    strokeWidth="1.75"
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
@@ -103,7 +103,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const accountLabel = user?.displayName || user?.email?.split("@")[0] || "Guest";
   const accountInitial = accountLabel.slice(0, 1).toUpperCase();
 
-  // Close options menu on outside click or window resize/scroll
+  // Close options menu on outside click, window resize/scroll, or Escape key
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -115,36 +115,44 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setMenuOpenId(null);
       setMenuPosition(null);
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpenId(null);
+        setMenuPosition(null);
+      }
+    };
     if (menuOpenId) {
       document.addEventListener("mousedown", handleClickOutside);
       window.addEventListener("resize", handleScrollOrResize);
       window.addEventListener("scroll", handleScrollOrResize, true);
+      document.addEventListener("keydown", handleKeyDown);
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
         window.removeEventListener("resize", handleScrollOrResize);
         window.removeEventListener("scroll", handleScrollOrResize, true);
+        document.removeEventListener("keydown", handleKeyDown);
       };
     }
   }, [menuOpenId]);
 
   if (!isOpen) {
     return (
-      <div className="flex h-full w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/60 bg-[#fcfcfb] py-3 select-none">
+      <div className="hidden sm:flex h-full w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/80 bg-[#fcfcfb] py-3 select-none">
         <button
           type="button"
           onClick={onBack}
           title="Return to main sidebar"
           aria-label="Return to main sidebar"
-          className="w-8 h-8 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
-          <ArrowLeft size={16} strokeWidth={2} />
+          <ArrowLeft size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
           onClick={onToggleOpen}
           title="Open sidebar"
           aria-label="Open sidebar"
-          className="w-8 h-8 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
           <PanelLeft size={16} strokeWidth={1.75} />
         </button>
@@ -156,29 +164,29 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           title="New chat"
           aria-label="New chat"
-          className="w-8 h-8 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
-          <SquarePen size={16} strokeWidth={1.8} />
+          <SquarePen size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
           onClick={onOpenScheduledTasks}
           title="Scheduled tasks"
           aria-label="Scheduled tasks"
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+          className={`w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "scheduled"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <Clock size={16} strokeWidth={1.8} />
+          <Clock size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
           onClick={() => onSelectView?.("projects")}
           title="Projects"
           aria-label="Projects"
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+          className={`w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "projects"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
@@ -191,65 +199,65 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           onClick={() => onSelectView?.("artifacts")}
           title="Artifacts"
           aria-label="Artifacts"
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+          className={`w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "artifacts"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <Shapes size={16} strokeWidth={1.8} />
+          <Shapes size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
           onClick={() => onSelectView?.("customize")}
           title="Customize"
           aria-label="Customize"
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+          className={`w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "customize"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <Briefcase size={16} strokeWidth={1.8} />
+          <Briefcase size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
           onClick={() => onSelectView?.("benchmarks")}
           title="Benchmarks"
           aria-label="Benchmarks"
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+          className={`w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "benchmarks"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <BarChart3 size={16} strokeWidth={1.8} />
+          <BarChart3 size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
           onClick={() => onSelectView?.("chapters")}
           title="Chapters"
           aria-label="Chapters"
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+          className={`w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "chapters"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <BookOpen size={16} strokeWidth={1.8} />
+          <BookOpen size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
           onClick={() => onSelectView?.("roadmaps")}
           title="Roadmaps"
           aria-label="Roadmaps"
-          className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+          className={`w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "roadmaps"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
           }`}
         >
-          <GitFork size={16} strokeWidth={1.8} />
+          <GitFork size={16} strokeWidth={1.75} />
         </button>
 
         {/* Bottom profile avatar in collapsed rail */}
@@ -259,7 +267,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             onClick={onToggleOpen}
             title={`${accountLabel} · Free plan`}
             aria-label={`${accountLabel} (Free plan)`}
-            className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[11px] font-medium hover:ring-2 hover:ring-slate-300 transition-all cursor-pointer"
+            className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[12px] font-medium hover:ring-2 hover:ring-slate-300 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
           >
             {accountInitial}
           </button>
@@ -274,7 +282,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     <aside
       ref={sidebarRef}
       aria-label="Chat history"
-      className="absolute inset-y-0 left-0 z-40 flex h-full w-[min(84vw,280px)] shrink-0 flex-col border-r border-slate-200/60 bg-[#fcfcfb] py-3 select-none shadow-[12px_0_36px_-28px_rgba(15,23,42,0.36)] transition-all duration-150 sm:static sm:w-56 sm:shadow-none md:w-60"
+      className="absolute inset-y-0 left-0 z-40 flex h-full w-[min(84vw,280px)] shrink-0 flex-col border-r border-slate-200/80 bg-[#fcfcfb] py-3 select-none shadow-[12px_0_36px_-28px_rgba(15,23,42,0.36)] transition-all duration-150 sm:static sm:w-56 sm:shadow-none md:w-60"
     >
       {/* Top action row: Back to main sidebar + Collapse sidebar */}
       <div className="flex items-center justify-between px-3 pb-3 mb-1 border-b border-slate-100">
@@ -283,9 +291,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           onClick={onBack}
           title="Return to main sidebar"
           aria-label="Return to main sidebar"
-          className="flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-slate-950 px-2 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer font-medium"
+          className="flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-slate-950 px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer font-medium min-h-[36px] sm:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
-          <ArrowLeft size={15} strokeWidth={2} />
+          <ArrowLeft size={15} strokeWidth={1.75} />
           <span>Back</span>
         </button>
 
@@ -294,7 +302,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           onClick={onToggleOpen}
           title="Collapse sidebar"
           aria-label="Collapse sidebar"
-          className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer min-h-[36px] min-w-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
           <PanelLeft size={16} strokeWidth={1.75} />
         </button>
@@ -305,13 +313,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <button
           type="button"
           onClick={onOpenScheduledTasks}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "scheduled"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 font-normal"
           }`}
         >
-          <Clock size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <Clock size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
           <span className="truncate">Scheduled tasks</span>
         </button>
 
@@ -321,16 +329,16 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             onSelectView?.("chat");
             onNewChat();
           }}
-          className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] font-normal text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 transition-colors cursor-pointer text-left"
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] font-normal text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
-          <SquarePen size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <SquarePen size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
           <span>New chat</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("projects")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "projects"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
@@ -343,78 +351,78 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <button
           type="button"
           onClick={() => onSelectView?.("artifacts")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
             activeView === "artifacts"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
           }`}
         >
-          <Shapes size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <Shapes size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
           <span>Artifacts</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("customize")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
             activeView === "customize"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
           }`}
         >
-          <Briefcase size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <Briefcase size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
           <span>Customize</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("benchmarks")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
             activeView === "benchmarks"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
           }`}
         >
-          <BarChart3 size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <BarChart3 size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
           <span>Benchmarks</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("chapters")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
             activeView === "chapters"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
           }`}
         >
-          <BookOpen size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <BookOpen size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
           <span>Chapters</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("roadmaps")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
             activeView === "roadmaps"
               ? "bg-[#ECECF1] text-slate-950 font-medium"
               : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
           }`}
         >
-          <GitFork size={14} strokeWidth={1.8} className="text-slate-500 shrink-0" />
+          <GitFork size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
           <span>Roadmaps</span>
         </button>
       </div>
 
       {/* Recents section */}
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-2 pb-3 no-native-scrollbar no-scrollbar">
-        <div className="px-2.5 py-1 text-[11px] font-medium text-slate-400 tracking-wide select-none">
+        <div className="px-2.5 py-1 text-[11px] font-medium text-slate-600 tracking-wide select-none">
           Recents
         </div>
 
         <div className="flex flex-col gap-0.5 mt-0.5">
           {conversations.filter((c) => !c.isArchived).length === 0 ? (
-            <div className="px-2.5 py-4 text-[12px] text-slate-400 font-light select-none">
+            <div className="px-2.5 py-4 text-[12px] text-slate-500 font-normal select-none">
               No recent chats
             </div>
           ) : (
@@ -513,7 +521,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                             } else {
                               const rect = e.currentTarget.getBoundingClientRect();
                               const sidebarRect = sidebarRef.current?.getBoundingClientRect();
-                              const left = (sidebarRect ? sidebarRect.right : rect.right) + 8;
+                              const rawLeft = (sidebarRect ? sidebarRect.right : rect.right) + 8;
+                              const menuWidth = 192;
+                              const left =
+                                rawLeft + menuWidth > window.innerWidth - 8
+                                  ? Math.max(8, window.innerWidth - menuWidth - 8)
+                                  : rawLeft;
                               const top = Math.max(
                                 16,
                                 Math.min(rect.top - 4, window.innerHeight - 280)
@@ -524,7 +537,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                           }}
                           title="More options"
                           aria-label="More options"
-                          className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                          className="w-7 h-7 sm:w-6 sm:h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
                         >
                           <MoreHorizontal size={14} />
                         </button>
@@ -538,7 +551,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                           }}
                           title={conv.isPinned ? "Unpin chat" : "Pin chat"}
                           aria-label={conv.isPinned ? "Unpin chat" : "Pin chat"}
-                          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+                          className={`w-7 h-7 sm:w-6 sm:h-6 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
                             conv.isPinned
                               ? "text-slate-900 bg-slate-200/70"
                               : "text-slate-400 hover:text-slate-800 hover:bg-slate-200/60"
@@ -546,7 +559,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         >
                           <Pin
                             size={14}
-                            strokeWidth={1.8}
+                            strokeWidth={1.75}
                             className={conv.isPinned ? "fill-slate-900" : ""}
                           />
                         </button>
@@ -560,15 +573,15 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </div>
 
       {/* Account identity */}
-      <div className="mt-auto flex min-w-0 items-center gap-2 border-t border-slate-200/70 px-3 pt-2.5 pb-1 select-none">
+      <div className="mt-auto flex min-w-0 items-center gap-2 border-t border-slate-200/80 px-3 pt-2.5 pb-1 select-none">
         {/* Avatar initial circle */}
         <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[11px] font-medium shrink-0">
           {accountInitial}
         </div>
         <div className="flex min-w-0 items-center gap-1.5 text-[13px]">
           <span className="truncate font-normal text-slate-800">{accountLabel}</span>
-          <span className="text-slate-400 font-normal">·</span>
-          <span className="text-slate-400 font-normal">Free</span>
+          <span className="text-slate-500 font-normal">·</span>
+          <span className="text-slate-600 font-normal">Free</span>
         </div>
       </div>
 
@@ -595,7 +608,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             }}
             className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <Pencil size={14} strokeWidth={1.8} className="text-slate-600 shrink-0" />
+            <Pencil size={14} strokeWidth={1.75} className="text-slate-600 shrink-0" />
             <span>Rename</span>
           </button>
 
@@ -609,7 +622,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             }}
             className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <Pin size={14} strokeWidth={1.8} className="text-slate-600 shrink-0" />
+            <Pin size={14} strokeWidth={1.75} className="text-slate-600 shrink-0" />
             <span>{menuConv.isPinned ? "Unpin" : "Pin"}</span>
           </button>
 
@@ -625,7 +638,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             }}
             className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <Archive size={14} strokeWidth={1.8} className="text-slate-600 shrink-0" />
+            <Archive size={14} strokeWidth={1.75} className="text-slate-600 shrink-0" />
             <span>Archive</span>
           </button>
 
@@ -639,7 +652,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             }}
             className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-rose-50/80 text-rose-600 transition-colors cursor-pointer"
           >
-            <Trash2 size={14} strokeWidth={1.8} className="text-rose-600 shrink-0" />
+            <Trash2 size={14} strokeWidth={1.75} className="text-rose-600 shrink-0" />
             <span>Delete</span>
           </button>
         </div>

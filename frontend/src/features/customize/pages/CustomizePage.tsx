@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Server,
   Layers,
+  LoaderCircle,
 } from "lucide-react";
 import {
   PROVIDER_CATALOG,
@@ -150,7 +151,10 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     } catch (error) {
       setSaveErrorMap((prev) => ({
         ...prev,
-        [providerId]: error instanceof Error ? error.message : "Could not save provider key.",
+        [providerId]:
+          error instanceof Error
+            ? `${error.message}. Please check that your API key is valid and has not expired, or verify network connection.`
+            : "Could not save provider key. Please check your network connection and verify your key.",
       }));
     } finally {
       setIsSavingMap((prev) => ({ ...prev, [providerId]: false }));
@@ -179,7 +183,10 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     } catch (error) {
       setSaveErrorMap((prev) => ({
         ...prev,
-        [providerId]: error instanceof Error ? error.message : "Could not remove provider key.",
+        [providerId]:
+          error instanceof Error
+            ? `${error.message}. Please check your connection and try again.`
+            : "Could not remove provider key. Please check your connection and try again.",
       }));
     } finally {
       setIsSavingMap((prev) => ({ ...prev, [providerId]: false }));
@@ -251,15 +258,15 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   }, [filteredProviders, expandedProviderId]);
 
   return (
-    <div className="flex-1 w-full h-full bg-[#fcfcfb] flex flex-col font-sans select-none overflow-y-auto">
-      <div className="w-full px-6 sm:px-8 md:px-10 lg:px-12 pt-7 md:pt-8 pb-12 flex flex-col">
+    <div className="flex-1 w-full h-full min-w-0 bg-[#fcfcfb] flex flex-col font-sans select-none overflow-y-auto overflow-x-hidden">
+      <div className="w-full px-4 sm:px-8 md:px-10 lg:px-12 pt-6 sm:pt-7 md:pt-8 pb-12 flex flex-col min-w-0">
         {/* Title in Editorial Serif font matching design */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-[28px] md:text-[30px] font-serif text-neutral-900 font-normal tracking-tight">
+          <div className="min-w-0">
+            <h1 className="text-[26px] sm:text-[28px] md:text-[30px] font-serif text-neutral-900 font-normal tracking-tight truncate">
               {activeCategory === "Providers" ? "AI Providers & BYOK" : "Customize"}
             </h1>
-            <p className="mt-1 text-[13px] text-neutral-500">
+            <p className="mt-1 text-[13px] text-neutral-500 line-clamp-2 sm:line-clamp-none">
               Bring your own API keys for frontier reasoning, coding, and multimodal intelligence.
             </p>
           </div>
@@ -268,9 +275,9 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
         {/* Navigation & Controls Toolbar */}
         <div className="mt-5 md:mt-6 flex flex-wrap items-center justify-between gap-3 w-full">
           {/* Left: Category tabs & segment toggle */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 max-w-full">
             {/* Category tabs: Skills, Connectors, Plugins, Providers */}
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               {(["Skills", "Connectors", "Plugins", "Providers"] as CustomizeCategory[]).map(
                 (cat) => {
                   const isActive = activeCategory === cat;
@@ -279,10 +286,10 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       key={cat}
                       type="button"
                       onClick={() => setActiveCategory(cat)}
-                      className={`text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 ${
+                      className={`text-[13px] sm:text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 min-h-[38px] sm:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
                         isActive
-                          ? "bg-[#ECECF1] text-neutral-900 font-medium px-3 py-1 rounded-lg"
-                          : "text-neutral-500 hover:text-neutral-800 font-normal px-2.5 py-1 rounded-lg"
+                          ? "bg-[#ECECF1] text-neutral-900 font-medium px-3 py-1.5 sm:py-1 rounded-lg"
+                          : "text-neutral-600 hover:text-neutral-900 font-normal px-2.5 py-1.5 sm:py-1 rounded-lg"
                       }`}
                     >
                       <span>{cat}</span>
@@ -291,7 +298,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           className={`text-[10.5px] px-1.5 py-0.2 rounded-full font-semibold ${
                             connectedCount > 0
                               ? "bg-neutral-900 text-white"
-                              : "bg-neutral-200 text-neutral-600"
+                              : "bg-neutral-200 text-neutral-700"
                           }`}
                         >
                           {connectedCount > 0 ? connectedCount : 8}
@@ -304,10 +311,10 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
             </div>
 
             {/* Vertical separator */}
-            <div className="w-[1px] h-4 bg-neutral-200 mx-3 shrink-0" />
+            <div className="w-[1px] h-4 bg-neutral-200 mx-1 sm:mx-3 shrink-0 hidden sm:block" />
 
             {/* Sub-tab segmented control: Yours | Discover */}
-            <div className="bg-[#F1F1F4] p-0.5 rounded-lg inline-flex items-center">
+            <div className="bg-[#F1F1F4] p-0.5 rounded-lg inline-flex items-center" role="tablist" aria-label="Provider views">
               {(["Yours", "Discover"] as CustomizeSubTab[]).map((tab) => {
                 const isActive = subTab === tab;
                 const countBadge = tab === "Yours" ? connectedCount : 8;
@@ -315,11 +322,13 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                   <button
                     key={tab}
                     type="button"
+                    role="tab"
+                    aria-selected={isActive}
                     onClick={() => setSubTab(tab)}
-                    className={`text-[12.5px] transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`text-[12.5px] transition-all cursor-pointer flex items-center gap-1.5 min-h-[38px] sm:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
                       isActive
-                        ? "bg-white text-neutral-900 font-medium px-3 py-1 rounded-md shadow-xs"
-                        : "text-neutral-500 hover:text-neutral-800 font-normal px-2.5 py-1 rounded-md"
+                        ? "bg-white text-neutral-900 font-medium px-3 py-1.5 sm:py-1 rounded-md shadow-xs"
+                        : "text-neutral-600 hover:text-neutral-900 font-normal px-2.5 py-1.5 sm:py-1 rounded-md"
                     }`}
                   >
                     <span>{tab}</span>
@@ -327,7 +336,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                         isActive
                           ? "bg-neutral-100 text-neutral-800 font-semibold"
-                          : "text-neutral-400"
+                          : "text-neutral-600 font-medium"
                       }`}
                     >
                       {countBadge}
@@ -339,9 +348,9 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
           </div>
 
           {/* Right: Search, Filter icon, + Add button */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             {/* Search Input */}
-            <div className="relative flex items-center">
+            <div className="relative flex-1 sm:flex-initial flex items-center min-w-0">
               <Search
                 size={14}
                 className="absolute left-2.5 text-neutral-400 pointer-events-none"
@@ -353,14 +362,14 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 placeholder={
                   activeCategory === "Providers" ? "Search providers, models, or tags" : "Search"
                 }
-                className="h-9 pl-8 pr-7 w-52 sm:w-64 md:w-72 text-[13px] text-neutral-900 placeholder-neutral-400 bg-neutral-50 rounded-xl outline-none focus:ring-2 focus:ring-neutral-300/70 transition-shadow"
+                className="h-10 sm:h-9 pl-8 pr-7 w-full sm:w-56 md:w-72 text-[13px] text-neutral-900 placeholder-neutral-500 bg-neutral-50 rounded-xl outline-none focus:ring-2 focus:ring-neutral-900/40 transition-shadow"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
                   aria-label="Clear search"
-                  className="absolute right-2 text-neutral-400 hover:text-neutral-700"
+                  className="absolute right-2 text-neutral-500 hover:text-neutral-800 min-h-[36px] min-w-[36px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded-lg"
                 >
                   <X size={13} />
                 </button>
@@ -372,25 +381,25 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
               type="button"
               aria-label="Filter"
               title="Filter"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80 transition-colors cursor-pointer"
+              className="w-10 h-10 sm:w-8 sm:h-8 shrink-0 rounded-lg flex items-center justify-center text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
             >
               <SlidersFilterIcon size={15} className="text-neutral-800" />
             </button>
 
             {/* + Add Button with Chevron Dropdown */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
                 aria-expanded={isAddMenuOpen}
                 aria-controls="customize-add-options"
                 onClick={() => setIsAddMenuOpen((v) => !v)}
-                className="h-9 bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-4 rounded-xl flex items-center gap-2 transition-colors cursor-pointer shadow-sm active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
+                className="h-10 sm:h-9 bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-3.5 sm:px-4 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer shadow-sm active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
               >
-                <Plus size={15} strokeWidth={2} />
+                <Plus size={15} strokeWidth={1.75} />
                 <span>Add</span>
                 <ChevronDown
                   size={14}
-                  strokeWidth={2}
+                  strokeWidth={1.75}
                   className={`text-white/80 transition-transform ${isAddMenuOpen ? "rotate-180" : ""}`}
                 />
               </button>
@@ -407,7 +416,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       setIsAddMenuOpen(false);
                       setActiveCategory("Providers");
                     }}
-                    className="flex h-9 w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                    className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
                   >
                     Connect API key
                   </button>
@@ -417,7 +426,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       setIsAddMenuOpen(false);
                       setActiveCategory("Connectors");
                     }}
-                    className="flex h-9 w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                    className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
                   >
                     Add connector
                   </button>
@@ -427,7 +436,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       setIsAddMenuOpen(false);
                       setActiveCategory("Plugins");
                     }}
-                    className="flex h-9 w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                    className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
                   >
                     Add plugin
                   </button>
@@ -534,7 +543,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                             current === provider.id ? null : provider.id
                           )
                         }
-                        className="flex min-w-0 flex-1 items-center gap-3.5 text-left cursor-pointer"
+                        className="flex min-w-0 flex-1 items-center gap-3.5 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded-xl"
                       >
                         <CreatorLogo
                           creator={PROVIDER_LOGO_CREATOR[provider.id]}
@@ -554,7 +563,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                   ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70"
                                   : isConnected
                                     ? "bg-amber-50 text-amber-800 border border-amber-200/70"
-                                    : "bg-neutral-100 text-neutral-600"
+                                    : "bg-neutral-100 text-neutral-700"
                               }`}
                             >
                               {isAccountConnected ? (
@@ -582,11 +591,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           </div>
 
                           <div className="mt-1 flex items-center gap-2 flex-wrap">
-                            <span className="text-[12.5px] text-neutral-500 line-clamp-1">
+                            <span className="text-[12.5px] text-neutral-600 line-clamp-1">
                               {provider.tagline}
                             </span>
-                            <span className="text-neutral-300">•</span>
-                            <span className="text-[11.5px] font-mono text-neutral-400">
+                            <span className="text-neutral-400">•</span>
+                            <span className="text-[11.5px] font-mono text-neutral-600">
                               {provider.envKeyName}
                             </span>
                           </div>
@@ -599,7 +608,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           href={provider.docsUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 text-[12px] text-neutral-600 hover:text-neutral-950 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors font-medium"
+                          className="flex items-center gap-1 text-[12px] text-neutral-700 hover:text-neutral-950 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                           title={`Get ${provider.name} API Key from official console`}
                         >
                           <span className="hidden sm:inline">Get key</span>
@@ -616,7 +625,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                               current === provider.id ? null : provider.id
                             )
                           }
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 cursor-pointer"
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                         >
                           <ChevronDown
                             size={17}
@@ -659,7 +668,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     </span>
                                   )}
                                   {model.contextWindowTokens && (
-                                    <span className="text-[10px] text-neutral-400 font-mono">
+                                    <span className="text-[10px] text-neutral-600 font-mono">
                                       {Math.round(model.contextWindowTokens / 1000)}k
                                     </span>
                                   )}
@@ -695,15 +704,15 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                               href={provider.docsUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-[11.5px] text-neutral-600 hover:text-neutral-900 inline-flex items-center gap-1 transition-colors"
+                              className="text-[11.5px] text-neutral-600 hover:text-neutral-900 inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded"
                             >
                               <span>{provider.name} Console</span>
                               <ExternalLink size={11} />
                             </a>
                           </div>
 
-                          <div className="flex min-w-0 items-center gap-2">
-                            <div className="relative flex-1">
+                          <div className="flex min-w-0 flex-wrap sm:flex-nowrap items-stretch sm:items-center gap-2">
+                            <div className="relative w-full sm:flex-1 min-w-0">
                               <input
                                 id={`provider-key-${provider.id}`}
                                 type={isRevealed ? "text" : "password"}
@@ -719,7 +728,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     ? "•••••••••••••••• (Saved to your account)"
                                     : `e.g. ${provider.keyPlaceholder || provider.keyPrefix}`
                                 }
-                                className="h-10 w-full rounded-xl bg-white pl-3 pr-10 text-[12.5px] font-mono text-neutral-900 outline-none shadow-[inset_0_0_0_1px_rgba(15,23,42,0.13)] transition-shadow placeholder:font-sans placeholder:text-neutral-400 focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.35)]"
+                                className="h-10 w-full rounded-xl bg-white pl-3 pr-10 text-[12.5px] font-mono text-neutral-900 outline-none shadow-[inset_0_0_0_1px_rgba(15,23,42,0.13)] transition-shadow placeholder:font-sans placeholder:text-neutral-500 focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.35)] focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                               />
                               <button
                                 type="button"
@@ -730,76 +739,90 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                   }))
                                 }
                                 aria-label={isRevealed ? "Hide API key" : "Show API key"}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 hover:text-neutral-800 transition-colors p-1"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-500 hover:text-neutral-800 transition-colors p-2 min-h-[36px] min-w-[36px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded-lg"
                               >
                                 {isRevealed ? <EyeOff size={15} /> : <Eye size={15} />}
                               </button>
                             </div>
 
-                            {/* Discard draft button if user made changes */}
-                            {hasUnsavedDraft && (
-                              <button
-                                type="button"
-                                onClick={() => handleDiscardDraft(provider.id)}
-                                title="Discard unsaved changes"
-                                aria-label="Discard unsaved changes"
-                                className="h-9 px-2.5 text-[12px] rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 flex items-center gap-1 transition-colors cursor-pointer"
-                              >
-                                <RotateCcw size={13} />
-                                <span className="hidden sm:inline">Discard</span>
-                              </button>
-                            )}
-
-                            {/* Save / Connect / Update Button */}
-                            <button
-                              type="button"
-                              onClick={() => handleSaveProvider(provider.id)}
-                              disabled={
-                                isSaving ||
-                                (!currentInput.trim() && !(isConnected && endpointChanged))
-                              }
-                              className={`h-9 shrink-0 cursor-pointer rounded-xl px-4 text-[12.5px] font-medium transition-all flex items-center gap-1.5 ${
-                                isJustSaved
-                                  ? "bg-emerald-700 text-white"
-                                  : isSaving
-                                    ? "bg-neutral-700 text-white cursor-wait"
-                                    : "bg-neutral-950 text-white hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-500 disabled:cursor-not-allowed"
-                              }`}
-                            >
-                              {isJustSaved ? (
-                                <>
-                                  <Check size={14} />
-                                  <span>
-                                    {hasAccountKey(provider.id) ? "Saved" : "Saved for session"}
-                                  </span>
-                                </>
-                              ) : isSaving ? (
-                                <span>Saving...</span>
-                              ) : (
-                                <span>
-                                  {isConnected && endpointChanged && !currentInput.trim()
-                                    ? "Save endpoint"
-                                    : isConnected
-                                      ? "Update"
-                                      : "Connect"}
-                                </span>
+                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                              {/* Discard draft button if user made changes */}
+                              {hasUnsavedDraft && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDiscardDraft(provider.id)}
+                                  title="Discard unsaved changes"
+                                  aria-label="Discard unsaved changes"
+                                  className="h-10 sm:h-9 px-3 text-[12px] rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 flex items-center gap-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
+                                >
+                                  <RotateCcw size={13} />
+                                  <span>Discard</span>
+                                </button>
                               )}
-                            </button>
 
-                            {/* Disconnect / Remove Key Button */}
-                            {isConnected && (
+                              {/* Save / Connect / Update Button */}
                               <button
                                 type="button"
-                                onClick={() => handleRemoveProvider(provider.id)}
-                                disabled={isSaving}
-                                title="Disconnect API key"
-                                aria-label="Disconnect API key"
-                                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-200"
+                                onClick={() => handleSaveProvider(provider.id)}
+                                disabled={
+                                  isSaving ||
+                                  (!currentInput.trim() && !(isConnected && endpointChanged))
+                                }
+                                aria-busy={isSaving}
+                                className={`h-10 sm:h-9 shrink-0 cursor-pointer rounded-xl px-4 text-[12.5px] font-medium transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 focus-visible:ring-offset-1 ${
+                                  isJustSaved
+                                    ? "bg-emerald-700 text-white"
+                                    : isSaving
+                                      ? "bg-neutral-700 text-white cursor-wait"
+                                      : "bg-neutral-950 text-white hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-500 disabled:cursor-not-allowed"
+                                }`}
                               >
-                                <Trash2 size={14} />
+                                {isJustSaved ? (
+                                  <>
+                                    <Check size={14} />
+                                    <span>
+                                      {hasAccountKey(provider.id) ? "Saved" : "Saved for session"}
+                                    </span>
+                                  </>
+                                ) : isSaving ? (
+                                  <>
+                                    <LoaderCircle size={14} className="animate-spin" />
+                                    <span>Saving...</span>
+                                  </>
+                                ) : (
+                                  <span>
+                                    {isConnected && endpointChanged && !currentInput.trim()
+                                      ? "Save endpoint"
+                                      : isConnected
+                                        ? "Update"
+                                        : "Connect"}
+                                  </span>
+                                )}
                               </button>
-                            )}
+
+                              {/* Disconnect / Remove Key Button */}
+                              {isConnected && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveProvider(provider.id)}
+                                  disabled={isSaving}
+                                  title="Disconnect API key"
+                                  aria-label="Disconnect API key"
+                                  className="flex h-10 w-10 sm:h-9 sm:w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
                           </div>
+
+                          {/* Live feedback for screen readers */}
+                          {isJustSaved && (
+                            <p role="status" aria-live="polite" className="text-[11.5px] text-emerald-700 flex items-center gap-1 mt-0.5">
+                              <Check size={12} className="text-emerald-600" />
+                              <span>{provider.name} credentials saved successfully.</span>
+                            </p>
+                          )}
 
                           {/* Prefix Mismatch Notice */}
                           {isPrefixMismatch && (
@@ -816,6 +839,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           {saveError && (
                             <div
                               role="alert"
+                              aria-live="assertive"
                               className="text-[12px] text-rose-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl flex items-center justify-between gap-2"
                             >
                               <div className="flex items-center gap-2">
@@ -832,7 +856,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                   })
                                 }
                                 aria-label="Dismiss error"
-                                className="text-rose-500 hover:text-rose-800"
+                                className="text-rose-500 hover:text-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded p-0.5"
                               >
                                 <X size={13} />
                               </button>
@@ -868,29 +892,29 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {/* Model ID Input */}
-                              <label className="flex flex-col gap-1.5 text-[12px] text-neutral-600 font-medium">
+                              <label className="flex flex-col gap-1.5 text-[12px] text-neutral-700 font-medium">
                                 <span>Model ID</span>
                                 <input
                                   type="text"
                                   value={customModelId}
                                   onChange={(e) => setCustomModel(e.target.value)}
                                   placeholder="e.g. openai/gpt-4o-mini or meta-llama/llama-3.3-70b"
-                                  className="h-9 px-3 text-[12px] font-mono text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                  className="h-9 px-3 text-[12px] font-mono text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)] focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                                 />
-                                <span className="text-[10.5px] text-neutral-400 font-normal">
+                                <span className="text-[10.5px] text-neutral-600 font-normal">
                                   Any model ID supported by OpenRouter or your custom endpoint.
                                 </span>
                               </label>
 
                               {/* Credentials Provider Selection */}
-                              <label className="flex flex-col gap-1.5 text-[12px] text-neutral-600 font-medium">
+                              <label className="flex flex-col gap-1.5 text-[12px] text-neutral-700 font-medium">
                                 <span>Credentials from</span>
                                 <select
                                   value={customModelProvider}
                                   onChange={(event) =>
                                     setCustomProvider(event.target.value as ProviderId)
                                   }
-                                  className="h-9 px-3 text-[12px] text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                  className="h-9 px-3 text-[12px] text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)] focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                                 >
                                   {PROVIDER_ORDER.map((providerId) => (
                                     <option key={providerId} value={providerId}>
@@ -898,7 +922,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     </option>
                                   ))}
                                 </select>
-                                <span className="text-[10.5px] text-neutral-400 font-normal">
+                                <span className="text-[10.5px] text-neutral-600 font-normal">
                                   Authenticates using the key configured for{" "}
                                   {PROVIDER_CATALOG[customModelProvider].name}.
                                 </span>
@@ -907,7 +931,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
                             {/* Quick Presets for Custom Endpoint */}
                             <div className="flex items-center gap-2 pt-1 flex-wrap">
-                              <span className="text-[11px] text-neutral-500 font-medium">
+                              <span className="text-[11px] text-neutral-600 font-medium">
                                 Quick presets:
                               </span>
                               <button
@@ -918,7 +942,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     custom: "https://openrouter.ai/api/v1",
                                   }))
                                 }
-                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                               >
                                 OpenRouter Default
                               </button>
@@ -930,7 +954,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     custom: "http://localhost:11434/v1",
                                   }))
                                 }
-                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                               >
                                 Ollama Local (11434)
                               </button>
@@ -942,7 +966,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     custom: "http://localhost:1234/v1",
                                   }))
                                 }
-                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                               >
                                 LM Studio (1234)
                               </button>
@@ -952,7 +976,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
                         {/* Advanced Settings (Base URL Override) */}
                         <details className="group mt-4 pt-3 border-t border-neutral-200/80">
-                          <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-[12px] font-medium text-neutral-700 transition-colors hover:text-neutral-950 [&::-webkit-details-marker]:hidden">
+                          <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-[12px] font-medium text-neutral-700 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded px-1 [&::-webkit-details-marker]:hidden">
                             <span>Advanced endpoint overrides</span>
                             <ChevronDown
                               size={13}
@@ -961,7 +985,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           </summary>
 
                           <div className="mt-3 flex flex-col gap-2">
-                            <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-500 font-medium">
+                            <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-600 font-medium">
                               <span>API Base URL Endpoint</span>
                               <div className="flex items-center gap-2">
                                 <input
@@ -975,7 +999,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                   }
                                   placeholder={provider.defaultBaseUrl}
                                   aria-label={`${provider.name} API endpoint`}
-                                  className="h-9 flex-1 px-3 text-[12px] font-mono text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)]"
+                                  className="h-9 flex-1 px-3 text-[12px] font-mono text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)] focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                                 />
                                 {currentUrl !== provider.defaultBaseUrl && (
                                   <button
@@ -987,13 +1011,13 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                       }))
                                     }
                                     title="Reset to default endpoint"
-                                    className="h-9 px-2.5 text-[11.5px] rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                    className="h-9 px-2.5 text-[11.5px] rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                                   >
                                     Reset
                                   </button>
                                 )}
                               </div>
-                              <span className="text-[10.5px] text-neutral-400 font-normal">
+                              <span className="text-[10.5px] text-neutral-600 font-normal">
                                 Default: {provider.defaultBaseUrl}
                               </span>
                             </label>

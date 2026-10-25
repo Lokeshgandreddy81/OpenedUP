@@ -4,6 +4,7 @@ export const ChatPageSkeleton: React.FC = () => {
   return (
     <div
       role="status"
+      aria-busy="true"
       aria-label="Loading chat"
       className="fixed inset-0 bg-[#FBFBFC] flex overflow-hidden animate-pulse"
     >

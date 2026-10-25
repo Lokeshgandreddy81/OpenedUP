@@ -243,8 +243,13 @@ export const ProjectsScreen: React.FC<{
 
   // Click outside to close menus
   useEffect(() => {
+    if (!cardMenuOpenId && !isSortMenuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+      if (
+        isSortMenuOpen &&
+        sortMenuRef.current &&
+        !sortMenuRef.current.contains(e.target as Node)
+      ) {
         setIsSortMenuOpen(false);
       }
       if (
@@ -256,7 +261,7 @@ export const ProjectsScreen: React.FC<{
     };
     window.addEventListener("mousedown", handleClickOutside);
     return () => window.removeEventListener("mousedown", handleClickOutside);
-  }, [cardMenuOpenId]);
+  }, [cardMenuOpenId, isSortMenuOpen]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -754,7 +759,7 @@ export const ProjectsScreen: React.FC<{
                   aria-label="Search projects"
                   className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/10"
                 >
-                  <Search size={16} strokeWidth={1.8} />
+                  <Search size={16} strokeWidth={1.75} />
                 </button>
               )}
             </div>
@@ -774,7 +779,7 @@ export const ProjectsScreen: React.FC<{
                     : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100"
                 }`}
               >
-                <ArrowUpDown size={15} strokeWidth={1.8} />
+                <ArrowUpDown size={15} strokeWidth={1.75} />
               </button>
 
               {/* Sort Popover Dropdown */}
@@ -945,7 +950,7 @@ export const ProjectsScreen: React.FC<{
                               }}
                               onKeyDown={(event) => event.stopPropagation()}
                               aria-label={`Actions for ${project.name}`}
-                              className="-mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-neutral-400"
+                              className="-mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-neutral-900"
                             >
                               <MoreVertical size={15} />
                             </button>
@@ -959,7 +964,7 @@ export const ProjectsScreen: React.FC<{
                                   type="button"
                                   onClick={(e) => handleDeleteProject(project.id, e)}
                                   onKeyDown={(event) => event.stopPropagation()}
-                                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-rose-600 transition-colors hover:bg-rose-50"
+                                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
                                 >
                                   <Trash2 size={13} />
                                   <span>Delete project</span>
@@ -1006,9 +1011,11 @@ export const ProjectsScreen: React.FC<{
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                aria-label="Close dialog"
+                title="Close"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
               >
-                <X size={18} strokeWidth={1.8} />
+                <X size={18} strokeWidth={1.75} />
               </button>
             </div>
 
@@ -1051,13 +1058,13 @@ export const ProjectsScreen: React.FC<{
                     <span className="text-[14px] md:text-[14.5px] font-medium text-neutral-900">
                       Context
                     </span>
-                    <span className="text-[13px] text-neutral-400 font-normal">optional</span>
+                    <span className="text-[13px] text-neutral-500 font-normal">optional</span>
                   </div>
                   {modalFiles.length > 0 && (
                     <button
                       type="button"
                       onClick={() => modalFileInputRef.current?.click()}
-                      className="text-xs text-neutral-700 hover:text-neutral-900 font-medium cursor-pointer"
+                      className="text-xs text-neutral-700 hover:text-neutral-900 font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded"
                     >
                       + Add more files
                     </button>
@@ -1082,7 +1089,7 @@ export const ProjectsScreen: React.FC<{
                   <button
                     type="button"
                     onClick={() => modalFileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 text-[13px] font-normal shadow-2xs transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 text-[13px] font-normal shadow-2xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                   >
                     <Plus size={14} className="text-neutral-700 stroke-[2.2]" />
                     <span>Add context</span>
@@ -1098,14 +1105,16 @@ export const ProjectsScreen: React.FC<{
                           <div className="flex items-center gap-2 min-w-0">
                             <FileText size={14} className="text-neutral-500 shrink-0" />
                             <span className="truncate max-w-[280px] font-medium">{f.name}</span>
-                            <span className="text-neutral-400 text-xs shrink-0">
+                            <span className="text-neutral-500 text-xs shrink-0">
                               · {formatFileSize(f.size)}
                             </span>
                           </div>
                           <button
                             type="button"
                             onClick={() => f.id && handleRemoveModalFile(f.id)}
-                            className="text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer p-0.5"
+                            aria-label={`Remove ${f.name}`}
+                            title="Remove file"
+                            className="text-neutral-500 hover:text-neutral-700 transition-colors cursor-pointer p-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                           >
                             <X size={13} />
                           </button>
@@ -1121,14 +1130,14 @@ export const ProjectsScreen: React.FC<{
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-neutral-200/90 bg-white hover:bg-neutral-50 text-[13.5px] font-medium text-neutral-900 transition-colors cursor-pointer shadow-2xs"
+                  className="px-4 py-2 rounded-xl border border-neutral-200/90 bg-white hover:bg-neutral-50 text-[13.5px] font-medium text-neutral-900 transition-colors cursor-pointer shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!newName.trim()}
-                  className="px-4.5 py-2 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 disabled:bg-neutral-300 disabled:text-neutral-500 disabled:pointer-events-none text-[13.5px] font-medium transition-colors cursor-pointer shadow-sm"
+                  className="px-4.5 py-2 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 disabled:bg-neutral-300 disabled:text-neutral-500 disabled:pointer-events-none text-[13.5px] font-medium transition-colors cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                 >
                   Create project
                 </button>

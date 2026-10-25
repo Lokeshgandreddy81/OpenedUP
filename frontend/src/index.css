@@ -78,7 +78,9 @@ body,
   margin: 0;
   padding: 0;
   width: 100%;
+  max-width: 100vw;
   height: 100%;
+  overflow-x: hidden;
   background-color: var(--blue-900);
   color: var(--white);
   -webkit-font-smoothing: antialiased;
@@ -1059,13 +1061,32 @@ select:focus-visible,
 .assistant-markdown pre code .token {
   font: inherit;
 }
+@keyframes assistantCaretBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+.assistant-streaming-caret {
+  display: inline-block;
+  width: 7px;
+  height: 1.15em;
+  margin-left: 3px;
+  vertical-align: -0.16em;
+  border-radius: 2px;
+  background-color: #0f172a;
+  animation: assistantCaretBlink 800ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
 .assistant-code-caret {
   display: inline-block;
   width: 2px;
-  height: 1em;
-  margin-left: 1px;
-  vertical-align: -0.12em;
-  background: #64748b;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: #0f172a;
+  animation: assistantCaretBlink 800ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 .assistant-markdown .token.comment,
 .assistant-markdown .token.prolog,

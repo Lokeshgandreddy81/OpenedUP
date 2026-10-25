@@ -542,7 +542,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
                       <span>{label}</span>
                       <ArrowRight
                         size={15}
-                        strokeWidth={1.8}
+                        strokeWidth={1.75}
                         className="shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700"
                         aria-hidden="true"
                       />

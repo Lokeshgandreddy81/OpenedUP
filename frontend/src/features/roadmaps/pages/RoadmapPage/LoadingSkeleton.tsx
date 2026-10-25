@@ -4,6 +4,7 @@ export const RoadmapPageSkeleton: React.FC = () => {
   return (
     <div
       role="status"
+      aria-busy="true"
       aria-label="Loading roadmap"
       className="fixed inset-0 bg-white flex flex-col p-6 animate-pulse"
     >

@@ -27,6 +27,7 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.stopPropagation();
         onClose();
       }
     };
@@ -111,7 +112,7 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                   onCompare(model);
                   onClose();
                 }}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
               >
                 Compare
               </button>
@@ -120,24 +121,30 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Close modal"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
             >
-              <X size={17} strokeWidth={1.8} />
+              <X size={17} strokeWidth={1.75} />
             </button>
           </div>
         </div>
 
         {/* Tab Strip */}
-        <div className="flex items-center px-6 border-b border-slate-100 gap-2 bg-white shrink-0 overflow-x-auto no-scrollbar">
+        <div
+          role="tablist"
+          aria-label="Model detail tabs"
+          className="flex items-center px-6 border-b border-slate-100 gap-2 bg-white shrink-0 overflow-x-auto no-scrollbar"
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                role="tab"
+                aria-selected={isActive}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+                className={`py-3 px-3 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap rounded-t focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
                   isActive
                     ? "border-[#0047FF] text-[#0047FF] font-semibold"
                     : "border-transparent text-slate-500 hover:text-slate-900"

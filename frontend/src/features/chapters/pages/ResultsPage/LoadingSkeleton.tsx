@@ -4,6 +4,7 @@ export const ResultsPageSkeleton: React.FC = () => {
   return (
     <div
       role="status"
+      aria-busy="true"
       aria-label="Loading results"
       className="h-screen w-screen bg-[#FDFCFB] flex overflow-hidden animate-pulse"
     >

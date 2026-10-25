@@ -4,6 +4,7 @@ export const CodingAgentsPageSkeleton: React.FC = () => {
   return (
     <div
       role="status"
+      aria-busy="true"
       aria-label="Loading coding agents"
       className="fixed inset-0 bg-[#FBFBFC] flex flex-col font-sans animate-pulse"
     >

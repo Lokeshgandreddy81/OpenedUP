@@ -4,6 +4,7 @@ import {
   BookmarkPlus,
   CircleAlert,
   Check,
+  ChevronDown,
   Clock3,
   Copy,
   FileText,
@@ -13,9 +14,11 @@ import {
   Pencil,
   RotateCcw,
   Square,
+  ZoomIn,
 } from "lucide-react";
 import type { ChatMessage } from "./chatTypes";
 import { AssistantResponse } from "./AssistantResponse";
+import { ImageLightboxModal } from "./ImageLightboxModal";
 
 const MessageTimestamp: React.FC<{ timestamp?: string }> = ({ timestamp }) => {
   if (!timestamp) return null;
@@ -25,7 +28,7 @@ const MessageTimestamp: React.FC<{ timestamp?: string }> = ({ timestamp }) => {
     <time
       dateTime={isValidDate ? timestamp : undefined}
       title={isValidDate ? date.toLocaleString() : undefined}
-      className="ml-1 text-[11px] leading-none text-slate-400"
+      className="ml-1 text-[11px] leading-none text-slate-400 tabular-nums font-mono"
     >
       {isValidDate
         ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
@@ -71,6 +74,23 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   const [savingArtifactId, setSavingArtifactId] = useState<string | null>(null);
   const [savedArtifactIds, setSavedArtifactIds] = useState<Set<string>>(() => new Set());
   const [artifactSaveErrorId, setArtifactSaveErrorId] = useState<string | null>(null);
+  const [activeLightboxImage, setActiveLightboxImage] = useState<{
+    src: string;
+    alt: string;
+    fileName?: string;
+    fileSize?: string;
+  } | null>(null);
+  const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(() => new Set());
+
+  const toggleThinkingExpanded = (messageId: string) => {
+    setExpandedThinkingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) next.delete(messageId);
+      else next.add(messageId);
+      return next;
+    });
+  };
+
   const lastUserMessageId = [...messages].reverse().find((message) => message.role === "user")?.id;
   const lastUserMessageIdRef = React.useRef(lastUserMessageId);
   const latestMessage = messages[messages.length - 1];
@@ -86,9 +106,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
       lastUserMessageIdRef.current = lastUserMessageId;
     }
     if (shouldFollowLatestRef.current) {
+      const behavior = isThinking || latestMessage?.isStreaming ? "auto" : "smooth";
       scrollContainer.scrollTo({
         top: scrollContainer.scrollHeight,
-        behavior: isThinking ? "auto" : "smooth",
+        behavior,
       });
       setShowJumpToLatest(false);
     }
@@ -243,9 +264,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     ) : (
                       /* ─── Normal display mode ─── */
                       <>
-                        <div className="max-w-full rounded-[24px] bg-[#f2f2f0] px-5 py-3 text-[16px] font-normal leading-[1.6] text-slate-800 select-text break-words whitespace-pre-wrap">
+                        <div className="max-w-full rounded-[22px] rounded-br-[6px] border border-slate-200/60 bg-[#f2f2f0] px-5 py-3 text-[15.5px] font-normal leading-[1.6] text-slate-900 shadow-2xs select-text break-words whitespace-pre-wrap">
                           {message.attachments && message.attachments.length > 0 && (
-                            <div className="mb-2 flex flex-wrap gap-2">
+                            <div className="mb-2.5 flex flex-wrap gap-2.5">
                               {message.attachments.map((file, index) => {
                                 const previewUrl =
                                   file.previewUrl ||
@@ -261,47 +282,52 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                                   return (
                                     <div
                                       key={file.id ?? `${file.name}-${index}`}
-                                      className="relative rounded-xl overflow-hidden border border-slate-200/80 bg-white shadow-2xs group/img"
+                                      onClick={() =>
+                                        setActiveLightboxImage({
+                                          src: previewUrl,
+                                          alt: file.name,
+                                          fileName: file.name,
+                                          fileSize: formatFileSize(file.size),
+                                        })
+                                      }
+                                      className="group/img relative rounded-xl overflow-hidden border border-slate-200/90 bg-white shadow-2xs cursor-zoom-in transition-all duration-150 hover:shadow-md hover:border-slate-300"
+                                      title={`Click to preview: ${file.name}`}
                                     >
                                       <img
                                         src={previewUrl}
                                         alt={file.name}
-                                        className="max-h-60 max-w-xs rounded-xl object-contain block cursor-pointer transition-transform duration-150 hover:scale-[1.01]"
-                                        onClick={() => {
-                                          const win = window.open();
-                                          if (win) {
-                                            win.document.write(
-                                              `<img src="${previewUrl}" alt="${file.name}" style="max-width:100%;height:auto;display:block;margin:auto;" />`
-                                            );
-                                            win.document.title = file.name;
-                                          }
-                                        }}
-                                        title={`Click to view full size: ${file.name}`}
+                                        className="max-h-60 max-w-xs rounded-xl object-contain block transition-transform duration-200 group-hover/img:scale-[1.02]"
                                       />
+                                      <div className="absolute inset-0 bg-slate-950/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                                        <span className="flex items-center gap-1.5 rounded-lg bg-slate-900/80 px-2.5 py-1 text-xs font-medium text-white shadow-sm backdrop-blur-xs">
+                                          <ZoomIn size={13} />
+                                          Preview
+                                        </span>
+                                      </div>
                                     </div>
                                   );
                                 }
                                 return (
                                   <span
                                     key={file.id ?? `${file.name}-${index}`}
-                                    className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/75 px-2.5 py-1.5 text-[12px] leading-4 text-slate-600"
+                                    className="inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 text-[12.5px] font-medium leading-4 text-slate-700 shadow-2xs"
                                     title={`${file.name} · ${formatFileSize(file.size)}`}
                                   >
                                     {isImg ? (
                                       <ImageIcon
-                                        size={13}
+                                        size={14}
                                         className="shrink-0 text-slate-500"
                                         aria-hidden="true"
                                       />
                                     ) : (
                                       <FileText
-                                        size={13}
+                                        size={14}
                                         className="shrink-0 text-slate-500"
                                         aria-hidden="true"
                                       />
                                     )}
                                     <span className="max-w-56 truncate">{file.name}</span>
-                                    <span className="shrink-0 text-slate-400">
+                                    <span className="shrink-0 text-[11px] font-normal text-slate-400">
                                       {formatFileSize(file.size)}
                                     </span>
                                   </span>
@@ -334,7 +360,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                             aria-label="Edit input"
                             className="p-1 rounded-md hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer"
                           >
-                            <Pencil size={13} strokeWidth={1.8} />
+                            <Pencil size={13} strokeWidth={1.75} />
                           </button>
                           <button
                             type="button"
@@ -356,11 +382,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                             className="p-1 rounded-md hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer"
                           >
                             {isCopied ? (
-                              <Check size={12} className="text-emerald-600" strokeWidth={2} />
+                              <Check size={12} className="text-emerald-600" strokeWidth={1.75} />
                             ) : copyFailedId === message.id ? (
-                              <CircleAlert size={13} className="text-rose-600" strokeWidth={1.8} />
+                              <CircleAlert size={13} className="text-rose-600" strokeWidth={1.75} />
                             ) : (
-                              <Copy size={13} strokeWidth={1.8} />
+                              <Copy size={13} strokeWidth={1.75} />
                             )}
                           </button>
                           {copyFailedId === message.id && (
@@ -394,35 +420,60 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     (hasCompletedResponse && thinkingDuration) ||
                     isStopped ||
                     isError) && (
-                    <div
-                      className={`chat-thinking-status mb-2 flex min-h-7 gap-2 text-[13px] ${isError ? "text-rose-700" : "text-slate-500"}`}
-                      role={isError ? "alert" : undefined}
-                    >
+                    <div className="mb-2.5">
                       {isThinkingOnThisResponse ? (
-                        <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
-                      ) : isError ? (
-                        <CircleAlert size={14} aria-hidden="true" />
-                      ) : isStopped ? (
-                        <Square size={12} aria-hidden="true" />
-                      ) : (
-                        <Clock3 size={14} strokeWidth={1.8} />
-                      )}
-                      {isStopped ? (
-                        <span>Response stopped</span>
-                      ) : isError ? (
-                        <span>Couldn’t complete this response</span>
-                      ) : isThinkingOnThisResponse ? (
-                        <span
-                          role="timer"
-                          aria-label={`${isRespondingOnThisResponse ? "Responding" : "Thinking"} for ${thinkingElapsedSeconds} seconds`}
+                        <div
+                          className="chat-thinking-status inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/90 px-3 py-1 text-[12.5px] text-slate-600 shadow-2xs select-none"
+                          role="status"
                         >
-                          {isRespondingOnThisResponse ? "Responding" : "Thinking"} ·{" "}
-                          {thinkingElapsedSeconds}s
-                        </span>
+                          <LoaderCircle size={13} className="animate-spin text-slate-500" aria-hidden="true" />
+                          <span
+                            role="timer"
+                            aria-label={`${isRespondingOnThisResponse ? "Responding" : "Thinking"} for ${thinkingElapsedSeconds} seconds`}
+                          >
+                            {isRespondingOnThisResponse ? "Responding" : (thinkingLabel || "Thinking")} ·{" "}
+                            {thinkingElapsedSeconds}s
+                          </span>
+                        </div>
+                      ) : isError ? (
+                        <div className="chat-thinking-status inline-flex items-center gap-1.5 text-[12.5px] text-rose-700" role="alert">
+                          <CircleAlert size={14} aria-hidden="true" />
+                          <span>Couldn’t complete this response</span>
+                        </div>
+                      ) : isStopped ? (
+                        <div className="chat-thinking-status inline-flex items-center gap-1.5 text-[12.5px] text-slate-500">
+                          <Square size={12} aria-hidden="true" />
+                          <span>Response stopped</span>
+                        </div>
                       ) : (
-                        <span aria-label={`Thought for ${thinkingDuration}`}>
-                          Thought for {thinkingDuration}
-                        </span>
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => toggleThinkingExpanded(message.id)}
+                            aria-expanded={expandedThinkingIds.has(message.id)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-50/80 hover:bg-slate-100/90 px-2.5 py-1 text-[12px] font-medium text-slate-600 transition-colors cursor-pointer select-none"
+                          >
+                            <Clock3 size={12} className="text-slate-400 stroke-[2]" />
+                            <span>Thought for {thinkingDuration}</span>
+                            <ChevronDown
+                              size={12}
+                              className={`text-slate-400 transition-transform duration-150 ${
+                                expandedThinkingIds.has(message.id) ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+                          {expandedThinkingIds.has(message.id) && (
+                            <div className="mt-1.5 max-w-md rounded-xl border border-slate-200/70 bg-slate-50/70 p-3 text-[12px] leading-relaxed text-slate-600 shadow-2xs animate-in fade-in slide-in-from-top-1 duration-150 select-text">
+                              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider pb-1.5 border-b border-slate-200/60 mb-1.5">
+                                <span>Thinking Process</span>
+                                <span className="font-mono text-slate-500">{thinkingDuration}</span>
+                              </div>
+                              <p className="text-slate-600 font-normal">
+                                Reasoning completed with structured synthesis and grounding checks.
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -494,7 +545,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         aria-label="Retry response"
                         className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-slate-600 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        <RotateCcw size={13} strokeWidth={1.8} />
+                        <RotateCcw size={13} strokeWidth={1.75} />
                         <span className="text-xs">Retry</span>
                       </button>
                     )}
@@ -518,11 +569,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                     >
                       {copiedId === message.id ? (
-                        <Check size={14} className="text-emerald-600" />
+                        <Check size={14} className="text-emerald-600" strokeWidth={1.75} />
                       ) : copyFailedId === message.id ? (
-                        <CircleAlert size={14} className="text-rose-600" />
+                        <CircleAlert size={14} className="text-rose-600" strokeWidth={1.75} />
                       ) : (
-                        <Copy size={14} strokeWidth={1.8} />
+                        <Copy size={14} strokeWidth={1.75} />
                       )}
                     </button>
                     {copyFailedId === message.id && (
@@ -547,14 +598,14 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           key={cIdx}
                           type="button"
                           onClick={() => onSelectActionChip?.(chip, message.id)}
-                          className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-[background-color,color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 ${
+                          className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-[background-color,color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 active:scale-[0.98] ${
                             chip === "Connect API Key"
-                              ? "bg-slate-950 text-white shadow-[0_2px_6px_rgba(15,23,42,0.16)] hover:-translate-y-px hover:bg-slate-800 hover:shadow-[0_5px_12px_rgba(15,23,42,0.18)]"
-                              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950"
+                              ? "bg-slate-950 text-white shadow-[0_2px_6px_rgba(15,23,42,0.16)] hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-[0_5px_12px_rgba(15,23,42,0.18)]"
+                              : "border border-slate-200/90 bg-white text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 hover:text-slate-950 hover:-translate-y-0.5"
                           }`}
                         >
-                          {chip === "Connect API Key" && <KeyRound size={14} strokeWidth={2} />}
-                          {chip}
+                          {chip === "Connect API Key" && <KeyRound size={14} strokeWidth={1.75} />}
+                          <span>{chip}</span>
                         </button>
                       ))}
                     </div>
@@ -566,14 +617,21 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
           {isThinking && latestMessage?.role === "user" && !hasStreamingAssistant && (
             <div
-              className="chat-thinking-status flex gap-2 py-1 text-[13px] text-slate-500 animate-in fade-in duration-200"
+              className="chat-thinking-status inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/90 px-3.5 py-1.5 text-[12.5px] text-slate-600 shadow-2xs animate-in fade-in duration-200"
               role="timer"
               aria-label={`${thinkingLabel} for ${thinkingElapsedSeconds} seconds`}
             >
-              <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
+              <LoaderCircle size={14} className="animate-spin text-slate-500" aria-hidden="true" />
               <span>
                 {thinkingLabel}
-                {thinkingElapsedSeconds > 0 ? ` · ${thinkingElapsedSeconds}s` : "…"}
+                {thinkingElapsedSeconds > 0 ? (
+                  <>
+                    {" "}
+                    · <span className="tabular-nums font-mono">{thinkingElapsedSeconds}s</span>
+                  </>
+                ) : (
+                  "…"
+                )}
               </span>
             </div>
           )}
@@ -583,12 +641,28 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         <button
           type="button"
           onClick={jumpToLatest}
-          className="absolute bottom-5 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-4 py-2 text-xs font-medium text-slate-600 shadow-lg shadow-slate-900/5 backdrop-blur transition hover:border-slate-300 hover:text-slate-900"
+          className="absolute bottom-5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-slate-200/90 bg-white/95 px-4 py-2 text-xs font-medium text-slate-700 shadow-md shadow-slate-900/10 backdrop-blur-sm transition-all hover:bg-white hover:border-slate-300 hover:text-slate-950 hover:shadow-lg active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-200"
           aria-label="Jump to latest message"
         >
-          <ArrowDown size={14} />
-          Latest response
+          {hasStreamingAssistant && (
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600" />
+            </span>
+          )}
+          <ArrowDown size={14} className="text-slate-500" />
+          <span>Latest response</span>
         </button>
+      )}
+
+      {activeLightboxImage && (
+        <ImageLightboxModal
+          src={activeLightboxImage.src}
+          alt={activeLightboxImage.alt}
+          fileName={activeLightboxImage.fileName}
+          fileSize={activeLightboxImage.fileSize}
+          onClose={() => setActiveLightboxImage(null)}
+        />
       )}
     </div>
   );

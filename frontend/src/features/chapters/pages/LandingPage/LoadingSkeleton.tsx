@@ -4,6 +4,7 @@ export const LandingPageSkeleton: React.FC = () => {
   return (
     <div
       role="status"
+      aria-busy="true"
       aria-label="Loading landing page"
       className="w-full min-h-screen md:h-screen flex flex-col md:grid md:grid-cols-12 bg-white overflow-hidden animate-pulse select-none"
     >

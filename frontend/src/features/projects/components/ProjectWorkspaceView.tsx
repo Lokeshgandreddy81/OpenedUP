@@ -124,7 +124,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             <button
               type="button"
               onClick={onBackToProjects}
-              className="text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer font-normal"
+              className="text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer font-normal rounded px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
             >
               Projects
             </button>
@@ -133,7 +133,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsHeaderMenuOpen((v) => !v)}
-                className="flex items-center gap-1.5 text-neutral-900 font-medium hover:text-neutral-700 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-neutral-900 font-medium hover:text-neutral-700 transition-colors cursor-pointer rounded px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
               >
                 <span>{project.name}</span>
                 <ChevronDown size={14} className="text-neutral-400 mt-0.5" />
@@ -182,7 +182,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
         <div className="w-full max-w-[1600px] mx-auto px-5 sm:px-8 lg:px-10 pt-7 pb-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 xl:gap-10">
           {/* Left Column: Title, Subtitle, Large Input Box, Recents */}
           <div className="min-w-0 flex flex-col">
-            <p className="text-[11px] uppercase tracking-[0.12em] font-medium text-[#8a765c] mb-1.5">
+            <p className="text-[11px] uppercase tracking-[0.12em] font-medium text-[#735e45] mb-1.5">
               Project workspace
             </p>
             <h1 className="text-[30px] md:text-[34px] font-serif text-neutral-900 tracking-tight font-normal leading-tight mb-1.5">
@@ -243,7 +243,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                         setIsSessionSearchOpen(false);
                         setSessionSearch("");
                       }}
-                      className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+                      className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                     >
                       <X size={14} />
                     </button>
@@ -253,7 +253,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                     type="button"
                     aria-label="Search sessions"
                     onClick={() => setIsSessionSearchOpen(true)}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-500 hover:bg-[#f2f0ec] hover:text-neutral-900"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-600 hover:bg-[#f2f0ec] hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                   >
                     <Search size={16} />
                   </button>
@@ -273,7 +273,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                           onOpenSession(sess);
                         }
                       }}
-                      className="flex items-center justify-between gap-4 py-3 px-1 rounded-lg hover:bg-[#f8f6f3] transition-colors cursor-pointer group"
+                      className="flex items-center justify-between gap-4 py-3 px-1 rounded-lg hover:bg-[#f8f6f3] transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                     >
                       <span className="text-[14px] text-neutral-800 group-hover:text-neutral-950 font-medium truncate">
                         {sess.title}
@@ -303,13 +303,13 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             {/* Instructions Row */}
             <div className="flex items-center justify-between py-2.5">
               <div className="flex items-center gap-2.5 text-neutral-800">
-                <FileText size={17} strokeWidth={1.8} className="text-neutral-600" />
+                <FileText size={17} strokeWidth={1.75} className="text-neutral-600" />
                 <span className="text-[14.5px] font-normal">Instructions</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsInstructionsModalOpen(true)}
-                className="text-[13.5px] text-neutral-600 hover:text-neutral-900 font-normal cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-[#f2f0ec]"
+                className="text-[13.5px] text-neutral-600 hover:text-neutral-900 font-normal cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-[#f2f0ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
               >
                 {project.customInstructions ? "Edit" : "Add"}
               </button>
@@ -328,13 +328,13 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
             {/* Files Row */}
             <div className="flex items-center justify-between py-2.5">
               <div className="flex items-center gap-2.5 text-neutral-800">
-                <Files size={17} strokeWidth={1.8} className="text-neutral-600" />
+                <Files size={17} strokeWidth={1.75} className="text-neutral-600" />
                 <span className="text-[14.5px] font-normal">Files</span>
               </div>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-[13.5px] text-neutral-600 hover:text-neutral-900 font-normal cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-[#f2f0ec]"
+                className="text-[13.5px] text-neutral-600 hover:text-neutral-900 font-normal cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-[#f2f0ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
               >
                 Add
               </button>
@@ -363,7 +363,9 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                     <button
                       type="button"
                       onClick={() => file.id && handleRemoveFile(file.id)}
-                      className="text-neutral-400 hover:text-rose-600 cursor-pointer transition-colors"
+                      aria-label={`Remove file ${file.name}`}
+                      title="Remove file"
+                      className="text-neutral-500 hover:text-rose-600 cursor-pointer transition-colors rounded p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                     >
                       <X size={13} />
                     </button>
@@ -404,7 +406,9 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsInstructionsModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer"
+                aria-label="Close dialog"
+                title="Close"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
               >
                 <X size={16} />
               </button>
@@ -445,14 +449,14 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsInstructionsModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[13px] font-medium text-neutral-800 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[13px] font-medium text-neutral-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveInstructions}
-                className="px-4 py-2 rounded-xl bg-[#806b4f] text-white hover:bg-[#705c43] text-[13px] font-medium transition-colors cursor-pointer shadow-sm"
+                className="px-4 py-2 rounded-xl bg-[#806b4f] text-white hover:bg-[#705c43] text-[13px] font-medium transition-colors cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#806b4f]/40"
               >
                 Save project
               </button>

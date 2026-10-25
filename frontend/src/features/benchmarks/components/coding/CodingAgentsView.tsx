@@ -171,11 +171,11 @@ const CodingAgentsFaq: React.FC = () => {
         {CODING_AGENT_FAQ_ITEMS.map((item, idx) => {
           const isOpen = Boolean(openFaq[idx]);
           return (
-            <div key={idx} className="py-3.5">
+            <div key={idx} className="py-2 sm:py-3.5">
               <button
                 type="button"
                 onClick={() => toggleFaq(idx)}
-                className="w-full flex items-center justify-between text-left text-xs sm:text-[13px] font-semibold text-neutral-900 hover:text-[#0047FF] transition-colors cursor-pointer"
+                className="w-full min-h-[44px] flex items-center justify-between text-left text-xs sm:text-[13px] font-semibold text-neutral-900 hover:text-[#0047FF] transition-colors cursor-pointer"
               >
                 <span>{item.q}</span>
                 {isOpen ? (
@@ -227,7 +227,33 @@ export const CodingAgentsView: React.FC<CodingAgentsViewProps> = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 mt-20">
+      {/* Mobile section jump pills */}
+      <div className="flex lg:hidden overflow-x-auto no-scrollbar gap-2 py-2 mt-8 mb-2 sticky top-0 bg-[#fcfcfb]/95 backdrop-blur-xs z-10 -mx-2 px-2 border-b border-neutral-100">
+        {CODING_AGENT_SECTIONS.map((section) => {
+          const isActive = section.id === activeSection;
+          return (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => handleSectionClick(section.id)}
+              className={`px-3.5 py-1.5 min-h-[36px] rounded-full text-xs whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                isActive
+                  ? "bg-neutral-900 text-white font-semibold shadow-2xs"
+                  : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+              }`}
+            >
+              <span>{section.label}</span>
+              {section.isNew && (
+                <span className={`text-[9px] font-bold px-1 rounded ${isActive ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-700"}`}>
+                  NEW
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 mt-6 lg:mt-20">
         {/* Section navigation */}
         <aside className="hidden lg:flex flex-col gap-0.5 w-[188px] shrink-0 sticky top-6 self-start">
           {CODING_AGENT_SECTIONS.map((section) => {

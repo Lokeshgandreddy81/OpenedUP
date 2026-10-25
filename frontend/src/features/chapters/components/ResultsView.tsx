@@ -2126,18 +2126,18 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                 </div>
               ) : (
                 <>
-                  <div className="w-14 h-14 flex items-center justify-center mb-4 text-black border border-transparent shadow-none">
-                    <BookOpen size={30} strokeWidth={1.8} className="text-black" />
+                  <div className="w-14 h-14 flex items-center justify-center mb-4 text-slate-800 border border-transparent shadow-none">
+                    <BookOpen size={30} strokeWidth={1.75} className="text-slate-800" />
                   </div>
-                  <h3 className="text-[19px] font-medium text-slate-800 m-0 mb-5 tracking-tight">
+                  <h3 className="font-serif text-[22px] font-normal text-slate-800 m-0 mb-5 tracking-tight">
                     No PDF loaded
                   </h3>
                   <button
                     type="button"
                     onClick={() => addFilesInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-none bg-black hover:bg-neutral-800 active:bg-neutral-900 text-white text-[13.5px] font-medium tracking-tight transition-colors cursor-pointer select-none"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[13.5px] font-medium tracking-tight transition-colors cursor-pointer select-none shadow-xs"
                   >
-                    <Plus size={16} strokeWidth={2} />
+                    <Plus size={16} strokeWidth={1.75} />
                     <span>Add PDF</span>
                   </button>
                 </>

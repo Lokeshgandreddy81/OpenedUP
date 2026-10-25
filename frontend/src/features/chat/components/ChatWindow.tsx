@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { PanelLeft } from "lucide-react";
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
@@ -32,7 +33,7 @@ const GhostIcon: React.FC<{ size?: number; className?: string }> = ({
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.8"
+    strokeWidth="1.75"
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
@@ -84,7 +85,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   initialView = "chat",
   onViewChange,
 }) => {
-  const { user } = useChatAuth();
+  const { user, signIn } = useChatAuth();
+  const accountLabel = user?.displayName || user?.email?.split("@")[0] || "Guest";
+  const accountInitial = accountLabel.slice(0, 1).toUpperCase();
   const [activeView, setActiveView] = useState<
     | "chat"
     | "projects"
@@ -274,17 +277,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     return conversations.find((c) => c.id === activeConversationId) || null;
   }, [conversations, activeConversationId]);
 
-  // Keyboard navigation: Escape key closes the window
+  // Keyboard navigation: Escape key closes layered elements cleanly
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (isSidebarOpen && window.matchMedia("(max-width: 639px)").matches) {
+          e.stopPropagation();
+          setIsSidebarOpen(false);
+          return;
+        }
+        if (activeView !== "chat") {
+          e.stopPropagation();
+          handleSelectView("chat");
+          return;
+        }
         onClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isSidebarOpen, activeView, handleSelectView]);
 
   // Handle + New chat
   const handleNewChat = useCallback(async () => {
@@ -974,17 +987,47 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           aria-label="Chat canvas"
           className="relative flex h-full min-w-0 flex-1 flex-col justify-between overflow-hidden bg-[#fcfcfb]"
         >
-          {/* Top Header Bar: Incognito / Temporary Chat Icon */}
-          <div className="w-full flex items-center justify-between gap-3 px-5 sm:px-8 py-3 z-30 shrink-0 relative border-b border-slate-100/80 bg-[#fcfcfb]/95">
-            <div className="min-w-0">
-              <p
-                className="truncate text-[13px] font-medium text-slate-700"
-                title={isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"}
+          {/* Top Header Bar: Responsive Navigation, Brand, Temporary Chat Indicator & Profile */}
+          <header className="w-full flex items-center justify-between gap-3 px-4 sm:px-6 py-2.5 sm:py-3 z-30 shrink-0 relative border-b border-slate-200/60 bg-[#fcfcfb]/95 backdrop-blur-xs">
+            {/* Left: Responsive Sidebar Collapse Button + Brand Title + Conversation Breadcrumb */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen((v) => !v)}
+                title={isSidebarOpen ? "Collapse sidebar" : "Open sidebar"}
+                aria-label={isSidebarOpen ? "Collapse sidebar" : "Open sidebar"}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0 ${
+                  isSidebarOpen ? "sm:hidden" : ""
+                }`}
               >
-                {isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"}
-              </p>
+                <PanelLeft size={17} strokeWidth={1.8} />
+              </button>
+
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-semibold text-[14px] tracking-tight text-slate-900 shrink-0">
+                  Shoebox
+                </span>
+                <span className="text-slate-300 text-[13px] select-none">/</span>
+                <p
+                  className="truncate text-[13px] font-medium text-slate-600 max-w-[160px] sm:max-w-[280px] md:max-w-[400px]"
+                  title={isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"}
+                >
+                  {isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"}
+                </p>
+              </div>
             </div>
-            <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
+
+            {/* Center/Right: Temporary Chat Pill Indicator, Toggle Button & Profile Avatar */}
+            <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-2.5">
+              {isTemporaryChat && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-900 text-[11.5px] font-medium transition-all duration-200 animate-in fade-in zoom-in-95 select-none">
+                  <GhostIcon size={13} className="text-amber-700 shrink-0" />
+                  <span>Temporary Chat</span>
+                  <span className="text-[10.5px] text-amber-700/80 font-normal">· Not saved</span>
+                </div>
+              )}
+
+              {/* Temporary Chat Toggle Button */}
               <button
                 type="button"
                 onClick={() => {
@@ -993,27 +1036,43 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     return !prev;
                   });
                 }}
-                title={isTemporaryChat ? "Turn off temporary chat" : "Turn on temporary chat"}
+                title={isTemporaryChat ? "Turn off temporary chat" : "Turn on temporary chat (history not saved)"}
                 aria-label="Temporary chat"
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                className={`h-8 px-2 sm:px-2.5 rounded-lg flex items-center gap-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer ${
                   isTemporaryChat
-                    ? "bg-slate-900 text-white hover:bg-slate-800"
-                    : "text-slate-700 hover:text-slate-950 hover:bg-slate-100"
+                    ? "bg-slate-900 text-white hover:bg-slate-800 shadow-xs ring-1 ring-slate-950"
+                    : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
                 }`}
               >
                 <GhostIcon
-                  size={18}
-                  className={isTemporaryChat ? "text-white" : "text-slate-700"}
+                  size={16}
+                  className={isTemporaryChat ? "text-white" : "text-slate-600"}
                 />
+                <span className="hidden md:inline">
+                  {isTemporaryChat ? "Temporary On" : "Temporary"}
+                </span>
+              </button>
+
+              {/* Profile / Auth Avatar */}
+              <button
+                type="button"
+                onClick={user ? undefined : signIn}
+                title={user ? `${accountLabel} (${user.email || "Active"})` : "Sign in to save history"}
+                aria-label={user ? `${accountLabel} profile` : "Sign in"}
+                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-800 flex items-center justify-center text-[12px] font-semibold transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-slate-400/40 shrink-0"
+              >
+                {accountInitial}
               </button>
             </div>
-          </div>
+          </header>
 
           {/* Temporary Chat Info Banner */}
           {isTemporaryChat && (
-            <div className="w-full bg-[#f6f6f4] border-b border-slate-200/70 px-4 py-2 flex items-center justify-center gap-2 text-xs text-slate-600 select-none animate-in fade-in duration-150">
-              <GhostIcon size={14} className="text-slate-600 shrink-0" />
-              <span>Temporary Chat is on. Messages are not saved to your history or used to train models.</span>
+            <div className="w-full bg-gradient-to-r from-amber-50/90 via-slate-50 to-amber-50/90 border-b border-amber-200/60 px-4 py-2 flex items-center justify-center gap-2 text-xs text-amber-950 select-none transition-all duration-200 animate-in fade-in slide-in-from-top-1">
+              <GhostIcon size={14} className="text-amber-700 shrink-0" />
+              <span>
+                <strong>Temporary Chat is active.</strong> Messages are not saved to your history, won&apos;t use memories, and disappear when you leave.
+              </span>
             </div>
           )}
 
@@ -1026,7 +1085,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center mx-auto mb-3 shadow-xs">
                       <GhostIcon size={22} className="text-white" />
                     </div>
-                    <h2 className="text-[28px] font-medium tracking-[-0.035em] text-slate-900 md:text-[34px]">
+                    <h2 className="font-serif text-[32px] md:text-[38px] font-normal tracking-tight text-slate-900 leading-tight">
                       Temporary Chat
                     </h2>
                     <p className="mt-2 text-[14px] text-slate-500 max-w-md mx-auto">
@@ -1035,7 +1094,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   </div>
                 ) : (
                   <div className="mb-7 text-center">
-                    <h2 className="text-[30px] font-medium tracking-[-0.035em] text-slate-900 md:text-[36px]">
+                    <h2 className="font-serif text-[32px] md:text-[38px] font-normal tracking-tight text-slate-900 leading-tight">
                       What can I help with?
                     </h2>
                     <p className="mt-2 text-[14px] text-slate-500">
@@ -1048,6 +1107,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <div className="w-full">
                   <ChatInput
                     initialText={artifactDraftPrompt}
+                    isTemporaryChat={isTemporaryChat}
                     onSendMessage={(msg, m, eff, files) => {
                       setArtifactDraftPrompt("");
                       void handleSendMessage(msg, m, eff, undefined, files);
@@ -1132,6 +1192,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <div className="animate-in fade-in duration-150 pb-6">
                 <ChatInput
                   initialText={artifactDraftPrompt}
+                  isTemporaryChat={isTemporaryChat}
                   onSendMessage={(msg, m, eff, files) => {
                     setArtifactDraftPrompt("");
                     handleSendMessage(msg, m, eff, undefined, files);

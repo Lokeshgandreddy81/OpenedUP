@@ -4,6 +4,7 @@ export const ScheduledPageSkeleton: React.FC = () => {
   return (
     <div
       role="status"
+      aria-busy="true"
       aria-label="Loading scheduled tasks"
       className="fixed inset-0 bg-[#FBFBFC] flex flex-col font-sans animate-pulse"
     >

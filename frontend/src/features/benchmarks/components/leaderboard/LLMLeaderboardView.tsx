@@ -159,12 +159,13 @@ function FilterSelect<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((v) => !v)}
-        className="relative h-9 pl-3.5 pr-8 text-xs font-bold rounded-none border border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 outline-none cursor-pointer whitespace-nowrap transition-none"
+        className="relative h-10 min-h-[40px] pl-3.5 pr-8 text-xs font-semibold rounded-xl border border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50/50 outline-none cursor-pointer whitespace-nowrap transition-colors flex items-center"
       >
         {selected.label}
         <ChevronDown
           size={12}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+          strokeWidth={1.75}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
         />
       </button>
 
@@ -175,7 +176,7 @@ function FilterSelect<T extends string>({
           <div
             role="listbox"
             aria-label={ariaLabel}
-            className="absolute left-0 top-full mt-1 z-50 min-w-full bg-white border border-neutral-200 shadow-lg py-1 transition-none"
+            className="absolute left-0 top-full mt-1.5 z-50 min-w-full bg-white border border-neutral-200 rounded-xl shadow-[0_12px_32px_-8px_rgba(0,0,0,0.12)] py-1 overflow-hidden"
           >
             {options.map((o) => (
               <button
@@ -187,15 +188,15 @@ function FilterSelect<T extends string>({
                   onChange(o.value);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center justify-between gap-4 px-3.5 py-2 text-xs font-bold whitespace-nowrap cursor-pointer transition-none ${
+                className={`w-full min-h-[38px] flex items-center justify-between gap-4 px-3.5 py-2 text-xs font-medium whitespace-nowrap cursor-pointer transition-colors ${
                   o.value === value
-                    ? "bg-neutral-100 text-neutral-950"
+                    ? "bg-neutral-100 text-neutral-950 font-semibold"
                     : "text-neutral-600 hover:bg-neutral-50"
                 }`}
               >
                 <span>{o.label}</span>
                 {o.value === value && (
-                  <Check size={12} strokeWidth={3} className="text-[#0047FF]" />
+                  <Check size={12} strokeWidth={1.75} className="text-[#0047FF]" />
                 )}
               </button>
             ))}
@@ -397,9 +398,10 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
           {/* Left / Middle Group: Search input + Filter Dropdowns */}
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
             {/* 1. Search Bar */}
-            <div className="relative w-64 sm:w-72 shrink-0">
+            <div className="relative w-full sm:w-64 md:w-72 shrink-0">
               <Search
                 size={16}
+                strokeWidth={1.75}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
               />
               <input
@@ -408,16 +410,16 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter e.g. GPT, Meta"
-                className="w-full h-9 pl-10 pr-9 text-xs rounded-none border border-neutral-200 bg-white focus:bg-white focus:border-neutral-300 focus:ring-0 text-neutral-900 placeholder:text-neutral-400 outline-none font-sans"
+                className="w-full h-10 min-h-[40px] pl-10 pr-9 text-xs rounded-xl border border-neutral-200 bg-white focus:bg-white focus:border-neutral-300 focus:ring-1 focus:ring-neutral-200/50 text-neutral-900 placeholder:text-neutral-400 outline-none font-sans transition-all"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 p-0.5 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-0.5 cursor-pointer"
                   title="Clear filter"
                 >
-                  <X size={14} strokeWidth={2.5} />
+                  <X size={14} strokeWidth={1.75} />
                 </button>
               )}
             </div>

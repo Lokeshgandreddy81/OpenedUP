@@ -233,16 +233,16 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
   };
 
   return (
-    <div className="w-full bg-[#fcfcfb] flex flex-col font-sans select-none">
+    <div className="w-full bg-[#fcfcfb] flex flex-col font-sans select-none overflow-x-hidden min-w-0">
       {/* ========================================================
           1. MODEL SELECTION DOCK (senior UIUX redesign)
           ======================================================== */}
-      <div className="w-full px-6 pt-8 pb-6">
+      <div className="w-full px-4 sm:px-6 pt-6 sm:pt-8 pb-6">
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div className="ml-[22%]">
-              <h2 className="text-[25.68px] font-extrabold text-slate-900 tracking-tight leading-none">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="font-serif text-[26px] sm:text-[32px] font-normal text-neutral-900 tracking-tight leading-tight">
                 Model Comparator
               </h2>
             </div>
@@ -251,10 +251,10 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                 <button
                   type="button"
                   onClick={() => setSelectedModels((prev) => prev.slice(0, 2))}
-                  className="h-8 px-3 rounded-none bg-transparent hover:bg-slate-100/60 text-slate-700 hover:text-slate-900 text-[10.9px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-transparent"
+                  className="h-9 px-3 rounded-xl bg-transparent hover:bg-slate-100/60 text-slate-700 hover:text-slate-900 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-transparent"
                   title="Keep only the first two models"
                 >
-                  <X size={12} />
+                  <X size={12} strokeWidth={1.75} />
                   <span>Clear extras</span>
                 </button>
               )}
@@ -262,9 +262,9 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                 <button
                   type="button"
                   onClick={openAddPicker}
-                  className="h-9 px-4 rounded-none bg-[#0047FF] hover:bg-[#0039CC] text-white text-[11.5px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm shadow-[#0047FF]/20"
+                  className="h-10 px-4 rounded-xl bg-[#0047FF] hover:bg-[#0039CC] text-white text-[12px] font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm shadow-[#0047FF]/20"
                 >
-                  <Plus size={14} />
+                  <Plus size={14} strokeWidth={1.75} />
                   <span>Add model</span>
                 </button>
               )}
@@ -277,10 +277,13 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
           </div>
 
           {/* Primary models: perfectly centered equal halves */}
-          <div
-            className="grid gap-5 max-w-4xl mx-auto mt-[5%]"
-            style={{ gridTemplateColumns: `repeat(${selectedModels.length}, minmax(0, 1fr))` }}
-          >
+          <div className="w-full overflow-x-auto no-scrollbar pb-2">
+            <div
+              className="grid gap-3 sm:gap-5 max-w-4xl mx-auto mt-4 sm:mt-[5%]"
+              style={{
+                gridTemplateColumns: `repeat(${selectedModels.length}, minmax(${selectedModels.length > 2 ? "140px" : "120px"}, 1fr))`,
+              }}
+            >
             {displayModels.map(({ model, slotLabel, originalIdx }) => {
               const isEdge = originalIdx === 0 || originalIdx === 1;
               return (
@@ -291,7 +294,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                   <CreatorLogo creator={model.creator} size={48} />
                   <ChevronDown
                     size={14}
-                    strokeWidth={3}
+                    strokeWidth={1.75}
                     className="absolute top-2 right-2 text-slate-300 group-hover:text-slate-500 transition-colors"
                   />
 
@@ -304,8 +307,8 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                     <div className="font-bold text-slate-900 group-hover:text-[#0047FF] transition-colors text-[15px] leading-tight">
                       {model.name}
                     </div>
-                    <div className="text-[10.5px] text-slate-400 flex flex-col items-center gap-0.5 mt-2 tabular-nums">
-                      <span className="font-semibold text-slate-500">
+                    <div className="text-[10.5px] text-slate-500 flex flex-col items-center gap-0.5 mt-2 tabular-nums">
+                      <span className="font-semibold text-slate-600">
                         Idx {model.quality.intelligenceIndex.toFixed(1)}
                       </span>
                       <span>${model.pricing.blendedPricePer1M.toFixed(2)}/1M</span>
@@ -319,7 +322,8 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                     <button
                       type="button"
                       onClick={() => removeModel(originalIdx)}
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+                      aria-label={`Remove ${model.name} from comparison`}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                       title="Remove this model"
                     >
                       <X size={12} />
@@ -328,6 +332,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                 </div>
               );
             })}
+            </div>
           </div>
 
           {canAddModel && (
@@ -335,7 +340,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
               <button
                 type="button"
                 onClick={openAddPicker}
-                className="flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-none bg-transparent hover:bg-slate-50/60 text-slate-500 hover:text-[#0047FF] text-[11px] font-semibold transition-all cursor-pointer border border-transparent"
+                className="flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-none bg-transparent hover:bg-slate-50/60 text-slate-600 hover:text-[#0047FF] text-[11px] font-semibold transition-all cursor-pointer border border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
               >
                 <Plus size={14} />
                 <span>Add a model</span>
@@ -352,13 +357,13 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150"
             onClick={closePicker}
           />
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
             <div
-              className="pointer-events-auto w-[75vw] h-[75vw] max-w-[85vh] max-h-[85vh] rounded-3xl border border-transparent bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+              className="pointer-events-auto w-[94vw] sm:w-[80vw] md:w-[70vw] h-[85vh] sm:h-[75vh] max-w-[720px] max-h-[85vh] rounded-3xl border border-transparent bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal header */}
-              <div className="relative px-5 py-4 border-b border-transparent text-center">
+              <div className="relative px-4 sm:px-5 py-4 border-b border-transparent text-center">
                 <h3 className="text-[16px] font-extrabold text-slate-900">
                   {pickerAddMode ? "Add a model to compare" : "Change model"}
                 </h3>
@@ -370,27 +375,29 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                 <button
                   type="button"
                   onClick={closePicker}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+                  aria-label="Close model picker"
+                  title="Close"
+                  className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                 >
                   <X size={16} />
                 </button>
               </div>
 
               {/* Search + sort */}
-              <div className="px-5 py-3 border-b border-transparent space-y-2.5">
+              <div className="px-4 sm:px-5 py-3 border-b border-transparent space-y-2.5">
                 <div className="flex items-center gap-2">
                   <div className="relative shrink-0">
                     <button
                       type="button"
                       onClick={() => setIsSortOpen((v) => !v)}
-                      className="h-10 px-3 text-[10.5px] font-extrabold rounded-none border border-transparent bg-white cursor-pointer outline-none flex items-center justify-center gap-1.5"
+                      className="h-10 px-3 text-[11px] font-semibold rounded-xl border border-neutral-200/80 bg-white cursor-pointer outline-none flex items-center justify-center gap-1.5 hover:bg-neutral-50"
                     >
                       {pickerSort === "index"
                         ? "Intelligence"
                         : pickerSort === "price"
                           ? "Price"
                           : "Speed"}
-                      <ChevronDown size={12} strokeWidth={3} />
+                      <ChevronDown size={12} strokeWidth={1.75} />
                     </button>
                     {isSortOpen && (
                       <>
@@ -398,7 +405,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                           className="fixed inset-0 z-[61]"
                           onClick={() => setIsSortOpen(false)}
                         />
-                        <div className="absolute left-0 top-full mt-1 z-[62] min-w-[110px] rounded-none border border-transparent bg-white shadow-lg overflow-hidden">
+                        <div className="absolute left-0 top-full mt-1.5 z-[62] min-w-[110px] rounded-xl border border-neutral-200/80 bg-white shadow-lg overflow-hidden py-1">
                           {(["index", "price", "speed"] as const).map((key) => (
                             <button
                               key={key}
@@ -438,15 +445,15 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                       className="w-full h-10 pl-9 pr-3 text-[12px] rounded-none border border-transparent bg-white focus:bg-white focus:border-transparent focus:ring-1 focus:ring-slate-200 outline-none transition-all"
                     />
                   </div>
-                  <span className="text-[10px] text-slate-400 tabular-nums shrink-0">
+                  <span className="text-[10px] text-slate-400 tabular-nums shrink-0 hidden sm:inline">
                     {filteredPickerModels.length} models
                   </span>
                 </div>
               </div>
 
               {/* Model list */}
-              <div className="flex-1 overflow-y-auto p-2">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="flex-1 overflow-y-auto p-2 sm:p-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {filteredPickerModels.map((m) => {
                     const isSelected = selectedModels.some((s) => s.id === m.id);
                     const disabled = pickerAddMode && (isSelected || !canAddModel);
@@ -523,10 +530,11 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
         </div>
 
         {/* Matrix Container */}
-        <div
-          className="rounded-2xl border border-transparent bg-white overflow-hidden shadow-xs"
-          style={{ "--cols": activeModels.length + 1 } as React.CSSProperties}
-        >
+        <div className="w-full overflow-x-auto no-scrollbar rounded-2xl">
+          <div
+            className="min-w-[560px] sm:min-w-0 rounded-2xl border border-transparent bg-white overflow-hidden shadow-xs"
+            style={{ "--cols": activeModels.length + 1 } as React.CSSProperties}
+          >
           {/* Table Header: Models & Slots */}
           <div className="grid grid-cols-[repeat(var(--cols),minmax(0,1fr))] bg-transparent border-b border-transparent text-[12px] font-bold text-slate-800 p-3.5">
             <div className={`text-slate-500 uppercase tracking-wider text-[13px] font-bold`}>
@@ -1135,6 +1143,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };

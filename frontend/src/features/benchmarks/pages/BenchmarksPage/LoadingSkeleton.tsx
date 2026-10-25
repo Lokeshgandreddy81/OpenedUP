@@ -4,6 +4,7 @@ export const BenchmarksPageSkeleton: React.FC = () => {
   return (
     <div
       role="status"
+      aria-busy="true"
       aria-label="Loading benchmarks"
       className="fixed inset-0 bg-[#FBFBFC] flex flex-col font-sans animate-pulse"
     >

@@ -223,8 +223,17 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
         setIsRecoveredDraftMenuOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsRecoveredDraftMenuOpen(false);
+      }
+    };
     document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isRecoveredDraftMenuOpen]);
 
   useEffect(() => {

@@ -247,7 +247,7 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
           aria-label="Back"
           className="fixed left-5 top-5 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
         >
-          <ArrowLeft size={16} strokeWidth={2} />
+          <ArrowLeft size={16} strokeWidth={1.75} />
         </button>
       )}
 
@@ -286,7 +286,7 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
               aria-label="Search roadmaps"
               className="grid h-8 w-8 place-items-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
             >
-              <Search size={16} strokeWidth={2} />
+              <Search size={16} strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -296,7 +296,7 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
             <section aria-label="Role-based roadmaps">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-xl sm:text-[22px] font-semibold tracking-tight text-slate-900">
+                  <h2 className="font-serif text-2xl sm:text-[26px] font-normal tracking-tight text-slate-900">
                     Roles
                   </h2>
                   {isSearching && (
@@ -315,7 +315,7 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
             <section aria-label="Skills roadmaps">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-xl sm:text-[22px] font-semibold tracking-tight text-slate-900">
+                  <h2 className="font-serif text-2xl sm:text-[26px] font-normal tracking-tight text-slate-900">
                     Skills
                   </h2>
                   {isSearching && (
@@ -333,7 +333,7 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
             <section aria-label="Best practices roadmaps">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-xl sm:text-[22px] font-semibold tracking-tight text-slate-900">
+                  <h2 className="font-serif text-2xl sm:text-[26px] font-normal tracking-tight text-slate-900">
                     Best Practices
                   </h2>
                   {isSearching && (

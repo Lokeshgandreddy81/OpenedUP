@@ -738,7 +738,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                       hasManualChapterZoomRef.current = true;
                       setChapterZoom((zoom) => Math.max(0.8, Number((zoom - 0.1).toFixed(1))));
                     }}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 disabled:text-slate-300"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 disabled:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                   >
                     <Minus size={15} aria-hidden="true" />
                   </button>
@@ -750,7 +750,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                       hasManualChapterZoomRef.current = true;
                       setChapterZoom(1);
                     }}
-                    className="min-w-10 rounded-full px-1 text-center text-[11px] font-medium tabular-nums text-slate-600 hover:bg-slate-100"
+                    className="min-w-10 rounded-full px-1 text-center text-[11px] font-medium tabular-nums text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                   >
                     {Math.round(chapterZoom * 100)}%
                   </button>
@@ -763,7 +763,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
                       hasManualChapterZoomRef.current = true;
                       setChapterZoom((zoom) => Math.min(1.8, Number((zoom + 0.1).toFixed(1))));
                     }}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 disabled:text-slate-300"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 disabled:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
                   >
                     <Plus size={15} aria-hidden="true" />
                   </button>
