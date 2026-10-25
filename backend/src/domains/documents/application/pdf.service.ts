@@ -278,10 +278,7 @@ export async function parsePdfChapters(params: {
   const scriptCandidates = [
     path.join(process.cwd(), "python", "src", "pdf_chapter_extractor.py"),
     path.join(process.cwd(), "..", "python", "src", "pdf_chapter_extractor.py"),
-    path.join(process.cwd(), "scripts", "pdf_chapter_extractor.py"),
-    path.join(process.cwd(), "..", "scripts", "pdf_chapter_extractor.py"),
     path.join(os.homedir(), "Desktop", "journal", "python", "src", "pdf_chapter_extractor.py"),
-    path.join(os.homedir(), "Desktop", "journal", "scripts", "pdf_chapter_extractor.py"),
   ];
   let scriptPath = scriptCandidates[0]!;
   for (const cand of scriptCandidates) {
