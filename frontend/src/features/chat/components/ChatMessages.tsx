@@ -436,9 +436,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                         </div>
                       ) : (
                         <div
-                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-slate-50/80 px-2.5 py-1 text-[12px] font-medium text-slate-500 select-none"
+                          className="inline-flex items-center gap-1.5 px-1 py-0.5 text-[12px] font-medium text-neutral-400 select-none"
                         >
-                          <Clock3 size={12} className="text-slate-400 stroke-[2]" aria-hidden="true" />
+                          <Clock3 size={12} className="text-neutral-400 stroke-[1.5]" aria-hidden="true" />
                           <span>Thought for {thinkingDuration}</span>
                         </div>
                       )}
