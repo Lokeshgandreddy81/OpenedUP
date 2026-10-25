@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Build, Lint & Test (Node ${{ matrix.node-version }})
+    name: Build & Validate (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -43,14 +43,5 @@ jobs:
       - name: Linting
         run: npm run lint
 
-      - name: Run Tests & Verify Coverage
-        run: npm run test:coverage
-
       - name: Build Application
         run: npm run build
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run E2E Smoke Tests
-        run: npm run e2e

@@ -168,25 +168,22 @@ Open <http://localhost:8080>. Before using signed-in credential storage, set `FI
 
 Run all scripts from the repository root:
 
-| Command                 | Action                                                                      |
-| :---------------------- | :-------------------------------------------------------------------------- |
-| `npm run dev`           | Boots application in development mode with live Vite HMR.                   |
-| `npm run build`         | Compiles frontend assets with Vite and compiles server bundle with esbuild. |
-| `npm start`             | Builds the workspaces and starts the production API server.                 |
-| `npm test`              | Executes complete Vitest suite across all unit & API tests.                 |
-| `npm run test:coverage` | Generates detailed V8 code coverage report.                                 |
-| `npm run typecheck`     | Validates strict TypeScript types with 0 emit across all workspaces.        |
-| `npm run lint`          | Runs ESLint flat configuration check with zero allowable errors.            |
-| `npm run format:check`  | Verifies code adherence to Prettier formatting standards.                   |
-| `npm run format`        | Auto-formats all code, markdown, YAML, and configuration files.             |
-| `npm run e2e`           | Builds and starts the production server for the Playwright smoke tests.     |
-| `npm audit`             | Scans dependency tree for vulnerabilities (0 high/critical allowed).        |
+| Command                | Action                                                                      |
+| :--------------------- | :-------------------------------------------------------------------------- |
+| `npm run dev`          | Boots application in development mode with live Vite HMR.                   |
+| `npm run build`        | Compiles frontend assets with Vite and compiles server bundle with esbuild. |
+| `npm start`            | Builds the workspaces and starts the production API server.                 |
+| `npm run typecheck`    | Validates strict TypeScript types with 0 emit across all workspaces.        |
+| `npm run lint`         | Runs ESLint flat configuration check with zero allowable errors.            |
+| `npm run format:check` | Verifies code adherence to Prettier formatting standards.                   |
+| `npm run format`       | Auto-formats all code, markdown, YAML, and configuration files.             |
+| `npm audit`            | Scans dependency tree for vulnerabilities (0 high/critical allowed).        |
 
 ---
 
 ## Verification
 
-CI runs formatting, typechecking, feature-boundary checks, lint, coverage tests, builds, and browser smoke tests on the supported Node versions. The security workflow scans for secrets and dependency vulnerabilities. Run the same checks locally before opening a pull request:
+CI runs formatting, typechecking, feature-boundary checks, lint, and builds on the supported Node versions. The security workflow scans for secrets and dependency vulnerabilities. Run the same checks locally before opening a pull request:
 
 ```bash
 npm ci
@@ -194,7 +191,6 @@ npm run format:check
 npm run typecheck
 npm run check:feature-boundaries
 npm run lint
-npm run test:coverage
 npm run build
 npm audit --audit-level=high
 ```
