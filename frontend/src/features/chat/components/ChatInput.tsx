@@ -351,7 +351,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-2 rounded-[28px] border p-4 sm:p-5 ${stableFrame ? "border-slate-300/80 bg-white shadow-[0_14px_36px_-30px_rgba(15,23,42,0.42)]" : `transition-[border-color,background-color,box-shadow] duration-200 ${chapterContextLabel ? "border-slate-200/70 bg-slate-50/35 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.4)] focus-within:border-slate-300/80 focus-within:bg-white" : "border-slate-200/80 bg-white shadow-[0_14px_36px_-30px_rgba(15,23,42,0.42)] focus-within:border-slate-300 focus-within:shadow-[0_18px_42px_-30px_rgba(15,23,42,0.5)]"}`} ${isFileDragActive ? "border-slate-300 bg-slate-50 ring-4 ring-slate-900/5" : ""}`}
+          className={`relative flex flex-col gap-2 rounded-[26px] border p-4 sm:p-5 ${
+            stableFrame
+              ? "border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]"
+              : `transition-[border-color,background-color,box-shadow] duration-200 ${
+                  chapterContextLabel
+                    ? "border-slate-200/80 bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)] focus-within:border-slate-300 focus-within:bg-white/80"
+                    : "border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-slate-300 focus-within:bg-white/90 focus-within:shadow-[inset_0_1px_2px_rgba(15,23,42,0.02)]"
+                }`
+          } ${isFileDragActive ? "border-slate-400 bg-slate-100/80 ring-2 ring-slate-900/5" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
           <input
@@ -436,7 +444,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={1}
-            className="chat-composer-input w-full bg-transparent px-1 text-[16px] leading-7 text-slate-900 placeholder:text-slate-500 resize-none outline-none min-h-[40px] max-h-[200px]"
+            className="chat-composer-input w-full bg-transparent px-1 text-[16px] leading-7 text-slate-900 placeholder:text-slate-400 resize-none outline-none min-h-[40px] max-h-[200px]"
           />
 
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
@@ -474,7 +482,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   className={`h-10 w-10 rounded-xl transition-[background-color,color,transform] duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-50 ${
                     isPlusMenuOpen
                       ? "bg-slate-200/80 text-slate-900"
-                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-200/50"
                   }`}
                 >
                   <Plus size={18} strokeWidth={1.8} />
@@ -617,9 +625,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   aria-haspopup="menu"
                   aria-expanded={isModelDropdownOpen}
                   title={currentModelName}
-                  className={`flex items-center gap-1.5 rounded-md px-2 py-1 font-semibold text-slate-950 transition-colors duration-150 cursor-pointer hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:gap-2 sm:text-[14px] ${chapterContextLabel ? "max-w-[min(56vw,360px)] text-[13px]" : "max-w-[min(44vw,360px)] text-[14px]"}`}
+                  className={`flex items-center gap-1.5 rounded-md px-2 py-1 font-medium text-slate-700 transition-colors duration-150 cursor-pointer hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:gap-2 sm:text-[14px] ${chapterContextLabel ? "max-w-[min(56vw,360px)] text-[13px]" : "max-w-[min(44vw,360px)] text-[14px]"}`}
                 >
-                  <span className="truncate font-semibold">{currentModelName}</span>
+                  <span className="truncate">{currentModelName}</span>
                   {supportsEffort && (
                     <span className="text-[12px] text-slate-600 font-medium">{selectedEffort}</span>
                   )}
@@ -794,7 +802,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 aria-label={isDictating ? "Stop dictation" : "Dictate"}
                 aria-pressed={isDictating}
                 onClick={toggleDictation}
-                className={`h-10 w-10 flex items-center justify-center rounded-full transition-[background-color,color,transform] duration-150 cursor-pointer active:scale-95 ${isDictating ? "text-rose-600 bg-rose-50" : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"}`}
+                className={`h-10 w-10 flex items-center justify-center rounded-full transition-[background-color,color,transform] duration-150 cursor-pointer active:scale-95 ${isDictating ? "text-rose-600 bg-rose-50" : "text-slate-400 hover:text-slate-700 hover:bg-slate-200/50"}`}
               >
                 <Mic size={18} strokeWidth={1.8} />
                 {isDictating && <span className="text-[11px]">Listening</span>}
@@ -812,7 +820,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 }
                 title="Send message"
                 aria-label="Send message"
-                className="h-10 w-10 rounded-full flex items-center justify-center transition-[background-color,color,transform,box-shadow] duration-150 cursor-pointer bg-slate-950 text-white shadow-[0_3px_8px_rgba(15,23,42,0.2)] hover:bg-slate-800 hover:shadow-[0_5px_14px_rgba(15,23,42,0.24)] active:scale-95 disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
+                className="h-10 w-10 rounded-full flex items-center justify-center transition-[background-color,color,transform] duration-150 cursor-pointer bg-slate-950 text-white hover:bg-slate-800 active:scale-95 disabled:cursor-default disabled:bg-slate-200/60 disabled:text-slate-400 disabled:shadow-none"
               >
                 <ArrowUp size={17} strokeWidth={2} />
               </button>

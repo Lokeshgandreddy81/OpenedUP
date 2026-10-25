@@ -89,16 +89,11 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
 
   return (
     <div className="w-full min-h-screen md:h-screen flex flex-col md:grid md:grid-cols-12 bg-white overflow-x-hidden md:overflow-hidden select-none">
-      {/* ═══ LEFT COLUMN ═══ Google Blue #0047FF — Pure Architectural Typography ═══ */}
+      {/* ═══ LEFT COLUMN ═══ Clean Slate Architectural Typography ═══ */}
       <div
-        className="md:col-span-7 min-h-[460px] md:h-full flex flex-col justify-between relative z-10 overflow-hidden"
+        className="md:col-span-7 min-h-[460px] md:h-full flex flex-col justify-between relative z-10 overflow-hidden bg-slate-50/80 border-b md:border-b-0 md:border-r border-slate-200/80 text-slate-900"
         style={{
-          backgroundColor: "#0047FF",
-          color: "#FFFFFF",
           padding: "clamp(24px, 3.6vw, 56px)",
-          transformOrigin: "left top",
-          transform: reducedMotion ? "none" : loadStep >= 1 ? "scaleX(1)" : "scaleX(0)",
-          transition: reducedMotion ? "opacity 150ms linear" : "transform 640ms var(--ease-soft)",
         }}
       >
         {/* Subtle architectural grid guidelines */}
@@ -106,7 +101,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
           style={{
             backgroundImage:
-              "linear-gradient(to right, #FFFFFF 1px, transparent 1px), linear-gradient(to bottom, #FFFFFF 1px, transparent 1px)",
+              "linear-gradient(to right, #0F172A 1px, transparent 1px), linear-gradient(to bottom, #0F172A 1px, transparent 1px)",
             backgroundSize: "80px 80px",
           }}
         />
@@ -119,8 +114,8 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
             style={fadeIn(3)}
           >
             <div className="flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span className="font-mono text-[9px] sm:text-[9.5px] tracking-[0.24em] text-white/80 uppercase font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-mono text-[9px] sm:text-[9.5px] tracking-[0.24em] text-slate-500 uppercase font-medium">
                 Document &amp; Expense Audit
               </span>
             </div>
@@ -128,7 +123,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
 
           {/* Monumental Wordmark (Foundational) */}
           <h1
-            className="m-0 tracking-[-0.05em] font-normal leading-[0.82] text-white"
+            className="m-0 tracking-[-0.05em] font-semibold leading-[0.82] text-slate-950"
             style={{
               fontSize: "clamp(48px, 9vw, 122px)",
             }}
@@ -154,31 +149,35 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
               ...fadeIn(6),
             }}
           >
-            <span className="text-white block font-medium">Drop documents &amp; receipts in.</span>
-            <span className="text-white/60 font-light block mt-0.5">Get audited ledgers out.</span>
+            <span className="text-slate-900 block font-medium">
+              Drop documents &amp; receipts in.
+            </span>
+            <span className="text-slate-500 font-normal block mt-0.5">
+              Get audited ledgers out.
+            </span>
           </p>
 
-          {/* Google Engineering Capability Strip — Zero Fluff */}
+          {/* Capability Strip */}
           <div
-            className="mt-4 sm:mt-5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[9.5px] sm:text-[10.5px] font-mono tracking-[0.14em] text-white/65 uppercase"
+            className="mt-4 sm:mt-5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[9.5px] sm:text-[10.5px] font-mono tracking-[0.14em] text-slate-500 uppercase"
             style={fadeIn(6, 100)}
           >
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-white/70" />
+              <span className="w-1 h-1 rounded-full bg-slate-400" />
               Deterministic Code Audit
             </span>
-            <span className="text-white/30">·</span>
+            <span className="text-slate-300">·</span>
             <span>Multi-Page Statement OCR</span>
-            <span className="text-white/30">·</span>
+            <span className="text-slate-300">·</span>
             <span>Zero Data Persistence</span>
           </div>
         </div>
 
-        {/* ── Bottom: Google Material Stepper (Pipeline Foundation Preserved) ── */}
+        {/* ── Bottom: Pipeline Stepper ── */}
         <div className="pt-6 relative z-10">
           <div className="mb-4">
             <h2
-              className="m-0 tracking-[-0.02em] font-normal text-white text-[15px] sm:text-[18px]"
+              className="m-0 tracking-[-0.02em] font-medium text-slate-900 text-[15px] sm:text-[18px]"
               style={fadeIn(7)}
             >
               Pipeline verification
@@ -187,7 +186,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
 
           <div className="relative">
             {/* Stepper connecting vertical track */}
-            <div className="absolute left-[13px] top-3.5 bottom-3.5 w-[1px] bg-white/20 pointer-events-none" />
+            <div className="absolute left-[13px] top-3.5 bottom-3.5 w-[1px] bg-slate-200 pointer-events-none" />
 
             <ol className="m-0 p-0 list-none flex flex-col gap-4 max-w-lg relative z-10">
               {[
@@ -218,8 +217,8 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
                   <div
                     className={`w-[27px] h-[27px] rounded-full shrink-0 flex items-center justify-center font-mono text-[10.5px] transition-all duration-200 ${
                       step.num === 1
-                        ? "bg-white text-[#0047FF] font-bold shadow-sm"
-                        : "bg-white/10 text-white/70 border border-white/25"
+                        ? "bg-slate-950 text-white font-bold shadow-sm"
+                        : "bg-white text-slate-600 border border-slate-200 shadow-xs"
                     }`}
                   >
                     {`0${step.num}`}
@@ -227,17 +226,17 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
 
                   <div className="flex-1 pt-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium tracking-tight text-[13px] sm:text-[14px] text-white">
+                      <span className="font-medium tracking-tight text-[13px] sm:text-[14px] text-slate-900">
                         {step.label}
                       </span>
-                      <span className="font-mono text-[8px] tracking-[0.16em] uppercase px-1.5 py-0.2 rounded bg-white/10 text-white/60 border border-white/10">
+                      <span className="font-mono text-[8px] tracking-[0.16em] uppercase px-1.5 py-0.2 rounded bg-white text-slate-500 border border-slate-200">
                         {step.spec}
                       </span>
                       {step.num === 1 && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse ml-auto" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-auto" />
                       )}
                     </div>
-                    <p className="m-0 mt-0.5 text-[12px] sm:text-[12.5px] leading-snug text-white/80">
+                    <p className="m-0 mt-0.5 text-[12px] sm:text-[12.5px] leading-snug text-slate-600">
                       {step.text}
                     </p>
                   </div>
@@ -248,29 +247,25 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
         </div>
       </div>
 
-      {/* ═══ RIGHT COLUMN ═══ Google Gallery White — Get Started Canvas ═══ */}
+      {/* ═══ RIGHT COLUMN ═══ Clean Modern Action Canvas ═══ */}
       <div
-        className="md:col-span-5 min-h-[460px] md:h-full min-w-0 flex flex-col justify-between overflow-hidden bg-white text-[#1F1F1F]"
+        className="md:col-span-5 min-h-[460px] md:h-full min-w-0 flex flex-col justify-between overflow-hidden bg-white text-slate-900"
         style={{
           padding: "clamp(24px, 3.6vw, 56px)",
-          transformOrigin: "center bottom",
-          transform: reducedMotion ? "none" : loadStep >= 2 ? "scaleY(1)" : "scaleY(0)",
-          opacity: 1,
-          transition: reducedMotion ? "opacity 150ms linear" : "transform 540ms var(--ease-soft)",
         }}
       >
         {/* ── Top: Right-column Provenance Bar ── */}
         <div
-          className="flex items-center justify-between select-none pb-2 border-b border-gray-100"
+          className="flex items-center justify-between select-none pb-2 border-b border-slate-100"
           style={fadeIn(3)}
         >
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[9px] sm:text-[9.5px] tracking-[0.24em] text-gray-400 uppercase font-medium">
+            <span className="font-mono text-[9px] sm:text-[9.5px] tracking-[0.24em] text-slate-400 uppercase font-medium">
               Ingestion
             </span>
           </div>
 
-          <span className="font-mono text-[8.5px] tracking-[0.2em] uppercase tabular-nums text-[#0047FF] font-semibold">
+          <span className="font-mono text-[8.5px] tracking-[0.2em] uppercase tabular-nums text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded font-semibold">
             READY
           </span>
         </div>
@@ -283,7 +278,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
           >
             {/* Clean Direct Headline */}
             <h2
-              className="font-normal m-0 mb-4 text-[#1F1F1F]"
+              className="font-normal m-0 mb-4 text-slate-950"
               style={{
                 fontSize: "clamp(26px, 3vw, 40px)",
                 letterSpacing: "-0.038em",
@@ -300,7 +295,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
               onMouseEnter={() => setCtaHovered(true)}
               onMouseLeave={() => setCtaHovered(false)}
               aria-label="Get started"
-              className="group inline-flex items-center gap-2.5 px-6 py-3.5 rounded-lg bg-[#0047FF] hover:bg-[#0038CC] active:bg-[#002FA7] text-white text-[15px] sm:text-[16px] font-medium tracking-tight shadow-sm hover:shadow transition-all cursor-pointer select-none"
+              className="group inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-slate-950 hover:bg-slate-800 active:bg-slate-900 text-white text-[15px] sm:text-[16px] font-medium tracking-tight shadow-sm hover:shadow active:scale-95 transition-all cursor-pointer select-none"
             >
               <span>Get started</span>
               <span
@@ -313,9 +308,9 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
               </span>
             </button>
 
-            <p className="m-0 mt-3.5 text-[12.5px] text-gray-500 font-normal">
+            <p className="m-0 mt-3.5 text-[12.5px] text-slate-500 font-normal">
               Press{" "}
-              <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 font-mono text-[11px] text-gray-700">
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-mono text-[11px] text-slate-700">
                 Enter ↵
               </kbd>{" "}
               or click to open Chat Assistant
@@ -325,14 +320,13 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
 
         {/* ── Bottom: Legal Footnote ── */}
         <div className="flex flex-col gap-3 select-none pt-2" style={fadeIn(7)}>
-          {/* Clean Legal Footnote */}
-          <p className="m-0 text-[10.5px] text-gray-400 leading-[1.6] font-normal">
+          <p className="m-0 text-[10.5px] text-slate-400 leading-[1.6] font-normal">
             Processed securely via Gemini. Subject to Google's{" "}
             <a
               href="https://policies.google.com/terms/generative-ai/use-policy"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-gray-600 font-medium text-gray-500"
+              className="underline hover:text-slate-700 font-medium text-slate-500"
             >
               Use Policy
             </a>
