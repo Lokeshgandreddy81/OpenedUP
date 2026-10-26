@@ -131,11 +131,6 @@ export const CapabilityIndexesSection: React.FC = () => {
                 </>
               )}
             </div>
-
-            <div className="flex items-center gap-1.5 font-serif text-[#736CD3] ml-auto">
-              <span className="text-[14px]">❖</span>
-              <span className="text-neutral-500 font-serif text-[15px]">Artificial Analysis</span>
-            </div>
           </div>
 
           {/* Bar Chart */}

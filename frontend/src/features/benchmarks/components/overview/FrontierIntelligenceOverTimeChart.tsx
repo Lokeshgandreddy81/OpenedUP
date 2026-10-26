@@ -1647,12 +1647,6 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
             );
           })}
         </div>
-
-        {/* Artificial Analysis Watermark */}
-        <div className="flex items-center gap-1.5 text-[12.5px] font-serif text-[#736CD3] font-medium self-end lg:self-auto shrink-0 select-none">
-          <span className="text-[13px]">❖</span>
-          <span className="text-neutral-500 font-serif">Artificial Analysis</span>
-        </div>
       </div>
 
       {/* ── Main Chart Plot Area (100% responsive, zero horizontal scroll) ── */}

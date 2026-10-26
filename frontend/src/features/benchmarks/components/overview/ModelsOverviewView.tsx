@@ -621,11 +621,6 @@ export const IntelligenceIndexFullChart: React.FC = () => {
             </>
           )}
         </div>
-
-        <div className="flex items-center gap-1.5 text-[12.5px] font-serif text-[#736CD3] font-medium ml-auto">
-          <span className="text-[14px]">❖</span>
-          <span className="text-neutral-500 font-serif">Artificial Analysis</span>
-        </div>
       </div>
 
       {/* Chart Canvas: 26 Models Bar Chart (Seamlessly immersed into background) */}
@@ -1266,14 +1261,6 @@ export const IntelligenceTaskMetricsFullChart: React.FC = () => {
         </p>
       </div>
 
-      {/* Watermark */}
-      <div className="flex flex-wrap items-center justify-end text-[12px] text-neutral-500 pt-0.5 gap-y-2">
-        <div className="flex items-center gap-1.5 text-[12.5px] font-serif text-[#736CD3] font-medium ml-auto">
-          <span className="text-[14px]">❖</span>
-          <span className="text-neutral-500 font-serif">Artificial Analysis</span>
-        </div>
-      </div>
-
       {/* Chart Canvas */}
       <div className="relative mt-4 overflow-x-auto no-scrollbar">
         <div className="min-w-[1480px] pl-32 pr-8">
@@ -1456,11 +1443,6 @@ export const TokenUseFullSection: React.FC = () => {
                 <span className="w-2.5 h-2.5 rounded-full bg-[#93C5FD] inline-block shrink-0" />
                 <span>Reasoning</span>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 font-serif text-[#736CD3] ml-auto">
-              <span className="text-[14px]">❖</span>
-              <span className="text-neutral-500 font-serif text-[15px]">Artificial Analysis</span>
             </div>
           </div>
 
@@ -1689,11 +1671,6 @@ export const CostFullSection: React.FC = () => {
                 <span className="w-2.5 h-2.5 rounded-full bg-[#F0C4B4] inline-block shrink-0" />
                 <span>Input</span>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 font-serif text-[#736CD3] ml-auto">
-              <span className="text-[14px]">❖</span>
-              <span className="text-neutral-500 font-serif text-[15px]">Artificial Analysis</span>
             </div>
           </div>
 
@@ -1957,11 +1934,6 @@ export const ContextWindowFullSection: React.FC = () => {
                 />
                 <span>No publicly available API</span>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 font-serif text-[#736CD3] ml-auto">
-              <span className="text-[14px]">❖</span>
-              <span className="text-neutral-500 font-serif text-[15px]">Artificial Analysis</span>
             </div>
           </div>
 
@@ -2418,13 +2390,6 @@ export const ResponseTimeFullSection: React.FC = () => {
                     </div>
                   ))}
                 </div>
-
-                <div className="flex items-center gap-1.5 font-serif text-[#736CD3] ml-auto">
-                  <span className="text-[14px]">❖</span>
-                  <span className="text-neutral-500 font-serif text-[15px]">
-                    Artificial Analysis
-                  </span>
-                </div>
               </div>
 
               {/* Bar Chart */}
@@ -2538,13 +2503,6 @@ export const ResponseTimeFullSection: React.FC = () => {
                       <span>{item.label}</span>
                     </div>
                   ))}
-                </div>
-
-                <div className="flex items-center gap-1.5 font-serif text-[#736CD3] ml-auto">
-                  <span className="text-[14px]">❖</span>
-                  <span className="text-neutral-500 font-serif text-[15px]">
-                    Artificial Analysis
-                  </span>
                 </div>
               </div>
 
@@ -2715,13 +2673,6 @@ export const ResponseTimeFullSection: React.FC = () => {
                       )
                     )}
                   </svg>
-
-                  <div className="absolute top-1 right-2 flex items-center gap-1.5 font-serif text-[#736CD3] pointer-events-none">
-                    <span className="text-[14px]">❖</span>
-                    <span className="text-neutral-400 font-serif text-[15px]">
-                      Artificial Analysis
-                    </span>
-                  </div>
                 </div>
               </div>
 
