@@ -374,7 +374,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
   }, [filteredModels, sortField, sortDirection, activeLeaderboardMode]);
 
   return (
-    <div className="w-full min-h-screen bg-[#fcfcfb] text-neutral-900 font-sans flex flex-col selection:bg-[#0047FF]/15">
+    <div className="w-full min-h-screen bg-white text-neutral-900 font-sans flex flex-col selection:bg-[#0047FF]/15">
       {/* ========================================================
           1. HEADER SECTION (Newsreader Serif)
           ======================================================== */}

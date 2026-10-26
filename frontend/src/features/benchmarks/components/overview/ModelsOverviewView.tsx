@@ -1359,7 +1359,7 @@ export const TokenUseFullSection: React.FC = () => {
       </div>
 
       {/* Index Card */}
-      <div className="rounded-lg border border-transparent bg-[#fcfcfb] overflow-hidden">
+      <div className="rounded-lg border border-transparent bg-white overflow-hidden">
         {/* View Tabs */}
         <div className="flex items-center gap-1 px-5 pt-3 pb-3 overflow-x-auto no-scrollbar">
           {viewTabs.map((tab) => (
@@ -1585,7 +1585,7 @@ export const CostFullSection: React.FC = () => {
       </div>
 
       {/* Index Card */}
-      <div className="rounded-lg border border-transparent bg-[#fcfcfb] overflow-hidden">
+      <div className="rounded-lg border border-transparent bg-white overflow-hidden">
         {/* View Tabs */}
         <div className="flex items-center gap-1 px-5 pt-3 pb-3 overflow-x-auto no-scrollbar">
           {viewTabs.map((tab) => (
@@ -1859,7 +1859,7 @@ export const ContextWindowFullSection: React.FC = () => {
       </div>
 
       {/* Index Card */}
-      <div className="rounded-lg border border-transparent bg-[#fcfcfb] overflow-hidden">
+      <div className="rounded-lg border border-transparent bg-white overflow-hidden">
         {/* View Tabs */}
         <div className="flex items-center gap-1 px-5 pt-3 pb-3 overflow-x-auto no-scrollbar">
           {viewTabs.map((tab) => (
@@ -2312,7 +2312,7 @@ export const ResponseTimeFullSection: React.FC = () => {
       </div>
 
       {/* Index Card */}
-      <div className="rounded-lg border border-transparent bg-[#fcfcfb] overflow-hidden">
+      <div className="rounded-lg border border-transparent bg-white overflow-hidden">
         {/* View Tabs */}
         <div className="flex items-center gap-1 px-5 pt-3 pb-3 overflow-x-auto no-scrollbar">
           {viewTabs.map((tab) => (

@@ -6,7 +6,7 @@ export const CodingAgentsPageSkeleton: React.FC = () => {
       role="status"
       aria-busy="true"
       aria-label="Loading coding agents"
-      className="fixed inset-0 bg-[#FBFBFC] flex flex-col font-sans animate-pulse"
+      className="fixed inset-0 bg-white flex flex-col font-sans animate-pulse"
     >
       {/* Header bar skeleton */}
       <div className="w-full h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between">

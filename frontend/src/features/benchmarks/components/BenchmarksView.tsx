@@ -147,14 +147,14 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       aria-label="Artificial Analysis Benchmarks"
       className={
         isEmbedded
-          ? "flex-1 w-full h-full min-w-0 bg-[#fcfcfb] flex flex-col font-sans select-none overflow-hidden text-neutral-900"
-          : "fixed inset-0 z-50 bg-[#fcfcfb] flex flex-col font-sans select-none overflow-hidden text-neutral-900 animate-in fade-in duration-150"
+          ? "flex-1 w-full h-full min-w-0 bg-white flex flex-col font-sans select-none overflow-hidden text-neutral-900"
+          : "fixed inset-0 z-50 bg-white flex flex-col font-sans select-none overflow-hidden text-neutral-900 animate-in fade-in duration-150"
       }
     >
       {/* ========================================================
           TOP NAVIGATION HEADER (Artificial Analysis Official Bar)
           ======================================================== */}
-      <header className="w-full h-14 bg-[#fcfcfb] border-b border-transparent px-4 md:px-6 relative flex items-center justify-between shrink-0 z-20">
+      <header className="w-full h-14 bg-white border-b border-transparent px-4 md:px-6 relative flex items-center justify-between shrink-0 z-20">
         {/* Left: Back to document (hidden when embedded or hideBackButton) */}
         {!isEmbedded && !hideBackButton && onClose ? (
           <div className="flex items-center z-10">
@@ -245,7 +245,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       </header>
 
       {/* Mobile Responsive Pill Bar */}
-      <div className="flex h-12 lg:hidden items-center px-3 bg-[#fcfcfb] border-b border-transparent gap-2 overflow-x-auto no-scrollbar shrink-0">
+      <div className="flex h-12 lg:hidden items-center px-3 bg-white border-b border-transparent gap-2 overflow-x-auto no-scrollbar shrink-0">
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeTab === cat.id;
@@ -268,7 +268,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       </div>
 
       {/* Main Viewport Content Area */}
-      <main className="flex-1 w-full overflow-y-auto no-scrollbar relative p-3 sm:p-4 md:p-8 flex flex-col gap-6 sm:gap-10 bg-[#fcfcfb]">
+      <main className="flex-1 w-full overflow-y-auto no-scrollbar relative p-3 sm:p-4 md:p-8 flex flex-col gap-6 sm:gap-10 bg-white">
         {/* VIEW: BENCHMARKS (evaluation catalog with score charts) */}
         {activeTab === "benchmarks" && <BenchmarkCatalogView onSelectModel={handleSelectModel} />}
 

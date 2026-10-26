@@ -17,8 +17,17 @@ import { artifactRouter } from "./domains/artifacts/http/artifact.routes.js";
 import { credentialRouter } from "./domains/credentials/http/credential.routes.js";
 import { projectRouter } from "./domains/projects/http/project.routes.js";
 import { scheduledTaskRouter } from "./domains/scheduled/http/scheduledTask.routes.js";
+import { skillRouter } from "./domains/skills/http/skill.routes.js";
+import { seedBuiltinSkills } from "./domains/skills/application/seedBuiltinSkills.js";
 
 export function createApp(): Express {
+  // Seed builtin skills if not already present
+  try {
+    seedBuiltinSkills();
+  } catch {
+    // Non-fatal if seeding runs in restricted test sandbox
+  }
+
   const app = express();
 
   // Support batches and large PDFs up to 100MB payload
@@ -44,6 +53,7 @@ export function createApp(): Express {
   app.use("/api/artifacts", requireFirebaseUser, artifactRouter);
   app.use("/api/credentials", requireFirebaseUser, credentialRouter);
   app.use("/api/projects", requireFirebaseUser, projectRouter);
+  app.use("/api", skillRouter);
 
   // Serve built frontend (if present) for production/E2E
   const __dirname = path.dirname(fileURLToPath(import.meta.url));

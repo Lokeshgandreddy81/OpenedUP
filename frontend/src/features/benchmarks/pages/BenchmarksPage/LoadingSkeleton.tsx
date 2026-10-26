@@ -6,7 +6,7 @@ export const BenchmarksPageSkeleton: React.FC = () => {
       role="status"
       aria-busy="true"
       aria-label="Loading benchmarks"
-      className="fixed inset-0 bg-[#FBFBFC] flex flex-col font-sans animate-pulse"
+      className="fixed inset-0 bg-white flex flex-col font-sans animate-pulse"
     >
       {/* Top bar skeleton */}
       <div className="w-full h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between">

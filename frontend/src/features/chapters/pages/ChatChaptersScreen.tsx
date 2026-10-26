@@ -20,7 +20,7 @@ export const ChatChaptersScreen: React.FC<ChatChaptersScreenProps> = ({ onClose 
   } = useAppContext();
 
   return (
-    <div className="flex-1 w-full h-full min-h-0 overflow-hidden flex flex-col bg-[#fcfcfb]">
+    <div className="flex-1 w-full h-full min-h-0 overflow-hidden flex flex-col bg-white">
       <ResultsView
         photos={photos}
         computedRows={engineOutput.computedRows}

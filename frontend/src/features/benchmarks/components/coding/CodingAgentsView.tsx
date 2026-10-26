@@ -228,7 +228,7 @@ export const CodingAgentsView: React.FC<CodingAgentsViewProps> = () => {
       </div>
 
       {/* Mobile section jump pills */}
-      <div className="flex lg:hidden overflow-x-auto no-scrollbar gap-2 py-2 mt-8 mb-2 sticky top-0 bg-[#fcfcfb]/95 backdrop-blur-xs z-10 -mx-2 px-2 border-b border-neutral-100">
+      <div className="flex lg:hidden overflow-x-auto no-scrollbar gap-2 py-2 mt-8 mb-2 sticky top-0 bg-white/95 backdrop-blur-xs z-10 -mx-2 px-2 border-b border-neutral-100">
         {CODING_AGENT_SECTIONS.map((section) => {
           const isActive = section.id === activeSection;
           return (

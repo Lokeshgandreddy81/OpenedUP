@@ -618,7 +618,7 @@ export function isPrivateAddress(address: string): boolean {
   return true;
 }
 
-async function fetchProvider(url: string, init: RequestInit): Promise<Response> {
+export async function fetchProvider(url: string, init: RequestInit): Promise<Response> {
   const parsed = new URL(url);
   const hostAddress = parsed.hostname.replace(/^\[|\]$/g, "");
   if (parsed.protocol !== "https:") throw new Error("Provider URL must use HTTPS.");

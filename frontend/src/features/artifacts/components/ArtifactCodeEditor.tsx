@@ -122,7 +122,7 @@ export const ArtifactCodeEditor: React.FC<ArtifactCodeEditorProps> = ({
   return (
     <section
       aria-label="Code editor"
-      className="flex h-[min(36vh,360px)] min-h-[320px] flex-col overflow-visible rounded-2xl border border-[#e7e5df] bg-[#fcfcfb] text-[#4b463f] shadow-sm"
+      className="flex h-[min(36vh,360px)] min-h-[320px] flex-col overflow-visible rounded-2xl border border-[#e7e5df] bg-white text-[#4b463f] shadow-sm"
     >
       <header className="flex min-h-12 items-center justify-between gap-3 rounded-t-[15px] border-b border-[#e8e6e1] bg-[#f8f7f4] px-4">
         <div className="flex min-w-0 items-center gap-2.5">

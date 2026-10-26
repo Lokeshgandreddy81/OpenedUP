@@ -145,6 +145,67 @@ CREATE INDEX IF NOT EXISTS scheduled_task_runs_owner_task
 CREATE INDEX IF NOT EXISTS scheduled_task_runs_queue
   ON scheduled_task_runs(status, lease_until, created_at);
 
+CREATE TABLE IF NOT EXISTS skills (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  scope TEXT NOT NULL CHECK(scope IN ('builtin', 'org', 'user')),
+  owner_id TEXT,
+  org_id TEXT,
+  storage_path TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_unique_name
+  ON skills(name, scope, ifnull(owner_id, ''), ifnull(org_id, ''));
+CREATE INDEX IF NOT EXISTS idx_skills_scope_owner
+  ON skills(scope, owner_id, org_id, is_active);
+
+CREATE TABLE IF NOT EXISTS skill_files (
+  id TEXT PRIMARY KEY,
+  skill_id TEXT NOT NULL,
+  relative_path TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  sha256 TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  UNIQUE(skill_id, relative_path)
+);
+CREATE INDEX IF NOT EXISTS idx_skill_files_skill
+  ON skill_files(skill_id);
+
+CREATE TABLE IF NOT EXISTS conversation_skills (
+  conversation_id TEXT NOT NULL,
+  skill_id TEXT NOT NULL,
+  enabled_at INTEGER NOT NULL,
+  enabled_by TEXT NOT NULL,
+  PRIMARY KEY(conversation_id, skill_id),
+  FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_conversation_skills_conv
+  ON conversation_skills(conversation_id);
+
+CREATE TABLE IF NOT EXISTS project_skills (
+  project_id TEXT NOT NULL,
+  skill_id TEXT NOT NULL,
+  PRIMARY KEY(project_id, skill_id),
+  FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_project_skills_project
+  ON project_skills(project_id);
+
+CREATE TABLE IF NOT EXISTS skill_usage (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+  skill TEXT NOT NULL,
+  user_id TEXT,
+  timestamp INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_skill_usage_conv
+  ON skill_usage(conversation_id, timestamp DESC);
 `;
 
 function migrateChatDatabase(database: ChatDatabase): void {
@@ -166,7 +227,73 @@ function migrateChatDatabase(database: ChatDatabase): void {
       "ALTER TABLE scheduled_task_runs ADD COLUMN conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL"
     );
   }
-  database.exec("PRAGMA user_version = 4;");
+
+  // Skills tables migration
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS skills (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      scope TEXT NOT NULL CHECK(scope IN ('builtin', 'org', 'user')),
+      owner_id TEXT,
+      org_id TEXT,
+      storage_path TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_unique_name
+      ON skills(name, scope, ifnull(owner_id, ''), ifnull(org_id, ''));
+    CREATE INDEX IF NOT EXISTS idx_skills_scope_owner
+      ON skills(scope, owner_id, org_id, is_active);
+
+    CREATE TABLE IF NOT EXISTS skill_files (
+      id TEXT PRIMARY KEY,
+      skill_id TEXT NOT NULL,
+      relative_path TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      sha256 TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+      UNIQUE(skill_id, relative_path)
+    );
+    CREATE INDEX IF NOT EXISTS idx_skill_files_skill
+      ON skill_files(skill_id);
+
+    CREATE TABLE IF NOT EXISTS conversation_skills (
+      conversation_id TEXT NOT NULL,
+      skill_id TEXT NOT NULL,
+      enabled_at INTEGER NOT NULL,
+      enabled_by TEXT NOT NULL,
+      PRIMARY KEY(conversation_id, skill_id),
+      FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+      FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_conversation_skills_conv
+      ON conversation_skills(conversation_id);
+
+    CREATE TABLE IF NOT EXISTS project_skills (
+      project_id TEXT NOT NULL,
+      skill_id TEXT NOT NULL,
+      PRIMARY KEY(project_id, skill_id),
+      FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_project_skills_project
+      ON project_skills(project_id);
+
+    CREATE TABLE IF NOT EXISTS skill_usage (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+      skill TEXT NOT NULL,
+      user_id TEXT,
+      timestamp INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_skill_usage_conv
+      ON skill_usage(conversation_id, timestamp DESC);
+  `);
+
+  database.exec("PRAGMA user_version = 5;");
 }
 
 function defaultDatabasePath(): string {

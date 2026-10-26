@@ -594,7 +594,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
   };
 
   return (
-    <div className="flex-1 w-full h-full bg-[#fcfcfb] flex flex-col font-sans overflow-y-auto">
+    <div className="flex-1 w-full h-full bg-white flex flex-col font-sans overflow-y-auto">
       <div className="w-full px-6 sm:px-8 md:px-10 lg:px-12 pb-12 pt-7 md:pt-8">
         <div className="flex items-center justify-between">
           <div>

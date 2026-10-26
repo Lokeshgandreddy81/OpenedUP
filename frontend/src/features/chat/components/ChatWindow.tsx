@@ -992,10 +992,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       {activeView === "chat" ? (
         <main
           aria-label="Chat canvas"
-          className="relative flex h-full min-w-0 flex-1 flex-col justify-between overflow-hidden bg-[#fcfcfb]"
+          className="relative flex h-full min-w-0 flex-1 flex-col justify-between overflow-hidden bg-white"
         >
           {/* Top Header Bar: Responsive Navigation, Brand, Temporary Chat Indicator & Profile */}
-          <header className="w-full flex items-center justify-between gap-3 px-4 sm:px-6 py-2.5 sm:py-3 z-30 shrink-0 relative bg-[#fcfcfb]/95 backdrop-blur-xs">
+          <header className="w-full flex items-center justify-between gap-3 px-4 sm:px-6 py-2.5 sm:py-3 z-30 shrink-0 relative bg-white/95 backdrop-blur-xs">
             {/* Left: Responsive Sidebar Collapse Button + Brand Title + Conversation Breadcrumb */}
             <div className="flex items-center gap-2.5 min-w-0">
               <button

@@ -260,7 +260,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   }, [filteredProviders, expandedProviderId]);
 
   return (
-    <div className="flex-1 w-full h-full min-w-0 bg-[#fcfcfb] flex flex-col font-sans select-none overflow-y-auto overflow-x-hidden">
+    <div className="flex-1 w-full h-full min-w-0 bg-white flex flex-col font-sans select-none overflow-y-auto overflow-x-hidden">
       <div className="w-full px-4 sm:px-8 md:px-10 lg:px-12 pt-6 sm:pt-7 md:pt-8 pb-12 flex flex-col min-w-0">
         {/* Title in Editorial Serif font matching design */}
         <div className="flex items-center justify-between">

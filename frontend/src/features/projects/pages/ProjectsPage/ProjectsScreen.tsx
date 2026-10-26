@@ -709,7 +709,7 @@ export const ProjectsScreen: React.FC<{
 
   // ── Render Projects List / Empty State View ──
   return (
-    <div className="flex-1 w-full h-full bg-[#fcfcfb] flex flex-col font-sans select-none overflow-y-auto">
+    <div className="flex-1 w-full h-full bg-white flex flex-col font-sans select-none overflow-y-auto">
       {projectSyncNotice}
       <div className="w-full px-6 sm:px-8 md:px-10 lg:px-12 pt-7 md:pt-8 pb-12 flex flex-col min-h-full">
         {/* ── Top Header Bar ── */}

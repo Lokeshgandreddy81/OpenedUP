@@ -233,7 +233,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
   };
 
   return (
-    <div className="w-full bg-[#fcfcfb] flex flex-col font-sans select-none overflow-x-hidden min-w-0">
+    <div className="w-full bg-white flex flex-col font-sans select-none overflow-x-hidden min-w-0">
       {/* ========================================================
           1. MODEL SELECTION DOCK (senior UIUX redesign)
           ======================================================== */}

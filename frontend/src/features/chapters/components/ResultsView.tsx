@@ -1354,7 +1354,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
 
   return (
     <div
-      className="w-full h-dvh min-h-dvh md:h-screen flex flex-col bg-[#fcfcfb] overflow-hidden animate-view-fade"
+      className="w-full h-dvh min-h-dvh md:h-screen flex flex-col bg-white overflow-hidden animate-view-fade"
       onDragOver={(e) => {
         if (onAddFiles) {
           e.preventDefault();
@@ -1420,7 +1420,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                 className={`absolute inset-0 ${
                   activeOpenTile.isForeign && groupingMode === "tile" ? "hatch-white" : ""
                 }`}
-                style={{ backgroundColor: isPdfDocument ? "#fcfcfb" : "var(--blue-900)" }}
+                style={{ backgroundColor: isPdfDocument ? "#ffffff" : "var(--blue-900)" }}
               />
 
               {/* FLIP counter-scaled content wrapper with inline-size container query */}
@@ -2032,7 +2032,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
           className="flex-1 min-w-0 min-h-[420px] md:min-h-0 md:h-full relative overflow-hidden"
           style={{
             backgroundColor: isPdfDocument
-              ? "#fcfcfb"
+              ? "#ffffff"
               : arrivalStage >= 2
                 ? "var(--blue-900)"
                 : "var(--white)",
@@ -2111,7 +2111,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
               />
             </ErrorBoundary>
           ) : isPdfDocument ? (
-            <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-8 text-center bg-[#fcfcfb] select-none">
+            <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-8 text-center bg-white select-none">
               {readingPhase !== "idle" ? (
                 <div className="flex flex-col items-center justify-center gap-3.5 max-w-sm animate-in fade-in duration-200">
                   <div className="w-10 h-10 border-2 border-slate-200 border-t-[#0047FF] rounded-full animate-spin" />

@@ -137,7 +137,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   if (!isOpen) {
     return (
-      <div className="hidden sm:flex h-full w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/80 bg-[#fcfcfb] py-3 select-none">
+      <div className="hidden sm:flex h-full w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/80 bg-white py-3 select-none">
         <button
           type="button"
           onClick={onBack}
@@ -282,7 +282,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     <aside
       ref={sidebarRef}
       aria-label="Chat history"
-      className="absolute inset-y-0 left-0 z-40 flex h-full w-[min(84vw,280px)] shrink-0 flex-col border-r border-slate-200/80 bg-[#fcfcfb] py-3 select-none shadow-[12px_0_36px_-28px_rgba(15,23,42,0.36)] transition-all duration-150 sm:static sm:w-56 sm:shadow-none md:w-60"
+      className="absolute inset-y-0 left-0 z-40 flex h-full w-[min(84vw,280px)] shrink-0 flex-col border-r border-slate-200/80 bg-white py-3 select-none shadow-[12px_0_36px_-28px_rgba(15,23,42,0.36)] transition-all duration-150 sm:static sm:w-56 sm:shadow-none md:w-60"
     >
       {/* Top action row: Back to main sidebar + Collapse sidebar */}
       <div className="flex items-center justify-between px-3 pb-3 mb-1 border-b border-slate-100">

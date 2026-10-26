@@ -241,7 +241,7 @@ export const CodingAgentIndexesFullChart: React.FC<CodingAgentIndexesFullChartPr
       {/* ── Main Card ── */}
       <div
         ref={containerRef}
-        className="w-full bg-white rounded-2xl relative select-none shadow-xs border border-transparent"
+        className="w-full bg-white rounded-2xl relative select-none"
       >
         {/* Performance variant: full-width tab bar at card top */}
         {isPerformance && (

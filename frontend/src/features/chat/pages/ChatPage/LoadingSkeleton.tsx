@@ -6,10 +6,10 @@ export const ChatPageSkeleton: React.FC = () => {
       role="status"
       aria-busy="true"
       aria-label="Loading chat"
-      className="fixed inset-0 bg-[#FBFBFC] flex overflow-hidden animate-pulse"
+      className="fixed inset-0 bg-white flex overflow-hidden animate-pulse"
     >
       {/* Sidebar skeleton */}
-      <div className="w-64 h-full border-r border-slate-200/80 bg-[#fcfcfb] p-4 flex flex-col gap-4 shrink-0">
+      <div className="w-64 h-full border-r border-slate-200/80 bg-white p-4 flex flex-col gap-4 shrink-0">
         <div className="flex items-center justify-between">
           <div className="h-6 w-24 bg-slate-200 rounded" />
           <div className="w-8 h-8 rounded-lg bg-slate-200" />
@@ -23,8 +23,8 @@ export const ChatPageSkeleton: React.FC = () => {
       </div>
 
       {/* Main chat window skeleton */}
-      <div className="flex-1 flex flex-col h-full bg-[#fcfcfb]">
-        <div className="h-14 border-b border-slate-200 bg-[#fcfcfb] px-6 flex items-center justify-between">
+      <div className="flex-1 flex flex-col h-full bg-white">
+        <div className="h-14 border-b border-slate-200 bg-white px-6 flex items-center justify-between">
           <div className="h-6 w-36 bg-slate-200 rounded" />
           <div className="w-8 h-8 rounded-lg bg-slate-200" />
         </div>
