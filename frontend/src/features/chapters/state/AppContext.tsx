@@ -77,7 +77,20 @@ export interface AppContextType {
   handleNewPile: () => void;
 }
 
-const AppContext = createContext<AppContextType | null>(null);
+declare global {
+  interface Window {
+    __SHOBOX_APP_CONTEXT__?: React.Context<AppContextType | null>;
+    __SHOBOX_APP_CONTEXT_VALUE__?: AppContextType;
+  }
+}
+
+const AppContext: React.Context<AppContextType | null> =
+  (typeof window !== "undefined" && window.__SHOBOX_APP_CONTEXT__) ||
+  createContext<AppContextType | null>(null);
+
+if (typeof window !== "undefined") {
+  window.__SHOBOX_APP_CONTEXT__ = AppContext;
+}
 
 export interface AppProviderProps {
   children: ReactNode;
@@ -907,13 +920,46 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     handleNewPile,
   };
 
+  if (typeof window !== "undefined") {
+    window.__SHOBOX_APP_CONTEXT_VALUE__ = contextValue;
+  }
+
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
+};
+
+const DEFAULT_APP_CONTEXT: AppContextType = {
+  photos: [],
+  setPhotos: () => {},
+  rows: [],
+  setRows: () => {},
+  privacyAccepted: true,
+  setPrivacyAccepted: () => {},
+  readingPhase: "idle",
+  totalReceiptsFound: 0,
+  recentDiscoveries: [],
+  failedBatches: [],
+  isWorkspaceModalOpen: false,
+  setIsWorkspaceModalOpen: () => {},
+  connectedEmail: null,
+  setConnectedEmail: () => {},
+  isDemo: false,
+  isPdfDemo: false,
+  engineOutput: computeShoeboxEngine([], 1),
+  handleAddFiles: () => {},
+  handleIngestWorkspaceFiles: () => {},
+  handleRemovePhoto: () => {},
+  handleStartVisualise: () => {},
+  handleRetryFailedBatches: () => {},
+  handleUpdateRow: () => {},
+  handleChangeCostCenter: () => {},
+  handleNewPile: () => {},
 };
 
 export function useAppContext(): AppContextType {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error("useAppContext must be used within an AppProvider");
+  if (context) return context;
+  if (typeof window !== "undefined" && window.__SHOBOX_APP_CONTEXT_VALUE__) {
+    return window.__SHOBOX_APP_CONTEXT_VALUE__;
   }
-  return context;
+  return DEFAULT_APP_CONTEXT;
 }
