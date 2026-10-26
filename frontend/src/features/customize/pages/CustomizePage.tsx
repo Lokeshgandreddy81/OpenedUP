@@ -5,17 +5,11 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
-  Check,
   Trash2,
   ExternalLink,
-  AlertCircle,
   X,
-  RotateCcw,
   KeyRound,
-  ShieldCheck,
-  Server,
-  Layers,
-  LoaderCircle,
+  Check,
 } from "lucide-react";
 import {
   PROVIDER_CATALOG,
@@ -25,7 +19,6 @@ import {
 } from "@charan-interiors/contracts";
 import { CreatorLogo } from "../../benchmarks/publicApi";
 import { useProviderKeys } from "../services/keyStore";
-import { useChatAuth } from "../../../app/auth/ChatAuthContext";
 
 export type CustomizeCategory = "Skills" | "Connectors" | "Plugins" | "Providers";
 export type CustomizeSubTab = "Yours" | "Discover";
@@ -103,16 +96,29 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
     hasKey,
     hasAccountKey,
   } = useProviderKeys();
-  const { user } = useChatAuth();
 
   const [draftKeys, setDraftKeys] = useState<Partial<Record<ProviderId, string>>>({});
   const [draftUrls, setDraftUrls] = useState<Partial<Record<ProviderId, string>>>({});
   const [revealedMap, setRevealedMap] = useState<Partial<Record<ProviderId, boolean>>>({});
   const [isSavingMap, setIsSavingMap] = useState<Partial<Record<ProviderId, boolean>>>({});
-  const [savedFeedbackMap, setSavedFeedbackMap] = useState<Partial<Record<ProviderId, boolean>>>(
-    {}
-  );
   const [saveErrorMap, setSaveErrorMap] = useState<Partial<Record<ProviderId, string>>>({});
+  const [selectedModelMap, setSelectedModelMap] = useState<Partial<Record<ProviderId, string>>>({});
+  const [openModelDropdownId, setOpenModelDropdownId] = useState<ProviderId | null>(null);
+  const [customProviderDropdownOpen, setCustomProviderDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-model-dropdown]")) {
+        setOpenModelDropdownId(null);
+      }
+      if (!target.closest("[data-provider-dropdown]")) {
+        setCustomProviderDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     setActiveCategory(initialCategory);
@@ -144,10 +150,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
         delete next[providerId];
         return next;
       });
-      setSavedFeedbackMap((prev) => ({ ...prev, [providerId]: true }));
-      setTimeout(() => {
-        setSavedFeedbackMap((prev) => ({ ...prev, [providerId]: false }));
-      }, 2000);
     } catch (error) {
       setSaveErrorMap((prev) => ({
         ...prev,
@@ -505,7 +507,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 const currentUrl =
                   draftUrls[provider.id] !== undefined ? draftUrls[provider.id]! : savedEndpoint;
                 const isRevealed = Boolean(revealedMap[provider.id]);
-                const isJustSaved = Boolean(savedFeedbackMap[provider.id]);
                 const isSaving = Boolean(isSavingMap[provider.id]);
                 const endpointChanged =
                   draftUrls[provider.id] !== undefined &&
@@ -527,14 +528,10 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 return (
                   <section
                     key={provider.id}
-                    className={`overflow-hidden rounded-[22px] bg-white border transition-shadow ${
-                      expandedProviderId === provider.id
-                        ? "border-neutral-300/80 shadow-sm"
-                        : "border-neutral-200/70 hover:border-neutral-300/60 shadow-2xs"
-                    }`}
+                    className="rounded-2xl bg-white hover:bg-neutral-50/70 transition-colors"
                   >
-                    {/* Header Row */}
-                    <div className="flex items-center justify-between gap-4 px-5 py-4">
+                    {/* Header Row - Completely borderless, no pills, minimal text */}
+                    <div className="flex items-center justify-between gap-4 px-5 py-3.5">
                       <button
                         type="button"
                         aria-expanded={expandedProviderId === provider.id}
@@ -543,92 +540,70 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                             current === provider.id ? null : provider.id
                           )
                         }
-                        className="flex min-w-0 flex-1 items-center gap-3.5 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded-xl"
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer focus-visible:outline-none"
                       >
                         <CreatorLogo
                           creator={PROVIDER_LOGO_CREATOR[provider.id]}
-                          size={32}
+                          size={24}
                           title={provider.name}
                         />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="truncate text-[15.5px] font-medium text-neutral-900">
-                              {provider.name}
-                            </span>
+                        <div className="min-w-0 flex-1 flex items-center gap-3 flex-wrap">
+                          <span className="text-[15px] font-medium text-neutral-900">
+                            {provider.name}
+                          </span>
 
-                            {/* Connection status tag */}
+                          {/* Minimalist dot status - NO PILLS */}
+                          <span className="text-[12px] text-neutral-400 flex items-center gap-1.5 select-none">
                             <span
-                              className={`inline-flex items-center gap-1 text-[11.5px] font-medium px-2 py-0.5 rounded-full ${
+                              className={`inline-block w-1.5 h-1.5 rounded-full ${
                                 isAccountConnected
-                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70"
+                                  ? "bg-emerald-500"
                                   : isConnected
-                                    ? "bg-amber-50 text-amber-800 border border-amber-200/70"
-                                    : "bg-neutral-100 text-neutral-700"
+                                    ? "bg-amber-500"
+                                    : "bg-neutral-300"
                               }`}
-                            >
-                              {isAccountConnected ? (
-                                <>
-                                  <ShieldCheck size={12} className="text-emerald-700" />
-                                  <span>Account connected</span>
-                                </>
-                              ) : isConnected ? (
-                                <>
-                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                  <span>Browser session only</span>
-                                </>
-                              ) : (
-                                <span>Not connected</span>
-                              )}
+                            />
+                            <span>
+                              {isAccountConnected
+                                ? "Connected"
+                                : isConnected
+                                  ? "Session"
+                                  : "Not connected"}
                             </span>
+                          </span>
 
-                            {/* Unsaved draft indicator */}
-                            {hasUnsavedDraft && (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                                <span>Unsaved draft</span>
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-1 flex items-center gap-2 flex-wrap">
-                            <span className="text-[12.5px] text-neutral-600 line-clamp-1">
-                              {provider.tagline}
+                          {hasUnsavedDraft && (
+                            <span className="text-[11px] text-orange-600 font-medium select-none">
+                              ● Unsaved
                             </span>
-                            <span className="text-neutral-400">•</span>
-                            <span className="text-[11.5px] font-mono text-neutral-600">
-                              {provider.envKeyName}
-                            </span>
-                          </div>
+                          )}
                         </div>
                       </button>
 
-                      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                        {/* Docs URL Link */}
+                      <div className="flex shrink-0 items-center gap-3">
                         <a
                           href={provider.docsUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 text-[12px] text-neutral-700 hover:text-neutral-950 px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-                          title={`Get ${provider.name} API Key from official console`}
+                          className="text-[12px] text-neutral-400 hover:text-neutral-900 flex items-center gap-1 transition-colors"
+                          title={`Get ${provider.name} API key`}
                         >
-                          <span className="hidden sm:inline">Get key</span>
-                          <ExternalLink size={12} />
+                          <span>Get key</span>
+                          <ExternalLink size={11} />
                         </a>
 
-                        {/* Expand / Collapse Button */}
                         <button
                           type="button"
                           aria-label={`${expandedProviderId === provider.id ? "Collapse" : "Edit"} ${provider.name} settings`}
-                          aria-expanded={expandedProviderId === provider.id}
                           onClick={() =>
                             setExpandedProviderId((current) =>
                               current === provider.id ? null : provider.id
                             )
                           }
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
+                          className="text-neutral-400 hover:text-neutral-800 cursor-pointer p-1 transition-colors"
                         >
                           <ChevronDown
-                            size={17}
+                            size={16}
                             className={`transition-transform duration-200 ${
                               expandedProviderId === provider.id ? "rotate-180" : ""
                             }`}
@@ -637,303 +612,254 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                       </div>
                     </div>
 
-                    {/* Expanded Configuration Panel */}
+                    {/* Expanded Area - Zero Inset Containers, Zero Visible Borders, Minimal Dead Text, Models Dropdown */}
                     {expandedProviderId === provider.id && (
-                      <div className="mx-3.5 mb-3.5 rounded-[18px] bg-neutral-50/80 p-4 sm:p-5 border border-neutral-150">
-                        {/* Models and Capabilities Tags */}
-                        {models.length > 0 && (
-                          <div className="mb-4 pb-3.5 border-b border-neutral-200/70">
-                            <div className="flex items-center gap-1.5 text-[11.5px] font-medium text-neutral-500 uppercase tracking-wider mb-2">
-                              <Layers size={12} />
-                              <span>Available Models ({models.length})</span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {models.map((model) => (
-                                <span
-                                  key={model.id}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-neutral-200 text-[12px] text-neutral-800 shadow-2xs"
-                                >
-                                  <span className="font-medium">{model.name}</span>
-                                  {model.tag && (
-                                    <span
-                                      className={`text-[9.5px] font-semibold px-1.5 py-0.2 rounded ${
-                                        model.tag === "Free"
-                                          ? "bg-emerald-100 text-emerald-800"
-                                          : model.tag === "Top" || model.tag === "Max"
-                                            ? "bg-amber-100 text-amber-800"
-                                            : "bg-blue-100 text-blue-800"
-                                      }`}
-                                    >
-                                      {model.tag}
-                                    </span>
-                                  )}
-                                  {model.contextWindowTokens && (
-                                    <span className="text-[10px] text-neutral-600 font-mono">
-                                      {Math.round(model.contextWindowTokens / 1000)}k
-                                    </span>
-                                  )}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* API Key Input Section */}
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <label
-                                htmlFor={`provider-key-${provider.id}`}
-                                className="text-[13px] font-medium text-neutral-800"
-                              >
-                                API key
-                              </label>
-                              {/* Prefix Hint Badge */}
-                              {provider.keyPrefix && (
-                                <span
-                                  title={`Expected key prefix for ${provider.name}`}
-                                  className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-neutral-200/70 text-neutral-700 font-medium"
-                                >
-                                  Prefix: {provider.keyPrefix}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Official console link */}
-                            <a
-                              href={provider.docsUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[11.5px] text-neutral-600 hover:text-neutral-900 inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded"
+                      <div className="px-5 pb-5 pt-1 flex flex-col gap-3">
+                        {/* Key Input & Actions Row - Compact, Proportional, Monochromatic */}
+                        <div className="flex items-center gap-2 max-w-lg">
+                          <div className="relative flex-1">
+                            <input
+                              id={`provider-key-${provider.id}`}
+                              type={isRevealed ? "text" : "password"}
+                              value={currentInput}
+                              onChange={(e) =>
+                                setDraftKeys((prev) => ({
+                                  ...prev,
+                                  [provider.id]: e.target.value,
+                                }))
+                              }
+                              placeholder={
+                                isAccountConnected && !currentInput
+                                  ? "••••••••••••••••"
+                                  : provider.keyPlaceholder || `Paste ${provider.name} key`
+                              }
+                              className="w-full h-9 px-3 pr-8 bg-neutral-100 text-[12.5px] font-mono text-neutral-900 rounded-xl outline-none placeholder:font-sans placeholder:text-neutral-400 focus:bg-neutral-150/60 transition-colors border-0"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRevealedMap((prev) => ({
+                                  ...prev,
+                                  [provider.id]: !prev[provider.id],
+                                }))
+                              }
+                              aria-label={isRevealed ? "Hide API key" : "Show API key"}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
                             >
-                              <span>{provider.name} Console</span>
-                              <ExternalLink size={11} />
-                            </a>
+                              {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
                           </div>
 
-                          <div className="flex min-w-0 flex-wrap sm:flex-nowrap items-stretch sm:items-center gap-2">
-                            <div className="relative w-full sm:flex-1 min-w-0">
-                              <input
-                                id={`provider-key-${provider.id}`}
-                                type={isRevealed ? "text" : "password"}
-                                value={currentInput}
-                                onChange={(e) =>
-                                  setDraftKeys((prev) => ({
-                                    ...prev,
-                                    [provider.id]: e.target.value,
-                                  }))
-                                }
-                                placeholder={
-                                  isAccountConnected && !currentInput
-                                    ? "•••••••••••••••• (Saved to your account)"
-                                    : `e.g. ${provider.keyPlaceholder || provider.keyPrefix}`
-                                }
-                                className="h-10 w-full rounded-xl bg-white pl-3 pr-10 text-[12.5px] font-mono text-neutral-900 outline-none shadow-[inset_0_0_0_1px_rgba(15,23,42,0.13)] transition-shadow placeholder:font-sans placeholder:text-neutral-500 focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.35)] focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setRevealedMap((prev) => ({
-                                    ...prev,
-                                    [provider.id]: !prev[provider.id],
-                                  }))
-                                }
-                                aria-label={isRevealed ? "Hide API key" : "Show API key"}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-500 hover:text-neutral-800 transition-colors p-2 min-h-[36px] min-w-[36px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded-lg"
-                              >
-                                {isRevealed ? <EyeOff size={15} /> : <Eye size={15} />}
-                              </button>
-                            </div>
+                          {/* Action Button - Monochromatic & Quiet (No Cheap Green Transition) */}
+                          <button
+                            type="button"
+                            onClick={() => handleSaveProvider(provider.id)}
+                            disabled={
+                              isSaving ||
+                              (!currentInput.trim() && !(isConnected && endpointChanged))
+                            }
+                            aria-busy={isSaving}
+                            className="h-9 px-3.5 text-[12.5px] font-medium rounded-xl transition-colors cursor-pointer border-0 shrink-0 bg-neutral-900 hover:bg-neutral-800 text-white disabled:bg-neutral-150 disabled:text-neutral-400 disabled:cursor-not-allowed"
+                          >
+                            {isSaving
+                              ? "Saving..."
+                              : isConnected && endpointChanged && !currentInput.trim()
+                                ? "Save endpoint"
+                                : isConnected
+                                  ? "Update"
+                                  : "Connect"}
+                          </button>
 
-                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                              {/* Discard draft button if user made changes */}
-                              {hasUnsavedDraft && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDiscardDraft(provider.id)}
-                                  title="Discard unsaved changes"
-                                  aria-label="Discard unsaved changes"
-                                  className="h-10 sm:h-9 px-3 text-[12px] rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 flex items-center gap-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-                                >
-                                  <RotateCcw size={13} />
-                                  <span>Discard</span>
-                                </button>
-                              )}
-
-                              {/* Save / Connect / Update Button */}
-                              <button
-                                type="button"
-                                onClick={() => handleSaveProvider(provider.id)}
-                                disabled={
-                                  isSaving ||
-                                  (!currentInput.trim() && !(isConnected && endpointChanged))
-                                }
-                                aria-busy={isSaving}
-                                className={`h-10 sm:h-9 shrink-0 cursor-pointer rounded-xl px-4 text-[12.5px] font-medium transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 focus-visible:ring-offset-1 ${
-                                  isJustSaved
-                                    ? "bg-emerald-700 text-white"
-                                    : isSaving
-                                      ? "bg-neutral-700 text-white cursor-wait"
-                                      : "bg-neutral-950 text-white hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-500 disabled:cursor-not-allowed"
-                                }`}
-                              >
-                                {isJustSaved ? (
-                                  <>
-                                    <Check size={14} />
-                                    <span>
-                                      {hasAccountKey(provider.id) ? "Saved" : "Saved for session"}
-                                    </span>
-                                  </>
-                                ) : isSaving ? (
-                                  <>
-                                    <LoaderCircle size={14} className="animate-spin" />
-                                    <span>Saving...</span>
-                                  </>
-                                ) : (
-                                  <span>
-                                    {isConnected && endpointChanged && !currentInput.trim()
-                                      ? "Save endpoint"
-                                      : isConnected
-                                        ? "Update"
-                                        : "Connect"}
-                                  </span>
-                                )}
-                              </button>
-
-                              {/* Disconnect / Remove Key Button */}
-                              {isConnected && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveProvider(provider.id)}
-                                  disabled={isSaving}
-                                  title="Disconnect API key"
-                                  aria-label="Disconnect API key"
-                                  className="flex h-10 w-10 sm:h-9 sm:w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Live feedback for screen readers */}
-                          {isJustSaved && (
-                            <p role="status" aria-live="polite" className="text-[11.5px] text-emerald-700 flex items-center gap-1 mt-0.5">
-                              <Check size={12} className="text-emerald-600" />
-                              <span>{provider.name} credentials saved successfully.</span>
-                            </p>
-                          )}
-
-                          {/* Prefix Mismatch Notice */}
-                          {isPrefixMismatch && (
-                            <p className="text-[11.5px] text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                              <AlertCircle size={13} className="shrink-0" />
-                              <span>
-                                Notice: {provider.name} keys typically start with &ldquo;
-                                {provider.keyPrefix}&rdquo;.
-                              </span>
-                            </p>
-                          )}
-
-                          {/* Error Banner */}
-                          {saveError && (
-                            <div
-                              role="alert"
-                              aria-live="assertive"
-                              className="text-[12px] text-rose-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl flex items-center justify-between gap-2"
+                          {hasUnsavedDraft && (
+                            <button
+                              type="button"
+                              onClick={() => handleDiscardDraft(provider.id)}
+                              className="h-9 px-2.5 text-[12px] text-neutral-500 hover:text-neutral-900 rounded-xl hover:bg-neutral-100 transition-colors cursor-pointer border-0 shrink-0"
                             >
-                              <div className="flex items-center gap-2">
-                                <AlertCircle size={14} className="shrink-0 text-rose-600" />
-                                <span>{saveError}</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setSaveErrorMap((prev) => {
-                                    const next = { ...prev };
-                                    delete next[provider.id];
-                                    return next;
-                                  })
-                                }
-                                aria-label="Dismiss error"
-                                className="text-rose-500 hover:text-rose-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded p-0.5"
-                              >
-                                <X size={13} />
-                              </button>
-                            </div>
+                              Discard
+                            </button>
                           )}
 
-                          {/* Account vs Browser Session Explanatory Note */}
-                          {isConnected && !isAccountConnected && (
-                            <p className="text-[11.5px] text-neutral-500 mt-0.5">
-                              This key is stored in browser session memory.{" "}
-                              {user
-                                ? "Click Update to securely encrypt and sync it with your account for scheduled tasks and other devices."
-                                : "Sign in, then click Update to save it to your account for scheduled tasks and multi-device access."}
-                            </p>
-                          )}
-                          {isAccountConnected && (
-                            <p className="text-[11px] text-emerald-700/90 mt-0.5 flex items-center gap-1">
-                              <ShieldCheck size={13} />
-                              <span>
-                                Key is encrypted with AES-GCM and stored in your account vault.
-                              </span>
-                            </p>
+                          {isConnected && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveProvider(provider.id)}
+                              disabled={isSaving}
+                              title="Disconnect key"
+                              className="h-9 w-9 text-neutral-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer border-0 flex items-center justify-center shrink-0"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           )}
                         </div>
 
-                        {/* Custom Model Configurations (Prominent for Custom / OpenRouter) */}
-                        {provider.id === "custom" && (
-                          <div className="mt-4 pt-4 border-t border-neutral-200/80 flex flex-col gap-3">
-                            <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-neutral-800">
-                              <Server size={14} className="text-neutral-600" />
-                              <span>Custom Model & Endpoint Settings</span>
-                            </div>
+                        {/* Models Dropdown - Neat & Clean Custom Dropdown (hidden on custom/OpenRouter where Model ID is configured directly) */}
+                        {provider.id !== "custom" && models.length > 0 && (() => {
+                          const selectedModelId = selectedModelMap[provider.id] || models[0]?.id;
+                          const currentModel = models.find((m) => m.id === selectedModelId) || models[0];
+                          const isDropdownOpen = openModelDropdownId === provider.id;
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {/* Model ID Input */}
-                              <label className="flex flex-col gap-1.5 text-[12px] text-neutral-700 font-medium">
-                                <span>Model ID</span>
-                                <input
-                                  type="text"
-                                  value={customModelId}
-                                  onChange={(e) => setCustomModel(e.target.value)}
-                                  placeholder="e.g. openai/gpt-4o-mini or meta-llama/llama-3.3-70b"
-                                  className="h-9 px-3 text-[12px] font-mono text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)] focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-                                />
-                                <span className="text-[10.5px] text-neutral-600 font-normal">
-                                  Any model ID supported by OpenRouter or your custom endpoint.
-                                </span>
-                              </label>
-
-                              {/* Credentials Provider Selection */}
-                              <label className="flex flex-col gap-1.5 text-[12px] text-neutral-700 font-medium">
-                                <span>Credentials from</span>
-                                <select
-                                  value={customModelProvider}
-                                  onChange={(event) =>
-                                    setCustomProvider(event.target.value as ProviderId)
-                                  }
-                                  className="h-9 px-3 text-[12px] text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)] focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-                                >
-                                  {PROVIDER_ORDER.map((providerId) => (
-                                    <option key={providerId} value={providerId}>
-                                      {PROVIDER_CATALOG[providerId].name}
-                                    </option>
-                                  ))}
-                                </select>
-                                <span className="text-[10.5px] text-neutral-600 font-normal">
-                                  Authenticates using the key configured for{" "}
-                                  {PROVIDER_CATALOG[customModelProvider].name}.
-                                </span>
-                              </label>
-                            </div>
-
-                            {/* Quick Presets for Custom Endpoint */}
-                            <div className="flex items-center gap-2 pt-1 flex-wrap">
-                              <span className="text-[11px] text-neutral-600 font-medium">
-                                Quick presets:
+                          return (
+                            <div className="relative flex items-center gap-2 pt-0.5" data-model-dropdown>
+                              <span className="text-[12px] text-neutral-400 shrink-0 select-none">
+                                Model
                               </span>
+                              <div className="relative flex-1 max-w-sm">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setOpenModelDropdownId((curr) =>
+                                      curr === provider.id ? null : provider.id
+                                    )
+                                  }
+                                  className="w-full h-9 px-3 bg-neutral-100 hover:bg-neutral-150/70 text-[12.5px] text-neutral-800 rounded-xl outline-none cursor-pointer flex items-center justify-between transition-colors select-none border-0"
+                                >
+                                  <span className="truncate">
+                                    {currentModel?.name}
+                                    {currentModel?.contextWindowTokens
+                                      ? ` • ${Math.round(currentModel.contextWindowTokens / 1000)}k`
+                                      : ""}
+                                  </span>
+                                  <ChevronDown
+                                    size={13}
+                                    className={`text-neutral-400 transition-transform duration-200 shrink-0 ml-1.5 ${
+                                      isDropdownOpen ? "rotate-180" : ""
+                                    }`}
+                                  />
+                                </button>
+
+                                {/* Custom Neat Dropdown Menu (No OS Native Blue Popup!) */}
+                                {isDropdownOpen && (
+                                  <div className="absolute left-0 top-full mt-1.5 w-full max-h-60 overflow-y-auto bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] p-1 z-30 animate-in fade-in duration-100 border border-neutral-100/60">
+                                    {models.map((m) => {
+                                      const isSelected = m.id === currentModel?.id;
+                                      return (
+                                        <button
+                                          key={m.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setSelectedModelMap((prev) => ({
+                                              ...prev,
+                                              [provider.id]: m.id,
+                                            }));
+                                            setOpenModelDropdownId(null);
+                                          }}
+                                          className={`w-full px-3 py-2 text-left rounded-lg flex items-center justify-between text-[12.5px] cursor-pointer transition-colors border-0 ${
+                                            isSelected
+                                              ? "bg-neutral-100/90 text-neutral-900 font-medium"
+                                              : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                                          }`}
+                                        >
+                                          <span className="truncate mr-2">{m.name}</span>
+                                          <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-[11px] font-mono text-neutral-400">
+                                              {m.contextWindowTokens
+                                                ? `${Math.round(m.contextWindowTokens / 1000)}k`
+                                                : m.tag || ""}
+                                            </span>
+                                            {isSelected && (
+                                              <Check size={13} className="text-neutral-900" />
+                                            )}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Prefix mismatch notice */}
+                        {isPrefixMismatch && (
+                          <p className="text-[11.5px] text-amber-700">
+                            Keys typically start with &ldquo;{provider.keyPrefix}&rdquo;
+                          </p>
+                        )}
+
+                        {/* Error Banner */}
+                        {saveError && (
+                          <div className="text-[12px] text-rose-600 flex items-center justify-between">
+                            <span>{saveError}</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSaveErrorMap((prev) => {
+                                  const next = { ...prev };
+                                  delete next[provider.id];
+                                  return next;
+                                })
+                              }
+                              aria-label="Dismiss error"
+                              className="text-rose-400 hover:text-rose-700 p-0.5 cursor-pointer"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Custom Provider (OpenRouter) Minimal Controls */}
+                        {provider.id === "custom" && (
+                          <div className="flex flex-col gap-2 pt-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[12px] text-neutral-400 shrink-0 select-none">
+                                Model ID
+                              </span>
+                              <input
+                                type="text"
+                                value={customModelId}
+                                onChange={(e) => setCustomModel(e.target.value)}
+                                placeholder="openai/gpt-4o-mini"
+                                className="h-9 flex-1 min-w-[180px] max-w-sm px-3 bg-neutral-100 text-[12px] font-mono text-neutral-800 rounded-xl outline-none border-0"
+                              />
+                              <span className="text-[12px] text-neutral-400 shrink-0 select-none">
+                                via
+                              </span>
+                              <div className="relative" data-provider-dropdown>
+                                <button
+                                  type="button"
+                                  onClick={() => setCustomProviderDropdownOpen((v) => !v)}
+                                  className="h-9 px-3 bg-neutral-100 hover:bg-neutral-150/70 text-[12px] text-neutral-800 rounded-xl outline-none cursor-pointer flex items-center gap-1.5 border-0"
+                                >
+                                  <span>{PROVIDER_CATALOG[customModelProvider].name}</span>
+                                  <ChevronDown
+                                    size={12}
+                                    className={`text-neutral-400 transition-transform ${
+                                      customProviderDropdownOpen ? "rotate-180" : ""
+                                    }`}
+                                  />
+                                </button>
+                                {customProviderDropdownOpen && (
+                                  <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] p-1 z-30 border border-neutral-100/60 animate-in fade-in duration-100">
+                                    {PROVIDER_ORDER.map((providerId) => {
+                                      const isSelected = providerId === customModelProvider;
+                                      return (
+                                        <button
+                                          key={providerId}
+                                          type="button"
+                                          onClick={() => {
+                                            setCustomProvider(providerId);
+                                            setCustomProviderDropdownOpen(false);
+                                          }}
+                                          className={`w-full px-2.5 py-1.5 text-left rounded-lg text-[12px] cursor-pointer flex items-center justify-between border-0 ${
+                                            isSelected
+                                              ? "bg-neutral-100 font-medium text-neutral-900"
+                                              : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                                          }`}
+                                        >
+                                          <span>{PROVIDER_CATALOG[providerId].name}</span>
+                                          {isSelected && <Check size={12} className="text-neutral-900" />}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+                              <span className="select-none">Presets:</span>
                               <button
                                 type="button"
                                 onClick={() =>
@@ -942,10 +868,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     custom: "https://openrouter.ai/api/v1",
                                   }))
                                 }
-                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
+                                className="hover:text-neutral-900 cursor-pointer"
                               >
-                                OpenRouter Default
+                                OpenRouter
                               </button>
+                              <span>•</span>
                               <button
                                 type="button"
                                 onClick={() =>
@@ -954,10 +881,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     custom: "http://localhost:11434/v1",
                                   }))
                                 }
-                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
+                                className="hover:text-neutral-900 cursor-pointer"
                               >
-                                Ollama Local (11434)
+                                Ollama
                               </button>
+                              <span>•</span>
                               <button
                                 type="button"
                                 onClick={() =>
@@ -966,61 +894,52 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                     custom: "http://localhost:1234/v1",
                                   }))
                                 }
-                                className="px-2 py-0.5 rounded-md text-[11px] bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
+                                className="hover:text-neutral-900 cursor-pointer"
                               >
-                                LM Studio (1234)
+                                LM Studio
                               </button>
                             </div>
                           </div>
                         )}
 
-                        {/* Advanced Settings (Base URL Override) */}
-                        <details className="group mt-4 pt-3 border-t border-neutral-200/80">
-                          <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-[12px] font-medium text-neutral-700 transition-colors hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded px-1 [&::-webkit-details-marker]:hidden">
-                            <span>Advanced endpoint overrides</span>
+                        {/* Minimal Endpoint Override */}
+                        <details className="group pt-0.5">
+                          <summary className="flex items-center gap-1 text-[11.5px] text-neutral-400 hover:text-neutral-700 cursor-pointer select-none [&::-webkit-details-marker]:hidden">
+                            <span>Endpoint</span>
                             <ChevronDown
-                              size={13}
-                              className="transition-transform group-open:rotate-180 text-neutral-500"
+                              size={11}
+                              className="transition-transform group-open:rotate-180"
                             />
                           </summary>
 
-                          <div className="mt-3 flex flex-col gap-2">
-                            <label className="flex flex-col gap-1.5 text-[11.5px] text-neutral-600 font-medium">
-                              <span>API Base URL Endpoint</span>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="url"
-                                  value={currentUrl}
-                                  onChange={(event) =>
-                                    setDraftUrls((prev) => ({
-                                      ...prev,
-                                      [provider.id]: event.target.value,
-                                    }))
-                                  }
-                                  placeholder={provider.defaultBaseUrl}
-                                  aria-label={`${provider.name} API endpoint`}
-                                  className="h-9 flex-1 px-3 text-[12px] font-mono text-neutral-800 bg-white rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] outline-none focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.32)] focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-                                />
-                                {currentUrl !== provider.defaultBaseUrl && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setDraftUrls((prev) => ({
-                                        ...prev,
-                                        [provider.id]: provider.defaultBaseUrl,
-                                      }))
-                                    }
-                                    title="Reset to default endpoint"
-                                    className="h-9 px-2.5 text-[11.5px] rounded-xl border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-                                  >
-                                    Reset
-                                  </button>
-                                )}
-                              </div>
-                              <span className="text-[10.5px] text-neutral-600 font-normal">
-                                Default: {provider.defaultBaseUrl}
-                              </span>
-                            </label>
+                          <div className="pt-2 flex items-center gap-2 max-w-md">
+                            <input
+                              type="url"
+                              value={currentUrl}
+                              onChange={(event) =>
+                                setDraftUrls((prev) => ({
+                                  ...prev,
+                                  [provider.id]: event.target.value,
+                                }))
+                              }
+                              placeholder={provider.defaultBaseUrl}
+                              aria-label={`${provider.name} API endpoint`}
+                              className="h-8 flex-1 px-3 bg-neutral-100 text-[12px] font-mono text-neutral-800 rounded-lg outline-none border-0"
+                            />
+                            {currentUrl !== provider.defaultBaseUrl && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDraftUrls((prev) => ({
+                                    ...prev,
+                                    [provider.id]: provider.defaultBaseUrl,
+                                  }))
+                                }
+                                className="text-[11.5px] text-neutral-400 hover:text-neutral-800 cursor-pointer"
+                              >
+                                Reset
+                              </button>
+                            )}
                           </div>
                         </details>
                       </div>

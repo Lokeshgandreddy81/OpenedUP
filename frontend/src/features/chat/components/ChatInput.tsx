@@ -12,6 +12,7 @@ import {
   Boxes,
   Plug,
   BarChart3,
+  Zap,
   ChevronRight,
   Mic,
   X,
@@ -61,6 +62,7 @@ interface ChatInputProps {
   onChangeModel: (model: AiModelId) => void;
   onOpenProjects?: () => void;
   onOpenPlugins?: () => void;
+  onOpenSkills?: () => void;
   onOpenBenchmarks?: () => void;
   onOpenProviders?: () => void;
   initialText?: string;
@@ -117,6 +119,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onChangeModel,
   onOpenProjects,
   onOpenPlugins,
+  onOpenSkills,
   onOpenBenchmarks,
   onOpenProviders,
   initialText = "",
@@ -686,22 +689,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       <ChevronRight size={13} className="text-slate-400 shrink-0" />
                     </button>
 
-                    {/* Benchmarks */}
+                    {/* Skills */}
                     <button
                       type="button"
                       onClick={() => {
                         setIsPlusMenuOpen(false);
-                        onOpenBenchmarks?.();
+                        onOpenSkills?.();
                       }}
                       className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <BarChart3
+                        <Zap
                           size={15}
                           strokeWidth={1.75}
                           className="text-slate-600 group-hover:text-slate-900 shrink-0"
                         />
-                        <span className="text-[13px] text-slate-800 font-normal">Benchmarks</span>
+                        <span className="text-[13px] text-slate-800 font-normal">Skills</span>
                       </div>
                       <ChevronRight size={13} className="text-slate-400 shrink-0" />
                     </button>

@@ -12,6 +12,8 @@ import {
   getProviderCredential,
   updateProviderEndpoint,
   CredentialDecryptionError,
+  getVaultAttestationFingerprint,
+  verifyVaultHealth,
 } from "../application/credentialVault.js";
 
 function getAuthenticatedUid(req: Request, res: Response): string | null {
@@ -21,6 +23,14 @@ function getAuthenticatedUid(req: Request, res: Response): string | null {
     return null;
   }
   return uid;
+}
+
+export function getAttestation(req: Request, res: Response): void {
+  const uid = getAuthenticatedUid(req, res);
+  if (!uid) return;
+  const attestation = getVaultAttestationFingerprint();
+  const health = verifyVaultHealth();
+  res.json({ attestation, health });
 }
 
 export function listCredentials(req: Request, res: Response): void {

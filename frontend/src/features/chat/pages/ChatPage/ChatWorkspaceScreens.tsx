@@ -43,6 +43,7 @@ export interface ChatWorkspaceScreensProps {
   onNavigateToChat: (prompt?: string) => void;
   onCloseScheduledTasks: () => void;
   onOpenProviders: () => void;
+  onOpenSkills?: () => void;
   onOpenProjects: () => void;
   onOpenPlugins: () => void;
   onOpenBenchmarks: () => void;
@@ -58,6 +59,7 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
   onNavigateToChat,
   onCloseScheduledTasks,
   onOpenProviders,
+  onOpenSkills,
   onOpenProjects,
   onOpenPlugins,
   onOpenBenchmarks,
@@ -76,6 +78,7 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
           <ProjectsScreen
             key={projectsNavKey}
             onOpenProviders={onOpenProviders}
+            onOpenSkills={onOpenSkills}
             onOpenProjects={onOpenProjects}
             onOpenPlugins={onOpenPlugins}
             onOpenBenchmarks={onOpenBenchmarks}

@@ -10,6 +10,7 @@ import {
   putCredential,
   updateCredentialEndpoint,
   removeCredential,
+  getAttestation,
 } from "./credential.controller.js";
 import {
   getProviderCredential,
@@ -168,6 +169,15 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => 
     const listRes3 = mockResponse();
     listCredentials(reqBase, listRes3);
     assert.deepEqual(listRes3.body, { providers: [] });
+
+    // 8. Attestation and vault health query
+    const attestRes = mockResponse();
+    getAttestation(reqBase, attestRes);
+    assert.equal(attestRes.statusCode, 200);
+    const attestBody = attestRes.body as { attestation?: { status: string; algorithm: string }; health?: { healthy: boolean } };
+    assert.equal(attestBody.attestation?.status, "healthy");
+    assert.equal(attestBody.attestation?.algorithm, "AES-256-GCM+HKDF");
+    assert.equal(attestBody.health?.healthy, true);
   } finally {
     cleanup();
   }

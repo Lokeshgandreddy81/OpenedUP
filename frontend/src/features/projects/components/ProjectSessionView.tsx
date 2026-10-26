@@ -28,6 +28,7 @@ export interface ProjectSessionViewProps {
   onUpdateSession: (updatedSession: ProjectSession) => void;
   onDeleteSession: (sessionId: string) => void;
   onOpenProviders: () => void;
+  onOpenSkills?: () => void;
   onOpenProjects: () => void;
   onOpenPlugins: () => void;
   onOpenBenchmarks: () => void;
@@ -43,6 +44,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
   onUpdateSession,
   onDeleteSession,
   onOpenProviders,
+  onOpenSkills,
   onOpenProjects,
   onOpenPlugins,
   onOpenBenchmarks,
@@ -402,6 +404,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
             onChangeModel={handleModelChange}
             onOpenProjects={onOpenProjects}
             onOpenPlugins={onOpenPlugins}
+            onOpenSkills={onOpenSkills}
             onOpenBenchmarks={onOpenBenchmarks}
             onOpenProviders={onOpenProviders}
           />

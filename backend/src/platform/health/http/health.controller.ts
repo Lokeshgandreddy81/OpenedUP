@@ -2,6 +2,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { Request, Response } from "express";
 import { resolveApiKey } from "../../config/index.js";
+import {
+  verifyVaultHealth,
+  getVaultAttestationFingerprint,
+} from "../../../domains/credentials/application/credentialVault.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -24,11 +28,15 @@ export async function getReadyz(_req: Request, res: Response): Promise<void> {
   }
 
   const geminiConfigured = Boolean(resolveApiKey());
+  const vaultHealth = verifyVaultHealth();
+  const vaultAttestation = getVaultAttestationFingerprint();
 
   res.status(200).json({
-    status: "ready",
+    status: vaultHealth.healthy ? "ready" : "degraded",
     geminiConfigured,
     pythonAvailable,
+    vaultHealthy: vaultHealth.healthy,
+    vaultAttestation: vaultAttestation.status,
     timestamp: new Date().toISOString(),
   });
 }

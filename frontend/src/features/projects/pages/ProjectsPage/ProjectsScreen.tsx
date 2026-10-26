@@ -70,11 +70,19 @@ const DEFAULT_DEMO_PROJECT: ProjectItem = {
 
 export const ProjectsScreen: React.FC<{
   onOpenProviders: () => void;
+  onOpenSkills?: () => void;
   onOpenProjects: () => void;
   onOpenPlugins: () => void;
   onOpenBenchmarks: () => void;
   onOpenArtifacts: () => void;
-}> = ({ onOpenProviders, onOpenProjects, onOpenPlugins, onOpenBenchmarks, onOpenArtifacts }) => {
+}> = ({
+  onOpenProviders,
+  onOpenSkills,
+  onOpenProjects,
+  onOpenPlugins,
+  onOpenBenchmarks,
+  onOpenArtifacts,
+}) => {
   const { user, loading: authLoading } = useChatAuth();
   // Load projects from localStorage (defaults to demo project "Yes" if empty)
   const [projects, setProjects] = useState<ProjectItem[]>(() => {
@@ -625,6 +633,7 @@ export const ProjectsScreen: React.FC<{
           }}
           onStartSession={handleStartSession}
           onOpenProviders={onOpenProviders}
+          onOpenSkills={onOpenSkills}
           onOpenProjects={onOpenProjects}
           onOpenPlugins={onOpenPlugins}
           onOpenBenchmarks={onOpenBenchmarks}
@@ -654,6 +663,7 @@ export const ProjectsScreen: React.FC<{
           project={activeProject}
           session={activeSession}
           onOpenProviders={onOpenProviders}
+          onOpenSkills={onOpenSkills}
           onOpenProjects={onOpenProjects}
           onOpenPlugins={onOpenPlugins}
           onOpenBenchmarks={onOpenBenchmarks}

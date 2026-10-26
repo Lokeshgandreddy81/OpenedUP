@@ -20,6 +20,7 @@ export interface ProjectWorkspaceViewProps {
   onUpdateProject: (updated: ProjectItem) => void;
   onDeleteProject: (projectId: string) => void;
   onOpenProviders: () => void;
+  onOpenSkills?: () => void;
   onOpenProjects: () => void;
   onOpenPlugins: () => void;
   onOpenBenchmarks: () => void;
@@ -33,6 +34,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
   onUpdateProject,
   onDeleteProject,
   onOpenProviders,
+  onOpenSkills,
   onOpenProjects,
   onOpenPlugins,
   onOpenBenchmarks,
@@ -209,6 +211,7 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                 onChangeModel={handleModelChange}
                 onOpenProjects={onOpenProjects}
                 onOpenPlugins={onOpenPlugins}
+                onOpenSkills={onOpenSkills}
                 onOpenBenchmarks={onOpenBenchmarks}
                 onOpenProviders={onOpenProviders}
               />

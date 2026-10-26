@@ -12,6 +12,18 @@ import {
   listProviderCredentials,
   deleteProviderCredential,
   CredentialDecryptionError,
+  secureWipeBuffer,
+  getFallbackEncryptionKeys,
+  deriveTenantDek,
+  CryptographicMaterialsCache,
+  generateBlindIndex,
+  getVaultAttestationFingerprint,
+  verifyVaultHealth,
+  sanitizeCredentialForAudit,
+  withDecryptedCredential,
+  constantTimeEqual,
+  reencryptAllCredentialsWithPrimaryKey,
+  purgeOrQuarantineCredential,
 } from "./credentialVault.js";
 import { getChatDatabase } from "../../../platform/database/chatDatabase.js";
 
@@ -357,6 +369,230 @@ test("5. Wrong master key resistance", () => {
     process.env["BYOK_ENCRYPTION_KEY"] = keyA.toString("base64");
     const recovered = getProviderCredential(userId, "openai");
     assert.equal(recovered?.apiKey, "key-a-secret");
+  } finally {
+    cleanup();
+  }
+});
+
+test("6. Agent 1: Secure in-memory buffer wiping and scoped execution", () => {
+  const buf = Buffer.from("super-secret-temporary-key");
+  assert.equal(buf.toString("utf8"), "super-secret-temporary-key");
+  secureWipeBuffer(buf);
+  // Ensure buffer is wiped and zeroes out
+  assert.ok(buf.every((byte) => byte === 0), "Buffer must be zero-filled");
+
+  // withDecryptedCredential safely wraps access
+  const { cleanup } = setupIsolatedEnv();
+  try {
+    const key = crypto.randomBytes(32);
+    process.env["BYOK_ENCRYPTION_KEY"] = key.toString("base64");
+    saveProviderCredential("mem-user", "anthropic", { apiKey: "sk-ant-test-123" });
+
+    const executed = withDecryptedCredential("mem-user", "anthropic", (cred) => {
+      return cred.apiKey.toUpperCase();
+    });
+    assert.equal(executed, "SK-ANT-TEST-123");
+
+    const nonExistent = withDecryptedCredential("mem-user", "google", (c) => c.apiKey);
+    assert.equal(nonExistent, null);
+  } finally {
+    cleanup();
+  }
+});
+
+test("7. Agent 2: Zero-downtime key rotation with fallback keys and re-encryption", () => {
+  const { cleanup } = setupIsolatedEnv();
+  try {
+    const oldKey = crypto.randomBytes(32);
+    const newKey = crypto.randomBytes(32);
+    const userId = "rotation-user";
+
+    // 1. Initial credential saved under old key
+    process.env["BYOK_ENCRYPTION_KEY"] = oldKey.toString("base64");
+    saveProviderCredential(userId, "openai", { apiKey: "original-openai-key" });
+
+    // 2. Rotate to newKey, keeping oldKey in fallback list
+    process.env["BYOK_ENCRYPTION_KEY"] = newKey.toString("base64");
+    process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"] = oldKey.toString("base64");
+
+    const fallbacks = getFallbackEncryptionKeys();
+    assert.equal(fallbacks.length, 1);
+    assert.deepEqual(fallbacks[0], oldKey);
+
+    // 3. Credential is decrypted via fallback AND transparently re-encrypted with newKey!
+    const decrypted = getProviderCredential(userId, "openai");
+    assert.equal(decrypted?.apiKey, "original-openai-key");
+
+    // 4. Remove fallback keys: reading MUST succeed with newKey alone because it was re-encrypted!
+    delete process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"];
+    const decryptedWithNewKeyAlone = getProviderCredential(userId, "openai");
+    assert.equal(decryptedWithNewKeyAlone?.apiKey, "original-openai-key");
+
+    // Proactive canary probe verifyVaultHealth
+    const health = verifyVaultHealth();
+    assert.equal(health.healthy, true);
+    assert.ok(health.latencyMs >= 0);
+  } finally {
+    cleanup();
+  }
+});
+
+test("8. Agent 3 & 4: Hierarchical Key Derivation (HKDF) & Cryptographic Materials Cache", () => {
+  const masterKey = crypto.randomBytes(32);
+
+  // Deterministic HKDF derivation
+  const dek1 = deriveTenantDek(masterKey, "tenant-alpha");
+  const dek2 = deriveTenantDek(masterKey, "tenant-alpha");
+  const dek3 = deriveTenantDek(masterKey, "tenant-beta");
+
+  assert.equal(dek1.length, 32);
+  assert.deepEqual(dek1, dek2, "Same tenant must derive identical DEK");
+  assert.notDeepEqual(dek1, dek3, "Different tenants must derive distinct DEKs");
+
+  // In-memory materials cache with operation limit & TTL
+  CryptographicMaterialsCache.clear();
+  CryptographicMaterialsCache.set("cache-test", dek1, 60000, 2); // max 2 ops
+
+  // Op 1
+  const cached1 = CryptographicMaterialsCache.get("cache-test");
+  assert.ok(cached1);
+  assert.deepEqual(cached1, dek1);
+
+  // Op 2
+  const cached2 = CryptographicMaterialsCache.get("cache-test");
+  assert.ok(cached2);
+
+  // Op 3: exhausted max operations
+  const cached3 = CryptographicMaterialsCache.get("cache-test");
+  assert.equal(cached3, null, "Cache must invalidate after reaching max operations limit");
+
+  // Invalidate on command
+  CryptographicMaterialsCache.set("cache-test-2", dek1);
+  CryptographicMaterialsCache.invalidate("cache-test-2");
+  assert.equal(CryptographicMaterialsCache.get("cache-test-2"), null);
+});
+
+test("9. Agent 5: Blind indexing for zero-knowledge queries and audit sanitizer", () => {
+  const masterKey = crypto.randomBytes(32);
+  const hash1 = generateBlindIndex("acme-customer@example.com", masterKey);
+  const hash2 = generateBlindIndex("ACME-CUSTOMER@example.com", masterKey);
+  const hash3 = generateBlindIndex("different-customer@example.com", masterKey);
+
+  assert.equal(hash1, hash2, "Blind index must be case-insensitive deterministic HMAC");
+  assert.notEqual(hash1, hash3, "Different plaintext must yield distinct blind index");
+  assert.equal(hash1.length, 64, "HMAC-SHA256 hex digest length must be 64 characters");
+
+  // Sanitizer
+  const sanitized = sanitizeCredentialForAudit({
+    apiKey: "sk-proj-1234567890abcdef",
+    baseUrl: "https://api.openai.com/v1",
+  });
+  assert.equal(sanitized.keyPreview, "sk-...cdef");
+  assert.equal(sanitized.baseUrl, "https://api.openai.com/v1");
+});
+
+test("10. Agent 6: Runtime attestation integrity fingerprint", () => {
+  const { cleanup } = setupIsolatedEnv();
+  try {
+    const key = crypto.randomBytes(32);
+    process.env["BYOK_ENCRYPTION_KEY"] = key.toString("base64");
+    process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"] = crypto.randomBytes(32).toString("base64");
+
+    const fingerprint = getVaultAttestationFingerprint();
+    assert.equal(fingerprint.status, "healthy");
+    assert.equal(fingerprint.algorithm, "AES-256-GCM+HKDF");
+    assert.equal(fingerprint.primaryKeyFingerprint.length, 16);
+    assert.equal(fingerprint.fallbackCount, 1);
+    assert.equal(fingerprint.fallbackFingerprints.length, 1);
+  } finally {
+    cleanup();
+  }
+});
+
+test("11. Agent 5: Constant-time comparison defends against timing attacks", () => {
+  const secretA = "5f4dcc3b5aa765d61d8327deb882cf99";
+  const secretB = "5f4dcc3b5aa765d61d8327deb882cf99";
+  const secretC = "5f4dcc3b5aa765d61d8327deb882cf00";
+  const secretD = "short";
+
+  assert.equal(constantTimeEqual(secretA, secretB), true);
+  assert.equal(constantTimeEqual(secretA, secretC), false);
+  assert.equal(constantTimeEqual(secretA, secretD), false);
+  assert.equal(constantTimeEqual(Buffer.from(secretA), Buffer.from(secretB)), true);
+  assert.equal(constantTimeEqual(Buffer.from(secretA), Buffer.from(secretC)), false);
+});
+
+test("12. Agent 2: Bulk database re-encryption sweeps and migrates all fallback records", () => {
+  const { cleanup } = setupIsolatedEnv();
+  try {
+    const keyOld = crypto.randomBytes(32);
+    const keyNew = crypto.randomBytes(32);
+
+    // Save records under keyOld
+    process.env["BYOK_ENCRYPTION_KEY"] = keyOld.toString("base64");
+    saveProviderCredential("bulk-user-1", "openai", { apiKey: "key-1" });
+    saveProviderCredential("bulk-user-1", "anthropic", { apiKey: "key-2" });
+    saveProviderCredential("bulk-user-1", "google", { apiKey: "key-3" });
+
+    // Rotate active key to keyNew with keyOld as fallback
+    process.env["BYOK_ENCRYPTION_KEY"] = keyNew.toString("base64");
+    process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"] = keyOld.toString("base64");
+
+    // Proactive migration sweep for bulk-user-1
+    const result = reencryptAllCredentialsWithPrimaryKey("bulk-user-1");
+    assert.equal(result.total, 3);
+    assert.equal(result.reencrypted, 3);
+    assert.equal(result.failed, 0);
+
+    // Running again: all should now be skipped because they are already under primary key!
+    const secondPass = reencryptAllCredentialsWithPrimaryKey("bulk-user-1");
+    assert.equal(secondPass.skipped, 3);
+    assert.equal(secondPass.reencrypted, 0);
+
+    // Remove fallback keys completely: everything must still decrypt cleanly under keyNew!
+    delete process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"];
+    assert.equal(getProviderCredential("bulk-user-1", "openai")?.apiKey, "key-1");
+    assert.equal(getProviderCredential("bulk-user-1", "anthropic")?.apiKey, "key-2");
+    assert.equal(getProviderCredential("bulk-user-1", "google")?.apiKey, "key-3");
+  } finally {
+    cleanup();
+  }
+});
+
+test("13. Agent 2 & 3: Defensive clone on cached materials and soft quarantine", () => {
+  // Defensive clone prevents caller mutations
+  CryptographicMaterialsCache.clear();
+  const rawKey = crypto.randomBytes(32);
+  CryptographicMaterialsCache.set("tenant-dek", rawKey);
+
+  const retrieved = CryptographicMaterialsCache.get("tenant-dek");
+  assert.ok(retrieved);
+  // Modify caller's local copy
+  retrieved.fill(0);
+
+  // Subsequent fetch must NOT be corrupted
+  const retrievedAgain = CryptographicMaterialsCache.get("tenant-dek");
+  assert.ok(retrievedAgain);
+  assert.notDeepEqual(retrievedAgain, retrieved, "Cache must return defensive copy to prevent caller mutation");
+  assert.deepEqual(retrievedAgain, rawKey);
+
+  // Soft-quarantine check
+  const { cleanup } = setupIsolatedEnv();
+  try {
+    const key = crypto.randomBytes(32);
+    process.env["BYOK_ENCRYPTION_KEY"] = key.toString("base64");
+    saveProviderCredential("quarantine-user", "openai", { apiKey: "test-key" });
+
+    // Quarantine without shredding
+    const qResult = purgeOrQuarantineCredential("quarantine-user", "openai", { quarantineOnly: true });
+    assert.equal(qResult.quarantined, true);
+    assert.equal(qResult.shredded, false);
+
+    // Active purge
+    const pResult = purgeOrQuarantineCredential("quarantine-user", "openai");
+    assert.equal(pResult.quarantined, false);
+    assert.equal(pResult.shredded, true);
+    assert.equal(getProviderCredential("quarantine-user", "openai"), null);
   } finally {
     cleanup();
   }

@@ -10,6 +10,7 @@ import {
   putCredential,
   removeCredential,
   updateCredentialEndpoint,
+  getAttestation,
 } from "./credential.controller.js";
 
 export const credentialRouter = Router();
@@ -31,6 +32,7 @@ const mutationRateLimiter = createRateLimiter({
 credentialRouter.use(readRateLimiter);
 
 credentialRouter.get("/", listCredentials);
+credentialRouter.get("/attestation", getAttestation);
 credentialRouter.put(
   "/",
   mutationRateLimiter,

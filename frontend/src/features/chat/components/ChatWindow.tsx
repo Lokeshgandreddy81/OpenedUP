@@ -171,6 +171,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     onViewChange?.("customize");
   }, [onViewChange]);
 
+  const handleOpenSkillsTab = useCallback(() => {
+    setCustomizeInitialCategory("Skills");
+    setActiveView("customize");
+    onViewChange?.("customize");
+  }, [onViewChange]);
+
   const handleOpenScheduledTasks = useCallback(() => {
     if (window.matchMedia("(max-width: 639px)").matches) setIsSidebarOpen(false);
     if (onOpenScheduledTasks) {
@@ -967,6 +973,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         }}
         onCloseScheduledTasks={() => setIsScheduledTasksInternalOpen(false)}
         onOpenProviders={handleOpenProvidersTab}
+        onOpenSkills={handleOpenSkillsTab}
         onOpenProjects={() => handleSelectView("projects")}
         onOpenPlugins={() => handleSelectView("plugins")}
         onOpenBenchmarks={() => handleSelectView("benchmarks")}
@@ -1091,6 +1098,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     onChangeModel={handleModelChange}
                     onOpenProjects={() => handleSelectView("projects")}
                     onOpenPlugins={() => handleSelectView("plugins")}
+                    onOpenSkills={handleOpenSkillsTab}
                     onOpenBenchmarks={() => handleSelectView("benchmarks")}
                     onOpenProviders={handleOpenProvidersTab}
                     starterPrompts={[
@@ -1176,6 +1184,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   onChangeModel={handleModelChange}
                   onOpenProjects={() => handleSelectView("projects")}
                   onOpenPlugins={() => handleSelectView("plugins")}
+                  onOpenSkills={handleOpenSkillsTab}
                   onOpenBenchmarks={() => handleSelectView("benchmarks")}
                   onOpenProviders={handleOpenProvidersTab}
                 />
