@@ -537,14 +537,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </div>
           )}
 
-          {/* Temporary Chat Mode Indicator Badge in Composer */}
-          {isTemporaryChat && (
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-900 text-[11px] font-medium w-fit mb-1 select-none animate-in fade-in duration-150">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              <span>Temporary Chat Mode — Not saved to history</span>
-            </div>
-          )}
-
           {/* Text input area */}
           <textarea
             data-testid="chat-composer"

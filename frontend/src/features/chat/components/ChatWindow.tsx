@@ -1017,16 +1017,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               </div>
             </div>
 
-            {/* Center/Right: Temporary Chat Pill Indicator, Toggle Button & Profile Avatar */}
+            {/* Center/Right: Temporary Chat Toggle Button */}
             <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-2.5">
-              {isTemporaryChat && (
-                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-900 text-[11.5px] font-medium transition-all duration-200 animate-in fade-in zoom-in-95 select-none">
-                  <GhostIcon size={13} className="text-amber-700 shrink-0" />
-                  <span>Temporary Chat</span>
-                  <span className="text-[10.5px] text-amber-700/80 font-normal">· Not saved</span>
-                </div>
-              )}
-
               {/* Temporary Chat Toggle Button */}
               <button
                 type="button"
@@ -1055,16 +1047,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
             </div>
           </header>
-
-          {/* Temporary Chat Info Banner */}
-          {isTemporaryChat && (
-            <div className="w-full bg-gradient-to-r from-amber-50/90 via-slate-50 to-amber-50/90 border-b border-amber-200/60 px-4 py-2 flex items-center justify-center gap-2 text-xs text-amber-950 select-none transition-all duration-200 animate-in fade-in slide-in-from-top-1">
-              <GhostIcon size={14} className="text-amber-700 shrink-0" />
-              <span>
-                <strong>Temporary Chat is active.</strong> Messages are not saved to your history, won&apos;t use memories, and disappear when you leave.
-              </span>
-            </div>
-          )}
 
           {isEmptyChat ? (
             <div className="flex-1 w-full flex flex-col items-center justify-center px-4 pb-16 select-none animate-in fade-in duration-200">
