@@ -11,6 +11,7 @@ export interface ProjectSessionMessage {
   thinkingTime?: string;
   isStreaming?: boolean;
   generationStatus?: "stopped" | "error";
+  actionChips?: string[];
   attachments?: Array<{ id?: string; name: string; size: number; type?: string }>;
   retryPayload?: {
     prompt: string;

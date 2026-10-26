@@ -584,17 +584,19 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
           {isThinking && latestMessage?.role === "user" && !hasStreamingAssistant && (
             <div
-              className="chat-thinking-status inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/90 px-3.5 py-1.5 text-[12.5px] text-slate-600 shadow-2xs animate-in fade-in duration-200"
+              className="chat-thinking-status chat-thinking-pill inline-flex max-w-full self-start items-center gap-2 text-[13px] font-medium text-slate-700 animate-in fade-in duration-200"
               role="timer"
               aria-label={`${thinkingLabel} for ${thinkingElapsedSeconds} seconds`}
             >
-              <LoaderCircle size={14} className="animate-spin text-slate-500" aria-hidden="true" />
-              <span>
+              <LoaderCircle size={14} className="animate-spin text-indigo-500" aria-hidden="true" />
+              <span className="inline-flex items-center gap-1.5">
                 {thinkingLabel}
                 {thinkingElapsedSeconds > 0 ? (
                   <>
-                    {" "}
-                    · <span className="tabular-nums font-mono">{thinkingElapsedSeconds}s</span>
+                    <span aria-hidden="true" className="text-slate-300">·</span>
+                    <span className="tabular-nums font-mono text-[11px] font-semibold text-slate-500">
+                      {thinkingElapsedSeconds}s
+                    </span>
                   </>
                 ) : (
                   "…"

@@ -5,9 +5,9 @@ import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 import { useInstalledPluginIds } from "../../plugins/publicApi";
 import type { CustomizeCategory } from "../../customize";
-import { ChatWorkspaceScreens } from "../pages/ChatPage/ChatWorkspaceScreens";
+import { ChatWorkspaceScreens, type ChatWorkspaceView } from "../pages/ChatPage/ChatWorkspaceScreens";
 import { getKeyForModel, getProviderChatRequestConfig } from "../../customize/publicApi";
-import { useChatAuth } from "../../../app/auth/ChatAuthContext";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
 import {
   chatAttachmentsForContext,
@@ -16,6 +16,12 @@ import {
 } from "../../../app/files/chatAttachments";
 import type { ChatConversation, ChatMessage, AiModelId, EffortLevel } from "./chatTypes";
 import { getModelMeta, type ComputedRow } from "@charan-interiors/contracts";
+import {
+  getConversationSkills,
+  setConversationSkills as apiSetConversationSkills,
+  SkillsMenuModal,
+  type SkillItem,
+} from "../../skills";
 
 const DEFAULT_CHAT_MODEL: AiModelId = "openrouter-nemotron-3.5-lightning-free";
 
@@ -49,7 +55,6 @@ export interface ChatWindowProps {
   onClose: () => void;
   chapters?: ComputedRow[];
   docTitle?: string;
-  onOpenScheduledTasks?: () => void;
   initialCustomizeCategory?: CustomizeCategory;
   initialView?:
     | "chat"
@@ -73,6 +78,7 @@ export interface ChatWindowProps {
       | "roadmaps"
       | "scheduled"
   ) => void;
+  onOpenScheduledTasks?: () => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -80,14 +86,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onClose,
   chapters = [],
   docTitle = "Document",
-  onOpenScheduledTasks,
   initialCustomizeCategory = "Connectors",
   initialView = "chat",
   onViewChange,
+  onOpenScheduledTasks,
 }) => {
-  const { user, signIn } = useChatAuth();
-  const accountLabel = user?.displayName || user?.email?.split("@")[0] || "Guest";
-  const accountInitial = accountLabel.slice(0, 1).toUpperCase();
+  const { user } = useChatAuth();
   const [activeView, setActiveView] = useState<
     | "chat"
     | "projects"
@@ -99,6 +103,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     | "roadmaps"
     | "scheduled"
   >(initialView);
+  const viewHistoryRef = useRef<ChatWorkspaceView[]>([]);
   const [customizeInitialCategory, setCustomizeInitialCategory] =
     useState<CustomizeCategory>(initialCustomizeCategory);
   const processedInitialViewRef = useRef<typeof initialView | null>(null);
@@ -112,6 +117,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [artifactDraftPrompt, setArtifactDraftPrompt] = useState("");
   const [artifactActionError, setArtifactActionError] = useState("");
+  const [retryActionError, setRetryActionError] = useState("");
   const installedPluginIds = useInstalledPluginIds();
 
   useEffect(() => {
@@ -123,26 +129,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   useEffect(() => {
     if (processedInitialViewRef.current === initialView) return;
     processedInitialViewRef.current = initialView;
-    setActiveView((current) => (current === initialView ? current : initialView));
-  }, [initialView]);
+    if (activeView !== initialView) {
+      viewHistoryRef.current = [];
+      setActiveView(initialView);
+    }
+  }, [activeView, initialView]);
 
   const [projectsNavKey, setProjectsNavKey] = useState(0);
+  const [benchmarksNavKey, setBenchmarksNavKey] = useState(0);
 
   const handleSelectView = useCallback(
-    (
-      view:
-        | "chat"
-        | "projects"
-        | "artifacts"
-        | "customize"
-        | "plugins"
-        | "benchmarks"
-        | "chapters"
-        | "roadmaps"
-        | "scheduled"
-    ) => {
-      if (view === "projects") {
+    (view: ChatWorkspaceView, options: { recordHistory?: boolean } = {}) => {
+      if (view !== activeView && options.recordHistory !== false) {
+        if (view === "chat") {
+          viewHistoryRef.current = [];
+        } else {
+          viewHistoryRef.current.push(activeView);
+        }
+      }
+      if (view === "projects" && options.recordHistory !== false) {
         setProjectsNavKey((k) => k + 1);
+      }
+      if (view === "benchmarks") {
+        setBenchmarksNavKey((key) => key + 1);
       }
       if (window.matchMedia("(max-width: 639px)").matches) setIsSidebarOpen(false);
       if (view === "customize") {
@@ -156,35 +165,48 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         } else {
           url.searchParams.set("view", view);
         }
+        if (view === "benchmarks") url.searchParams.delete("tab");
         window.history.replaceState({}, "", url.toString());
       } catch {
         // ignore
       }
       onViewChange?.(view);
     },
-    [onViewChange]
+    [activeView, onViewChange]
   );
 
+  const handleSidebarBack = useCallback(() => {
+    let previousView = viewHistoryRef.current.pop();
+    while (previousView === activeView) {
+      previousView = viewHistoryRef.current.pop();
+    }
+
+    if (previousView) {
+      handleSelectView(previousView, { recordHistory: false });
+    } else if (activeView !== "chat") {
+      handleSelectView("chat", { recordHistory: false });
+    } else {
+      onClose();
+    }
+  }, [activeView, handleSelectView, onClose]);
+
   const handleOpenProvidersTab = useCallback(() => {
+    handleSelectView("customize");
     setCustomizeInitialCategory("Providers");
-    setActiveView("customize");
-    onViewChange?.("customize");
-  }, [onViewChange]);
+  }, [handleSelectView]);
 
   const handleOpenSkillsTab = useCallback(() => {
+    handleSelectView("customize");
     setCustomizeInitialCategory("Skills");
-    setActiveView("customize");
-    onViewChange?.("customize");
-  }, [onViewChange]);
+  }, [handleSelectView]);
 
   const handleOpenScheduledTasks = useCallback(() => {
-    if (window.matchMedia("(max-width: 639px)").matches) setIsSidebarOpen(false);
     if (onOpenScheduledTasks) {
       onOpenScheduledTasks();
-    } else {
-      handleSelectView("scheduled");
+      return;
     }
-  }, [onOpenScheduledTasks, handleSelectView]);
+    handleSelectView("scheduled");
+  }, [handleSelectView, onOpenScheduledTasks]);
 
   const [isThinking, setIsThinking] = useState(false);
   const [isResponding, setIsResponding] = useState(false);
@@ -212,6 +234,37 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // Cleared all dummy chats: Start fresh with an empty list
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string>("");
+  const [enabledSkills, setEnabledSkills] = useState<SkillItem[]>([]);
+  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const targetId = activeConversationId || "guest-chat";
+    getConversationSkills(targetId)
+      .then((skills) => {
+        if (!cancelled) setEnabledSkills(skills);
+      })
+      .catch(() => {
+        if (!cancelled) setEnabledSkills([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeConversationId]);
+
+  const handleRemoveSkill = async (skillId: string) => {
+    const updated = enabledSkills.filter((s) => s.id !== skillId);
+    setEnabledSkills(updated);
+    const targetId = activeConversationId || "guest-chat";
+    try {
+      await apiSetConversationSkills(
+        targetId,
+        updated.map((s) => s.id)
+      );
+    } catch {
+      // Keep optimistic update in local state
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -288,14 +341,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (document.querySelector('[data-benchmark-modal="open"]')) return;
         if (isSidebarOpen && window.matchMedia("(max-width: 639px)").matches) {
           e.stopPropagation();
           setIsSidebarOpen(false);
           return;
         }
+        if (document.querySelector('[data-roadmap-detail-open="true"]')) return;
         if (activeView !== "chat") {
           e.stopPropagation();
-          handleSelectView("chat");
+          handleSidebarBack();
           return;
         }
         onClose();
@@ -303,7 +358,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, isSidebarOpen, activeView, handleSelectView]);
+  }, [isOpen, onClose, isSidebarOpen, activeView, handleSidebarBack]);
 
   // Handle + New chat
   const handleNewChat = useCallback(async () => {
@@ -439,7 +494,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       let targetId = activeConversationId;
       if (isTemporaryChat) {
-        setTemporaryMessages((prev) => [...prev, userMessage]);
+        setTemporaryMessages((prev) => [...(priorMessagesOverride ?? prev), userMessage]);
       } else if (!targetId || !conversations.some((c) => c.id === targetId)) {
         targetId = `chat-${Date.now()}`;
         if (user) {
@@ -461,7 +516,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           id: targetId,
           title: text.slice(0, 24) + (text.length > 24 ? "..." : ""),
           model,
-          messages: [userMessage],
+          messages: [...(priorMessagesOverride ?? []), userMessage],
         };
         setConversations((prev) => [newConv, ...prev]);
         setActiveConversationId(targetId);
@@ -469,12 +524,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         setConversations((prev) =>
           prev.map((conv) => {
             if (conv.id === targetId) {
-              const isFirst = conv.messages.length === 0;
+              const baseMessages = priorMessagesOverride ?? conv.messages;
+              const isFirst = baseMessages.length === 0;
               return {
                 ...conv,
                 model,
                 title: isFirst ? text.slice(0, 24) + (text.length > 24 ? "..." : "") : conv.title,
-                messages: [...conv.messages, userMessage],
+                messages: [...baseMessages, userMessage],
               };
             }
             return conv;
@@ -490,7 +546,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               body: JSON.stringify({ title: text.slice(0, 200) || "New chat" }),
               signal: controller.signal,
             });
-          await authenticatedChatFetch(
+          const savedUserMsgResponse = await authenticatedChatFetch(
             `/api/conversations/${encodeURIComponent(targetId)}/messages`,
             {
               method: "POST",
@@ -513,6 +569,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               signal: controller.signal,
             }
           );
+          if (savedUserMsgResponse.ok) {
+            const savedData = (await savedUserMsgResponse.json()) as {
+              message?: { id?: string };
+            };
+            const savedId = savedData.message?.id;
+            if (savedId) {
+              const clientId = userMessage.id;
+              userMessage.id = savedId;
+              setConversations((prev) =>
+                prev.map((conv) =>
+                  conv.id === targetId
+                    ? {
+                        ...conv,
+                        messages: conv.messages.map((m) =>
+                          m.id === clientId ? { ...m, id: savedId } : m
+                        ),
+                      }
+                    : conv
+                )
+              );
+            }
+          }
         } catch {
           /* continue the live response; the server may be temporarily unavailable */
         }
@@ -658,6 +736,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               content: `**${providerName} API key required**\n\nConnect a key in **Customize → Providers** to use **${modelName}**.`,
               timestamp: new Date().toISOString(),
               actionChips: ["Connect API Key"],
+              retryPayload: { prompt: text, model, effort, attachments },
             };
 
             if (isTemporaryChat) {
@@ -697,6 +776,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               timestamp: new Date().toISOString(),
               generationStatus: "stopped",
               thinkingTime: streamedAssistantMessage.thinkingTime ?? `${elapsedSeconds}s`,
+              retryPayload: { prompt: text, model, effort, attachments },
             };
             if (isTemporaryChat) {
               setTemporaryMessages((prev) =>
@@ -745,7 +825,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const errorAssistantMessage: ChatMessage = {
           id: `msg-a-${Date.now()}`,
           role: "assistant",
-          content: `I couldn’t get a response from the model. ${errorMessage}`,
+          content: streamedAssistantMessage?.content
+            ? `${streamedAssistantMessage.content}\n\n_Response stopped early: ${errorMessage}_`
+            : `I couldn’t get a response from the model. ${errorMessage}`,
           timestamp: new Date().toISOString(),
           generationStatus: "error",
           retryPayload: { prompt: text, model, effort, attachments },
@@ -922,7 +1004,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       aria-label="Chat"
       className="fixed inset-0 z-50 bg-white flex font-sans select-none overflow-hidden text-slate-900 animate-in fade-in duration-150"
     >
-      {/* Left History & Navigation Drawer with Back button returning to main sidebar */}
+      {/* Left history and navigation drawer */}
       <ChatSidebar
         conversations={conversations}
         activeConversationId={isTemporaryChat ? "" : activeConversationId}
@@ -938,7 +1020,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           setTemporaryMessages([]);
           void handleNewChat();
         }}
-        onBack={onClose}
+        onBack={handleSidebarBack}
         isOpen={isSidebarOpen}
         onToggleOpen={() => setIsSidebarOpen((v) => !v)}
         onDeleteConversation={(id, e) => {
@@ -965,6 +1047,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         activeView={activeView}
         customizeInitialCategory={customizeInitialCategory}
         projectsNavKey={projectsNavKey}
+        benchmarksNavKey={benchmarksNavKey}
         isScheduledTasksOpen={isScheduledTasksInternalOpen}
         onSelectView={handleSelectView}
         onNavigateToChat={(prompt) => {
@@ -1056,27 +1139,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </header>
 
           {isEmptyChat ? (
-            <div className="flex-1 w-full flex flex-col items-center justify-center px-4 pb-16 select-none animate-in fade-in duration-200">
-              <div className="w-full max-w-[880px] flex flex-col items-center">
+            <div className="flex-1 w-full flex flex-col items-center justify-center px-4 pb-12 sm:pb-16 select-none animate-in fade-in duration-200">
+              <div className="w-full max-w-[1120px] flex flex-col items-center">
                 {/* Hero Heading */}
                 {isTemporaryChat ? (
-                  <div className="mb-7 text-center">
-                    <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center mx-auto mb-3 shadow-xs">
+                  <div className="mb-8 text-center">
+                    <div className="w-12 h-12 rounded-full bg-slate-900 text-white flex items-center justify-center mx-auto mb-4 shadow-xs">
                       <GhostIcon size={22} className="text-white" />
                     </div>
                     <h2 className="font-serif text-[32px] md:text-[38px] font-normal tracking-tight text-slate-900 leading-tight">
                       Temporary Chat
                     </h2>
-                    <p className="mt-2 text-[14px] text-slate-500 max-w-md mx-auto">
+                    <p className="mt-3 text-[15px] leading-6 text-slate-500 max-w-md mx-auto">
                       Chats in this mode won&apos;t be saved in your history, won&apos;t use memories, and disappear when you leave.
                     </p>
                   </div>
                 ) : (
-                  <div className="mb-7 text-center">
-                    <h2 className="font-serif text-[32px] md:text-[38px] font-normal tracking-tight text-slate-900 leading-tight">
+                  <div className="mb-8 text-center">
+                    <h2 className="font-serif text-[34px] md:text-[42px] font-normal tracking-[-0.035em] text-slate-950 leading-[1.12]">
                       What can I help with?
                     </h2>
-                    <p className="mt-2 text-[14px] text-slate-500">
+                    <p className="mt-3 text-[15px] leading-6 text-slate-500">
                       Ask a question or drop in a file to get started.
                     </p>
                   </div>
@@ -1085,6 +1168,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 {/* Centered Input Box */}
                 <div className="w-full">
                   <ChatInput
+                    landingMode
                     initialText={artifactDraftPrompt}
                     isTemporaryChat={isTemporaryChat}
                     onSendMessage={(msg, m, eff, files) => {
@@ -1101,6 +1185,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     onOpenSkills={handleOpenSkillsTab}
                     onOpenBenchmarks={() => handleSelectView("benchmarks")}
                     onOpenProviders={handleOpenProvidersTab}
+                    enabledSkills={enabledSkills}
+                    onRemoveSkill={handleRemoveSkill}
+                    onOpenSkillsModal={() => setIsSkillsModalOpen(true)}
                     starterPrompts={[
                       { label: "Explain a concept", prompt: "Explain a concept to me simply: " },
                       { label: "Help me write", prompt: "Help me write: " },
@@ -1140,7 +1227,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   handleSendMessage(chip, selectedModel);
                 }}
                 onEditMessage={handleEditMessage}
-                onRetryMessage={(messageId, retryPayload) => {
+                onRetryMessage={async (messageId, retryPayload) => {
+                  setRetryActionError("");
                   const failedIndex = currentMessages.findIndex(
                     (message) => message.id === messageId
                   );
@@ -1150,6 +1238,45 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     if (currentMessages[index]?.role === "user") previousUserIndex = index;
                   }
                   const priorMessages = currentMessages.slice(0, Math.max(0, previousUserIndex));
+                  const previousUserMessage =
+                    previousUserIndex >= 0 ? currentMessages[previousUserIndex] : undefined;
+                  try {
+                    if (
+                      user &&
+                      !isTemporaryChat &&
+                      activeConversation &&
+                      !activeConversation.id.startsWith("chat-") &&
+                      previousUserMessage?.id &&
+                      !previousUserMessage.id.startsWith("msg-u-")
+                    ) {
+                      const response = await authenticatedChatFetch(
+                        `/api/conversations/${encodeURIComponent(activeConversation.id)}/messages/${encodeURIComponent(previousUserMessage.id)}`,
+                        { method: "DELETE" }
+                      );
+                      if (!response.ok) {
+                        setRetryActionError(
+                          "Could not prepare this retry because the saved conversation could not be updated. Please try again."
+                        );
+                        return;
+                      }
+                    }
+                  } catch {
+                    setRetryActionError(
+                      "Could not prepare this retry because the saved conversation could not be updated. Please try again."
+                    );
+                    return;
+                  }
+                  if (isTemporaryChat) setTemporaryMessages(priorMessages);
+                  else if (activeConversation) {
+                    setConversations((prev) =>
+                      prev.map((conversation) =>
+                        conversation.id === activeConversation.id
+                          ? { ...conversation, messages: priorMessages }
+                          : conversation
+                      )
+                    );
+                  }
+                  setSelectedModel(retryPayload.model);
                   void handleSendMessage(
                     retryPayload.prompt,
                     retryPayload.model,
@@ -1165,6 +1292,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   className="mx-auto mb-3 w-[min(800px,calc(100%-2.5rem))] rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
                 >
                   {artifactActionError}
+                </p>
+              )}
+              {retryActionError && (
+                <p
+                  role="alert"
+                  className="mx-auto mb-3 w-[min(800px,calc(100%-2.5rem))] rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+                >
+                  {retryActionError}
                 </p>
               )}
 
@@ -1187,12 +1322,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   onOpenSkills={handleOpenSkillsTab}
                   onOpenBenchmarks={() => handleSelectView("benchmarks")}
                   onOpenProviders={handleOpenProvidersTab}
+                  enabledSkills={enabledSkills}
+                  onRemoveSkill={handleRemoveSkill}
+                  onOpenSkillsModal={() => setIsSkillsModalOpen(true)}
                 />
               </div>
             </>
           )}
         </main>
       ) : null}
+
+      <SkillsMenuModal
+        isOpen={isSkillsModalOpen}
+        onClose={() => setIsSkillsModalOpen(false)}
+        conversationId={activeConversationId}
+        enabledSkills={enabledSkills}
+        onSkillsChange={setEnabledSkills}
+      />
     </div>
   );
 };

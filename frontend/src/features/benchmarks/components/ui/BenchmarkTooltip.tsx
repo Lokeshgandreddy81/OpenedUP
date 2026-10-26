@@ -1,7 +1,8 @@
 import React from "react";
 import { Brain, Zap, Clock, Coins, ExternalLink } from "lucide-react";
 import { AIModelBenchmark } from "../types";
-import { CreatorLogo, getCreatorName } from "./CreatorLogo";
+import { CreatorLogo } from "./CreatorLogo";
+import { getCreatorName } from "./creatorBranding";
 import { WeightsBadge, ReasoningBadge } from "./BenchmarkBadge";
 
 export interface BenchmarkTooltipContentProps {

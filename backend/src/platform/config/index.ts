@@ -18,13 +18,6 @@ export const PLACEHOLDER_API_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 export const MODEL_ID = "gemini-3.8-flash";
-export const FALLBACK_MODELS: readonly string[] = [
-  "gemini-flash-latest",
-  "gemini-3.5-flash",
-  "gemini-3.1-pro-preview",
-  "gemini-2.5-flash",
-];
-
 export function isValidApiKey(val: unknown): val is string {
   if (typeof val !== "string") return false;
   const trimmed = val.trim();

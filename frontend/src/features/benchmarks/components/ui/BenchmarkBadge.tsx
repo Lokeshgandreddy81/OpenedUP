@@ -1,7 +1,8 @@
 import React from "react";
 import { TrendingUp, TrendingDown, Sparkles, Lock, GitBranch, ShieldAlert } from "lucide-react";
 import { CreatorId, ReasoningType, WeightsType } from "../types";
-import { CreatorLogo, getCreatorName } from "./CreatorLogo";
+import { CreatorLogo } from "./CreatorLogo";
+import { getCreatorName } from "./creatorBranding";
 
 // ==========================================
 // 1. GENERAL BENCHMARK BADGE

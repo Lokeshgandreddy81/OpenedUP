@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
 import { authenticatedChatFetch } from "../../../app/api/chatApi";
-import { useChatAuth } from "../../../app/auth/ChatAuthContext";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import {
   ChatInput,
   ChatMessages,
@@ -130,6 +130,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
   const [chatPhase, setChatPhase] = useState<ChapterChatPhase>("searching");
   const [thinkingElapsedSeconds, setThinkingElapsedSeconds] = useState(0);
   const activeRequestControllerRef = React.useRef<AbortController | null>(null);
+  const userStoppedRequestRef = React.useRef(false);
   const generationStartedAtRef = React.useRef<number | null>(null);
   const isMountedRef = React.useRef(true);
 
@@ -225,6 +226,8 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
     generationStartedAtRef.current = Date.now();
     const controller = new AbortController();
     activeRequestControllerRef.current = controller;
+    userStoppedRequestRef.current = false;
+    const requestTimeoutId = window.setTimeout(() => controller.abort(), 90_000);
     setIsSending(true);
     await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
@@ -366,17 +369,20 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
       ]);
     } catch (error) {
       const wasAborted = error instanceof DOMException && error.name === "AbortError";
+      const wasStoppedByUser = wasAborted && userStoppedRequestRef.current;
       if (!isMountedRef.current) return;
       const isBrowserRequestError =
         error instanceof TypeError &&
         (requestStage === "connecting" || requestStage === "receiving");
-      const message = wasAborted
+      const message = wasStoppedByUser
         ? "Response stopped. You can try again."
-        : isBrowserRequestError
-          ? "Couldn’t connect to chapter chat. Check your connection and that the app server is running, then retry."
-          : error instanceof Error
-            ? error.message
-            : "Chapter chat failed.";
+        : wasAborted
+          ? "The chapter chat request timed out. Please try again."
+          : isBrowserRequestError
+            ? "Couldn’t connect to chapter chat. Check your connection and that the app server is running, then retry."
+            : error instanceof Error
+              ? error.message
+              : "Chapter chat failed.";
       onHistoryChange([
         ...updatedHistory,
         {
@@ -386,10 +392,12 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
           timestamp: new Date().toISOString(),
           model,
           effort,
-          generationStatus: wasAborted ? "stopped" : "error",
+          generationStatus: wasStoppedByUser ? "stopped" : "error",
         },
       ]);
     } finally {
+      window.clearTimeout(requestTimeoutId);
+      userStoppedRequestRef.current = false;
       if (activeRequestControllerRef.current === controller) {
         activeRequestControllerRef.current = null;
       }
@@ -638,7 +646,12 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
             isSending ||
             (!source.pages.some((page) => page.text.trim()) && !supportsVision)
           }
-          onStopThinking={() => activeRequestControllerRef.current?.abort()}
+          onStopThinking={() => {
+            if (activeRequestControllerRef.current) {
+              userStoppedRequestRef.current = true;
+              activeRequestControllerRef.current.abort();
+            }
+          }}
           placeholder={isExtracting ? "Preparing this chapter…" : "Ask about this chapter…"}
           selectedModel={selectedModel}
           onChangeModel={(model) => {

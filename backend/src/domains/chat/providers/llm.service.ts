@@ -30,10 +30,36 @@ export interface LlmGenerateResult {
   text: string;
   modelUsed: string;
   providerUsed: ProviderId;
+  usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | undefined;
 }
 
 export type LlmStreamEvent =
   { type: "token"; delta: string } | { type: "done"; result: LlmGenerateResult };
+
+function getSseProviderError(
+  data: unknown,
+  eventType: string
+): { message: string; status?: number } | null {
+  if (!data || typeof data !== "object") return null;
+  const payload = data as Record<string, unknown>;
+  const error = payload.error;
+  if (!error && eventType !== "error" && payload.type !== "error") return null;
+
+  const errorPayload =
+    error && typeof error === "object" ? (error as Record<string, unknown>) : payload;
+  const message =
+    typeof error === "string"
+      ? error
+      : typeof errorPayload.message === "string"
+        ? errorPayload.message
+        : JSON.stringify(errorPayload);
+  const code = errorPayload.code ?? errorPayload.status ?? payload.code ?? payload.status;
+  const status = typeof code === "number" && code >= 400 && code <= 599 ? code : undefined;
+  const type = typeof errorPayload.type === "string" ? errorPayload.type : undefined;
+  const fullMessage = type && !message.includes(type) ? `${type}: ${message}` : message;
+
+  return { message: redactSecretsString(fullMessage), ...(status ? { status } : {}) };
+}
 
 async function consumeSseResponse(
   response: Response,
@@ -50,54 +76,63 @@ async function consumeSseResponse(
   const decoder = new TextDecoder();
   let pending = "";
   let full = "";
+  let reachedEnd = false;
+  const consumeEvent = (eventText: string) => {
+    const lines = eventText.split(/\r?\n/);
+    const eventType =
+      lines
+        .find((line) => line.startsWith("event:"))
+        ?.slice(6)
+        .trim()
+        .toLowerCase() || "";
+    const data = lines
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim())
+      .join("\n");
+    if (!data || data === "[DONE]") return;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      throw new Error("Provider returned malformed streaming data.");
+    }
+
+    const providerError = getSseProviderError(parsed, eventType);
+    if (providerError) {
+      const prefix = providerError.status ? ` (${providerError.status})` : "";
+      throw new Error(
+        `Provider API error${prefix}: ${providerError.message || response.statusText}`
+      );
+    }
+
+    const delta = extract(parsed);
+    if (delta) {
+      full += delta;
+      onDelta(delta);
+    }
+  };
   try {
     while (true) {
       const { value, done } = await reader.read();
       pending += decoder.decode(value, { stream: !done });
       const events = pending.split(/\r?\n\r?\n/);
       pending = events.pop() || "";
-      for (const event of events) {
-        const data = event
-          .split(/\r?\n/)
-          .filter((line) => line.startsWith("data:"))
-          .map((line) => line.slice(5).trim())
-          .join("\n");
-        if (!data || data === "[DONE]") continue;
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(data);
-        } catch {
-          continue;
-        }
-        const delta = extract(parsed);
-        if (delta) {
-          full += delta;
-          onDelta(delta);
-        }
-      }
+      for (const event of events) consumeEvent(event);
       if (done) {
-        if (pending.trim()) {
-          const data = pending
-            .split(/\r?\n/)
-            .filter((line) => line.startsWith("data:"))
-            .map((line) => line.slice(5).trim())
-            .join("\n");
-          if (data && data !== "[DONE]") {
-            try {
-              const delta = extract(JSON.parse(data));
-              if (delta) {
-                full += delta;
-                onDelta(delta);
-              }
-            } catch {
-              // Ignore malformed SSE chunk
-            }
-          }
-        }
+        if (pending.trim()) consumeEvent(pending);
+        reachedEnd = true;
         break;
       }
     }
   } finally {
+    if (!reachedEnd) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Preserve the original stream error.
+      }
+    }
     reader.releaseLock();
   }
   return full;
@@ -343,10 +378,17 @@ export async function generateMultiProviderChatStream(
     params.customProvider
   );
   const effort = resolveEffort(params.effort);
-  const maxTokens = maxOutputTokensForEffort(effort);
-  let text: string;
-  const modelUsed = upstreamModelId;
+  const supportsNativeEffort =
+    params.modelId !== "custom-model" &&
+    supportsProviderReasoningEffort(provider, params.modelId);
+  const effectiveEffort = supportsNativeEffort ? effort : "medium";
+  const maxTokens = supportsNativeEffort
+    ? (getModelMeta(params.modelId).maxOutputTokens ?? 8192)
+    : maxOutputTokensForEffort("medium");
+  let text = "";
+  let modelUsed = upstreamModelId;
   const allImages = resolveAllImages(params);
+  assertTextRequestFitsContextWindow(params, maxTokens, allImages.length > 0);
 
   const cleanApiKey = apiKey.replace(/[^\x21-\x7E]/g, "");
 
@@ -363,12 +405,11 @@ export async function generateMultiProviderChatStream(
         ...(params.signal ? { abortSignal: params.signal } : {}),
         maxOutputTokens: maxTokens,
         systemInstruction: params.systemInstruction,
-        thinkingConfig: {
-          thinkingLevel: resolveGeminiThinkingLevel(effort),
-        },
+        ...(supportsNativeEffort
+          ? { thinkingConfig: { thinkingLevel: resolveGeminiThinkingLevel(effectiveEffort) } }
+          : {}),
       },
     });
-    text = "";
     for await (const chunk of stream) {
       const delta = chunk.text || "";
       if (delta) {
@@ -376,6 +417,7 @@ export async function generateMultiProviderChatStream(
         onDelta(delta);
       }
     }
+    modelUsed = upstreamModelId;
   } else if (provider === "anthropic") {
     const response = await fetchProvider(`${baseUrl.replace(/\/+$/, "")}/messages`, {
       method: "POST",
@@ -388,6 +430,7 @@ export async function generateMultiProviderChatStream(
       body: JSON.stringify({
         model: upstreamModelId,
         max_tokens: maxTokens,
+        ...(supportsNativeEffort ? { output_config: { effort: effectiveEffort } } : {}),
         stream: true,
         system: params.systemInstruction,
         messages: buildAnthropicMessages(params.messages, allImages),
@@ -411,9 +454,13 @@ export async function generateMultiProviderChatStream(
       body: JSON.stringify({
         model: upstreamModelId,
         stream: true,
-        ...(provider === "openai"
-          ? { reasoning_effort: resolveOpenAiEffort(effort), max_completion_tokens: maxTokens }
-          : { temperature: 0.2, max_tokens: maxTokens }),
+        ...openAiCompatibleEffortPayload(
+          provider,
+          params.modelId,
+          effectiveEffort,
+          maxTokens,
+          supportsNativeEffort
+        ),
         messages: buildOpenAiMessages(
           params.messages,
           allImages,
@@ -438,7 +485,10 @@ export async function generateMultiProviderChatStream(
       onDelta
     );
   }
-  return { text: text || "No response content returned.", modelUsed, providerUsed: provider };
+  if (!text.trim()) {
+    throw new Error(`EMPTY_PROVIDER_RESPONSE:${provider}:The selected provider returned no text.`);
+  }
+  return { text, modelUsed, providerUsed: provider };
 }
 
 function parseIpv4(ip: string): [number, number, number, number] | null {
@@ -739,9 +789,13 @@ export function resolveProviderCredentials(
 } {
   if (!MODEL_REGISTRY[modelId]) {
     const safeModelId = redactSecretsString(
-      String(modelId).replace(/[^\x21-\x7E]/g, "").slice(0, 64)
+      String(modelId)
+        .replace(/[^\x21-\x7E]/g, "")
+        .slice(0, 64)
     );
-    throw new Error(`UNKNOWN_MODEL:${safeModelId}:The requested model is not in the model catalog.`);
+    throw new Error(
+      `UNKNOWN_MODEL:${safeModelId}:The requested model is not in the model catalog.`
+    );
   }
   if (modelId === "custom-model" && !customModel?.trim()) {
     throw new Error("MISSING_CUSTOM_MODEL:Enter a model ID for the custom provider.");
@@ -798,14 +852,105 @@ export function resolveEffort(effort?: string): "low" | "medium" | "high" | "xhi
 
 export function resolveOpenAiEffort(
   effort: "low" | "medium" | "high" | "xhigh" | "max"
-): "low" | "medium" | "high" {
-  if (effort === "low") return "low";
-  if (effort === "medium") return "medium";
-  return "high";
+): "low" | "medium" | "high" | "xhigh" | "max" {
+  return effort;
+}
+
+function resolveProviderReasoningEffort(
+  provider: ProviderId,
+  modelId: string,
+  effort: "low" | "medium" | "high" | "xhigh" | "max"
+): string | undefined {
+  if (provider === "openai" || provider === "anthropic" || provider === "google") return effort;
+  if (provider === "xai" && modelId === "grok-4.7") return effort === "max" ? undefined : effort;
+  if (provider === "kimi" && modelId === "kimi-k3.1-pro") {
+    return effort === "low" || effort === "max" ? effort : "high";
+  }
+  if (provider === "qwen" && modelId === "qwen3.8-max") {
+    return effort === "low" || effort === "medium" ? effort : "xhigh";
+  }
+  if (provider === "deepseek" && ["deepseek-v4.1-flash", "deepseek-v4-pro"].includes(modelId)) {
+    return effort === "low" || effort === "max" ? effort : "high";
+  }
+  if (provider === "custom" && modelId === "openrouter-nemotron-3-ultra-free") {
+    return effort === "medium" || effort === "high" ? effort : undefined;
+  }
+  return undefined;
+}
+
+function supportsProviderReasoningEffort(provider: ProviderId, modelId: string): boolean {
+  return (
+    resolveProviderReasoningEffort(provider, modelId, "medium") !== undefined ||
+    (provider === "xai" && modelId === "grok-4.7") ||
+    (provider === "deepseek" && ["deepseek-v4.1-flash", "deepseek-v4-pro"].includes(modelId))
+  );
+}
+
+function openAiCompatibleEffortPayload(
+  provider: ProviderId,
+  modelId: string,
+  effort: "low" | "medium" | "high" | "xhigh" | "max",
+  maxTokens: number,
+  supportsNativeEffort: boolean
+): Record<string, unknown> {
+  if (!supportsNativeEffort) return { temperature: 0.2, max_tokens: maxTokens };
+  if (provider === "openai") {
+    return { reasoning_effort: effort, max_completion_tokens: maxTokens };
+  }
+
+  const reasoningEffort = resolveProviderReasoningEffort(provider, modelId, effort);
+  return {
+    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+    ...(provider === "deepseek" ? { thinking: { type: "enabled" } } : {}),
+    max_tokens: maxTokens,
+  };
 }
 
 function maxOutputTokensForEffort(effort: "low" | "medium" | "high" | "xhigh" | "max") {
   return effort === "low" ? 1024 : effort === "medium" ? 2048 : effort === "high" ? 4096 : 8192;
+}
+
+function normalizeUsage(input: unknown, output: unknown, total: unknown) {
+  const usage = {
+    ...(typeof input === "number" && Number.isSafeInteger(input) && input >= 0
+      ? { inputTokens: input }
+      : {}),
+    ...(typeof output === "number" && Number.isSafeInteger(output) && output >= 0
+      ? { outputTokens: output }
+      : {}),
+    ...(typeof total === "number" && Number.isSafeInteger(total) && total >= 0
+      ? { totalTokens: total }
+      : {}),
+  };
+  return Object.keys(usage).length ? usage : undefined;
+}
+
+function assertTextRequestFitsContextWindow(
+  params: LlmGenerateParams,
+  outputTokenBudget: number,
+  hasImages: boolean
+): void {
+  if (hasImages) return;
+  const contextWindowTokens = getModelMeta(params.modelId).contextWindowTokens;
+  if (!contextWindowTokens) return;
+
+  const textBytes =
+    Buffer.byteLength(params.systemInstruction, "utf8") +
+    params.messages.reduce(
+      (total, message) => total + Buffer.byteLength(message.content, "utf8"),
+      0
+    );
+  const messageOverheadReserve = 512 + params.messages.length * 16;
+  const availableInputBytes = Math.max(
+    0,
+    contextWindowTokens - outputTokenBudget - messageOverheadReserve
+  );
+
+  if (textBytes > availableInputBytes) {
+    throw new Error(
+      "Request exceeds the model context window after reserving output tokens and message overhead."
+    );
+  }
 }
 
 /**
@@ -818,10 +963,11 @@ async function callAnthropic(params: {
   messages: ChatMessage[];
   systemInstruction: string;
   effort: "low" | "medium" | "high" | "xhigh" | "max";
+  supportsNativeEffort: boolean;
   maxTokens: number;
   images?: PreparedImage[];
   signal?: AbortSignal | undefined;
-}): Promise<string> {
+}): Promise<{ text: string; usage?: LlmGenerateResult["usage"] }> {
   const images = params.images || [];
   const cleanApiKey = params.apiKey.replace(/[^\x21-\x7E]/g, "");
   const endpoint = `${params.baseUrl.replace(/\/+$/, "")}/messages`;
@@ -836,6 +982,7 @@ async function callAnthropic(params: {
     body: JSON.stringify({
       model: params.model,
       max_tokens: params.maxTokens,
+      ...(params.supportsNativeEffort ? { output_config: { effort: params.effort } } : {}),
       system: params.systemInstruction,
       messages: buildAnthropicMessages(params.messages, images),
     }),
@@ -849,9 +996,14 @@ async function callAnthropic(params: {
 
   const data = (await response.json()) as {
     content?: Array<{ type: string; text?: string }>;
+    usage?: { input_tokens?: number; output_tokens?: number };
   };
   const textBlock = data.content?.find((c) => c.type === "text");
-  return textBlock?.text || "No response content returned from Anthropic.";
+  const usage = normalizeUsage(data.usage?.input_tokens, data.usage?.output_tokens, undefined);
+  return {
+    text: requireProviderText(textBlock?.text, "anthropic"),
+    ...(usage ? { usage } : {}),
+  };
 }
 
 /**
@@ -861,14 +1013,16 @@ async function callOpenAICompatible(params: {
   apiKey: string;
   baseUrl: string;
   model: string;
+  modelId: string;
   messages: ChatMessage[];
   systemInstruction: string;
   effort: "low" | "medium" | "high" | "xhigh" | "max";
   maxTokens: number;
   provider: ProviderId;
+  supportsNativeEffort: boolean;
   images?: PreparedImage[];
   signal?: AbortSignal | undefined;
-}): Promise<string> {
+}): Promise<{ text: string; usage?: LlmGenerateResult["usage"] }> {
   const images = params.images || [];
   const cleanApiKey = params.apiKey.replace(/[^\x21-\x7E]/g, "");
   const endpoint = `${params.baseUrl.replace(/\/+$/, "")}/chat/completions`;
@@ -881,12 +1035,13 @@ async function callOpenAICompatible(params: {
     },
     body: JSON.stringify({
       model: params.model,
-      ...(params.provider === "openai"
-        ? {
-            reasoning_effort: resolveOpenAiEffort(params.effort),
-            max_completion_tokens: params.maxTokens,
-          }
-        : { temperature: 0.2, max_tokens: params.maxTokens }),
+      ...openAiCompatibleEffortPayload(
+        params.provider,
+        params.modelId,
+        params.effort,
+        params.maxTokens,
+        params.supportsNativeEffort
+      ),
       messages: buildOpenAiMessages(
         params.messages,
         images,
@@ -904,12 +1059,21 @@ async function callOpenAICompatible(params: {
 
   const data = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
-  return data.choices?.[0]?.message?.content || "No response content returned.";
+  const usage = normalizeUsage(
+    data.usage?.prompt_tokens,
+    data.usage?.completion_tokens,
+    data.usage?.total_tokens
+  );
+  return {
+    text: requireProviderText(data.choices?.[0]?.message?.content, params.provider),
+    ...(usage ? { usage } : {}),
+  };
 }
 
 /**
- * Calls Google Gemini API via @google/genai with the injected key or default server fallback
+ * Calls the user-selected Google Gemini model with the user's injected key.
  */
 async function callGoogleGemini(params: {
   apiKey: string;
@@ -918,10 +1082,11 @@ async function callGoogleGemini(params: {
   messages: ChatMessage[];
   systemInstruction: string;
   effort: "low" | "medium" | "high" | "xhigh" | "max";
-  allowFallback: boolean;
+  supportsNativeEffort: boolean;
+  maxTokens: number;
   images?: PreparedImage[];
   signal?: AbortSignal | undefined;
-}): Promise<{ text: string; modelUsed: string }> {
+}): Promise<{ text: string; modelUsed: string; usage?: LlmGenerateResult["usage"] }> {
   const images = params.images || [];
   const contents = buildGeminiContents(params.messages, images);
   const cleanApiKey = params.apiKey.replace(/[^\x21-\x7E]/g, "");
@@ -934,37 +1099,35 @@ async function callGoogleGemini(params: {
       fetch: fetchProviderFromSdk,
     },
   });
-  const fallbackPool = params.allowFallback
-    ? [...new Set([params.model, "gemini-3.8-flash"])]
-    : [params.model];
+  const response = await ai.models.generateContent({
+    model: params.model,
+    contents,
+    config: {
+      ...(params.signal ? { abortSignal: params.signal } : {}),
+      systemInstruction: params.systemInstruction,
+      maxOutputTokens: params.maxTokens,
+      ...(params.supportsNativeEffort
+        ? { thinkingConfig: { thinkingLevel: resolveGeminiThinkingLevel(params.effort) } }
+        : {}),
+    },
+  });
+  const usage = normalizeUsage(
+    response.usageMetadata?.promptTokenCount,
+    response.usageMetadata?.candidatesTokenCount,
+    response.usageMetadata?.totalTokenCount
+  );
+  return {
+    text: requireProviderText(response.text, "google"),
+    modelUsed: params.model,
+    ...(usage ? { usage } : {}),
+  };
+}
 
-  let lastErr: unknown = null;
-  for (const candidateModel of fallbackPool) {
-    try {
-      const response = await ai.models.generateContent({
-        model: candidateModel,
-        contents,
-        config: {
-          ...(params.signal ? { abortSignal: params.signal } : {}),
-          systemInstruction: params.systemInstruction,
-          maxOutputTokens: maxOutputTokensForEffort(params.effort),
-          thinkingConfig: {
-            thinkingLevel: resolveGeminiThinkingLevel(params.effort),
-          },
-        },
-      });
-      return {
-        text: response.text || "No response received from Gemini.",
-        modelUsed: candidateModel,
-      };
-    } catch (err) {
-      lastErr = err;
-      logEvent(
-        `Gemini model ${candidateModel} failed${candidateModel === fallbackPool.at(-1) ? "." : ", trying next fallback..."}`
-      );
-    }
+function requireProviderText(text: string | undefined, provider: ProviderId): string {
+  if (!text?.trim()) {
+    throw new Error(`EMPTY_PROVIDER_RESPONSE:${provider}:The selected provider returned no text.`);
   }
-  throw lastErr instanceof Error ? lastErr : new Error("Gemini request failed.");
+  return text;
 }
 
 /**
@@ -982,54 +1145,73 @@ export async function generateMultiProviderChat(
   );
 
   const effort = resolveEffort(params.effort);
-  const maxTokens = maxOutputTokensForEffort(effort);
+  const supportsNativeEffort =
+    params.modelId !== "custom-model" &&
+    supportsProviderReasoningEffort(provider, params.modelId);
+  const effectiveEffort = supportsNativeEffort ? effort : "medium";
+  const maxTokens = supportsNativeEffort
+    ? (getModelMeta(params.modelId).maxOutputTokens ?? 8192)
+    : maxOutputTokensForEffort("medium");
   const allImages = resolveAllImages(params);
+  assertTextRequestFitsContextWindow(params, maxTokens, allImages.length > 0);
 
   logEvent(`Dispatching BYOK chat -> provider=${provider} model=${upstreamModelId}`);
 
   if (provider === "anthropic") {
-    const text = await callAnthropic({
+    const generated = await callAnthropic({
       apiKey,
       baseUrl,
       model: upstreamModelId,
       messages: params.messages,
       systemInstruction: params.systemInstruction,
-      effort,
+      effort: effectiveEffort,
+      supportsNativeEffort,
       maxTokens,
       images: allImages,
       signal: params.signal,
     });
-    return { text, modelUsed: upstreamModelId, providerUsed: provider };
+    return {
+      ...generated,
+      modelUsed: upstreamModelId,
+      providerUsed: provider,
+    };
   }
 
   if (provider === "google") {
-    const { text, modelUsed } = await callGoogleGemini({
+    const generated = await callGoogleGemini({
       apiKey,
       baseUrl,
       model: upstreamModelId,
       messages: params.messages,
       systemInstruction: params.systemInstruction,
-      effort,
-      allowFallback: params.modelId !== "custom-model",
+      effort: effectiveEffort,
+      supportsNativeEffort,
+      maxTokens,
       images: allImages,
       signal: params.signal,
     });
-    return { text, modelUsed, providerUsed: provider };
+    return { ...generated, providerUsed: provider };
   }
 
   // OpenAI-compatible providers, including OpenRouter.
-  const text = await callOpenAICompatible({
+  const generated = await callOpenAICompatible({
     apiKey,
     baseUrl,
     model: upstreamModelId,
+    modelId: params.modelId,
     messages: params.messages,
     systemInstruction: params.systemInstruction,
-    effort,
+    effort: effectiveEffort,
     maxTokens,
     provider,
+    supportsNativeEffort,
     images: allImages,
     signal: params.signal,
   });
 
-  return { text, modelUsed: upstreamModelId, providerUsed: provider };
+  return {
+    ...generated,
+    modelUsed: upstreamModelId,
+    providerUsed: provider,
+  };
 }

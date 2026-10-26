@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Search, Star } from "lucide-react";
+import React, { Suspense, useEffect, useState } from "react";
+import { ArrowLeft, ArrowUpRight, Search, Star } from "lucide-react";
 import { RoadmapPage } from "./RoadmapPage";
 import { getRoadmapPageById } from "../pages/catalog/index";
 import { RoadmapPageSkeleton } from "../pages/RoadmapPage/LoadingSkeleton";
@@ -126,13 +126,12 @@ const BEST_PRACTICE_ROADMAPS: CatalogRoadmap[] = [
 const ALL_ROADMAPS = [...ROLE_ROADMAPS, ...SKILL_ROADMAPS, ...BEST_PRACTICE_ROADMAPS];
 
 const ROADMAP_GRID_CLASS =
-  "mt-6 grid grid-cols-1 gap-x-8 gap-y-1.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+  "mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5";
 
 export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbedded = false }) => {
   const [query, setQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedRoadmap, setSelectedRoadmap] = useState<CatalogRoadmap | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const totalRoadmaps = ALL_ROADMAPS.length;
 
   const needle = query.trim().toLowerCase();
   const filterRoadmaps = (roadmaps: CatalogRoadmap[]) => {
@@ -173,26 +172,31 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
         key={roadmap.id}
         type="button"
         onClick={() => setSelectedRoadmap(roadmap)}
-        className="group flex min-h-[38px] items-center justify-start rounded-md px-2.5 -mx-2.5 text-left text-[13.5px] font-medium leading-snug text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 active:bg-slate-200/60 transition-colors duration-150 cursor-pointer"
+        className="group flex min-h-11 min-w-0 items-center justify-between rounded-lg px-3 text-left text-[14px] font-medium leading-snug text-neutral-700 transition-colors duration-150 hover:bg-neutral-100/70 hover:text-neutral-950 active:bg-neutral-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500/70"
       >
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="truncate group-hover:translate-x-0.5 transition-transform duration-150">
             {roadmap.title}
           </span>
           {roadmap.isStarred && (
-            <span title="High-impact skill to crack big jobs" className="inline-flex shrink-0">
+            <span title="Popular roadmap" className="inline-flex shrink-0">
               <Star
-                size={12.5}
-                className="fill-black text-black group-hover:scale-110 transition-transform duration-150"
+                size={12}
+                className="fill-neutral-500 text-neutral-500 transition-transform duration-150 group-hover:scale-110"
               />
             </span>
           )}
           {roadmap.isNew && (
-            <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
               New
             </span>
           )}
         </div>
+        <ArrowUpRight
+          size={14}
+          aria-hidden="true"
+          className="ml-2 shrink-0 text-neutral-500 opacity-0 transition-all duration-150 group-hover:translate-x-0.5 group-hover:opacity-100"
+        />
       </button>
     );
   };
@@ -203,6 +207,7 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
     if (CustomRoadmapPage) {
       return (
         <div
+          data-roadmap-detail-open="true"
           className={
             isEmbedded
               ? "flex-1 w-full h-full min-w-0 relative overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A]"
@@ -221,6 +226,7 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
 
     return (
       <div
+        data-roadmap-detail-open="true"
         className={
           isEmbedded
             ? "flex-1 w-full h-full min-w-0 relative overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A]"
@@ -236,8 +242,8 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
     <div
       className={
         isEmbedded
-          ? "explore-screen flex-1 w-full h-full min-w-0 relative overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A]"
-          : "explore-screen fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#FFFFFF] font-sans text-[#0F172A] animate-in fade-in duration-150"
+          ? "explore-screen flex-1 w-full h-full min-w-0 relative overflow-y-auto overscroll-contain bg-white font-sans text-neutral-950"
+          : "explore-screen fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-white font-sans text-neutral-950 animate-in fade-in duration-150"
       }
     >
       {!isEmbedded && (
@@ -245,104 +251,61 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
           type="button"
           onClick={onBack}
           aria-label="Back"
-          className="fixed left-5 top-5 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-slate-950 transition-colors cursor-pointer"
+          className="fixed left-5 top-5 z-20 inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:text-neutral-950 cursor-pointer"
         >
           <ArrowLeft size={16} strokeWidth={1.75} />
         </button>
       )}
 
       <div
-        className={`mx-auto w-full max-w-[1360px] px-6 sm:px-10 pb-28 ${isEmbedded ? "pt-8 sm:pt-10" : "pt-14 sm:pt-20"}`}
+        className={`mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-12 pb-24 ${isEmbedded ? "pt-9 sm:pt-12" : "pt-16 sm:pt-20"}`}
       >
-        <div className="relative flex items-center justify-center">
-          <h1 className="font-serif text-4xl sm:text-5xl font-normal text-slate-900 tracking-tight leading-tight">
-            Roadmaps
-          </h1>
-
-          {/* Persistent, unobtrusive search control aligned on the right of the header */}
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
-            {isSearchOpen && (
-              <input
-                ref={searchInputRef}
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search roadmaps..."
-                aria-label="Search roadmaps"
-                className="h-8 w-48 sm:w-64 border-b border-slate-300 bg-transparent px-2 text-[13px] font-normal text-slate-900 outline-none focus:border-slate-900 placeholder:text-slate-400 transition-colors [&::-webkit-search-cancel-button]:hidden"
-              />
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (isSearchOpen) {
-                  if (query) setQuery("");
-                  setIsSearchOpen(false);
-                } else {
-                  setIsSearchOpen(true);
-                  requestAnimationFrame(() => searchInputRef.current?.focus());
-                }
-              }}
-              aria-label="Search roadmaps"
-              className="grid h-8 w-8 place-items-center rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <Search size={16} strokeWidth={1.75} />
-            </button>
+        <header className="flex flex-col gap-7 pb-2 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
+          <div className="max-w-2xl">
+            <h1 className="font-serif text-[46px] font-medium leading-[1.02] tracking-tight text-neutral-950 sm:text-[60px]">
+              Roadmaps
+            </h1>
+            <p className="mt-4 max-w-xl text-[15px] leading-7 text-neutral-600 sm:text-[16px]">
+              Explore {totalRoadmaps} paths for your next role, skill, or engineering challenge.
+            </p>
           </div>
-        </div>
+          <label className="group flex h-11 w-full max-w-[320px] shrink-0 items-center gap-3 text-neutral-500 transition-colors duration-200 focus-within:text-neutral-950 sm:mb-1">
+            <Search
+              size={17}
+              strokeWidth={1.8}
+              aria-hidden="true"
+              className="shrink-0 transition-transform duration-200 group-focus-within:scale-105"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search all roadmaps"
+              aria-label="Search roadmaps"
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-neutral-950 outline-none transition-colors duration-200 placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-0 [&::-webkit-search-cancel-button]:hidden"
+            />
+          </label>
+        </header>
 
-        <main className="mt-12 space-y-16">
+        <main className="mt-12 space-y-14 sm:mt-16 sm:space-y-16">
           {(!isSearching || filteredRoles.length > 0) && (
-            <section aria-label="Role-based roadmaps">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-baseline gap-2">
-                  <h2 className="font-serif text-2xl sm:text-[26px] font-normal tracking-tight text-slate-900">
-                    Roles
-                  </h2>
-                  {isSearching && (
-                    <span className="text-[12px] font-medium text-slate-400">
-                      ({filteredRoles.length})
-                    </span>
-                  )}
-                </div>
-              </div>
+            <section aria-label="Role-based roadmaps" className="py-1">
+              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">Roles</h2>
 
               <div className={ROADMAP_GRID_CLASS}>{filteredRoles.map(renderRoadmapCard)}</div>
             </section>
           )}
 
           {(!isSearching || filteredSkills.length > 0) && (
-            <section aria-label="Skills roadmaps">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-baseline gap-2">
-                  <h2 className="font-serif text-2xl sm:text-[26px] font-normal tracking-tight text-slate-900">
-                    Skills
-                  </h2>
-                  {isSearching && (
-                    <span className="text-[12px] font-medium text-slate-400">
-                      ({filteredSkills.length})
-                    </span>
-                  )}
-                </div>
-              </div>
+            <section aria-label="Skills roadmaps" className="py-1">
+              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">Skills</h2>
               <div className={ROADMAP_GRID_CLASS}>{filteredSkills.map(renderRoadmapCard)}</div>
             </section>
           )}
 
           {(!isSearching || filteredBestPractices.length > 0) && (
-            <section aria-label="Best practices roadmaps">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-baseline gap-2">
-                  <h2 className="font-serif text-2xl sm:text-[26px] font-normal tracking-tight text-slate-900">
-                    Best Practices
-                  </h2>
-                  {isSearching && (
-                    <span className="text-[12px] font-medium text-slate-400">
-                      ({filteredBestPractices.length})
-                    </span>
-                  )}
-                </div>
-              </div>
+            <section aria-label="Best practices roadmaps" className="py-1">
+              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">Best practices</h2>
               <div className={ROADMAP_GRID_CLASS}>
                 {filteredBestPractices.map(renderRoadmapCard)}
               </div>
@@ -351,13 +314,13 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
 
           {isSearching && !hasResults && (
             <div className="flex min-h-[220px] flex-col items-center justify-center px-6 text-center">
-              <p className="text-[14px] font-medium text-slate-600">
+              <p className="text-[14px] font-medium text-neutral-600">
                 No roadmaps match “{query.trim()}”
               </p>
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="mt-3 text-[13px] font-medium text-slate-900 underline underline-offset-4 hover:text-black cursor-pointer"
+                className="mt-3 text-[13px] font-medium text-neutral-800 underline underline-offset-4 hover:text-black cursor-pointer"
               >
                 Clear search
               </button>

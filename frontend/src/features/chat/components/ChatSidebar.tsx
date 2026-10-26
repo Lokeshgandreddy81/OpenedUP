@@ -17,7 +17,7 @@ import {
   Archive,
 } from "lucide-react";
 import type { ChatConversation } from "./chatTypes";
-import { useChatAuth } from "../../../app/auth/ChatAuthContext";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 
 const ProjectsIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 14,
@@ -141,20 +141,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <button
           type="button"
           onClick={onBack}
-          title="Return to main sidebar"
-          aria-label="Return to main sidebar"
+          title="Go back"
+          aria-label="Go back"
           className="w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
-          <ArrowLeft size={16} strokeWidth={1.75} />
-        </button>
-        <button
-          type="button"
-          onClick={onToggleOpen}
-          title="Open sidebar"
-          aria-label="Open sidebar"
-          className="w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-        >
-          <PanelLeft size={16} strokeWidth={1.75} />
+          <ArrowLeft size={18} strokeWidth={2} />
         </button>
         <button
           type="button"
@@ -284,16 +275,16 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       aria-label="Chat history"
       className="absolute inset-y-0 left-0 z-40 flex h-full w-[min(84vw,280px)] shrink-0 flex-col border-r border-slate-200/80 bg-white py-3 select-none shadow-[12px_0_36px_-28px_rgba(15,23,42,0.36)] transition-all duration-150 sm:static sm:w-56 sm:shadow-none md:w-60"
     >
-      {/* Top action row: Back to main sidebar + Collapse sidebar */}
+      {/* Top action row: Back navigation + Collapse sidebar */}
       <div className="flex items-center justify-between px-3 pb-3 mb-1 border-b border-slate-100">
         <button
           type="button"
           onClick={onBack}
-          title="Return to main sidebar"
-          aria-label="Return to main sidebar"
+          title="Go back"
+          aria-label="Go back"
           className="flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-slate-950 px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer font-medium min-h-[36px] sm:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
-          <ArrowLeft size={15} strokeWidth={1.75} />
+          <ArrowLeft size={18} strokeWidth={2} />
           <span>Back</span>
         </button>
 

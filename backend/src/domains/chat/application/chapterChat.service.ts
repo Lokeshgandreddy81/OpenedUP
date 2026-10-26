@@ -1,5 +1,8 @@
 import type { ChapterChatRequest, ChatMessage } from "@charan-interiors/contracts";
-import { getModelMeta } from "@charan-interiors/contracts";
+import {
+  getUnsupportedInputMessage,
+  modelSupportsInput,
+} from "@charan-interiors/contracts";
 import { generateMultiProviderChatStream } from "../providers/llm.service.js";
 
 export interface ChapterCitation {
@@ -156,11 +159,8 @@ export async function answerChapterQuestion(
     onGenerationStarted?: () => void;
   }
 ): Promise<ChapterChatResult> {
-  if (
-    request.imagePages?.length &&
-    !getModelMeta(request.model).inputModalities?.includes("image")
-  ) {
-    throw new Error("The selected model does not accept PDF page images.");
+  if (request.imagePages?.length && !modelSupportsInput(request.model, "image")) {
+    throw new Error(getUnsupportedInputMessage(request.model, "image"));
   }
   let generationStarted = false;
   const prompt = buildPrompt(request);

@@ -44,7 +44,22 @@ export function getLocalProjects(): ProjectItem[] {
 }
 
 export function saveLocalProjects(projects: ProjectItem[]): void {
-  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectsForPersistence(projects)));
+}
+
+function projectsForPersistence(projects: ProjectItem[]): ProjectItem[] {
+  return projects.map((project) => ({
+    ...project,
+    ...(project.files
+      ? {
+          files: project.files.map((file) => {
+            const persistedFile = { ...file };
+            delete persistedFile.previewUrl;
+            return persistedFile;
+          }),
+        }
+      : {}),
+  }));
 }
 
 export async function loadAccountProjects(userId: string): Promise<{
@@ -88,7 +103,8 @@ export async function loadAccountProjects(userId: string): Promise<{
 
 export async function saveAccountProjects(userId: string, projects: ProjectItem[]): Promise<void> {
   const key = accountSnapshotKey(userId);
-  const pendingSnapshot: PendingProjectSnapshot = { projects };
+  const persistedProjects = projectsForPersistence(projects);
+  const pendingSnapshot: PendingProjectSnapshot = { projects: persistedProjects };
   const serializedPending = JSON.stringify(pendingSnapshot);
   try {
     localStorage.setItem(key, serializedPending);
@@ -99,7 +115,7 @@ export async function saveAccountProjects(userId: string, projects: ProjectItem[
   const response = await authenticatedChatFetch("/api/projects", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ projects }),
+    body: JSON.stringify({ projects: persistedProjects }),
   });
   if (!response.ok) throw new Error("Could not save projects to your account.");
   try {

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getChatDatabase, type ChatDatabase } from "../../../platform/database/chatDatabase.js";
+import { SkillRepository } from "../../skills/repositories/skillRepository.js";
 
 export interface StoredMessage {
   id: string;
@@ -61,7 +62,12 @@ export class ConversationRepository {
     };
   }
 
-  create(userId: string, title: string, model: string): StoredConversation {
+  create(
+    userId: string,
+    title: string,
+    model: string,
+    projectId?: string
+  ): StoredConversation {
     const now = Date.now();
     const id = randomUUID();
     this.db
@@ -70,6 +76,11 @@ export class ConversationRepository {
          VALUES (?, ?, ?, ?, ?, ?)`
       )
       .run(id, userId, title, model, now, now);
+
+    if (projectId) {
+      new SkillRepository(this.db).inheritProjectSkills(id, projectId, userId);
+    }
+
     return {
       id,
       title,

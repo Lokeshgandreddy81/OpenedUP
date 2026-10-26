@@ -22,7 +22,7 @@ import {
   ArchiveRestore,
 } from "lucide-react";
 import { useArtifacts, type ArtifactItem, type ArtifactVersion } from "../services/artifactStore";
-import { useChatAuth } from "../../../app/auth/ChatAuthContext";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { ArtifactContentView } from "../components/ArtifactContentView";
 import { ArtifactCodeEditor } from "../components/ArtifactCodeEditor";
 import { getArtifactExtension, getArtifactFileInfo } from "../utils/artifactFormats";
@@ -35,11 +35,43 @@ export interface ArtifactsScreenProps {
   onNavigateToChat?: (prompt?: string) => void;
 }
 
-function artifactChatPrompt(title: string, content: string): string {
+function artifactContentForChat(content: string): string {
+  return content
+    .split(/(```[\s\S]*?```)/g)
+    .map((segment) => {
+      if (segment.startsWith("```")) {
+        return segment.replace(/^```[^\n]*\n?/, "").replace(/\n?```$/, "");
+      }
+
+      return segment
+        .split("\n")
+        .map((line) =>
+          line
+            .replace(/^\s{0,3}#{1,6}\s+/, "")
+            .replace(/^\s*[-+*]\s+/, "• ")
+            .replace(/^\s*>\s?/, "")
+            .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 — $2")
+            .replace(/\*\*(.+?)\*\*/g, "$1")
+            .replace(/__(.+?)__/g, "$1")
+            .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "$1")
+            .replace(/(?<!_)_([^_\n]+)_(?!_)/g, "$1")
+            .replace(/~~(.+?)~~/g, "$1")
+            .replace(/`([^`]+)`/g, "$1")
+        )
+        .join("\n");
+    })
+    .join("")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function artifactChatPrompt(title: string, content: string, category: ArtifactCategory): string {
   const contextLimit = 32_000;
-  const excerpt = content.slice(0, contextLimit);
-  const omittedCharacters = content.length - excerpt.length;
-  return `Continue working on the artifact “${title}”. Preserve its intent and help me refine it.\n\n${excerpt}${omittedCharacters > 0 ? `\n\n[The chat draft includes the first ${contextLimit.toLocaleString()} characters. ${omittedCharacters.toLocaleString()} more characters remain in the saved artifact.]` : ""}`;
+  const chatContent = category === "Code" ? content : artifactContentForChat(content);
+  const excerpt = chatContent.slice(0, contextLimit);
+  const omittedCharacters = chatContent.length - excerpt.length;
+  return `Continue working on the artifact “${title}”. Preserve its intent and help me refine it.\n\nArtifact content:\n${excerpt}${omittedCharacters > 0 ? `\n\n[The chat draft includes the first ${contextLimit.toLocaleString()} characters. ${omittedCharacters.toLocaleString()} more characters remain in the saved artifact.]` : ""}`;
 }
 
 function artifactExcerpt(artifact: ArtifactItem): string {
@@ -122,7 +154,6 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
   const [isOrganizationEditorOpen, setIsOrganizationEditorOpen] = useState(false);
   const [collectionDraft, setCollectionDraft] = useState("");
   const [tagsDraft, setTagsDraft] = useState("");
-  const [artifactNotice, setArtifactNotice] = useState("");
 
   const {
     artifacts,
@@ -431,7 +462,6 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
     try {
       const updated = await updateOrganization(artifact.id, { isFavorite: !artifact.isFavorite });
       setSelectedArtifact((current) => (current?.id === artifact.id ? updated : current));
-      setArtifactNotice(updated.isFavorite ? "Added to favorites" : "Removed from favorites");
     } catch (error) {
       setArtifactError(error instanceof Error ? error.message : "Could not update favorite.");
     } finally {
@@ -470,7 +500,6 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
       });
       setSelectedArtifact(updated);
       setIsOrganizationEditorOpen(false);
-      setArtifactNotice("Organization saved");
       setArtifactError("");
     } catch (error) {
       setArtifactError(error instanceof Error ? error.message : "Could not save organization.");
@@ -490,16 +519,9 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
     }
 
     let content: string;
-    let importNotice = `Imported ${file.name}`;
     if (isPdf) {
       const extracted = await extractPdfText(file);
       content = extracted.content;
-      if (extracted.truncated) {
-        importNotice +=
-          extracted.pagesImported < extracted.totalPages
-            ? ` (first ${extracted.pagesImported} pages)`
-            : " (text shortened to fit the artifact limit)";
-      }
     } else {
       if (file.size > 200_000) {
         setArtifactError("This file is larger than the 200 KB artifact limit.");
@@ -525,7 +547,6 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
       isShared: false,
     });
     setSelectedArtifact(saved);
-    setArtifactNotice(importNotice);
     setArtifactError("");
   };
 
@@ -553,7 +574,6 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
       setArtifactVersions([]);
       setIsHistoryVisible(false);
       setArtifactError("");
-      setArtifactNotice(editingArtifactId ? "Artifact saved" : "Artifact created");
     } catch (error) {
       setArtifactError(error instanceof Error ? error.message : "Could not save artifact.");
     } finally {
@@ -764,7 +784,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
         {!showEmptyLibrary && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex min-w-0 flex-1 flex-wrap items-start gap-3">
-              <div ref={sortMenuRef} className="flex flex-col items-start">
+              <div ref={sortMenuRef} className="relative flex flex-col items-start">
                 <button
                   ref={sortMenuTriggerRef}
                   type="button"
@@ -785,40 +805,44 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                   <ChevronDown
                     size={16}
                     strokeWidth={2}
-                    className={`shrink-0 text-neutral-400 transition-transform duration-150 ${isSortMenuOpen ? "rotate-180" : ""}`}
+                    className={`shrink-0 text-neutral-400 transition-transform duration-150 motion-reduce:transition-none ${isSortMenuOpen ? "rotate-180" : ""}`}
                   />
                 </button>
-                {isSortMenuOpen && (
-                  <div
-                    id="artifact-sort-menu"
-                    role="group"
-                    aria-label="Sort artifacts"
-                    className="mt-2 w-52 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.12)]"
-                  >
-                    {(
-                      [
-                        ["updated", "Recently updated"],
-                        ["created", "Recently created"],
-                        ["title", "Title A–Z"],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        aria-pressed={sortBy === value}
-                        onClick={() => {
-                          setSortBy(value);
-                          setIsSortMenuOpen(false);
-                          sortMenuTriggerRef.current?.focus();
-                        }}
-                        className={`flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-left text-xs transition-colors ${sortBy === value ? "bg-[#f0eee8] font-medium text-neutral-900" : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"}`}
-                      >
-                        {label}
-                        {sortBy === value && <Check size={14} className="text-neutral-600" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div
+                  id="artifact-sort-menu"
+                  role="group"
+                  aria-label="Sort artifacts"
+                  aria-hidden={!isSortMenuOpen}
+                  inert={!isSortMenuOpen}
+                  className={`absolute left-0 top-full z-50 mt-2 w-52 origin-top-left rounded-xl border border-neutral-200 bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.12)] transition-[opacity,transform,visibility] duration-150 ease-out motion-reduce:transition-none ${
+                    isSortMenuOpen
+                      ? "visible translate-y-0 scale-100 opacity-100"
+                      : "invisible pointer-events-none -translate-y-1 scale-[0.98] opacity-0"
+                  }`}
+                >
+                  {(
+                    [
+                      ["updated", "Recently updated"],
+                      ["created", "Recently created"],
+                      ["title", "Title A–Z"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={sortBy === value}
+                      onClick={() => {
+                        setSortBy(value);
+                        setIsSortMenuOpen(false);
+                        sortMenuTriggerRef.current?.focus();
+                      }}
+                      className={`flex h-9 w-full items-center justify-between rounded-lg px-2.5 text-left text-xs transition-colors ${sortBy === value ? "bg-[#f0eee8] font-medium text-neutral-900" : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"}`}
+                    >
+                      {label}
+                      {sortBy === value && <Check size={14} className="text-neutral-600" />}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button
                 type="button"
@@ -893,12 +917,6 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
             </div>
           </div>
         )}
-        {artifactNotice && (
-          <p role="status" aria-live="polite" className="mt-3 text-xs text-emerald-700">
-            {artifactNotice}
-          </p>
-        )}
-
         {/* Artifacts Grid */}
         {syncError && (
           <div
@@ -968,7 +986,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                   className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-500"
                   aria-label={`Open ${displayTitle}`}
                 >
-                  <div className="flex min-h-[176px] flex-col p-4">
+                  <div className="flex min-h-[160px] flex-col p-4">
                     <div className="flex items-center justify-between gap-3 pr-10">
                       <div className="flex min-w-0 items-center gap-3">
                         <div
@@ -990,15 +1008,15 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                     </div>
 
                     <div
-                      className={`mt-3 h-[68px] overflow-hidden rounded-xl border px-3.5 py-3 ${art.category === "Code" ? "border-[#e7e5df] bg-[#faf9f6] text-[#4b463f]" : "border-neutral-100 bg-[#faf9f6] text-neutral-600"}`}
+                      className={`mt-3 flex overflow-hidden px-3 text-neutral-600 ${preview.label ? "h-[60px] flex-col justify-center" : "min-h-[40px] max-h-[44px] items-center"}`}
                     >
                       {preview.label && (
-                        <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
+                        <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
                           First page
                         </div>
                       )}
                       <pre
-                        className={`line-clamp-2 whitespace-pre-wrap break-words text-[13px] leading-[1.6] ${art.category === "Code" ? "font-mono text-[#4b463f]" : "font-sans"}`}
+                        className={`min-w-0 line-clamp-2 whitespace-pre-wrap break-words text-[13px] leading-[1.6] ${art.category === "Code" ? "font-mono" : "font-sans"}`}
                       >
                         {preview.content || "No text preview available"}
                       </pre>
@@ -1468,7 +1486,8 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                   onClick={() => {
                     const prompt = artifactChatPrompt(
                       selectedArtifact.title,
-                      selectedArtifact.content
+                      selectedArtifact.content,
+                      selectedArtifact.category
                     );
                     setSelectedArtifact(null);
                     onNavigateToChat(prompt);

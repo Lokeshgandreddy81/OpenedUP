@@ -1,12 +1,8 @@
-import { Type } from "@google/genai";
-import type { PhotoInput } from "@charan-interiors/contracts";
-import { resolveApiKey } from "../../../platform/config/index.js";
-import { AppError, parseJsonSafely } from "../../../platform/errors/errors.js";
+import { z } from "zod";
+import type { PhotoInput, ProviderId } from "@charan-interiors/contracts";
+import { AppError } from "../../../platform/errors/errors.js";
+import { generateMultiProviderChat } from "../../chat/providers/llm.service.js";
 import { logEvent } from "../../../platform/observability/logger.js";
-import {
-  generateWithModelFallback,
-  getActiveModelId,
-} from "../../chat/providers/gemini.service.js";
 
 const READ_SYSTEM_INSTRUCTION = `You are a careful, meticulous bookkeeper examining photos of physical receipts and business invoices. Your job is to find every receipt in every photo, box each one accurately, and extract its printed and handwritten values.
 
@@ -29,220 +25,122 @@ Strict rules:
 4. Never give advice on what is tax-deductible, allowable, or claimable.
 5. Date should be formatted as YYYY-MM-DD when possible, or as printed if partial, or null if unreadable.`;
 
-const READ_RESPONSE_SCHEMA = {
-  type: Type.OBJECT,
-  properties: {
-    receipts: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          photo_index: {
-            type: Type.NUMBER,
-            description: "The 1-based global photo index passed in the prompt.",
-          },
-          box_2d: {
-            type: Type.ARRAY,
-            items: { type: Type.NUMBER },
-            description: "Bounding box [ymin, xmin, ymax, xmax] normalised 0 to 1000.",
-          },
-          merchant: {
-            type: Type.STRING,
-            nullable: true,
-            description: "Merchant or shop name as printed on the receipt, or null if unreadable.",
-          },
-          date: {
-            type: Type.STRING,
-            nullable: true,
-            description: "Receipt date in YYYY-MM-DD format if possible, or null if unreadable.",
-          },
-          time: {
-            type: Type.STRING,
-            nullable: true,
-            description:
-              "Time printed on receipt (e.g. '09:34:12' or '09:34'), or null if not present.",
-          },
-          item_count: {
-            type: Type.NUMBER,
-            nullable: true,
-            description: "Number of items read from the receipt, or null if not present.",
-          },
-          printed_total: {
-            type: Type.NUMBER,
-            nullable: true,
-            description: "Printed total before handwritten tip, or null if unreadable.",
-          },
-          handwritten_tip: {
-            type: Type.NUMBER,
-            nullable: true,
-            description: "Handwritten tip or gratuity amount if present, otherwise null.",
-          },
-          final_total: {
-            type: Type.NUMBER,
-            nullable: true,
-            description: "Final total written or printed on the receipt, or null if unreadable.",
-          },
-          currency: {
-            type: Type.STRING,
-            nullable: true,
-            description:
-              "3-letter currency code read from symbols, words, or address (e.g. USD, GBP, JPY, NZD, EUR).",
-          },
-          tax: {
-            type: Type.NUMBER,
-            nullable: true,
-            description: "Tax amount printed on the receipt, or null if not shown or unreadable.",
-          },
-          tax_label: {
-            type: Type.STRING,
-            nullable: true,
-            description: "Tax label printed on the receipt (e.g. 'VAT 20%', 'GST'), or null.",
-          },
-          tax_id_or_vat: {
-            type: Type.STRING,
-            nullable: true,
-            description:
-              "Merchant VAT, GST, EIN, or ABN tax registration ID if printed on the receipt, or null.",
-          },
-          is_tax_invoice: {
-            type: Type.BOOLEAN,
-            nullable: true,
-            description:
-              "True if the receipt shows an itemized tax/VAT line, tax registration number, or formal TAX INVOICE header; false if only a card slip or receipt without tax details.",
-          },
-          category: {
-            type: Type.STRING,
-            description: "Fixed category: Meals, Travel, Lodging, Office, or Other.",
-          },
-          card_last4: {
-            type: Type.STRING,
-            nullable: true,
-            description: "Last 4 digits of payment card if shown (e.g. '0000'), or null.",
-          },
-          confidence: {
-            type: Type.OBJECT,
-            properties: {
-              merchant: { type: Type.NUMBER },
-              date: { type: Type.NUMBER },
-              printed_total: { type: Type.NUMBER },
-              handwritten_tip: { type: Type.NUMBER },
-              currency: { type: Type.NUMBER },
-              tax: { type: Type.NUMBER },
-            },
-            required: ["merchant", "date", "printed_total", "handwritten_tip", "currency", "tax"],
-          },
-          flags: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                type: {
-                  type: Type.STRING,
-                  description:
-                    "One of: tip_changes_total, unreadable_field, foreign_currency, possible_duplicate, low_confidence, not_a_receipt",
-                },
-                note: {
-                  type: Type.STRING,
-                  description: "Short human-readable explanation of the flag.",
-                },
-              },
-              required: ["type", "note"],
-            },
-          },
-        },
-        required: [
-          "photo_index",
-          "box_2d",
-          "merchant",
-          "date",
-          "time",
-          "item_count",
-          "printed_total",
-          "handwritten_tip",
-          "final_total",
-          "currency",
-          "tax",
-          "tax_label",
-          "tax_id_or_vat",
-          "is_tax_invoice",
-          "category",
-          "card_last4",
-          "confidence",
-          "flags",
-        ],
-      },
-    },
-  },
-  required: ["receipts"],
-};
+const ReceiptExtractionSchema = z
+  .object({
+    receipts: z.array(
+      z
+        .object({
+          photo_index: z.number().int().positive(),
+          box_2d: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+          merchant: z.string().nullable(),
+          date: z.string().nullable(),
+          time: z.string().nullable(),
+          item_count: z.number().nullable(),
+          printed_total: z.number().nullable(),
+          handwritten_tip: z.number().nullable(),
+          final_total: z.number().nullable(),
+          currency: z.string().nullable(),
+          tax: z.number().nullable(),
+          tax_label: z.string().nullable(),
+          tax_id_or_vat: z.string().nullable().optional(),
+          is_tax_invoice: z.boolean().nullable().optional(),
+          category: z.enum(["Meals", "Travel", "Lodging", "Office", "Other"]),
+          card_last4: z.string().nullable(),
+          confidence: z.object({
+            merchant: z.number().min(0).max(1),
+            date: z.number().min(0).max(1),
+            printed_total: z.number().min(0).max(1),
+            handwritten_tip: z.number().min(0).max(1),
+            currency: z.number().min(0).max(1),
+            tax: z.number().min(0).max(1),
+          }),
+          flags: z.array(z.object({ type: z.string(), note: z.string() })),
+        })
+        .passthrough()
+    ),
+  })
+  .strict();
 
-export async function readReceipts(photos: PhotoInput[]): Promise<{ receipts: unknown[] }> {
+export interface ReceiptExtractionModel {
+  modelId: string;
+  customModel?: string;
+  customProvider?: ProviderId;
+  apiKey?: string;
+  baseUrl?: string;
+  signal?: AbortSignal;
+}
+
+export async function readReceipts(
+  photos: PhotoInput[],
+  model: ReceiptExtractionModel
+): Promise<{ receipts: unknown[] }> {
   const startTime = Date.now();
-
-  if (!resolveApiKey()) {
-    throw new AppError(
-      "Receipt photo scanning requires a Gemini API key. However, PDF chapter breakdown works 100% locally with Python (zero API key needed).",
-      400
-    );
-  }
-
-  const indices = photos.map((p) => p.globalIndex);
+  const indices = photos.map((photo) => photo.globalIndex);
   const totalKB = Math.round(
-    photos.reduce((acc, p) => acc + (p.base64Data.length || 0) * 0.75, 0) / 1024
+    photos.reduce((total, photo) => total + photo.base64Data.length * 0.75, 0) / 1024
   );
 
   logEvent("START /api/read-receipts", {
-    model: getActiveModelId(),
+    model: model.modelId,
     photoIndices: indices,
     totalKB,
   });
 
-  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
-
   const indexDescriptions = photos
     .map(
-      (p, i) =>
-        `Image ${i + 1} in this request is Photo ${p.globalIndex} of ${p.totalPhotos} (set photo_index = ${p.globalIndex}).`
+      (photo, index) =>
+        `Image ${index + 1} in this request is Photo ${photo.globalIndex} of ${photo.totalPhotos} (set photo_index = ${photo.globalIndex}).`
     )
     .join("\n");
-
-  parts.push({
-    text: `Examine the following ${photos.length} photo(s) of receipts.\n${indexDescriptions}\n\nFind every physical receipt in each photo, box it with box_2d = [ymin, xmin, ymax, xmax] (0-1000), and extract all fields strictly following the schema.`,
+  const userPrompt = `Examine the following ${photos.length} photo(s) of receipts.\n${indexDescriptions}\n\nFind every physical receipt in each photo, box it with box_2d = [ymin, xmin, ymax, xmax] (0-1000), and extract all fields strictly following the system instructions. Return only JSON in this shape: {"receipts":[{"photo_index":1,"box_2d":[0,0,1000,1000],"merchant":null,"date":null,"time":null,"item_count":null,"printed_total":null,"handwritten_tip":null,"final_total":null,"currency":null,"tax":null,"tax_label":null,"tax_id_or_vat":null,"is_tax_invoice":null,"category":"Other","card_last4":null,"confidence":{"merchant":0,"date":0,"printed_total":0,"handwritten_tip":0,"currency":0,"tax":0},"flags":[]}]}. Do not include markdown or commentary.`;
+  const generated = await generateMultiProviderChat({
+    modelId: model.modelId,
+    ...(model.customModel ? { customModel: model.customModel } : {}),
+    ...(model.customProvider ? { customProvider: model.customProvider } : {}),
+    ...(model.apiKey ? { injectedApiKey: model.apiKey } : {}),
+    ...(model.baseUrl ? { injectedBaseUrl: model.baseUrl } : {}),
+    ...(model.signal ? { signal: model.signal } : {}),
+    images: photos.map((photo) => ({
+      name: `Photo ${photo.globalIndex} of ${photo.totalPhotos}`,
+      mimeType: photo.mimeType || "image/jpeg",
+      base64Data: photo.base64Data,
+    })),
+    systemInstruction: READ_SYSTEM_INSTRUCTION,
+    effort: "Low",
+    messages: [{ role: "user", content: userPrompt }],
   });
 
-  for (const photo of photos) {
-    parts.push({
-      text: `Photo ${photo.globalIndex} of ${photo.totalPhotos} is the image below (use photo_index: ${photo.globalIndex}):`,
-    });
-    parts.push({
-      inlineData: {
-        mimeType: photo.mimeType || "image/jpeg",
-        data: photo.base64Data,
-      },
-    });
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(generated.text.trim().replace(/^```(?:json)?\s*|\s*```$/g, ""));
+  } catch {
+    throw new AppError(
+      "The selected model returned invalid receipt data. Retry or choose another model.",
+      502
+    );
+  }
+  const result = ReceiptExtractionSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new AppError(
+      "The selected model returned invalid receipt data. Retry or choose another model.",
+      502
+    );
+  }
+  const requestedPhotoIndices = new Set(indices);
+  if (result.data.receipts.some((receipt) => !requestedPhotoIndices.has(receipt.photo_index))) {
+    throw new AppError(
+      "The selected model returned receipt data for an unknown photo. Retry the upload.",
+      502
+    );
   }
 
-  const { response, modelUsed } = await generateWithModelFallback({
-    contents: { parts },
-    config: {
-      systemInstruction: READ_SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema: READ_RESPONSE_SCHEMA,
-      temperature: 0.1,
-    },
-  });
-
-  const parsed = parseJsonSafely<{ receipts: unknown[] }>(response.text, {
-    receipts: [],
-  });
-
-  const elapsedMs = Date.now() - startTime;
   logEvent("DONE /api/read-receipts", {
-    model: modelUsed,
+    model: generated.modelUsed,
+    provider: generated.providerUsed,
     photoIndices: indices,
-    receiptsFound: Array.isArray(parsed.receipts) ? parsed.receipts.length : 0,
-    elapsedMs,
+    receiptsFound: result.data.receipts.length,
+    elapsedMs: Date.now() - startTime,
   });
 
-  return parsed;
+  return result.data;
 }

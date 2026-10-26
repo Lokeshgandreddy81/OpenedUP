@@ -85,6 +85,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (document.querySelector('[data-benchmark-modal="open"]')) return;
         if (isModalOpen) {
           setIsModalOpen(false);
         } else if (!isEmbedded && onClose) {
@@ -109,12 +110,16 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
     setIsModalOpen(true);
   };
 
-  // Compare models handler
-  // Compare single model trigger
+  // Start a two-model comparison with a stable baseline and the chosen target.
   const handleCompareSingle = (model: AIModelBenchmark) => {
     setCompareModelIds((prev) => {
-      if (prev.includes(model.id)) return prev;
-      return [prev[0] || "claude-opus-5-5-max-with-fallback", model.id];
+      const baseline = [
+        prev.find((id) => id !== model.id),
+        "claude-opus-5-5-max-with-fallback",
+        "gpt-6-astra-max",
+        "deepseek-v4-1-flash-max",
+      ].find((id): id is string => Boolean(id && id !== model.id));
+      return [baseline ?? model.id, model.id];
     });
     setActiveTab("compare");
   };

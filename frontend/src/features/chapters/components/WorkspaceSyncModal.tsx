@@ -16,7 +16,8 @@ import {
   saveWorkspaceSession,
   scanWorkspaceSources,
 } from "../../../app/integrations/workspaceLiveSync";
-import { RollingNumber, usePrefersReducedMotion } from "../../../app/components/MotionPrimitives";
+import { RollingNumber } from "../../../app/components/MotionPrimitives";
+import { usePrefersReducedMotion } from "../../../app/hooks/usePrefersReducedMotion";
 
 export const COST_CENTER_OPTIONS = [
   "CC-410 Sales",

@@ -149,19 +149,26 @@ CREATE TABLE IF NOT EXISTS skills (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
-  scope TEXT NOT NULL CHECK(scope IN ('builtin', 'org', 'user')),
+  scope TEXT NOT NULL CHECK(scope IN ('builtin', 'org', 'user', 'directory')),
   owner_id TEXT,
   org_id TEXT,
   storage_path TEXT NOT NULL,
   version INTEGER NOT NULL DEFAULT 1,
   is_active INTEGER NOT NULL DEFAULT 1,
+  icon TEXT,
+  author TEXT,
+  source_label TEXT,
+  changelog TEXT,
+  tools_required TEXT,
+  approval_status TEXT NOT NULL DEFAULT 'approved' CHECK(approval_status IN ('draft', 'pending_review', 'approved', 'rejected')),
+  rejection_reason TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_unique_name
   ON skills(name, scope, ifnull(owner_id, ''), ifnull(org_id, ''));
 CREATE INDEX IF NOT EXISTS idx_skills_scope_owner
-  ON skills(scope, owner_id, org_id, is_active);
+  ON skills(scope, owner_id, org_id, is_active, approval_status);
 
 CREATE TABLE IF NOT EXISTS skill_files (
   id TEXT PRIMARY KEY,
@@ -181,6 +188,9 @@ CREATE TABLE IF NOT EXISTS conversation_skills (
   skill_id TEXT NOT NULL,
   enabled_at INTEGER NOT NULL,
   enabled_by TEXT NOT NULL,
+  explicitly_selected INTEGER NOT NULL DEFAULT 0,
+  preloaded_at INTEGER,
+  source TEXT NOT NULL DEFAULT 'direct' CHECK(source IN ('direct', 'project')),
   PRIMARY KEY(conversation_id, skill_id),
   FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
   FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
@@ -202,10 +212,50 @@ CREATE TABLE IF NOT EXISTS skill_usage (
   conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
   skill TEXT NOT NULL,
   user_id TEXT,
-  timestamp INTEGER NOT NULL
+  timestamp INTEGER NOT NULL,
+  tool_name TEXT DEFAULT 'Skill',
+  duration_ms INTEGER,
+  outcome TEXT DEFAULT 'success' CHECK(outcome IN ('success', 'error', 'timeout'))
 );
 CREATE INDEX IF NOT EXISTS idx_skill_usage_conv
   ON skill_usage(conversation_id, timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS skill_categories (
+  skill_id TEXT NOT NULL,
+  category_id TEXT NOT NULL,
+  PRIMARY KEY(skill_id, category_id),
+  FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS skill_versions (
+  id TEXT PRIMARY KEY,
+  skill_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  changelog TEXT,
+  file_manifest TEXT,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  UNIQUE(skill_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS skill_agents (
+  id TEXT PRIMARY KEY,
+  skill_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  tools TEXT,
+  system_prompt TEXT,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+  UNIQUE(skill_id, name)
+);
 `;
 
 function migrateChatDatabase(database: ChatDatabase): void {
@@ -234,7 +284,7 @@ function migrateChatDatabase(database: ChatDatabase): void {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT NOT NULL,
-      scope TEXT NOT NULL CHECK(scope IN ('builtin', 'org', 'user')),
+      scope TEXT NOT NULL CHECK(scope IN ('builtin', 'org', 'user', 'directory')),
       owner_id TEXT,
       org_id TEXT,
       storage_path TEXT NOT NULL,
@@ -293,7 +343,140 @@ function migrateChatDatabase(database: ChatDatabase): void {
       ON skill_usage(conversation_id, timestamp DESC);
   `);
 
-  database.exec("PRAGMA user_version = 5;");
+  const skillsTableDef = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='skills'")
+    .get() as { sql?: string } | undefined;
+  if (skillsTableDef?.sql && !skillsTableDef.sql.includes("'directory'")) {
+    database.exec(`
+      PRAGMA foreign_keys = OFF;
+      CREATE TABLE skills_migrated (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        scope TEXT NOT NULL CHECK(scope IN ('builtin', 'org', 'user', 'directory')),
+        owner_id TEXT,
+        org_id TEXT,
+        storage_path TEXT NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        icon TEXT,
+        author TEXT,
+        source_label TEXT,
+        changelog TEXT,
+        tools_required TEXT,
+        approval_status TEXT NOT NULL DEFAULT 'approved' CHECK(approval_status IN ('draft', 'pending_review', 'approved', 'rejected')),
+        rejection_reason TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      INSERT INTO skills_migrated (
+        id, name, description, scope, owner_id, org_id, storage_path, version, is_active,
+        icon, author, source_label, changelog, tools_required, approval_status, rejection_reason,
+        created_at, updated_at
+      )
+      SELECT
+        id, name, description, scope, owner_id, org_id, storage_path, version, is_active,
+        icon, author, source_label, changelog, tools_required, approval_status, rejection_reason,
+        created_at, updated_at
+      FROM skills;
+      DROP TABLE skills;
+      ALTER TABLE skills_migrated RENAME TO skills;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_unique_name
+        ON skills(name, scope, ifnull(owner_id, ''), ifnull(org_id, ''));
+      CREATE INDEX IF NOT EXISTS idx_skills_scope_owner
+        ON skills(scope, owner_id, org_id, is_active, approval_status);
+      PRAGMA foreign_keys = ON;
+    `);
+  }
+
+  const userVersion = (database.pragma("user_version", { simple: true }) as number) ?? 0;
+  if (userVersion < 6) {
+    const convSkillCols = (database.pragma("table_info(conversation_skills)") as Array<{ name: string }>).map((c) => c.name);
+    if (!convSkillCols.includes("explicitly_selected")) {
+      database.exec("ALTER TABLE conversation_skills ADD COLUMN explicitly_selected INTEGER NOT NULL DEFAULT 0;");
+    }
+    if (!convSkillCols.includes("preloaded_at")) {
+      database.exec("ALTER TABLE conversation_skills ADD COLUMN preloaded_at INTEGER;");
+    }
+    if (!convSkillCols.includes("source")) {
+      database.exec("ALTER TABLE conversation_skills ADD COLUMN source TEXT NOT NULL DEFAULT 'direct';");
+    }
+
+    const skillCols = (database.pragma("table_info(skills)") as Array<{ name: string }>).map((c) => c.name);
+    if (!skillCols.includes("icon")) {
+      database.exec("ALTER TABLE skills ADD COLUMN icon TEXT;");
+    }
+    if (!skillCols.includes("author")) {
+      database.exec("ALTER TABLE skills ADD COLUMN author TEXT;");
+    }
+    if (!skillCols.includes("source_label")) {
+      database.exec("ALTER TABLE skills ADD COLUMN source_label TEXT;");
+    }
+    if (!skillCols.includes("changelog")) {
+      database.exec("ALTER TABLE skills ADD COLUMN changelog TEXT;");
+    }
+    if (!skillCols.includes("tools_required")) {
+      database.exec("ALTER TABLE skills ADD COLUMN tools_required TEXT;");
+    }
+    if (!skillCols.includes("approval_status")) {
+      database.exec("ALTER TABLE skills ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'approved';");
+    }
+    if (!skillCols.includes("rejection_reason")) {
+      database.exec("ALTER TABLE skills ADD COLUMN rejection_reason TEXT;");
+    }
+
+    const skillUsageCols = (database.pragma("table_info(skill_usage)") as Array<{ name: string }>).map((c) => c.name);
+    if (!skillUsageCols.includes("tool_name")) {
+      database.exec("ALTER TABLE skill_usage ADD COLUMN tool_name TEXT DEFAULT 'Skill';");
+    }
+    if (!skillUsageCols.includes("duration_ms")) {
+      database.exec("ALTER TABLE skill_usage ADD COLUMN duration_ms INTEGER;");
+    }
+    if (!skillUsageCols.includes("outcome")) {
+      database.exec("ALTER TABLE skill_usage ADD COLUMN outcome TEXT DEFAULT 'success';");
+    }
+
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        description TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS skill_categories (
+        skill_id TEXT NOT NULL,
+        category_id TEXT NOT NULL,
+        PRIMARY KEY(skill_id, category_id),
+        FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+        FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS skill_versions (
+        id TEXT PRIMARY KEY,
+        skill_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        changelog TEXT,
+        file_manifest TEXT,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+        UNIQUE(skill_id, version)
+      );
+
+      CREATE TABLE IF NOT EXISTS skill_agents (
+        id TEXT PRIMARY KEY,
+        skill_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        tools TEXT,
+        system_prompt TEXT,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+        UNIQUE(skill_id, name)
+      );
+    `);
+
+    database.exec("PRAGMA user_version = 6;");
+  }
 }
 
 function defaultDatabasePath(): string {

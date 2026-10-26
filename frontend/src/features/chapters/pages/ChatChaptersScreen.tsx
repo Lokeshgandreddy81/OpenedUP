@@ -1,6 +1,6 @@
 import React from "react";
 import { ResultsView } from "../components/ResultsView";
-import { useAppContext } from "../state/AppContext";
+import { useAppContext } from "../state/useAppContext";
 
 export interface ChatChaptersScreenProps {
   onClose?: () => void;
@@ -12,6 +12,10 @@ export const ChatChaptersScreen: React.FC<ChatChaptersScreenProps> = ({ onClose 
     engineOutput,
     readingPhase,
     failedBatches,
+    receiptModel,
+    setReceiptModel,
+    duplicateReviewError,
+    setDuplicateReviewError,
     handleRetryFailedBatches,
     handleUpdateRow,
     handleChangeCostCenter,
@@ -28,6 +32,12 @@ export const ChatChaptersScreen: React.FC<ChatChaptersScreenProps> = ({ onClose 
         reconciliation={engineOutput.reconciliation}
         readingPhase={readingPhase}
         failedBatches={failedBatches}
+        receiptModel={receiptModel}
+        onReceiptModelChange={(model) => {
+          setReceiptModel(model);
+          setDuplicateReviewError(null);
+        }}
+        duplicateReviewError={duplicateReviewError}
         onRetryFailedBatches={handleRetryFailedBatches}
         onUpdateRow={handleUpdateRow}
         onChangeCostCenter={handleChangeCostCenter}

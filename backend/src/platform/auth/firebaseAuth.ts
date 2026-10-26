@@ -5,6 +5,8 @@ import { resolveFirebaseProjectId } from "../config/index.js";
 export interface Principal {
   uid: string;
   email?: string;
+  role?: "user" | "admin";
+  orgId?: string;
 }
 
 interface FirebaseIdTokenClaims {
@@ -15,6 +17,8 @@ interface FirebaseIdTokenClaims {
   iss: unknown;
   sub: unknown;
   email?: unknown;
+  role?: unknown;
+  orgId?: unknown;
 }
 
 interface FirebaseIdTokenHeader {
@@ -98,6 +102,10 @@ export async function verifyFirebaseIdToken(
   return {
     uid: claims.sub,
     ...(typeof claims.email === "string" ? { email: claims.email } : {}),
+    ...(claims.role === "admin" || claims.role === "user" ? { role: claims.role } : {}),
+    ...(typeof claims.orgId === "string" && claims.orgId.length <= 128
+      ? { orgId: claims.orgId }
+      : {}),
   };
 }
 

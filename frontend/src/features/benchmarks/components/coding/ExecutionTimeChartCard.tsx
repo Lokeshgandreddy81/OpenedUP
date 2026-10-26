@@ -5,7 +5,8 @@ import {
   DEFAULT_CODING_AGENT_MODEL_IDS,
   type CodingAgentModelItem,
 } from "../data/codingAgentBenchmarks";
-import { ChartModelLabels, chartLabelSlotWidth } from "../ui/ChartModelLabels";
+import { ChartModelLabels } from "../ui/ChartModelLabels";
+import { chartLabelSlotWidth } from "../ui/chartModelLabelLayout";
 import { ColorByControl, ModelsFilterControl, type ColorBy } from "../ui/ChartCardControls";
 
 type TimeTab = "executionTime" | "turns";

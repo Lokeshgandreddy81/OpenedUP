@@ -1,13 +1,15 @@
-import { exec, execFile } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 import type { SkillRecord } from "../repositories/skillRepository.js";
+import {
+  getSandboxExecutor,
+  type SandboxExecutor,
+  DEFAULT_COMMAND_TIMEOUT_MS,
+} from "./sandboxExecutor.js";
+import { checkBashRateLimit, recordBashCpuUsage } from "./rateLimits.js";
 
-const execAsync = promisify(exec);
-
-export const COMMAND_TIMEOUT_MS = 60000; // 60s
+export const COMMAND_TIMEOUT_MS = DEFAULT_COMMAND_TIMEOUT_MS; // 60s
 export const MAX_OUTPUT_BYTES = 1024 * 1024; // 1MB
 export const MAX_READ_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -66,6 +68,12 @@ export function initSandbox(
     }
   }
 
+  try {
+    fs.chmodSync(skillsMountDir, 0o555); // Read-only mount root
+  } catch {
+    // ignore
+  }
+
   return {
     baseDir,
     workspaceDir,
@@ -113,6 +121,7 @@ export function resolveSandboxPath(
     throw new SandboxSecurityError("Invalid empty file path.");
   }
 
+  // eslint-disable-next-line no-control-regex
   if (/[\0\x00-\x1F]/.test(rawPath)) {
     throw new SandboxSecurityError("Path contains null or control characters.");
   }
@@ -130,6 +139,13 @@ export function resolveSandboxPath(
     if (!fullPath.startsWith(path.resolve(paths.skillsMountDir))) {
       throw new SandboxSecurityError("Path traversal escape from /mnt/skills detected.");
     }
+    if (fs.existsSync(fullPath)) {
+      const realTarget = fs.realpathSync(fullPath);
+      const realMount = fs.realpathSync(paths.skillsMountDir);
+      if (!realTarget.startsWith(realMount)) {
+        throw new SandboxSecurityError("Symlink escape from /mnt/skills detected.");
+      }
+    }
     return { fullPath, isSkillMount: true };
   }
 
@@ -139,6 +155,14 @@ export function resolveSandboxPath(
 
   if (!fullPath.startsWith(path.resolve(paths.workspaceDir))) {
     throw new SandboxSecurityError("Path traversal escape from workspace detected.");
+  }
+
+  if (fs.existsSync(fullPath)) {
+    const realTarget = fs.realpathSync(fullPath);
+    const realWorkspace = fs.realpathSync(paths.workspaceDir);
+    if (!realTarget.startsWith(realWorkspace)) {
+      throw new SandboxSecurityError("Symlink escape from workspace detected.");
+    }
   }
 
   return { fullPath, isSkillMount: false };
@@ -220,70 +244,152 @@ export function executeWrite(
 
 /**
  * Tool handler: Bash
- * Runs in the sandbox workspace directory with timeout and environment scrubbing.
+ * Runs in the sandbox workspace directory via SandboxExecutor with timeout,
+ * process tree termination, and strict environment stripping.
  */
 export async function executeBash(
   command: string,
   paths: SandboxPaths,
-  options?: { timeoutMs?: number }
+  options?: {
+    timeoutMs?: number;
+    executor?: SandboxExecutor;
+    conversationId?: string;
+    userId?: string | null;
+  }
 ): Promise<{ content: string; isError?: boolean }> {
+  if (options?.conversationId) {
+    const rateCheck = checkBashRateLimit(options.conversationId, options.userId);
+    if (!rateCheck.allowed) {
+      return {
+        content: rateCheck.message || "Rate limit exceeded for Bash tool calls.",
+        isError: true,
+      };
+    }
+  }
+
   if (!command || !command.trim()) {
     return { content: "Error: Empty command.", isError: true };
   }
 
-  // Disallow obvious host filesystem escapes
-  if (
-    command.includes("/etc/passwd") ||
-    command.includes("/etc/shadow") ||
-    command.includes(".ssh")
-  ) {
-    return { content: "Error: Command rejected due to security policy.", isError: true };
+  const executor = options?.executor ?? getSandboxExecutor();
+  const timeoutMs = options?.timeoutMs ?? COMMAND_TIMEOUT_MS;
+  const start = Date.now();
+
+  const result = await executor.execute(command, paths, { timeoutMs });
+  const durationMs = Date.now() - start;
+
+  if (options?.userId) {
+    recordBashCpuUsage(options.userId, durationMs);
   }
 
-  // Sanitize environment variables: do not expose host secrets, API keys, or database configs
-  const cleanEnv: NodeJS.ProcessEnv = {
-    PATH: process.env["PATH"] || "/usr/bin:/bin:/usr/local/bin",
-    HOME: paths.workspaceDir,
-    LANG: "en_US.UTF-8",
-    PYTHONUNBUFFERED: "1",
-    // Provide python path to find skill scripts if needed
-    PYTHONPATH: `${paths.skillsMountDir}:${paths.workspaceDir}`,
-  };
+  const output = [
+    result.stdout ? result.stdout.trim() : "",
+    result.stderr ? `STDERR:\n${result.stderr.trim()}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-  const timeoutMs = options?.timeoutMs ?? COMMAND_TIMEOUT_MS;
+  if (result.exitCode !== 0 || result.timedOut) {
+    return {
+      content: output || `Command exited with code ${result.exitCode}`,
+      isError: true,
+    };
+  }
 
+  return { content: output || "(Command produced no output)" };
+}
+
+function makeWritableRecursive(targetPath: string): void {
   try {
-    const { stdout, stderr } = await execAsync(command, {
-      cwd: paths.workspaceDir,
-      env: cleanEnv,
-      timeout: timeoutMs,
-      maxBuffer: MAX_OUTPUT_BYTES,
-    });
-
-    const output = [
-      stdout ? stdout.trim() : "",
-      stderr ? `STDERR:\n${stderr.trim()}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    return { content: output || "(Command produced no output)" };
-  } catch (err: any) {
-    if (err.killed || err.signal === "SIGTERM") {
-      return {
-        content: `Error: Command timed out after ${timeoutMs / 1000} seconds.`,
-        isError: true,
-      };
+    const stat = fs.lstatSync(targetPath);
+    if (stat.isSymbolicLink()) {
+      try {
+        fs.unlinkSync(targetPath);
+      } catch {
+        /* ignore */
+      }
+      return;
     }
-    const msg = [
-      err.stdout ? err.stdout.trim() : "",
-      err.stderr ? err.stderr.trim() : "",
-      err.message ? err.message : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    if (stat.isDirectory()) {
+      try {
+        fs.chmodSync(targetPath, 0o777);
+      } catch {
+        /* ignore */
+      }
+      const entries = fs.readdirSync(targetPath);
+      for (const entry of entries) {
+        makeWritableRecursive(path.join(targetPath, entry));
+      }
+    } else {
+      try {
+        fs.chmodSync(targetPath, 0o666);
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
-    return { content: `Command failed:\n${msg}`, isError: true };
+/**
+ * Deletes the sandbox workspace and mounts for a conversation.
+ */
+export function cleanupSandbox(conversationId: string): void {
+  const baseDir = getSandboxBaseDir(conversationId);
+  if (fs.existsSync(baseDir)) {
+    makeWritableRecursive(baseDir);
+    fs.rmSync(baseDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Scans sandboxes and cleans up any that are older than ttlMs.
+ */
+export function cleanupOldSandboxes(ttlMs = 24 * 60 * 60 * 1000): number {
+  const custom = process.env["SANDBOX_BASE_DIR"]?.trim();
+  const root = custom || path.join(os.homedir(), ".local", "share", "openedup", "sandboxes");
+  if (!fs.existsSync(root)) return 0;
+
+  const now = Date.now();
+  let cleanedCount = 0;
+  const entries = fs.readdirSync(root, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const dirPath = path.join(root, entry.name);
+    try {
+      const stat = fs.statSync(dirPath);
+      if (now - stat.mtimeMs > ttlMs) {
+        makeWritableRecursive(dirPath);
+        fs.rmSync(dirPath, { recursive: true, force: true });
+        cleanedCount++;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return cleanedCount;
+}
+
+let janitorInterval: NodeJS.Timeout | null = null;
+
+export function startSandboxJanitor(options?: { ttlMs?: number; intervalMs?: number }): void {
+  if (janitorInterval) return;
+  const ttlMs = options?.ttlMs ?? 24 * 60 * 60 * 1000;
+  const intervalMs = options?.intervalMs ?? 60 * 60 * 1000;
+
+  janitorInterval = setInterval(() => {
+    cleanupOldSandboxes(ttlMs);
+  }, intervalMs);
+  janitorInterval.unref();
+}
+
+export function stopSandboxJanitor(): void {
+  if (janitorInterval) {
+    clearInterval(janitorInterval);
+    janitorInterval = null;
   }
 }
 
@@ -310,13 +416,14 @@ export function executeSendUserFile(
     }
 
     const fileName = path.basename(fullPath);
+    const displayTitle = title?.trim().slice(0, 120) || fileName;
     const destPath = path.join(paths.attachmentsDir, fileName);
     fs.copyFileSync(fullPath, destPath);
 
     const downloadUrl = `/api/conversations/${encodeURIComponent(conversationId)}/files/${encodeURIComponent(fileName)}`;
 
     return {
-      content: `File prepared for user: ${fileName} (${stat.size} bytes). Download URL: ${downloadUrl}`,
+      content: `File prepared for user: ${displayTitle} (${fileName}, ${stat.size} bytes). Download URL: ${downloadUrl}`,
       attachment: {
         downloadUrl,
         fileName,

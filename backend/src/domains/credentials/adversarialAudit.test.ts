@@ -74,9 +74,12 @@ test("ADVERSARIAL AUDIT 1: No BYOK keys in logs, structured logs, stack traces, 
     ["sk-proj", "mocktest1234567890abcdef123456"].join("-"),
     ["sk-ant", "api03", "mocktest1234567890abcdef"].join("-"),
     ["AIza", "MockTest1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6"].join(""),
+    ["xai", "mocktest1234567890abcdef123456"].join("-"),
     ["gsk", "mocktest1234567890abcdefghijklmnopqr"].join("_"),
     ["pplx", "mocktest1234567890abcdefghijklmnop"].join("-"),
     ["sk-or", "v1", "mocktest1234567890abcdefghijklmnopqrstuvwxyz"].join("-"),
+    ["AQ", "MockEnterpriseAccessToken1234567890"].join("."),
+    ["ya29", "MockOAuthAccessToken1234567890"].join("."),
   ];
 
   for (const key of keys) {
@@ -90,10 +93,19 @@ test("ADVERSARIAL AUDIT 1: No BYOK keys in logs, structured logs, stack traces, 
     const urlWithKey = `https://api.journal.local/api/chat?apiKey=${key}&other=123`;
     const cleanUrl = sanitizeLogUrl(urlWithKey);
     assert.ok(!cleanUrl.includes(key), `Expected ${key} to be stripped from URL`);
+    const cleanPromptUrl = sanitizeLogUrl(
+      "/api/chat?prompt=private+customer+question&content=private+answer&question=secret%20question&keep=1"
+    );
+    assert.doesNotMatch(cleanPromptUrl, /private\+customer\+question|private\+answer|secret%20question/);
+    assert.match(cleanPromptUrl, /keep=1/);
 
     // 1.3 Object redaction
     const meta = { auth: key, apiKey: key, nested: { providerKey: key, token: key } };
-    const cleanMeta = redactSecretsObject(meta) as any;
+    const cleanMeta = redactSecretsObject(meta) as {
+      auth: string;
+      apiKey: string;
+      nested: { providerKey: string; token: string };
+    };
     assert.equal(cleanMeta.auth, "[REDACTED]");
     assert.equal(cleanMeta.apiKey, "[REDACTED]");
     assert.equal(cleanMeta.nested.providerKey, "[REDACTED]");
@@ -112,6 +124,19 @@ test("ADVERSARIAL AUDIT 1: No BYOK keys in logs, structured logs, stack traces, 
     assert.equal(responseBody.error, "Internal Server Error");
     assert.ok(!JSON.stringify(responseBody).includes(key));
   }
+});
+
+test("secret redaction covers xAI keys and Google key header and JSON dumps", () => {
+  const xaiKey = "xai-adversarial-secret-token-1234567890";
+  const googleHeaderKey = "google-header-secret-value";
+  const googleJsonKey = "google-json-secret-value";
+  const redacted = redactSecretsString(
+    `xAI=${xaiKey}; x-goog-api-key: ${googleHeaderKey}; {"api_key":"${googleJsonKey}"}`
+  );
+
+  assert.ok(!redacted.includes(xaiKey));
+  assert.ok(!redacted.includes(googleHeaderKey));
+  assert.ok(!redacted.includes(googleJsonKey));
 });
 
 test("ADVERSARIAL AUDIT 2: Malicious inputs cannot reflect API key in error responses", () => {

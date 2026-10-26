@@ -11,7 +11,8 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     logger.warn({
       requestId,
       statusCode: err.statusCode,
-      message: safeAppMessage,
+      errorType: err.name,
+      failureCategory: err.statusCode < 500 ? "client_error" : "server_error",
     });
     res.status(err.statusCode).json({
       error: safeAppMessage,
@@ -21,23 +22,20 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     return;
   }
 
-  const rawMessage = err instanceof Error ? err.message : "Internal Server Error";
-  const rawStack = err instanceof Error ? err.stack : undefined;
-  const safeMessage = redactSecretsString(rawMessage);
-  const safeStack = rawStack ? redactSecretsString(rawStack) : undefined;
+  const statusCode =
+    typeof (err as { status?: number })?.status === "number"
+      ? (err as { status: number }).status
+      : 500;
+  const safeMessage = redactSecretsString(err instanceof Error ? err.message : "Internal Server Error");
 
   logger.error({
     requestId,
     url: sanitizeLogUrl(req.originalUrl || req.url),
     method: req.method,
-    message: safeMessage,
-    stack: safeStack,
+    errorType: err instanceof Error ? err.name : "UnknownError",
+    statusCode,
+    failureCategory: statusCode < 500 ? "client_error" : "server_error",
   });
-
-  const statusCode =
-    typeof (err as { status?: number })?.status === "number"
-      ? (err as { status: number }).status
-      : 500;
 
   // Never return raw 500 errors to client responses to prevent internal or upstream secret leakage
   const clientMessage = statusCode >= 500 ? "Internal Server Error" : safeMessage;

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronsUpDown, Filter, Minus, Plus, SlidersHorizontal } from "lucide-react";
-import { CreatorLogo, getCreatorColor } from "../ui/CreatorLogo";
+import { CreatorLogo } from "../ui/CreatorLogo";
+import { getCreatorColor } from "../ui/creatorBranding";
 import { BENCHMARK_MODELS } from "../data/benchmarkModels";
 import { FrontierIntelligenceOverTimeChart } from "./FrontierIntelligenceOverTimeChart";
 import { CodingAgentIndexesFullChart } from "./CodingAgentIndexesFullChart";
@@ -28,7 +29,7 @@ export interface MetricCardConfig {
 
 // ─── Real Datasets from Artificial Analysis (Matching Official Leaderboards) ──
 
-export const LANGUAGE_MODELS_DATA: {
+const LANGUAGE_MODELS_DATA: {
   intelligence: MetricCardConfig;
   speed: MetricCardConfig;
   cost: MetricCardConfig;
@@ -201,7 +202,7 @@ export const LANGUAGE_MODELS_DATA: {
 
 // ─── Full 26-Model Intelligence Index Dataset (from screenshot) ─────────────
 
-export interface FullIndexModelItem {
+interface FullIndexModelItem {
   name: string;
   creator: string;
   score: number;
@@ -212,7 +213,7 @@ export interface FullIndexModelItem {
   country: "us" | "cn" | "fr" | "ae";
 }
 
-export const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
+const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
   {
     name: "Claude Sonnet\n5.5 (max\nwith fallback)",
     creator: "anthropic",
@@ -704,7 +705,7 @@ export const IntelligenceIndexFullChart: React.FC = () => {
 
 // ─── Task Metrics Datasets (Cost per Task, Time per Task, Tokens per Task) ────
 
-export interface TaskCostModelItem {
+interface TaskCostModelItem {
   name: string;
   creator: string;
   color: string;
@@ -713,7 +714,7 @@ export interface TaskCostModelItem {
   segments: { value: number; label: string; opacity: number }[];
 }
 
-export const TASK_COST_MODELS: TaskCostModelItem[] = [
+const TASK_COST_MODELS: TaskCostModelItem[] = [
   {
     name: "K2 Horizon\n375B A23B",
     creator: "cohere",
@@ -947,14 +948,14 @@ export const TASK_COST_MODELS: TaskCostModelItem[] = [
   },
 ];
 
-export interface TaskTimeModelItem {
+interface TaskTimeModelItem {
   name: string;
   creator: string;
   color: string;
   minutes: number;
 }
 
-export const TASK_TIME_MODELS: TaskTimeModelItem[] = [
+const TASK_TIME_MODELS: TaskTimeModelItem[] = [
   { name: "K2 Horizon\n375B A23B", creator: "cohere", color: "#1E3A8A", minutes: 0.7 },
   { name: "Beam 1.0", creator: "reflection", color: "#14532D", minutes: 1.2 },
   { name: "Nemotron\n3.5 Super VL", creator: "nvidia", color: "#65A30D", minutes: 1.7 },
@@ -990,7 +991,7 @@ export const TASK_TIME_MODELS: TaskTimeModelItem[] = [
   { name: "Qwen 3.6\nMax (0902)", creator: "alibaba", color: "#FF6900", minutes: 35.9 },
 ];
 
-export interface TaskTokensModelItem {
+interface TaskTokensModelItem {
   name: string;
   creator: string;
   color: string;
@@ -1001,7 +1002,7 @@ export interface TaskTokensModelItem {
   noPublicApi?: boolean;
 }
 
-export const TASK_TOKENS_MODELS: TaskTokensModelItem[] = [
+const TASK_TOKENS_MODELS: TaskTokensModelItem[] = [
   {
     name: "Beam 1.0",
     creator: "reflection",
@@ -1776,7 +1777,7 @@ export const CostFullSection: React.FC = () => {
 
 // ─── Context Window Section (after Cost) ─────────────────────────────────────
 
-export interface ContextWindowModelItem {
+interface ContextWindowModelItem {
   name: string;
   creator: string;
   color: string;
@@ -1784,7 +1785,7 @@ export interface ContextWindowModelItem {
   noPublicApi?: boolean;
 }
 
-export const TASK_CONTEXT_MODELS: ContextWindowModelItem[] = [
+const TASK_CONTEXT_MODELS: ContextWindowModelItem[] = [
   { name: "Muse Spark\nOpen (xhigh)", creator: "meta", color: "#0084FF", tokens: 1000000 },
   { name: "Beam 1.0", creator: "reflection", color: "#14532D", tokens: 1000000 },
   { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", tokens: 1000000 },
@@ -2017,7 +2018,7 @@ export const ContextWindowFullSection: React.FC = () => {
 
 // ─── End-to-End Response Time Section ────────────────────────────────────────
 
-export interface ResponseTimeModelItem {
+interface ResponseTimeModelItem {
   name: string;
   creator: string;
   color: string;
@@ -2026,7 +2027,7 @@ export interface ResponseTimeModelItem {
   input: number;
 }
 
-export const TASK_RESPONSE_MODELS: ResponseTimeModelItem[] = [
+const TASK_RESPONSE_MODELS: ResponseTimeModelItem[] = [
   {
     name: "K2 Horizon\n375B A23B",
     creator: "cohere",
@@ -2217,7 +2218,7 @@ export const TASK_RESPONSE_MODELS: ResponseTimeModelItem[] = [
 
 // ─── Response Time by Prompt Type Data ──────────────────────────────────────
 
-export interface PromptTypeModelItem {
+interface PromptTypeModelItem {
   name: string;
   creator: string;
   segments: number[];
@@ -2226,7 +2227,7 @@ export interface PromptTypeModelItem {
 
 const PROMPT_TYPE_FACTORS = [0.3, 0.18, 0.32, 0.2];
 
-export const TASK_PROMPT_MODELS: PromptTypeModelItem[] = TASK_RESPONSE_MODELS.map((m) => {
+const TASK_PROMPT_MODELS: PromptTypeModelItem[] = TASK_RESPONSE_MODELS.map((m) => {
   const stack = m.total * 1.58;
   const segments = PROMPT_TYPE_FACTORS.map((f) => Math.round(stack * f * 10) / 10);
   return {
@@ -2239,7 +2240,7 @@ export const TASK_PROMPT_MODELS: PromptTypeModelItem[] = TASK_RESPONSE_MODELS.ma
 
 // ─── Response Time Over Time Data ───────────────────────────────────────────
 
-export const RESPONSE_TIME_OVER_TIME = TASK_RESPONSE_MODELS.map((m, idx) => ({
+const RESPONSE_TIME_OVER_TIME = TASK_RESPONSE_MODELS.map((m, idx) => ({
   name: m.name,
   creator: m.creator,
   color: m.color,

@@ -2,6 +2,8 @@ import { fetchProvider } from "../../chat/providers/llm.service.js";
 import { redactSecretsString } from "../../../platform/observability/logger.js";
 import { SKILL_TOOL_DEFINITION, handleSkillToolCall, type SkillToolResult } from "./skillToolHandler.js";
 import { SkillRepository } from "../repositories/skillRepository.js";
+import { readSkillFileFromDisk } from "./skillStorage.js";
+import { parseSkillMd } from "./skillParser.js";
 
 export const MAX_TOOL_ITERATIONS = 20;
 
@@ -16,15 +18,16 @@ export interface AnthropicToolLoopOptions {
   apiKey: string;
   baseUrl: string;
   model: string;
-  messages: Array<{ role: "user" | "assistant"; content: any }>;
+  messages: Array<{ role: "user" | "assistant"; content: unknown }>;
   systemInstruction: string;
   conversationId: string;
   userId?: string | null;
-  tools?: any[];
+  tools?: unknown[];
   maxTokens?: number;
   maxIterations?: number;
   repo?: SkillRepository;
   signal?: AbortSignal;
+  fetchFn?: (url: string, init: RequestInit) => Promise<Response>;
   executeCustomTool?: (
     name: string,
     input: Record<string, unknown>
@@ -59,6 +62,55 @@ export async function runAnthropicToolLoop(
   let finalText = "";
   let lastStopReason = "end_turn";
 
+  // Force-load explicitly selected skills once into context as synthetic tool_use/tool_result pair
+  const unpreloadedExplicitSkills = repo.getUnpreloadedExplicitSkills(options.conversationId);
+  for (const skill of unpreloadedExplicitSkills) {
+    let body = "";
+    if (skill.storagePath) {
+      const fileData = readSkillFileFromDisk(skill.storagePath, "SKILL.md");
+      if (fileData) {
+        body = parseSkillMd(fileData).body;
+      }
+    }
+    if (!body) {
+      body = skill.description;
+    }
+
+    const syntheticToolId = `synthetic-skill-${skill.name}-${Date.now()}`;
+    conversationHistory.push({
+      role: "assistant",
+      content: [
+        {
+          type: "tool_use",
+          id: syntheticToolId,
+          name: "Skill",
+          input: { skill: skill.name },
+        },
+      ],
+    });
+    conversationHistory.push({
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: syntheticToolId,
+          content: body,
+        },
+      ],
+    });
+
+    toolTraces.push({
+      toolName: "Skill",
+      input: { skill: skill.name, explicitlySelected: true },
+      output: body,
+      isError: false,
+    });
+    repo.logUsage(options.conversationId, skill.name, options.userId ?? null);
+    repo.markSkillPreloaded(options.conversationId, skill.id);
+  }
+
+  const fetchImpl = options.fetchFn ?? fetchProvider;
+
   while (iteration < maxIterations) {
     iteration++;
 
@@ -70,7 +122,7 @@ export async function runAnthropicToolLoop(
       tools,
     };
 
-    const response = await fetchProvider(endpoint, {
+    const response = await fetchImpl(endpoint, {
       method: "POST",
       ...(options.signal ? { signal: options.signal } : {}),
       headers: {
@@ -137,16 +189,38 @@ export async function runAnthropicToolLoop(
       const toolName = block.name || "";
       const toolInput = block.input || {};
 
+      const toolStartTime = Date.now();
       let result: SkillToolResult;
 
+      const skillName =
+        toolName === "Skill"
+          ? String(toolInput["skill"] || "unknown")
+          : String(toolInput["skill"] || toolName);
+
       if (toolName === "Skill") {
-        const skillName = String(toolInput["skill"] || "");
         result = handleSkillToolCall(skillName, options.conversationId, options.userId, repo);
       } else if (options.executeCustomTool) {
         result = await options.executeCustomTool(toolName, toolInput);
       } else {
         result = { content: `Error: Unknown tool '${toolName}'.`, isError: true };
       }
+
+      const durationMs = Date.now() - toolStartTime;
+      const outcome: "success" | "error" = result.isError ? "error" : "success";
+
+      // Structured logging for every Skill/Bash/Read/Write call
+      console.log(
+        JSON.stringify({
+          level: "info",
+          type: "structured_tool_log",
+          conversationId: options.conversationId,
+          skill: skillName,
+          toolName,
+          durationMs,
+          outcome,
+          timestamp: Date.now(),
+        })
+      );
 
       toolTraces.push({
         toolName,

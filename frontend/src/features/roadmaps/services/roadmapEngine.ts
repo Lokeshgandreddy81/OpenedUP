@@ -1,7 +1,8 @@
 import dagre from "@dagrejs/dagre";
 import { MarkerType, Position, type Node, type Edge } from "@xyflow/react";
 import type { ComputedRow } from "@charan-interiors/contracts";
-import { formatDisplayTitle, stripChapterNumberPrefix } from "../../chapters";
+import { stripChapterNumberPrefix } from "@charan-interiors/contracts";
+import { formatDisplayTitle } from "../../chapters/services/engine";
 
 export type NodeStatus = "todo" | "in_progress" | "completed";
 export type NodeDifficulty = "Beginner" | "Intermediate" | "Advanced";

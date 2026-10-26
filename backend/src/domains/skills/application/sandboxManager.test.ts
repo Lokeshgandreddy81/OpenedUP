@@ -33,7 +33,9 @@ function createTestSandbox() {
     cleanup: () => {
       try {
         fs.rmSync(tmpDir, { recursive: true, force: true });
-      } catch {}
+      } catch {
+        /* ignore */
+      }
     },
   };
 }

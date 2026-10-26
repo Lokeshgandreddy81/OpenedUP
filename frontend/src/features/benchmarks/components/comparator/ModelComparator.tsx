@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Plus, X, Zap, Clock, Check, Trophy, ChevronDown, Search } from "lucide-react";
 import { AIModelBenchmark } from "../types";
-import { CreatorLogo, getCreatorColor } from "../ui/CreatorLogo";
+import { CreatorLogo } from "../ui/CreatorLogo";
+import { getCreatorColor } from "../ui/creatorBranding";
 
 export interface ModelComparatorProps {
   models: AIModelBenchmark[];
@@ -68,15 +69,27 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
   // Synchronize when incoming initialModelIds changes dynamically
   useEffect(() => {
     if (!initialModelIds) return;
-    setSelectedModels((prev) => {
-      const next = [...prev];
-      initialModelIds.slice(0, 5).forEach((id, i) => {
-        const found = models.find((m) => m.id === id);
-        if (found) next[i] = found;
-      });
-      return next;
-    });
-  }, [initialModelIds, models]);
+    const next: AIModelBenchmark[] = [];
+    const seenIds = new Set<string>();
+    for (const id of initialModelIds.slice(0, 5)) {
+      const found = models.find((model) => model.id === id);
+      if (found && !seenIds.has(found.id)) {
+        next.push(found);
+        seenIds.add(found.id);
+      }
+    }
+
+    // The parent owns the requested selection. Rebuild it instead of merging it
+    // into the old list, so shortened selections cannot leave stale models behind.
+    for (const fallback of [defaultModelA, defaultModelB, ...models]) {
+      if (next.length >= 2) break;
+      if (fallback && !seenIds.has(fallback.id)) {
+        next.push(fallback);
+        seenIds.add(fallback.id);
+      }
+    }
+    setSelectedModels(next);
+  }, [defaultModelA, defaultModelB, initialModelIds, models]);
 
   const MAX_MODELS = 5;
   const canAddModel = selectedModels.length < MAX_MODELS;
@@ -152,7 +165,21 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
   const [pickerSort, setPickerSort] = useState<"index" | "price" | "speed">("index");
   const [isSortOpen, setIsSortOpen] = useState(false);
 
-  // Legacy compat: keep activeModels for chart sections below
+  useEffect(() => {
+    if (!isPickerOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsPickerOpen(false);
+        setIsSortOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPickerOpen]);
+
+  // Keep every selected model paired with its matrix slot for rendering and winner checks.
   const activeModels = useMemo(() => {
     return selectedModels.map((model, i) => ({
       slot: SLOT_LABELS[i] as SlotKey,
@@ -160,7 +187,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
     }));
   }, [selectedModels]);
 
-  // Legacy compat for calculateWinner
+  // The first three models also feed the comparison matrix columns.
   const modelA = selectedModels[0];
   const modelB = selectedModels[1];
   const modelC = selectedModels[2] ?? null;
@@ -190,28 +217,16 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
   }, [models, pickerSearchQuery, pickerSort]);
 
   // Winner comparison calculation helper
-  const calculateWinner = (
-    valA: number,
-    valB: number,
-    valC: number | undefined,
-    direction: "higher" | "lower"
-  ) => {
-    const values = [
-      { slot: "A", val: valA },
-      { slot: "B", val: valB },
-    ];
-    if (valC !== undefined) {
-      values.push({ slot: "C", val: valC });
-    }
+  const calculateWinner = (values: { slot: SlotKey; val: number }[], direction: "higher" | "lower") => {
+    const sortedValues = [...values].sort((a, b) =>
+      direction === "higher" ? b.val - a.val : a.val - b.val
+    );
 
-    if (direction === "higher") {
-      values.sort((a, b) => b.val - a.val);
-    } else {
-      values.sort((a, b) => a.val - b.val);
+    const winner = sortedValues[0];
+    const runnerUp = sortedValues[1];
+    if (!winner || !runnerUp) {
+      return { winnerSlot: winner?.slot, winnerVal: winner?.val ?? 0, deltaLabel: "", isTie: true };
     }
-
-    const winner = values[0];
-    const runnerUp = values[1];
 
     let deltaLabel = "";
     if (runnerUp.val !== 0) {
@@ -359,6 +374,10 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
           />
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={pickerAddMode ? "Add a model to compare" : "Change model"}
+              data-benchmark-modal="open"
               className="pointer-events-auto w-[94vw] sm:w-[80vw] md:w-[70vw] h-[85vh] sm:h-[75vh] max-w-[720px] max-h-[85vh] rounded-3xl border border-transparent bg-white shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
               onClick={(e) => e.stopPropagation()}
             >
@@ -564,9 +583,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: Artificial Analysis Intelligence Index */}
             {(() => {
               const res = calculateWinner(
-                modelA.quality.intelligenceIndex,
-                modelB.quality.intelligenceIndex,
-                modelC?.quality.intelligenceIndex,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.quality.intelligenceIndex })),
                 "higher"
               );
               return (
@@ -603,9 +620,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: MMLU-Pro */}
             {(() => {
               const res = calculateWinner(
-                modelA.quality.mmluPro,
-                modelB.quality.mmluPro,
-                modelC?.quality.mmluPro,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.quality.mmluPro })),
                 "higher"
               );
               return (
@@ -641,9 +656,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: GPQA Diamond */}
             {(() => {
               const res = calculateWinner(
-                modelA.quality.gpqaDiamond,
-                modelB.quality.gpqaDiamond,
-                modelC?.quality.gpqaDiamond,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.quality.gpqaDiamond })),
                 "higher"
               );
               return (
@@ -679,9 +692,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: SWE-bench Verified */}
             {(() => {
               const res = calculateWinner(
-                modelA.quality.sweBenchVerified,
-                modelB.quality.sweBenchVerified,
-                modelC?.quality.sweBenchVerified,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.quality.sweBenchVerified })),
                 "higher"
               );
               return (
@@ -717,9 +728,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: MATH-500 */}
             {(() => {
               const res = calculateWinner(
-                modelA.quality.math500,
-                modelB.quality.math500,
-                modelC?.quality.math500,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.quality.math500 })),
                 "higher"
               );
               return (
@@ -786,9 +795,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: Output Speed (Median) */}
             {(() => {
               const res = calculateWinner(
-                modelA.performance.outputSpeedTokensPerSec.median,
-                modelB.performance.outputSpeedTokensPerSec.median,
-                modelC?.performance.outputSpeedTokensPerSec.median,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.performance.outputSpeedTokensPerSec.median })),
                 "higher"
               );
               return (
@@ -827,9 +834,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: TTFT Latency (seconds) */}
             {(() => {
               const res = calculateWinner(
-                modelA.performance.ttftSeconds.median,
-                modelB.performance.ttftSeconds.median,
-                modelC?.performance.ttftSeconds.median,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.performance.ttftSeconds.median })),
                 "lower"
               );
               return (
@@ -866,9 +871,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: 500-Token End-to-End Latency */}
             {(() => {
               const res = calculateWinner(
-                modelA.performance.endToEnd500TokensSec,
-                modelB.performance.endToEnd500TokensSec,
-                modelC?.performance.endToEnd500TokensSec,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.performance.endToEnd500TokensSec })),
                 "lower"
               );
               return (
@@ -935,9 +938,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: Blended Price per 1M */}
             {(() => {
               const res = calculateWinner(
-                modelA.pricing.blendedPricePer1M,
-                modelB.pricing.blendedPricePer1M,
-                modelC?.pricing.blendedPricePer1M,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.pricing.blendedPricePer1M })),
                 "lower"
               );
               return (
@@ -973,9 +974,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: Input Token Price */}
             {(() => {
               const res = calculateWinner(
-                modelA.pricing.inputPricePer1M,
-                modelB.pricing.inputPricePer1M,
-                modelC?.pricing.inputPricePer1M,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.pricing.inputPricePer1M })),
                 "lower"
               );
               return (
@@ -1006,9 +1005,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: Output Token Price */}
             {(() => {
               const res = calculateWinner(
-                modelA.pricing.outputPricePer1M,
-                modelB.pricing.outputPricePer1M,
-                modelC?.pricing.outputPricePer1M,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.pricing.outputPricePer1M })),
                 "lower"
               );
               return (
@@ -1048,9 +1045,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
             {/* Row: Context Window */}
             {(() => {
               const res = calculateWinner(
-                modelA.contextWindowTokens,
-                modelB.contextWindowTokens,
-                modelC?.contextWindowTokens,
+                activeModels.map(({ slot, model }) => ({ slot, val: model.contextWindowTokens })),
                 "higher"
               );
               return (

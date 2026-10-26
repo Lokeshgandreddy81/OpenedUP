@@ -3,6 +3,7 @@ import path from "node:path";
 import { SkillRepository } from "../repositories/skillRepository.js";
 import { parseSkillMd } from "./skillParser.js";
 import { readSkillFileFromDisk } from "./skillStorage.js";
+import { checkSkillToolRateLimit } from "./rateLimits.js";
 
 export const SKILL_TOOL_DEFINITION = {
   name: "Skill",
@@ -22,7 +23,7 @@ export const SKILL_TOOL_DEFINITION = {
 
 export interface SkillToolResult {
   content: string;
-  isError: boolean;
+  isError?: boolean;
 }
 
 /**
@@ -36,6 +37,16 @@ export function handleSkillToolCall(
   userId?: string | null,
   repo: SkillRepository = new SkillRepository()
 ): SkillToolResult {
+  const rateLimitStatus = checkSkillToolRateLimit(conversationId);
+  if (!rateLimitStatus.allowed) {
+    return {
+      content:
+        rateLimitStatus.message ||
+        "Rate limit exceeded for Skill tool calls. Please wait before trying again.",
+      isError: true,
+    };
+  }
+
   if (!skillName || typeof skillName !== "string" || !skillName.trim()) {
     return { content: "Error: No skill name provided.", isError: true };
   }

@@ -64,6 +64,7 @@ export type AiModelId =
   | "gpt-6-luna"
   | "custom-model"
   | "gemini-3.8-flash"
+  | "gemini-3.5-flash-lite"
   | (string & {});
 
 export type EffortLevel = "Low" | "Medium" | "High" | "Extra" | "Max";

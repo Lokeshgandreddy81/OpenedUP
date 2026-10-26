@@ -42,18 +42,26 @@ export function createApp(): Express {
   app.use(healthRouter);
 
   // API domain routes
-  app.use("/api/scheduled-tasks", scheduledTaskRouter);
   app.use("/api", attachOptionalFirebaseUser);
   app.use("/api", authRouter);
   app.use("/api", analyticsRouter);
   app.use("/api", pdfRouter);
   app.use("/api", chatRouter);
   app.use("/api", benchmarksRouter);
+  if (process.env["NODE_ENV"] === "production") {
+    app.use("/api", requireFirebaseUser, skillRouter);
+  } else {
+    app.use("/api", skillRouter);
+  }
+  if (process.env["NODE_ENV"] === "production") {
+    app.use("/api/scheduled-tasks", requireFirebaseUser, scheduledTaskRouter);
+  } else {
+    app.use("/api/scheduled-tasks", scheduledTaskRouter);
+  }
   app.use("/api/conversations", requireFirebaseUser, conversationRouter);
   app.use("/api/artifacts", requireFirebaseUser, artifactRouter);
   app.use("/api/credentials", requireFirebaseUser, credentialRouter);
   app.use("/api/projects", requireFirebaseUser, projectRouter);
-  app.use("/api", skillRouter);
 
   // Serve built frontend (if present) for production/E2E
   const __dirname = path.dirname(fileURLToPath(import.meta.url));

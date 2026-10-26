@@ -1,4 +1,13 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -19,10 +28,6 @@ import {
   Tag,
 } from "lucide-react";
 import { ErrorBoundary } from "../../../app/components/ErrorBoundary";
-import { RoadmapCanvas } from "../../roadmaps";
-import { ChatWindow } from "../../chat";
-import { BenchmarksView } from "../../benchmarks";
-import { ScheduledTasksView } from "../../scheduled";
 import type {
   ComputedRow,
   FailedBatchInfo,
@@ -51,10 +56,22 @@ import {
   CustomScrollList,
   RisingWord,
   RollingNumber,
-  usePrefersReducedMotion,
 } from "../../../app/components/MotionPrimitives";
+import { usePrefersReducedMotion } from "../../../app/hooks/usePrefersReducedMotion";
 import { ProofPanel } from "./ProofPanel";
 import { COST_CENTER_OPTIONS } from "./WorkspaceSyncModal";
+import { getChatModels, modelSupportsInput, PROVIDER_CATALOG } from "@charan-interiors/contracts";
+
+const LazyRoadmapCanvas = lazy(() =>
+  import("../../roadmaps").then((feature) => ({ default: feature.RoadmapCanvas }))
+);
+const LazyChatWindow = lazy(() => import("../../chat").then((feature) => ({ default: feature.ChatWindow })));
+const LazyBenchmarksView = lazy(() =>
+  import("../../benchmarks").then((feature) => ({ default: feature.BenchmarksView }))
+);
+const LazyScheduledTasksView = lazy(() =>
+  import("../../scheduled").then((feature) => ({ default: feature.ScheduledTasksView }))
+);
 
 interface ResultsViewProps {
   photos: UploadedPhoto[];
@@ -63,6 +80,9 @@ interface ResultsViewProps {
   reconciliation: ReconciliationResult;
   readingPhase?: ReadingPhase;
   failedBatches?: FailedBatchInfo[];
+  receiptModel: string;
+  onReceiptModelChange: (model: string) => void;
+  duplicateReviewError: string | null;
   onRetryFailedBatches?: () => void;
   onUpdateRow: (rowNumber: number, updater: (prev: ReceiptRow) => ReceiptRow) => void;
   onChangeCostCenter?: (rowId: string, newCostCenter: string) => void;
@@ -78,6 +98,9 @@ export type SidebarTab = "chapters" | "roadmap" | "chat" | "benchmarks";
 const CATEGORIES: ReceiptCategory[] = ["Meals", "Travel", "Lodging", "Office", "Other"];
 
 const FLAG_CHECK_TILE_ID = "__flagged_to_check__";
+const DUPLICATE_REVIEW_MODELS = getChatModels().filter(
+  (model) => model.catalogStatus === "verified" && modelSupportsInput(model.id, "image")
+);
 
 // Share of the stage width the open-tile sidebar occupies on desktop
 const SIDEBAR_WIDTH_PERCENT = 12.65;
@@ -196,6 +219,9 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   reconciliation,
   readingPhase = "idle",
   failedBatches = [],
+  receiptModel,
+  onReceiptModelChange,
+  duplicateReviewError,
   onRetryFailedBatches,
   onUpdateRow,
   onChangeCostCenter,
@@ -1437,78 +1463,78 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                   /* Minimalist Sidebar Header styled exactly like screenshot */
                   <>
                     <div className="shrink-0 mb-3 flex items-center justify-between px-1 pt-1 pb-1 select-none">
-                    <div className="flex min-w-0 items-center gap-1">
-                      {!isEmbedded && (
+                      <div className="flex min-w-0 items-center gap-1">
+                        {!isEmbedded && (
+                          <button
+                            type="button"
+                            onClick={handleBackToChat}
+                            title="Back to chat"
+                            aria-label="Back to chat"
+                            className="w-7 h-7 -ml-1 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer shrink-0"
+                          >
+                            <ArrowLeft size={16} strokeWidth={2} aria-hidden={true} />
+                          </button>
+                        )}
+                        <span className="shrink-0 text-[15px] font-semibold tracking-tight text-slate-900">
+                          Chapters
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-0.5">
                         <button
                           type="button"
-                          onClick={handleBackToChat}
-                          title="Back to chat"
-                          aria-label="Back to chat"
-                          className="w-7 h-7 -ml-1 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer shrink-0"
+                          onClick={() => addFilesInputRef.current?.click()}
+                          title="Add PDF"
+                          aria-label="Add PDF"
+                          className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer"
                         >
-                          <ArrowLeft size={16} strokeWidth={2} aria-hidden={true} />
+                          <Plus size={17} strokeWidth={2} aria-hidden={true} />
                         </button>
-                      )}
-                      <span className="shrink-0 text-[15px] font-semibold tracking-tight text-slate-900">
-                        Chapters
-                      </span>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <button
-                        type="button"
-                        onClick={() => addFilesInputRef.current?.click()}
-                        title="Add PDF"
-                        aria-label="Add PDF"
-                        className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer"
-                      >
-                        <Plus size={17} strokeWidth={2} aria-hidden={true} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsOutlineSearchOpen((prev) => {
-                            const next = !prev;
-                            if (next) {
-                              setTimeout(() => outlineSearchInputRef.current?.focus(), 40);
-                            } else {
-                              setOutlineSearchQuery("");
-                            }
-                            return next;
-                          });
-                        }}
-                        title={isOutlineSearchOpen ? "Close search" : "Search outline"}
-                        aria-label="Search outline"
-                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
-                          isOutlineSearchOpen || outlineSearchQuery.trim()
-                            ? "bg-[#ECECF1] text-slate-900"
-                            : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"
-                        }`}
-                      >
-                        <Search size={17} strokeWidth={1.8} aria-hidden={true} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCloseSidebar}
-                        title="Close sidebar"
-                        aria-label="Close sidebar"
-                        className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer"
-                      >
-                        <PanelLeft size={18} strokeWidth={1.8} aria-hidden={true} />
-                      </button>
-                    </div>
-                  </div>
-                  {readingPhase !== "idle" && (
-                    <div className="w-full px-1 mb-2 shrink-0 animate-in fade-in duration-150">
-                      <div className="flex items-center justify-between text-[11px] font-medium text-slate-500 mb-1">
-                        <span className="animate-pulse">Parsing chapters…</span>
-                      </div>
-                      <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#0047FF] rounded-full animate-sweep" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOutlineSearchOpen((prev) => {
+                              const next = !prev;
+                              if (next) {
+                                setTimeout(() => outlineSearchInputRef.current?.focus(), 40);
+                              } else {
+                                setOutlineSearchQuery("");
+                              }
+                              return next;
+                            });
+                          }}
+                          title={isOutlineSearchOpen ? "Close search" : "Search outline"}
+                          aria-label="Search outline"
+                          className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+                            isOutlineSearchOpen || outlineSearchQuery.trim()
+                              ? "bg-[#ECECF1] text-slate-900"
+                              : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"
+                          }`}
+                        >
+                          <Search size={17} strokeWidth={1.8} aria-hidden={true} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCloseSidebar}
+                          title="Close sidebar"
+                          aria-label="Close sidebar"
+                          className="w-7 h-7 rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 transition-colors cursor-pointer"
+                        >
+                          <PanelLeft size={18} strokeWidth={1.8} aria-hidden={true} />
+                        </button>
                       </div>
                     </div>
-                  )}
-                </>
-              ) : (
+                    {readingPhase !== "idle" && (
+                      <div className="w-full px-1 mb-2 shrink-0 animate-in fade-in duration-150">
+                        <div className="flex items-center justify-between text-[11px] font-medium text-slate-500 mb-1">
+                          <span className="animate-pulse">Parsing chapters…</span>
+                        </div>
+                        <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#0047FF] rounded-full animate-sweep" />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
                   /* Legacy Receipt Audit Mode Header */
                   <>
                     <div className="mb-2 flex flex-col gap-1.5 shrink-0">
@@ -1881,7 +1907,9 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                     <div className="py-6 text-[17px] text-white/80">
                       {activeOpenTile.id === FLAG_CHECK_TILE_ID
                         ? "All flagged receipts have been checked ✓"
-                        : "No receipts in this view."}
+                        : isPdfDocument
+                          ? "No chapters in this view."
+                          : "No receipts in this view."}
                     </div>
                   ) : isPdfDocument && documentSections.length > 1 ? (
                     filteredDocumentSections.length === 0 ? (
@@ -2057,21 +2085,23 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
             </div>
           )}
           {isPdfDocument && activeNavTab === "roadmap" ? (
-            <RoadmapCanvas
-              isOpen={true}
-              onClose={() => {
-                setActiveNavTab("chapters");
-              }}
-              chapters={computedRows}
-              selectedRow={selectedProofRow}
-              onSelectChapter={(rowNum) => {
-                setSelectedProofRow(rowNum);
-                setProofPhase("active");
-                setActiveNavTab("chapters");
-              }}
-              docTitle={sidebarTitle}
-              mode="docked"
-            />
+            <Suspense fallback={null}>
+              <LazyRoadmapCanvas
+                isOpen={true}
+                onClose={() => {
+                  setActiveNavTab("chapters");
+                }}
+                chapters={computedRows}
+                selectedRow={selectedProofRow}
+                onSelectChapter={(rowNum) => {
+                  setSelectedProofRow(rowNum);
+                  setProofPhase("active");
+                  setActiveNavTab("chapters");
+                }}
+                docTitle={sidebarTitle}
+                mode="docked"
+              />
+            </Suspense>
           ) : (proofPhase === "entering" || proofPhase === "active" || proofPhase === "exiting") &&
             activeProofRowObj ? (
             <ErrorBoundary
@@ -2351,6 +2381,27 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center justify-between md:justify-end gap-4 lg:gap-6 shrink-0 text-[14px] lg:text-[15.5px] pb-0.5">
+              <label className="flex items-center gap-2 text-[12px] lg:text-[13px] text-slate-700">
+                <span className="whitespace-nowrap">Receipt model</span>
+                <select
+                  aria-label="Receipt model"
+                  value={receiptModel}
+                  disabled={readingPhase !== "idle"}
+                  onChange={(event) => onReceiptModelChange(event.target.value)}
+                  className="max-w-[190px] rounded border border-slate-300 bg-white px-2 py-1 text-slate-800 disabled:opacity-60"
+                >
+                  {DUPLICATE_REVIEW_MODELS.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {`${model.name} (${PROVIDER_CATALOG[model.provider].name})`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {duplicateReviewError && (
+                <span role="alert" className="max-w-[260px] text-[11px] leading-tight text-red-700">
+                  Duplicate review unavailable: {duplicateReviewError}
+                </span>
+              )}
               {onAddFiles && (
                 <button
                   type="button"
@@ -2392,7 +2443,8 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
 
       {/* AI Assistant Chat Feature Screen */}
       {isChatOpen && (
-        <ChatWindow
+        <Suspense fallback={null}>
+        <LazyChatWindow
           isOpen={isChatOpen}
           initialView={chatInitialView}
           initialCustomizeCategory="Providers"
@@ -2418,22 +2470,26 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
           docTitle={sidebarTitle}
           onOpenScheduledTasks={() => setIsScheduledTasksOpen(true)}
         />
+        </Suspense>
       )}
 
       {/* AI Benchmarks Feature Screen (Inspired by artificialanalysis.ai) */}
       {isBenchmarksOpen && (
-        <BenchmarksView
+        <Suspense fallback={null}>
+        <LazyBenchmarksView
           isOpen={isBenchmarksOpen}
           onClose={() => {
             setIsBenchmarksOpen(false);
             setActiveNavTab("chapters");
           }}
         />
+        </Suspense>
       )}
 
       {/* Scheduled Tasks Screen (ChatGPT Scheduled Tasks Design) */}
       {isScheduledTasksOpen && (
-        <ScheduledTasksView
+        <Suspense fallback={null}>
+        <LazyScheduledTasksView
           isOpen={isScheduledTasksOpen}
           onNavigateToProviders={() => {
             setIsScheduledTasksOpen(false);
@@ -2450,6 +2506,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
             setIsChatOpen(true);
           }}
         />
+        </Suspense>
       )}
     </div>
   );

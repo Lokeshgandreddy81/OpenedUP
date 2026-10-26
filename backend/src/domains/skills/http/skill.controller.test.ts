@@ -12,15 +12,24 @@ import {
   updateSkill,
   deleteSkill,
   setConversationSkills,
-  getConversationSkills,
-  setProjectSkills,
-  getProjectSkills,
   setSkillRepository,
 } from "./skill.controller.js";
 
+interface TestResponseBody {
+  error: string;
+  skills: Array<{ id: string; name: string }>;
+  skill: {
+    id: string;
+    name: string;
+    version: number;
+    ownerId: string;
+    files: Array<{ relativePath: string }>;
+  };
+}
+
 function mockRes() {
   let statusCode = 200;
-  let body: any = null;
+  let body = {} as TestResponseBody;
   const headers: Record<string, string> = {};
 
   const res: Partial<Response> = {
@@ -28,7 +37,7 @@ function mockRes() {
       statusCode = code;
       return res as Response;
     },
-    json(data: any) {
+    json(data: TestResponseBody) {
       body = data;
       return res as Response;
     },
@@ -79,8 +88,8 @@ test("Skill Registry API - listSkills returns seeded builtin skills and filters"
   assert.equal(getStatus(), 200);
   const skills = getBody().skills;
   assert.ok(Array.isArray(skills));
-  assert.ok(skills.some((s: any) => s.name === "hello-format"));
-  assert.ok(skills.some((s: any) => s.name === "csv-summary"));
+  assert.ok(skills.some((skill) => skill.name === "hello-format"));
+  assert.ok(skills.some((skill) => skill.name === "csv-summary"));
 
   // Query filter
   const { res: resQuery, getBody: getQueryBody } = mockRes();
@@ -93,7 +102,7 @@ test("Skill Registry API - listSkills returns seeded builtin skills and filters"
   listSkills(reqQuery, resQuery);
   const filtered = getQueryBody().skills;
   assert.equal(filtered.length, 1);
-  assert.equal(filtered[0].name, "csv-summary");
+  assert.equal(filtered[0]!.name, "csv-summary");
 });
 
 test("Skill Registry API - getSkill returns metadata with file tree", () => {
@@ -117,8 +126,8 @@ test("Skill Registry API - getSkill returns metadata with file tree", () => {
   const skill = getBody().skill;
   assert.equal(skill.name, "csv-summary");
   assert.ok(Array.isArray(skill.files));
-  assert.ok(skill.files.some((f: any) => f.relativePath === "SKILL.md"));
-  assert.ok(skill.files.some((f: any) => f.relativePath === "scripts/summarize.py"));
+  assert.ok(skill.files.some((file) => file.relativePath === "SKILL.md"));
+  assert.ok(skill.files.some((file) => file.relativePath === "scripts/summarize.py"));
 });
 
 test("Skill Registry API - createSkill, updateSkill (versioning), deleteSkill with permissions", async () => {
@@ -236,5 +245,5 @@ test("Skill Registry API - Conversation skills permissions guard (cannot enable 
   setConversationSkills(reqAlice, resAlice);
   assert.equal(getAliceStatus(), 200);
   assert.equal(getAliceBody().skills.length, 1);
-  assert.equal(getAliceBody().skills[0].name, "alice-secret");
+  assert.equal(getAliceBody().skills[0]!.name, "alice-secret");
 });

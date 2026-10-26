@@ -46,6 +46,57 @@ test("SkillRepository - Schema & Migrations: creates skills and enforces uniquen
   assert.notEqual(userSkill.id, skill1.id);
 });
 
+test("Directory listing prefers the marketplace copy over a legacy built-in duplicate", () => {
+  const db = setupTestDb();
+  const repo = new SkillRepository(db);
+  repo.create({
+    name: "duplicate-marketplace-skill",
+    description: "Legacy built-in copy",
+    scope: "builtin",
+    storagePath: "/skills/builtin/duplicate-marketplace-skill",
+  });
+  const directoryCopy = repo.create({
+    name: "duplicate-marketplace-skill",
+    description: "Marketplace copy",
+    scope: "directory",
+    storagePath: "/skills/directory/duplicate-marketplace-skill",
+  });
+
+  const listed = repo.listDirectorySkills();
+
+  assert.equal(
+    listed.filter((skill) => skill.name === "duplicate-marketplace-skill").length,
+    1
+  );
+  assert.equal(
+    listed.find((skill) => skill.name === "duplicate-marketplace-skill")?.id,
+    directoryCopy.id
+  );
+});
+
+test("Visible library listing hides a legacy built-in when its marketplace copy exists", () => {
+  const db = setupTestDb();
+  const repo = new SkillRepository(db);
+  repo.create({
+    name: "visible-marketplace-skill",
+    description: "Legacy built-in copy",
+    scope: "builtin",
+    storagePath: "/skills/builtin/visible-marketplace-skill",
+  });
+  const directoryCopy = repo.create({
+    name: "visible-marketplace-skill",
+    description: "Marketplace copy",
+    scope: "directory",
+    storagePath: "/skills/directory/visible-marketplace-skill",
+  });
+
+  const listed = repo.listVisible("guest");
+  const matchingSkills = listed.filter((skill) => skill.name === "visible-marketplace-skill");
+
+  assert.equal(matchingSkills.length, 1);
+  assert.equal(matchingSkills[0]?.id, directoryCopy.id);
+});
+
 test("SkillRepository - Skill Files and cascading deletes", () => {
   const db = setupTestDb();
   const repo = new SkillRepository(db);

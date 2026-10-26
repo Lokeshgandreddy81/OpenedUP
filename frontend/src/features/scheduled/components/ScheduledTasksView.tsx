@@ -422,6 +422,37 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     }
   }, [selectedTaskId, fetchTaskRuns]);
 
+  // Keep scheduled execution results current while the page stays open.
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    let timeoutId: number | undefined;
+
+    const refreshScheduledData = async () => {
+      try {
+        const [latestTasks, latestRuns] = await Promise.all([
+          listScheduledTasks(),
+          selectedTaskId ? listScheduledTaskRuns(selectedTaskId) : Promise.resolve(null),
+        ]);
+        if (!active) return;
+        setTasks(latestTasks);
+        if (latestRuns) setRunsForSelectedTask(latestRuns);
+      } catch {
+        // A transient polling failure should not interrupt the schedule view.
+      }
+
+      if (active) {
+        timeoutId = window.setTimeout(() => void refreshScheduledData(), 5_000);
+      }
+    };
+
+    timeoutId = window.setTimeout(() => void refreshScheduledData(), 5_000);
+    return () => {
+      active = false;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, [isOpen, selectedTaskId]);
+
   // Filtered upcoming tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
@@ -1404,10 +1435,10 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   key={tmpl.id}
                   type="button"
                   onClick={() => handleOpenFromTemplate(tmpl)}
-                  className="group relative rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md p-4.5 flex items-start gap-3.5 text-left transition-all duration-200 cursor-pointer active:scale-[0.99]"
+                  className="group relative rounded-2xl border border-slate-200/80 bg-white p-4.5 flex items-start gap-3.5 text-left transition-[background-color,border-color,box-shadow,transform] duration-150 cursor-pointer hover:translate-y-px hover:border-slate-300 hover:bg-slate-50/70 hover:shadow-[inset_0_2px_5px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400 active:translate-y-px active:scale-[0.99] active:shadow-[inset_0_2px_6px_rgba(15,23,42,0.12)]"
                 >
                   {/* Icon */}
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 group-hover:bg-slate-200/70 text-2xl group-hover:scale-105 transition-all">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-2xl transition-[background-color,transform] duration-150 group-hover:bg-slate-200/70 group-hover:scale-[0.97]">
                     {tmpl.icon}
                   </span>
 
@@ -2038,17 +2069,28 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   {/* Status metadata banner */}
                   <div
                     className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${
-                      executionRunRecord?.status === "failed"
+                      executionRunRecord?.status === "failed" || !executionRunRecord
                         ? "bg-rose-50/70 border border-rose-100/80"
-                        : "bg-slate-50 border border-slate-100"
+                        : executionRunRecord?.status === "queued" ||
+                            executionRunRecord?.status === "running"
+                          ? "bg-amber-50/70 border border-amber-100/80"
+                          : "bg-slate-50 border border-slate-100"
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      {executionRunRecord?.status === "failed" ? (
+                      {executionRunRecord?.status === "failed" || !executionRunRecord ? (
                         <>
                           <AlertCircle size={13} className="text-rose-600" />
                           <span className="text-xs font-semibold text-rose-700">
                             Execution Failed
+                          </span>
+                        </>
+                      ) : executionRunRecord?.status === "queued" ||
+                        executionRunRecord?.status === "running" ? (
+                        <>
+                          <Clock size={13} className="text-amber-700" />
+                          <span className="text-xs font-semibold text-amber-800">
+                            Still Running
                           </span>
                         </>
                       ) : (
@@ -2108,11 +2150,16 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
             {!isExecuting && (
               <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
                 <span className="text-[11px] text-slate-400">
-                  Result saved in task execution history.
+                  {executionRunRecord?.status === "queued" ||
+                  executionRunRecord?.status === "running"
+                    ? "This run is still active. Its history will update when it finishes."
+                    : executionRunRecord
+                      ? "Result saved in task execution history."
+                      : "No run was created. Fix the issue and try again."}
                 </span>
 
                 <div className="flex items-center gap-2.5">
-                  {executionRunRecord?.status === "failed" &&
+                  {(executionRunRecord?.status === "failed" || !executionRunRecord) &&
                     executionOutput.includes("Customize → Providers") && (
                       <button
                         type="button"

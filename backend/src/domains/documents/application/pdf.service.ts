@@ -3,17 +3,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { z } from "zod";
 import { PDFDocument } from "pdf-lib";
-import { Type } from "@google/genai";
-import type { ParsedPdfResult } from "@charan-interiors/contracts";
-import { resolveApiKey } from "../../../platform/config/index.js";
-import {
-  validateAndRepairChapters,
-  type NormalizedChapter,
-} from "../../receipts/application/chapterRepair.js";
-import { AppError, parseJsonSafely } from "../../../platform/errors/errors.js";
+import type { ParsedPdfResult, ProviderId } from "@charan-interiors/contracts";
+import { generateMultiProviderChat } from "../../chat/providers/llm.service.js";
+import { validateAndRepairChapters } from "../../receipts/application/chapterRepair.js";
+import { AppError } from "../../../platform/errors/errors.js";
 import { logEvent } from "../../../platform/observability/logger.js";
-import { generateWithModelFallback } from "../../chat/providers/gemini.service.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -37,189 +33,101 @@ Guiding Principles:
 5. If the PDF is completely blank or corrupt, return an empty chapters list with total_chapters = 0.
 6. Scanned / Image-Only PDFs: If the document contains scanned images or photocopies without an embedded text layer, perform visual OCR on each page to read chapter titles, section boundaries, and page contents accurately.`;
 
-const PDF_PARSE_RESPONSE_SCHEMA = {
-  type: Type.OBJECT,
-  properties: {
-    document_title: {
-      type: Type.STRING,
-      description: "The document title from the title page or inferred from content.",
-    },
-    total_pages: {
-      type: Type.NUMBER,
-      description: "Total number of pages in the PDF.",
-    },
-    total_chapters: {
-      type: Type.NUMBER,
-      description: "Total number of chapters or sections found/inferred.",
-    },
-    has_explicit_structure: {
-      type: Type.BOOLEAN,
-      description:
-        "True if the document has explicit chapter/section headings; false if structure was inferred.",
-    },
-    chapters: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          chapter_number: {
-            type: Type.NUMBER,
-            description: "1-based chapter/section number in document order.",
-          },
-          title: {
-            type: Type.STRING,
-            description: "Title of the chapter/section as printed or inferred.",
-          },
-          start_page: {
-            type: Type.NUMBER,
-            description: "Starting page number (1-based).",
-          },
-          end_page: {
-            type: Type.NUMBER,
-            description: "Ending page number (1-based, inclusive).",
-          },
-          content: {
-            type: Type.STRING,
-            description: "Detailed chapter overview highlighting core concepts and anchors.",
-          },
-          summary: {
-            type: Type.STRING,
-            description: "Brief 2-4 sentence summary of this chapter.",
-          },
-          key_topics: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "2-5 key topics or themes in this chapter.",
-          },
-          word_count: {
-            type: Type.NUMBER,
-            description: "Estimated number of words in this chapter.",
-          },
-          is_explicit_chapter: {
-            type: Type.BOOLEAN,
-            description:
-              "True if chapter boundary came from explicit document structure; false if inferred.",
-          },
-        },
-        required: [
-          "chapter_number",
-          "title",
-          "start_page",
-          "end_page",
-          "content",
-          "summary",
-          "key_topics",
-          "word_count",
-          "is_explicit_chapter",
-        ],
-      },
-    },
-  },
-  required: [
-    "document_title",
-    "total_pages",
-    "total_chapters",
-    "has_explicit_structure",
-    "chapters",
-  ],
-};
+const PdfModelResponseSchema = z.object({
+  document_title: z.string().optional(),
+  total_pages: z.number().int().positive().optional(),
+  has_explicit_structure: z.boolean().optional(),
+  chapters: z.array(z.record(z.string(), z.unknown())).max(500),
+});
 
-export async function parsePdfWithPdfLib(
-  pdfBuffer: Buffer,
-  fileName?: string
-): Promise<{
-  document_title: string;
-  total_pages: number;
-  total_chapters: number;
-  has_explicit_structure: boolean;
-  chapters: NormalizedChapter[];
-}> {
-  const doc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-  const totalPages = Math.max(1, doc.getPageCount());
-
-  let metaTitle = doc.getTitle()?.trim() || "";
-  if (metaTitle.toLowerCase().endsWith(".pdf")) {
-    metaTitle = metaTitle.slice(0, -4);
-  }
-  const cleanDocTitle =
-    metaTitle ||
-    (fileName
-      ? fileName
-          .replace(/\.[a-zA-Z0-9]+$/, "")
-          .replace(/[-_]/g, " ")
-          .trim()
-      : "") ||
-    "Untitled Document";
-
-  const numChapters =
-    totalPages <= 1
-      ? 1
-      : totalPages <= 4
-        ? totalPages
-        : Math.min(10, Math.max(3, Math.round(totalPages / 6)));
-
-  const rawChapters: NormalizedChapter[] = [];
-  const pagesPerChapter = Math.max(1, Math.floor(totalPages / numChapters));
-
-  for (let i = 0; i < numChapters; i++) {
-    const sp = i === 0 ? 1 : i * pagesPerChapter + 1;
-    const ep = i === numChapters - 1 ? totalPages : Math.min(totalPages, (i + 1) * pagesPerChapter);
-    const chNum = i + 1;
-
-    let partTitle = `Section ${chNum}: Overview & Analysis (Pages ${sp}–${ep})`;
-    let secType: "front_matter" | "chapter" | "back_matter" = "chapter";
-
-    if (numChapters > 2) {
-      if (i === 0 && sp === 1) {
-        partTitle = `Part 1: Preliminary & Overview (Pages ${sp}–${ep})`;
-        secType = "front_matter";
-      } else if (i === numChapters - 1 && ep === totalPages) {
-        partTitle = `Part ${chNum}: Concluding Synthesis (Pages ${sp}–${ep})`;
-        secType = "back_matter";
-      } else {
-        partTitle = `Part ${chNum}: Core Analysis (Pages ${sp}–${ep})`;
-        secType = "chapter";
-      }
-    } else if (numChapters === 1) {
-      partTitle = `${cleanDocTitle} (Complete Document, Pages 1–${totalPages})`;
-    }
-
-    rawChapters.push({
-      chapter_number: chNum,
-      title: partTitle,
-      chapter_title: partTitle,
-      start_page: sp,
-      end_page: ep,
-      content: `Extracted logical section ${chNum} of ${cleanDocTitle}, covering pages ${sp} to ${ep}.`,
-      extracted_text: `Extracted logical section ${chNum} of ${cleanDocTitle}, covering pages ${sp} to ${ep}.`,
-      summary: `Logical section ${chNum} covering document progression from page ${sp} through page ${ep}.`,
-      key_topics: [cleanDocTitle, `Pages ${sp}–${ep}`],
-      word_count: 0,
-      is_explicit_chapter: false,
-      section_type: secType,
-    });
-  }
-
-  const { chapters: normalizedChapters, totalPages: calculatedTotal } = validateAndRepairChapters(
-    rawChapters,
-    totalPages,
-    cleanDocTitle
-  );
-
-  return {
-    document_title: cleanDocTitle,
-    total_pages: calculatedTotal,
-    total_chapters: normalizedChapters.length,
-    has_explicit_structure: false,
-    chapters: normalizedChapters,
-  };
+export interface ParsePdfModelOptions {
+  modelId: string;
+  customModel?: string;
+  customProvider?: ProviderId;
+  apiKey?: string;
+  baseUrl?: string;
 }
 
-export async function parsePdfChapters(params: {
-  mimeType?: string | undefined;
+interface RenderedPdfPage {
+  pageNumber: number;
+  mimeType: "image/jpeg";
   base64Data: string;
-  fileName?: string | undefined;
-}): Promise<ParsedPdfResult> {
+}
+
+export async function renderPdfPagesForOcr(pdfBuffer: Buffer): Promise<RenderedPdfPage[]> {
+  const tempDirectory = await fs.promises.mkdtemp(path.join(os.tmpdir(), "shoebox_pdf_ocr_"));
+  const sourcePath = path.join(tempDirectory, "source.pdf");
+  const outputDirectory = path.join(tempDirectory, "pages");
+  try {
+    await fs.promises.writeFile(sourcePath, pdfBuffer);
+    const scriptCandidates = [
+      path.join(process.cwd(), "python", "src", "pdf_page_renderer.py"),
+      path.join(process.cwd(), "..", "python", "src", "pdf_page_renderer.py"),
+      path.join(os.homedir(), "Desktop", "journal", "python", "src", "pdf_page_renderer.py"),
+    ];
+    const rendererPath = scriptCandidates.find((candidate) => fs.existsSync(candidate));
+    if (!rendererPath) throw new AppError("The local scanned-PDF renderer is unavailable.", 503);
+
+    let stdout: string;
+    try {
+      ({ stdout } = await execFileAsync("python3", [rendererPath, sourcePath, outputDirectory], {
+        maxBuffer: 1_000_000,
+        timeout: 20_000,
+      }));
+    } catch (error) {
+      const details = error && typeof error === "object" ? error as { stderr?: unknown; stdout?: unknown } : {};
+      const output = `${String(details.stderr || "")} ${String(details.stdout || "")}`;
+      if (output.includes("page_limit_exceeded")) {
+        throw new AppError("Scanned PDFs must have eight pages or fewer for provider OCR.", 400);
+      }
+      throw new AppError("Could not render scanned PDF pages for the selected provider.", 422);
+    }
+    const response = JSON.parse(stdout) as {
+      pages?: Array<{
+        pageNumber?: number;
+        mimeType?: string;
+        fileName?: string;
+        encodedByteCount?: number;
+      }>;
+    };
+    if (!Array.isArray(response.pages) || response.pages.length < 1 || response.pages.length > 8) {
+      throw new AppError(
+        "The scanned PDF could not be rendered within the eight-page OCR limit.",
+        400
+      );
+    }
+
+    const pages: RenderedPdfPage[] = [];
+    let totalEncodedBytes = 0;
+    for (const [index, metadata] of response.pages.entries()) {
+      if (
+        metadata.pageNumber !== index + 1 ||
+        metadata.mimeType !== "image/jpeg" ||
+        !metadata.fileName ||
+        path.basename(metadata.fileName) !== metadata.fileName
+      ) {
+        throw new AppError("The local PDF renderer returned invalid page metadata.", 500);
+      }
+      const imageBytes = await fs.promises.readFile(path.join(outputDirectory, metadata.fileName));
+      const base64Data = imageBytes.toString("base64");
+      if (base64Data.length > 1_500_000) {
+        throw new AppError("A scanned PDF page exceeds the image input limit.", 400);
+      }
+      totalEncodedBytes += base64Data.length;
+      if (totalEncodedBytes > 8_000_000) {
+        throw new AppError("Scanned PDF pages exceed the image input limit.", 400);
+      }
+      pages.push({ pageNumber: metadata.pageNumber, mimeType: "image/jpeg", base64Data });
+    }
+    return pages;
+  } finally {
+    await fs.promises.rm(tempDirectory, { recursive: true, force: true });
+  }
+}
+
+export async function parsePdfChapters(
+  params: { mimeType?: string; base64Data: string; fileName?: string } & ParsePdfModelOptions
+): Promise<ParsedPdfResult> {
   const startTime = Date.now();
   const { mimeType, base64Data, fileName } = params;
 
@@ -256,8 +164,7 @@ export async function parsePdfChapters(params: {
 
   const pdfSizeKB = Math.round(pdfBuffer.length / 1024);
   logEvent("START /api/parse-pdf-chapters", {
-    method: "hybrid-local",
-    fileName: fileName || "unknown.pdf",
+    method: "local-text-extraction",
     pdfSizeKB,
   });
 
@@ -271,7 +178,9 @@ export async function parsePdfChapters(params: {
       accurateTitle = t.toLowerCase().endsWith(".pdf") ? t.slice(0, -4) : t;
     }
   } catch (preErr) {
-    logEvent("WARN pdf-lib pre-check notice", { err: String(preErr) });
+    logEvent("WARN pdf-lib pre-check notice", {
+      errorType: preErr instanceof Error ? preErr.name : "UnknownError",
+    });
   }
 
   // Find python script
@@ -317,8 +226,9 @@ export async function parsePdfChapters(params: {
       }
     }
   } catch (pyErr: unknown) {
-    const msg = pyErr instanceof Error ? pyErr.message : String(pyErr);
-    logEvent("WARN python-extractor failed, evaluating fallback", { err: msg });
+    logEvent("WARN local PDF text extraction failed; selected provider analysis is required", {
+      errorType: pyErr instanceof Error ? pyErr.name : "UnknownError",
+    });
   } finally {
     try {
       if (fs.existsSync(tempFilePath)) {
@@ -333,7 +243,6 @@ export async function parsePdfChapters(params: {
   const isScannedPdf = Boolean(
     pyResult?.is_scanned_pdf || (pyResult?.total_words !== undefined && pyResult.total_words === 0)
   );
-
   if (pythonSuccess && pyResult && !isScannedPdf) {
     const { chapters: normalizedChapters, totalPages: calculatedTotal } = validateAndRepairChapters(
       pyResult.chapters || [],
@@ -355,7 +264,6 @@ export async function parsePdfChapters(params: {
     const elapsedMs = Date.now() - startTime;
     logEvent("DONE /api/parse-pdf-chapters (Python Local Text)", {
       method: "python-local",
-      fileName: fileName || "unknown.pdf",
       chaptersFound: normalizedChapters.length,
       totalPages: result.total_pages,
       elapsedMs,
@@ -364,177 +272,70 @@ export async function parsePdfChapters(params: {
     return result;
   }
 
-  // Fallback to Gemini if API key is present
-  if (resolveApiKey()) {
-    try {
-      logEvent(
-        isScannedPdf
-          ? "ROUTE /api/parse-pdf-chapters to Gemini Vision OCR (scanned PDF detected)"
-          : "FALLBACK /api/parse-pdf-chapters to Gemini",
-        {
-          fileName: fileName || "unknown.pdf",
-          isScannedPdf,
-        }
-      );
-
-      const ocrHint = isScannedPdf
-        ? " This PDF appears to be scanned or image-only with no embedded text layer. Use visual OCR to read every page, then extract chapters from the recognized text."
-        : "";
-
-      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
-        {
-          text: `Read the following PDF document in its entirety. Parse and return every chapter or logical section in strict document order, following the schema exactly.${
-            fileName ? ` The file is named "${fileName}".` : ""
-          }${ocrHint}`,
-        },
-        {
-          inlineData: {
-            mimeType: "application/pdf",
-            data: cleanBase64,
-          },
-        },
-      ];
-
-      const { response, modelUsed } = await generateWithModelFallback({
-        contents: { parts },
-        config: {
-          systemInstruction: PDF_PARSE_SYSTEM_INSTRUCTION,
-          responseMimeType: "application/json",
-          responseSchema: PDF_PARSE_RESPONSE_SCHEMA,
-          temperature: 0.1,
-        },
-      });
-
-      const parsed = parseJsonSafely<{
-        document_title?: string;
-        total_pages?: number;
-        total_chapters?: number;
-        has_explicit_structure?: boolean;
-        chapters?: unknown[];
-      }>(response.text, {
-        document_title: fileName || "Untitled Document",
-        total_pages: 0,
-        total_chapters: 0,
-        has_explicit_structure: false,
-        chapters: [],
-      });
-
-      const { chapters: normalizedChapters, totalPages: calculatedTotal } =
-        validateAndRepairChapters(
-          parsed.chapters || [],
-          Math.max(totalPages, parsed.total_pages || 0),
-          accurateTitle || fileName || "Document"
-        );
-
-      const result: ParsedPdfResult = {
-        document_title: parsed.document_title || accurateTitle || fileName || "Untitled Document",
-        total_pages: calculatedTotal,
-        total_chapters: normalizedChapters.length,
-        has_explicit_structure: Boolean(parsed.has_explicit_structure ?? true),
-        chapters: normalizedChapters,
-      };
-
-      const elapsedMs = Date.now() - startTime;
-      logEvent("DONE /api/parse-pdf-chapters (Gemini Fallback)", {
-        model: modelUsed,
-        fileName: fileName || "unknown.pdf",
-        chaptersFound: normalizedChapters.length,
-        totalPages: result.total_pages,
-        elapsedMs,
-      });
-
-      return result;
-    } catch (geminiErr: unknown) {
-      logEvent("WARN Gemini fallback failed or quota exhausted, using local engine", {
-        err: String(geminiErr),
-      });
-    }
-  }
-
-  if (
-    pythonSuccess &&
-    pyResult &&
-    Array.isArray(pyResult.chapters) &&
-    pyResult.chapters.length > 0
-  ) {
-    const { chapters: normalizedChapters, totalPages: calculatedTotal } = validateAndRepairChapters(
-      pyResult.chapters,
-      totalPages,
-      accurateTitle || fileName || "Document"
+  if (!params.apiKey) {
+    throw new AppError(
+      "MISSING_API_KEY:Connect your selected provider API key to analyze this PDF.",
+      401
     );
-
-    const result: ParsedPdfResult = {
-      document_title: pyResult.document_title || accurateTitle || fileName || "Untitled Document",
-      total_pages: calculatedTotal,
-      total_chapters: normalizedChapters.length,
-      has_explicit_structure: Boolean(pyResult.has_explicit_structure ?? true),
-      is_scanned_pdf: Boolean(pyResult.is_scanned_pdf),
-      ocr_recommended: Boolean(pyResult.ocr_recommended),
-      total_words: pyResult.total_words,
-      chapters: normalizedChapters,
-    };
-
-    const elapsedMs = Date.now() - startTime;
-    logEvent("DONE /api/parse-pdf-chapters (Python Scanned/Partitioned Recovery)", {
-      method: "python-local",
-      fileName: fileName || "unknown.pdf",
-      chaptersFound: normalizedChapters.length,
-      totalPages: result.total_pages,
-      elapsedMs,
-    });
-
-    return result;
   }
 
-  // Pure JS fallback via pdf-lib
-  try {
-    logEvent("FALLBACK /api/parse-pdf-chapters to pure JS pdf-lib engine", {
-      fileName: fileName || "unknown.pdf",
-    });
-    const jsResult = await parsePdfWithPdfLib(pdfBuffer, accurateTitle || fileName);
-
-    const elapsedMs = Date.now() - startTime;
-    logEvent("DONE /api/parse-pdf-chapters (pdf-lib Pure JS Fallback)", {
-      fileName: fileName || "unknown.pdf",
-      chaptersFound: jsResult.total_chapters,
-      totalPages: jsResult.total_pages,
-      elapsedMs,
-    });
-
-    return jsResult;
-  } catch (pdfLibErr: unknown) {
-    logEvent("WARN pdf-lib pure JS fallback failed", {
-      err: String(pdfLibErr),
-    });
-  }
-
-  // Synthesized fallback
-  const fallbackTotalPages = totalPages || 1;
-  const { chapters: fallbackChapters, totalPages: calculatedFallbackTotal } =
-    validateAndRepairChapters(
-      pyResult?.chapters || [],
-      fallbackTotalPages,
-      accurateTitle || fileName || "Document"
-    );
-
-  const result: ParsedPdfResult = {
-    document_title: pyResult?.document_title || accurateTitle || fileName || "Untitled Document",
-    total_pages: calculatedFallbackTotal,
-    total_chapters: fallbackChapters.length,
-    has_explicit_structure: Boolean(pyResult?.has_explicit_structure ?? false),
-    is_scanned_pdf: Boolean(pyResult?.is_scanned_pdf),
-    ocr_recommended: Boolean(pyResult?.ocr_recommended),
-    total_words: pyResult?.total_words,
-    chapters: fallbackChapters,
-  };
-
-  const elapsedMs = Date.now() - startTime;
-  logEvent("DONE /api/parse-pdf-chapters (Synthesized Fallback)", {
-    fileName: fileName || "unknown.pdf",
-    chaptersFound: fallbackChapters.length,
-    totalPages: result.total_pages,
-    elapsedMs,
+  logEvent("ROUTE /api/parse-pdf-chapters to selected provider", {
+    model: params.modelId,
+    isScannedPdf,
+  });
+  const renderedPages = await renderPdfPagesForOcr(pdfBuffer);
+  const pageMap = renderedPages
+    .map((page, index) => `Image ${index + 1} is PDF page ${page.pageNumber}.`)
+    .join("\n");
+  const prompt = `Read the rendered pages of this PDF in order. The PDF has ${totalPages} pages and every page is included as an image. ${pageMap} Extract chapter and section boundaries across the whole document. Return only JSON matching {"document_title":"title","total_pages":${totalPages},"has_explicit_structure":true,"chapters":[{"chapter_number":1,"title":"Chapter title","start_page":1,"end_page":${totalPages},"content":"Detailed overview","summary":"Brief summary","key_topics":["topic"],"word_count":100,"is_explicit_chapter":true}]}. Do not include markdown or commentary.`;
+  const generated = await generateMultiProviderChat({
+    modelId: params.modelId,
+    ...(params.customModel ? { customModel: params.customModel } : {}),
+    ...(params.customProvider ? { customProvider: params.customProvider } : {}),
+    injectedApiKey: params.apiKey,
+    ...(params.baseUrl ? { injectedBaseUrl: params.baseUrl } : {}),
+    images: renderedPages.map((page) => ({
+      mimeType: page.mimeType,
+      base64Data: page.base64Data,
+    })),
+    systemInstruction: PDF_PARSE_SYSTEM_INSTRUCTION,
+    effort: "Low",
+    signal: AbortSignal.timeout(90_000),
+    messages: [{ role: "user", content: prompt }],
   });
 
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(generated.text.trim().replace(/^```(?:json)?\s*|\s*```$/g, ""));
+  } catch {
+    throw new AppError("The selected model returned invalid PDF chapter data.", 502);
+  }
+  const parsedResult = PdfModelResponseSchema.safeParse(decoded);
+  if (!parsedResult.success) {
+    throw new AppError("The selected model returned invalid PDF chapter data.", 502);
+  }
+
+  const { chapters: normalizedChapters, totalPages: calculatedTotal } = validateAndRepairChapters(
+    parsedResult.data.chapters,
+    totalPages,
+    accurateTitle || fileName || "Document"
+  );
+  const result: ParsedPdfResult = {
+    document_title: parsedResult.data.document_title || accurateTitle || fileName || "Untitled Document",
+    total_pages: calculatedTotal,
+    total_chapters: normalizedChapters.length,
+    has_explicit_structure: Boolean(parsedResult.data.has_explicit_structure ?? true),
+    is_scanned_pdf: isScannedPdf,
+    ocr_recommended: false,
+    chapters: normalizedChapters,
+  };
+
+  logEvent("DONE /api/parse-pdf-chapters (Selected Provider)", {
+    model: generated.modelUsed,
+    provider: generated.providerUsed,
+    chaptersFound: normalizedChapters.length,
+    totalPages: result.total_pages,
+    elapsedMs: Date.now() - startTime,
+  });
   return result;
 }

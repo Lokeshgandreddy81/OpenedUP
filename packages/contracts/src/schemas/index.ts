@@ -13,9 +13,23 @@ export const PhotoInputSchema = z.object({
   base64Data: z.string().min(1, "base64Data cannot be empty").max(20_000_000),
 });
 
-export const ReadReceiptsRequestSchema = z.object({
-  photos: z.array(PhotoInputSchema).min(1, "At least one photo must be provided"),
-});
+export const ReadReceiptsRequestSchema = z
+  .object({
+    photos: z.array(PhotoInputSchema).min(1, "At least one photo must be provided").max(10),
+    model: z.string().trim().min(1).max(200),
+    customModel: z.string().trim().max(200).optional(),
+    customProvider: z.enum(PROVIDER_IDS).optional(),
+  })
+  .superRefine(({ photos }, context) => {
+    const encodedPhotoBytes = photos.reduce((total, photo) => total + photo.base64Data.length, 0);
+    if (encodedPhotoBytes > 50_000_000) {
+      context.addIssue({
+        code: "custom",
+        path: ["photos"],
+        message: "Receipt photo batch exceeds the 50 MB encoded image limit",
+      });
+    }
+  });
 
 export const ReceiptRowInputSchema = z.object({
   row: z.number().int(),
@@ -33,12 +47,18 @@ export const ReceiptRowInputSchema = z.object({
 
 export const CheckDuplicatesRequestSchema = z.object({
   rows: z.array(ReceiptRowInputSchema),
+  model: z.string().trim().min(1).max(200),
+  customModel: z.string().trim().max(200).optional(),
+  customProvider: z.enum(PROVIDER_IDS).optional(),
 });
 
 export const ParsePdfChaptersRequestSchema = z.object({
   mimeType: z.string().trim().max(100).optional().default("application/pdf"),
   base64Data: z.string().min(1, "base64Data is required").max(50_000_000),
   fileName: z.string().max(300).optional(),
+  model: z.string().trim().min(1).max(200),
+  customModel: z.string().trim().max(200).optional(),
+  customProvider: z.enum(PROVIDER_IDS).optional(),
 });
 
 export const ChatMessageSchema = z.object({
@@ -81,7 +101,7 @@ export const ChatRequestSchema = z.object({
         .optional(),
     })
     .optional(),
-  model: z.string().min(1).max(200).optional(),
+  model: z.string().min(1).max(200),
   customModel: z.string().trim().min(1).max(200).optional(),
   customProvider: z.enum(PROVIDER_IDS).optional(),
   effort: z.enum(["Low", "Medium", "High", "Extra", "Max"]).optional(),
@@ -274,13 +294,24 @@ export const ImportArtifactsRequestSchema = z.object({
 });
 export const SetArtifactSharingRequestSchema = z.object({ isShared: z.boolean() });
 
+const PROJECT_IMAGE_MAX_BYTES = 10_000_000;
+const PROJECT_IMAGE_MAX_BASE64_CHARS = Math.ceil(PROJECT_IMAGE_MAX_BYTES / 3) * 4;
+const PROJECTS_PAYLOAD_MAX_CHARS = 20_000_000;
+
 const ProjectFileSchema = z.object({
   id: z.string().min(1).max(200),
   name: z.string().min(1).max(500),
   size: z.number().int().nonnegative(),
   type: z.string().max(200).optional(),
+  mimeType: z.string().max(200).optional(),
   uploadedAt: z.number().int().nonnegative(),
   content: z.string().max(120_000).optional(),
+  base64Data: z
+    .string()
+    .min(1)
+    .max(PROJECT_IMAGE_MAX_BASE64_CHARS)
+    .regex(/^[A-Za-z0-9+/]*={0,2}$/, "Project images must use base64 encoding.")
+    .optional(),
 });
 
 const ProjectSessionMessageSchema = z.object({
@@ -290,6 +321,7 @@ const ProjectSessionMessageSchema = z.object({
   timestamp: z.string().max(100),
   thinkingTime: z.string().max(30).optional(),
   generationStatus: z.enum(["stopped", "error"]).optional(),
+  actionChips: z.array(z.string().max(100)).max(8).optional(),
   attachments: z
     .array(
       z.object({
@@ -366,6 +398,24 @@ export const ProjectSnapshotSchema = z
         path: ["sessions"],
       });
     }
+    (project.files || []).forEach((file, index) => {
+      if (!file.base64Data) return;
+      const mimeType = file.mimeType || file.type || "";
+      if (!/^image\/(png|jpe?g|webp|gif)$/i.test(mimeType)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Project image data requires a supported image MIME type.",
+          path: ["files", index, "mimeType"],
+        });
+      }
+      if (file.size > PROJECT_IMAGE_MAX_BYTES) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Project images must be 10 MB or smaller.",
+          path: ["files", index, "size"],
+        });
+      }
+    });
   });
 
 const ProjectsCollectionSchema = z
@@ -380,10 +430,10 @@ const ProjectsCollectionSchema = z
       });
     }
     const encodedLength = JSON.stringify(input.projects).length;
-    if (encodedLength > 10_000_000) {
+    if (encodedLength > PROJECTS_PAYLOAD_MAX_CHARS) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Project import exceeds the 10 MB limit.",
+        message: "Project data exceeds the 20 MB limit.",
         path: ["projects"],
       });
     }

@@ -12,7 +12,19 @@ export function sanitizeLogUrl(rawUrl: string): string {
         lower.includes("secret") ||
         lower.includes("password") ||
         lower.includes("auth") ||
-        lower.includes("credential")
+        lower.includes("credential") ||
+        lower.includes("prompt") ||
+        lower.includes("content") ||
+        lower.includes("message") ||
+        lower.includes("query") ||
+        lower.includes("text") ||
+        lower.includes("input") ||
+        lower.includes("output") ||
+        lower.includes("body") ||
+        lower.includes("question") ||
+        lower.includes("search") ||
+        lower.includes("data") ||
+        lower.includes("filename")
       ) {
         dummy.searchParams.set(key, "[REDACTED]");
       }
@@ -20,7 +32,7 @@ export function sanitizeLogUrl(rawUrl: string): string {
     return redactSecretsString(dummy.pathname + dummy.search);
   } catch {
     const cleaned = rawUrl.replace(
-      /(?:key|token|secret|password|auth|credential)=([^&\s]+)/gi,
+      /(?:key|token|secret|password|auth|credential|prompt|content|message|query|text|input|output|body|question|search|data|filename)=([^&\s]+)/gi,
       (match, val) => match.replace(val, "[REDACTED]")
     );
     return redactSecretsString(cleaned);

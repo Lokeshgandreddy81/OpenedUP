@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Search,
   Plus,
@@ -13,12 +13,14 @@ import {
 } from "lucide-react";
 import {
   PROVIDER_CATALOG,
-  getModelsForProvider,
+  getChatModelsForProvider,
   type ProviderId,
   type ModelMetadata,
 } from "@charan-interiors/contracts";
 import { CreatorLogo } from "../../benchmarks/publicApi";
 import { useProviderKeys } from "../services/keyStore";
+
+import { CustomizeSkillsTab } from "../../skills";
 
 export type CustomizeCategory = "Skills" | "Connectors" | "Plugins" | "Providers";
 export type CustomizeSubTab = "Yours" | "Discover";
@@ -106,6 +108,45 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   const [openModelDropdownId, setOpenModelDropdownId] = useState<ProviderId | null>(null);
   const [customProviderDropdownOpen, setCustomProviderDropdownOpen] = useState(false);
 
+  // Skills synchronization
+  const [skillsCount, setSkillsCount] = useState<number>(0);
+  const [directoryCount, setDirectoryCount] = useState<number>(0);
+  const [isSkillCreatorOpen, setIsSkillCreatorOpen] = useState(false);
+  const skillFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter menu state
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [selectedSkillCategory, setSelectedSkillCategory] = useState<string>("All");
+  const [skillCategories, setSkillCategories] = useState<Array<{ id: string; name: string }>>([
+    { id: "productivity", name: "Productivity" },
+    { id: "engineering", name: "Engineering" },
+    { id: "development", name: "Development" },
+    { id: "data-analysis", name: "Data Analysis" },
+    { id: "architecture", name: "Architecture" },
+    { id: "database", name: "Database" },
+    { id: "documentation", name: "Documentation" },
+    { id: "python", name: "Python" },
+    { id: "research", name: "Research" },
+    { id: "writing", name: "Writing" },
+  ]);
+  const [skillScopeFilter, setSkillScopeFilter] = useState<string>("all");
+  const [skillSortBy, setSkillSortBy] = useState<"popular" | "name" | "newest">("popular");
+
+  const hasActiveFilters =
+    activeCategory === "Skills"
+      ? selectedSkillCategory !== "All" || skillScopeFilter !== "all" || skillSortBy !== "popular"
+      : Boolean(searchQuery);
+
+  const resetFilters = () => {
+    if (activeCategory === "Skills") {
+      setSelectedSkillCategory("All");
+      setSkillScopeFilter("all");
+      setSkillSortBy("popular");
+    } else {
+      setSearchQuery("");
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -114,6 +155,12 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
       }
       if (!target.closest("[data-provider-dropdown]")) {
         setCustomProviderDropdownOpen(false);
+      }
+      if (!target.closest("[data-filter-dropdown]")) {
+        setIsFilterMenuOpen(false);
+      }
+      if (!target.closest("#customize-add-options") && !target.closest("[data-add-button]")) {
+        setIsAddMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -220,12 +267,12 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
       }
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
-      const models = getModelsForProvider(provider.id);
+      const models = getChatModelsForProvider(provider.id);
       return (
         provider.name.toLowerCase().includes(q) ||
         provider.tagline.toLowerCase().includes(q) ||
         provider.envKeyName.toLowerCase().includes(q) ||
-        provider.keyPrefix.toLowerCase().includes(q) ||
+        provider.keySample.toLowerCase().includes(q) ||
         (provider.id === "custom" && customModelId.toLowerCase().includes(q)) ||
         models.some(
           (m: ModelMetadata) =>
@@ -266,10 +313,14 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <h1 className="text-[26px] sm:text-[28px] md:text-[30px] font-serif text-neutral-900 font-normal tracking-tight truncate">
-              {activeCategory === "Providers" ? "AI Providers & BYOK" : "Customize"}
+              {activeCategory === "Providers" ? "AI Providers & BYOK" : activeCategory === "Skills" ? "Skills" : "Customize"}
             </h1>
             <p className="mt-1 text-[13px] text-neutral-500 line-clamp-2 sm:line-clamp-none">
-              Bring your own API keys for frontier reasoning, coding, and multimodal intelligence.
+              {activeCategory === "Providers"
+                ? "Bring your own API keys for frontier reasoning, coding, and multimodal intelligence."
+                : activeCategory === "Skills"
+                  ? "Extend model capabilities with specialized tools, workflows, and domain intelligence."
+                  : "Configure and extend your workspace."}
             </p>
           </div>
         </div>
@@ -319,7 +370,16 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
             <div className="bg-[#F1F1F4] p-0.5 rounded-lg inline-flex items-center" role="tablist" aria-label="Provider views">
               {(["Yours", "Discover"] as CustomizeSubTab[]).map((tab) => {
                 const isActive = subTab === tab;
-                const countBadge = tab === "Yours" ? connectedCount : 8;
+                const countBadge =
+                  activeCategory === "Skills"
+                    ? tab === "Yours"
+                      ? skillsCount
+                      : directoryCount
+                    : activeCategory === "Providers"
+                      ? tab === "Yours"
+                        ? connectedCount
+                        : 8
+                      : 0;
                 return (
                   <button
                     key={tab}
@@ -350,6 +410,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
           </div>
 
           {/* Right: Search, Filter icon, + Add button */}
+          {(activeCategory === "Providers" || activeCategory === "Skills") && (
           <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             {/* Search Input */}
             <div className="relative flex-1 sm:flex-initial flex items-center min-w-0">
@@ -362,7 +423,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
-                  activeCategory === "Providers" ? "Search providers, models, or tags" : "Search"
+                  activeCategory === "Providers"
+                    ? "Search providers, models, or tags"
+                    : activeCategory === "Skills"
+                      ? "Search skills by name, description, or capabilities"
+                      : "Search"
                 }
                 className="h-10 sm:h-9 pl-8 pr-7 w-full sm:w-56 md:w-72 text-[13px] text-neutral-900 placeholder-neutral-500 bg-neutral-50 rounded-xl outline-none focus:ring-2 focus:ring-neutral-900/40 transition-shadow"
               />
@@ -378,18 +443,180 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
               )}
             </div>
 
-            {/* Filter Sliders Button */}
-            <button
-              type="button"
-              aria-label="Filter"
-              title="Filter"
-              className="w-10 h-10 sm:w-8 sm:h-8 shrink-0 rounded-lg flex items-center justify-center text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
-            >
-              <SlidersFilterIcon size={15} className="text-neutral-800" />
-            </button>
+            {/* Filter Sliders Button with Popover */}
+            <div className="relative shrink-0" data-filter-dropdown>
+              <button
+                type="button"
+                aria-label="Filter"
+                title="Filter options"
+                onClick={() => setIsFilterMenuOpen((v) => !v)}
+                className={`w-10 h-10 sm:w-8 sm:h-8 shrink-0 rounded-lg flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 relative ${
+                  isFilterMenuOpen || hasActiveFilters
+                    ? "bg-neutral-950 text-white shadow-xs"
+                    : "text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80"
+                }`}
+              >
+                <SlidersFilterIcon
+                  size={15}
+                  className={isFilterMenuOpen || hasActiveFilters ? "text-white" : "text-neutral-800"}
+                />
+                {hasActiveFilters && !isFilterMenuOpen && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-950 absolute top-1 right-1 ring-2 ring-white" />
+                )}
+              </button>
+
+              {isFilterMenuOpen && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-white p-4 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.2)] ring-1 ring-neutral-200/80 z-40 animate-in fade-in zoom-in-95 duration-100 text-[13px] text-neutral-700 select-none max-h-[85vh] overflow-y-auto"
+                >
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+                    <span className="font-semibold text-[13.5px] text-neutral-900">
+                      {activeCategory === "Skills" ? "Filter Skills" : "Filter Providers"}
+                    </span>
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="text-[11.5px] text-neutral-500 hover:text-neutral-900 cursor-pointer"
+                      >
+                        Reset all
+                      </button>
+                    )}
+                  </div>
+
+                  {activeCategory === "Skills" ? (
+                    <div className="space-y-4 pt-3">
+                      {/* Category selection */}
+                      <div>
+                        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
+                          Category
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {["All", ...skillCategories.map((c) => c.name)].map((cat) => {
+                            const isSelected = selectedSkillCategory === cat;
+                            return (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => setSelectedSkillCategory(cat)}
+                                className={`px-2.5 py-1 rounded-lg text-[11.5px] transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? "bg-neutral-950 text-white font-medium shadow-2xs"
+                                    : "bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 font-normal"
+                                }`}
+                              >
+                                {cat}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Scope selection */}
+                      <div>
+                        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
+                          Source / Visibility
+                        </span>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {[
+                            { id: "all", label: "All scopes" },
+                            { id: "builtin", label: "Built-in" },
+                            { id: "org", label: "Organization" },
+                            { id: "user", label: "Personal" },
+                          ].map((item) => {
+                            const isSelected = skillScopeFilter === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setSkillScopeFilter(item.id)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[12px] text-left transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? "bg-neutral-950 text-white font-medium"
+                                    : "bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700"
+                                }`}
+                              >
+                                {item.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Sort selection */}
+                      <div>
+                        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
+                          Sort By
+                        </span>
+                        <div className="flex items-center gap-1.5 bg-neutral-100 p-0.5 rounded-lg text-[12px]">
+                          {[
+                            { id: "popular", label: "Most popular" },
+                            { id: "name", label: "Name (A–Z)" },
+                            { id: "newest", label: "Newest" },
+                          ].map((item) => {
+                            const isSelected = skillSortBy === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() =>
+                                  setSkillSortBy(item.id as "popular" | "name" | "newest")
+                                }
+                                className={`flex-1 py-1 px-2 rounded-md transition-colors text-center cursor-pointer ${
+                                  isSelected
+                                    ? "bg-white text-neutral-950 font-medium shadow-xs"
+                                    : "text-neutral-500 hover:text-neutral-900"
+                                }`}
+                              >
+                                {item.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Providers Filter */
+                    <div className="space-y-4 pt-3">
+                      <div>
+                        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
+                          Quick Presets
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {["All", "Reasoning", "Vision", "Fast", "Free"].map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => {
+                                setSearchQuery(tag === "All" ? "" : tag.toLowerCase());
+                                setIsFilterMenuOpen(false);
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-[11.5px] bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 cursor-pointer"
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-3 mt-4 border-t border-neutral-100 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsFilterMenuOpen(false)}
+                      className="px-3.5 py-1.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-[12px] font-medium transition-colors cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* + Add Button with Chevron Dropdown */}
-            <div className="relative shrink-0">
+            <div className="relative shrink-0" data-add-button>
               <button
                 type="button"
                 aria-expanded={isAddMenuOpen}
@@ -412,45 +639,73 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                   id="customize-add-options"
                   className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-white p-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.2)] ring-1 ring-neutral-200/80 z-40 animate-in fade-in zoom-in-95 duration-100 text-[13.5px] text-neutral-700 select-none"
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddMenuOpen(false);
-                      setActiveCategory("Providers");
-                    }}
-                    className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
-                  >
-                    Connect API key
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddMenuOpen(false);
-                      setActiveCategory("Connectors");
-                    }}
-                    className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
-                  >
-                    Add connector
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddMenuOpen(false);
-                      setActiveCategory("Plugins");
-                    }}
-                    className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
-                  >
-                    Add plugin
-                  </button>
+                  {activeCategory === "Skills" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddMenuOpen(false);
+                          setIsSkillCreatorOpen(true);
+                        }}
+                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                      >
+                        Create custom skill
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddMenuOpen(false);
+                          skillFileInputRef.current?.click();
+                        }}
+                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                      >
+                        Import skill (.md, .pdf, .zip)
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddMenuOpen(false);
+                          setActiveCategory("Providers");
+                        }}
+                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                      >
+                        Connect API key
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddMenuOpen(false);
+                          setActiveCategory("Connectors");
+                        }}
+                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                      >
+                        Add connector
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddMenuOpen(false);
+                          setActiveCategory("Plugins");
+                        }}
+                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                      >
+                        Add plugin
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
           </div>
+          )}
         </div>
 
         {/* Main Content Area */}
         {activeCategory === "Providers" ? (
-          <div className="mt-7 flex flex-col gap-4">
+          <div className="mt-10 flex flex-col gap-4">
             {/* Empty State: When "Yours" tab has zero connected keys */}
             {subTab === "Yours" && connectedCount === 0 && (
               <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-3xl border border-neutral-200/80 shadow-2xs">
@@ -496,7 +751,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
             )}
 
             {/* Flat provider list */}
-            <div className="flex flex-col gap-3.5">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-3.5">
               {filteredProviders.map((provider) => {
                 const isConnected = hasKey(provider.id);
                 const isAccountConnected = hasAccountKey(provider.id);
@@ -515,20 +770,16 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                   draftKeys[provider.id] !== undefined &&
                   draftKeys[provider.id]!.trim() !== savedKey;
                 const hasUnsavedDraft = hasKeyDraft || endpointChanged;
+                const canSaveProvider = Boolean(
+                  currentInput.trim() || (isConnected && endpointChanged)
+                );
                 const saveError = saveErrorMap[provider.id];
-                const models = getModelsForProvider(provider.id);
-
-                // Prefix hint check
-                const isPrefixMismatch =
-                  Boolean(currentInput.trim()) &&
-                  currentInput.length >= 4 &&
-                  provider.keyPrefix &&
-                  !currentInput.startsWith(provider.keyPrefix);
+                const models = getChatModelsForProvider(provider.id);
 
                 return (
                   <section
                     key={provider.id}
-                    className="rounded-2xl bg-white hover:bg-neutral-50/70 transition-colors"
+                    className="w-full rounded-2xl bg-white hover:bg-neutral-50/70 transition-colors"
                   >
                     {/* Header Row - Completely borderless, no pills, minimal text */}
                     <div className="flex items-center justify-between gap-4 px-5 py-3.5">
@@ -547,20 +798,20 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           size={24}
                           title={provider.name}
                         />
-                        <div className="min-w-0 flex-1 flex items-center gap-3 flex-wrap">
+                        <div className="min-w-0 flex-1 flex flex-col items-start gap-1 lg:flex-row lg:items-center lg:gap-3">
                           <span className="text-[15px] font-medium text-neutral-900">
                             {provider.name}
                           </span>
 
                           {/* Minimalist dot status - NO PILLS */}
-                          <span className="text-[12px] text-neutral-400 flex items-center gap-1.5 select-none">
+                          <span className="whitespace-nowrap text-[12px] text-neutral-500 flex items-center gap-1.5 select-none">
                             <span
                               className={`inline-block w-1.5 h-1.5 rounded-full ${
                                 isAccountConnected
                                   ? "bg-emerald-500"
                                   : isConnected
                                     ? "bg-amber-500"
-                                    : "bg-neutral-300"
+                                  : "bg-neutral-400"
                               }`}
                             />
                             <span>
@@ -585,7 +836,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                           href={provider.docsUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[12px] text-neutral-400 hover:text-neutral-900 flex items-center gap-1 transition-colors"
+                          className="text-[12px] text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
                           title={`Get ${provider.name} API key`}
                         >
                           <span>Get key</span>
@@ -600,7 +851,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                               current === provider.id ? null : provider.id
                             )
                           }
-                          className="text-neutral-400 hover:text-neutral-800 cursor-pointer p-1 transition-colors"
+                          className="rounded-lg p-1 text-neutral-400 hover:text-neutral-800 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300"
                         >
                           <ChevronDown
                             size={16}
@@ -614,334 +865,359 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
                     {/* Expanded Area - Zero Inset Containers, Zero Visible Borders, Minimal Dead Text, Models Dropdown */}
                     {expandedProviderId === provider.id && (
-                      <div className="px-5 pb-5 pt-1 flex flex-col gap-3">
-                        {/* Key Input & Actions Row - Compact, Proportional, Monochromatic */}
-                        <div className="flex items-center gap-2 max-w-lg">
-                          <div className="relative flex-1">
-                            <input
-                              id={`provider-key-${provider.id}`}
-                              type={isRevealed ? "text" : "password"}
-                              value={currentInput}
-                              onChange={(e) =>
-                                setDraftKeys((prev) => ({
-                                  ...prev,
-                                  [provider.id]: e.target.value,
-                                }))
-                              }
-                              placeholder={
-                                isAccountConnected && !currentInput
-                                  ? "••••••••••••••••"
-                                  : provider.keyPlaceholder || `Paste ${provider.name} key`
-                              }
-                              className="w-full h-9 px-3 pr-8 bg-neutral-100 text-[12.5px] font-mono text-neutral-900 rounded-xl outline-none placeholder:font-sans placeholder:text-neutral-400 focus:bg-neutral-150/60 transition-colors border-0"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setRevealedMap((prev) => ({
-                                  ...prev,
-                                  [provider.id]: !prev[provider.id],
-                                }))
-                              }
-                              aria-label={isRevealed ? "Hide API key" : "Show API key"}
-                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                      <div className="px-5 pb-5 pt-2">
+                        <div className="grid max-w-7xl grid-cols-1 gap-x-10 gap-y-5 lg:grid-cols-2">
+                          <div className="min-w-0">
+                            <label
+                              htmlFor={`provider-key-${provider.id}`}
+                              className="mb-2 block text-[12px] font-medium text-neutral-700"
                             >
-                              {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
-                            </button>
-                          </div>
-
-                          {/* Action Button - Monochromatic & Quiet (No Cheap Green Transition) */}
-                          <button
-                            type="button"
-                            onClick={() => handleSaveProvider(provider.id)}
-                            disabled={
-                              isSaving ||
-                              (!currentInput.trim() && !(isConnected && endpointChanged))
-                            }
-                            aria-busy={isSaving}
-                            className="h-9 px-3.5 text-[12.5px] font-medium rounded-xl transition-colors cursor-pointer border-0 shrink-0 bg-neutral-900 hover:bg-neutral-800 text-white disabled:bg-neutral-150 disabled:text-neutral-400 disabled:cursor-not-allowed"
-                          >
-                            {isSaving
-                              ? "Saving..."
-                              : isConnected && endpointChanged && !currentInput.trim()
-                                ? "Save endpoint"
-                                : isConnected
-                                  ? "Update"
-                                  : "Connect"}
-                          </button>
-
-                          {hasUnsavedDraft && (
-                            <button
-                              type="button"
-                              onClick={() => handleDiscardDraft(provider.id)}
-                              className="h-9 px-2.5 text-[12px] text-neutral-500 hover:text-neutral-900 rounded-xl hover:bg-neutral-100 transition-colors cursor-pointer border-0 shrink-0"
-                            >
-                              Discard
-                            </button>
-                          )}
-
-                          {isConnected && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveProvider(provider.id)}
-                              disabled={isSaving}
-                              title="Disconnect key"
-                              className="h-9 w-9 text-neutral-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer border-0 flex items-center justify-center shrink-0"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Models Dropdown - Neat & Clean Custom Dropdown (hidden on custom/OpenRouter where Model ID is configured directly) */}
-                        {provider.id !== "custom" && models.length > 0 && (() => {
-                          const selectedModelId = selectedModelMap[provider.id] || models[0]?.id;
-                          const currentModel = models.find((m) => m.id === selectedModelId) || models[0];
-                          const isDropdownOpen = openModelDropdownId === provider.id;
-
-                          return (
-                            <div className="relative flex items-center gap-2 pt-0.5" data-model-dropdown>
-                              <span className="text-[12px] text-neutral-400 shrink-0 select-none">
-                                Model
-                              </span>
-                              <div className="relative flex-1 max-w-sm">
+                              API key
+                            </label>
+                            <div className="flex w-full min-w-0 items-center gap-2">
+                              <div className="relative flex-1">
+                                <input
+                                  id={`provider-key-${provider.id}`}
+                                  type={isRevealed ? "text" : "password"}
+                                  value={currentInput}
+                                  onChange={(e) =>
+                                    setDraftKeys((prev) => ({
+                                      ...prev,
+                                      [provider.id]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder={
+                                    isAccountConnected && !currentInput
+                                      ? "••••••••••••••••"
+                                      : provider.keyPlaceholder || `Paste ${provider.name} key`
+                                  }
+                                  className="w-full h-11 px-3 pr-8 bg-neutral-100 text-[12.5px] font-mono text-neutral-900 rounded-xl outline-none placeholder:font-sans placeholder:text-neutral-400 focus:bg-neutral-150/60 focus-visible:ring-2 focus-visible:ring-neutral-300 transition-colors border-0"
+                                />
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    setOpenModelDropdownId((curr) =>
-                                      curr === provider.id ? null : provider.id
-                                    )
+                                    setRevealedMap((prev) => ({
+                                      ...prev,
+                                      [provider.id]: !prev[provider.id],
+                                    }))
                                   }
-                                  className="w-full h-9 px-3 bg-neutral-100 hover:bg-neutral-150/70 text-[12.5px] text-neutral-800 rounded-xl outline-none cursor-pointer flex items-center justify-between transition-colors select-none border-0"
+                                  aria-label={isRevealed ? "Hide API key" : "Show API key"}
+                                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
                                 >
-                                  <span className="truncate">
-                                    {currentModel?.name}
-                                    {currentModel?.contextWindowTokens
-                                      ? ` • ${Math.round(currentModel.contextWindowTokens / 1000)}k`
-                                      : ""}
-                                  </span>
-                                  <ChevronDown
-                                    size={13}
-                                    className={`text-neutral-400 transition-transform duration-200 shrink-0 ml-1.5 ${
-                                      isDropdownOpen ? "rotate-180" : ""
-                                    }`}
-                                  />
+                                  {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
                                 </button>
-
-                                {/* Custom Neat Dropdown Menu (No OS Native Blue Popup!) */}
-                                {isDropdownOpen && (
-                                  <div className="absolute left-0 top-full mt-1.5 w-full max-h-60 overflow-y-auto bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] p-1 z-30 animate-in fade-in duration-100 border border-neutral-100/60">
-                                    {models.map((m) => {
-                                      const isSelected = m.id === currentModel?.id;
-                                      return (
-                                        <button
-                                          key={m.id}
-                                          type="button"
-                                          onClick={() => {
-                                            setSelectedModelMap((prev) => ({
-                                              ...prev,
-                                              [provider.id]: m.id,
-                                            }));
-                                            setOpenModelDropdownId(null);
-                                          }}
-                                          className={`w-full px-3 py-2 text-left rounded-lg flex items-center justify-between text-[12.5px] cursor-pointer transition-colors border-0 ${
-                                            isSelected
-                                              ? "bg-neutral-100/90 text-neutral-900 font-medium"
-                                              : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
-                                          }`}
-                                        >
-                                          <span className="truncate mr-2">{m.name}</span>
-                                          <div className="flex items-center gap-2 shrink-0">
-                                            <span className="text-[11px] font-mono text-neutral-400">
-                                              {m.contextWindowTokens
-                                                ? `${Math.round(m.contextWindowTokens / 1000)}k`
-                                                : m.tag || ""}
-                                            </span>
-                                            {isSelected && (
-                                              <Check size={13} className="text-neutral-900" />
-                                            )}
-                                          </div>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                )}
                               </div>
-                            </div>
-                          );
-                        })()}
 
-                        {/* Prefix mismatch notice */}
-                        {isPrefixMismatch && (
-                          <p className="text-[11.5px] text-amber-700">
-                            Keys typically start with &ldquo;{provider.keyPrefix}&rdquo;
-                          </p>
-                        )}
+                              <button
+                                type="button"
+                                onClick={() => handleSaveProvider(provider.id)}
+                                disabled={isSaving || !canSaveProvider}
+                                aria-busy={isSaving}
+                                style={
+                                  canSaveProvider && !isSaving
+                                    ? undefined
+                                    : {
+                                        backgroundColor: "var(--color-neutral-200)",
+                                        color: "var(--color-neutral-500)",
+                                        boxShadow: "none",
+                                      }
+                                }
+                                className="inline-flex h-11 min-w-[120px] shrink-0 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-[13px] font-medium text-white shadow-sm shadow-neutral-950/10 transition-all duration-150 hover:bg-neutral-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed"
+                              >
+                                {!isSaving &&
+                                  (isConnected && endpointChanged && !currentInput.trim() ? (
+                                    <Check size={14} strokeWidth={1.8} aria-hidden="true" />
+                                  ) : (
+                                    <KeyRound size={14} strokeWidth={1.8} aria-hidden="true" />
+                                  ))}
+                                {isSaving
+                                  ? "Saving..."
+                                  : isConnected && endpointChanged && !currentInput.trim()
+                                    ? "Save endpoint"
+                                    : isConnected
+                                      ? "Update"
+                                      : "Connect"}
+                              </button>
 
-                        {/* Error Banner */}
-                        {saveError && (
-                          <div className="text-[12px] text-rose-600 flex items-center justify-between">
-                            <span>{saveError}</span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSaveErrorMap((prev) => {
-                                  const next = { ...prev };
-                                  delete next[provider.id];
-                                  return next;
-                                })
-                              }
-                              aria-label="Dismiss error"
-                              className="text-rose-400 hover:text-rose-700 p-0.5 cursor-pointer"
-                            >
-                              <X size={13} />
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Custom Provider (OpenRouter) Minimal Controls */}
-                        {provider.id === "custom" && (
-                          <div className="flex flex-col gap-2 pt-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[12px] text-neutral-400 shrink-0 select-none">
-                                Model ID
-                              </span>
-                              <input
-                                type="text"
-                                value={customModelId}
-                                onChange={(e) => setCustomModel(e.target.value)}
-                                placeholder="openai/gpt-4o-mini"
-                                className="h-9 flex-1 min-w-[180px] max-w-sm px-3 bg-neutral-100 text-[12px] font-mono text-neutral-800 rounded-xl outline-none border-0"
-                              />
-                              <span className="text-[12px] text-neutral-400 shrink-0 select-none">
-                                via
-                              </span>
-                              <div className="relative" data-provider-dropdown>
+                              {hasUnsavedDraft && (
                                 <button
                                   type="button"
-                                  onClick={() => setCustomProviderDropdownOpen((v) => !v)}
-                                  className="h-9 px-3 bg-neutral-100 hover:bg-neutral-150/70 text-[12px] text-neutral-800 rounded-xl outline-none cursor-pointer flex items-center gap-1.5 border-0"
+                                  onClick={() => handleDiscardDraft(provider.id)}
+                                  className="h-11 px-2.5 text-[12px] text-neutral-500 hover:text-neutral-900 rounded-xl hover:bg-neutral-100 transition-colors cursor-pointer border-0 shrink-0"
                                 >
-                                  <span>{PROVIDER_CATALOG[customModelProvider].name}</span>
-                                  <ChevronDown
-                                    size={12}
-                                    className={`text-neutral-400 transition-transform ${
-                                      customProviderDropdownOpen ? "rotate-180" : ""
-                                    }`}
-                                  />
+                                  Discard
                                 </button>
-                                {customProviderDropdownOpen && (
-                                  <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] p-1 z-30 border border-neutral-100/60 animate-in fade-in duration-100">
-                                    {PROVIDER_ORDER.map((providerId) => {
-                                      const isSelected = providerId === customModelProvider;
-                                      return (
-                                        <button
-                                          key={providerId}
-                                          type="button"
-                                          onClick={() => {
-                                            setCustomProvider(providerId);
-                                            setCustomProviderDropdownOpen(false);
-                                          }}
-                                          className={`w-full px-2.5 py-1.5 text-left rounded-lg text-[12px] cursor-pointer flex items-center justify-between border-0 ${
-                                            isSelected
-                                              ? "bg-neutral-100 font-medium text-neutral-900"
-                                              : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                              )}
+
+                              {isConnected && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveProvider(provider.id)}
+                                  disabled={isSaving}
+                                  title="Disconnect key"
+                                  className="h-11 w-11 text-neutral-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer border-0 flex items-center justify-center shrink-0"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Models Dropdown - Neat & Clean Custom Dropdown (hidden on custom/OpenRouter where Model ID is configured directly) */}
+                          <div className="min-w-0 flex flex-col gap-4">
+                            {provider.id !== "custom" &&
+                              models.length > 0 &&
+                              (() => {
+                                const selectedModelId =
+                                  selectedModelMap[provider.id] || models[0]?.id;
+                                const currentModel =
+                                  models.find((m) => m.id === selectedModelId) || models[0];
+                                const isDropdownOpen = openModelDropdownId === provider.id;
+
+                                return (
+                                  <div
+                                    className="relative flex flex-col items-start gap-2"
+                                    data-model-dropdown
+                                  >
+                                    <span className="text-[12px] font-medium text-neutral-700 shrink-0 select-none">
+                                      Model
+                                    </span>
+                                    <div className="relative w-full">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setOpenModelDropdownId((curr) =>
+                                            curr === provider.id ? null : provider.id
+                                          )
+                                        }
+                                        className="w-full h-11 px-3 bg-neutral-100 hover:bg-neutral-150/70 text-[12.5px] text-neutral-800 rounded-xl outline-none cursor-pointer flex items-center justify-between transition-colors select-none border-0 focus-visible:ring-2 focus-visible:ring-neutral-300"
+                                      >
+                                        <span className="truncate">
+                                          {currentModel?.name}
+                                          {currentModel?.contextWindowTokens
+                                            ? ` • ${Math.round(currentModel.contextWindowTokens / 1000)}k`
+                                            : ""}
+                                        </span>
+                                        <ChevronDown
+                                          size={13}
+                                          className={`text-neutral-400 transition-transform duration-200 shrink-0 ml-1.5 ${
+                                            isDropdownOpen ? "rotate-180" : ""
                                           }`}
-                                        >
-                                          <span>{PROVIDER_CATALOG[providerId].name}</span>
-                                          {isSelected && <Check size={12} className="text-neutral-900" />}
-                                        </button>
-                                      );
-                                    })}
+                                        />
+                                      </button>
+
+                                      {/* Custom Neat Dropdown Menu (No OS Native Blue Popup!) */}
+                                      {isDropdownOpen && (
+                                        <div className="absolute left-0 top-full mt-1.5 w-full max-h-60 overflow-y-auto bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] p-1 z-30 animate-in fade-in duration-100 border border-neutral-100/60">
+                                          {models.map((m) => {
+                                            const isSelected = m.id === currentModel?.id;
+                                            return (
+                                              <button
+                                                key={m.id}
+                                                type="button"
+                                                onClick={() => {
+                                                  setSelectedModelMap((prev) => ({
+                                                    ...prev,
+                                                    [provider.id]: m.id,
+                                                  }));
+                                                  setOpenModelDropdownId(null);
+                                                }}
+                                                className={`w-full px-3 py-2 text-left rounded-lg flex items-center justify-between text-[12.5px] cursor-pointer transition-colors border-0 ${
+                                                  isSelected
+                                                    ? "bg-neutral-100/90 text-neutral-900 font-medium"
+                                                    : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                                                }`}
+                                              >
+                                                <span className="truncate mr-2">{m.name}</span>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                  <span className="text-[11px] font-mono text-neutral-400">
+                                                    {m.contextWindowTokens
+                                                      ? `${Math.round(m.contextWindowTokens / 1000)}k`
+                                                      : m.tag || ""}
+                                                  </span>
+                                                  {isSelected && (
+                                                    <Check size={13} className="text-neutral-900" />
+                                                  )}
+                                                </div>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
+                                );
+                              })()}
+
+                            {/* Custom Provider (OpenRouter) Minimal Controls */}
+                            {provider.id === "custom" && (
+                              <div className="flex flex-col gap-2 pt-1">
+                                <span className="text-[12px] font-medium text-neutral-700">
+                                  Custom model
+                                </span>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-[12px] text-neutral-400 shrink-0 select-none">
+                                    Model ID
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={customModelId}
+                                    onChange={(e) => setCustomModel(e.target.value)}
+                                    placeholder="openai/gpt-4o-mini"
+                                    className="h-9 flex-1 min-w-[180px] max-w-sm px-3 bg-neutral-100 text-[12px] font-mono text-neutral-800 rounded-xl outline-none border-0"
+                                  />
+                                  <span className="text-[12px] text-neutral-400 shrink-0 select-none">
+                                    via
+                                  </span>
+                                  <div className="relative" data-provider-dropdown>
+                                    <button
+                                      type="button"
+                                      onClick={() => setCustomProviderDropdownOpen((v) => !v)}
+                                      className="h-9 px-3 bg-neutral-100 hover:bg-neutral-150/70 text-[12px] text-neutral-800 rounded-xl outline-none cursor-pointer flex items-center gap-1.5 border-0"
+                                    >
+                                      <span>{PROVIDER_CATALOG[customModelProvider].name}</span>
+                                      <ChevronDown
+                                        size={12}
+                                        className={`text-neutral-400 transition-transform ${
+                                          customProviderDropdownOpen ? "rotate-180" : ""
+                                        }`}
+                                      />
+                                    </button>
+                                    {customProviderDropdownOpen && (
+                                      <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] p-1 z-30 border border-neutral-100/60 animate-in fade-in duration-100">
+                                        {PROVIDER_ORDER.map((providerId) => {
+                                          const isSelected = providerId === customModelProvider;
+                                          return (
+                                            <button
+                                              key={providerId}
+                                              type="button"
+                                              onClick={() => {
+                                                setCustomProvider(providerId);
+                                                setCustomProviderDropdownOpen(false);
+                                              }}
+                                              className={`w-full px-2.5 py-1.5 text-left rounded-lg text-[12px] cursor-pointer flex items-center justify-between border-0 ${
+                                                isSelected
+                                                  ? "bg-neutral-100 font-medium text-neutral-900"
+                                                  : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                                              }`}
+                                            >
+                                              <span>{PROVIDER_CATALOG[providerId].name}</span>
+                                              {isSelected && (
+                                                <Check size={12} className="text-neutral-900" />
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+                                  <span className="select-none">Presets:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDraftUrls((prev) => ({
+                                        ...prev,
+                                        custom: "https://openrouter.ai/api/v1",
+                                      }))
+                                    }
+                                    className="hover:text-neutral-900 cursor-pointer"
+                                  >
+                                    OpenRouter
+                                  </button>
+                                  <span>•</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDraftUrls((prev) => ({
+                                        ...prev,
+                                        custom: "http://localhost:11434/v1",
+                                      }))
+                                    }
+                                    className="hover:text-neutral-900 cursor-pointer"
+                                  >
+                                    Ollama
+                                  </button>
+                                  <span>•</span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDraftUrls((prev) => ({
+                                        ...prev,
+                                        custom: "http://localhost:1234/v1",
+                                      }))
+                                    }
+                                    className="hover:text-neutral-900 cursor-pointer"
+                                  >
+                                    LM Studio
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Minimal Endpoint Override */}
+                            <details className="group pt-0.5">
+                              <summary className="flex items-center gap-1 text-[12px] font-medium text-neutral-600 hover:text-neutral-900 cursor-pointer select-none [&::-webkit-details-marker]:hidden">
+                                <span>API endpoint</span>
+                                <ChevronDown
+                                  size={11}
+                                  className="transition-transform group-open:rotate-180"
+                                />
+                              </summary>
+
+                              <div className="pt-2 flex items-center gap-2">
+                                <input
+                                  type="url"
+                                  value={currentUrl}
+                                  onChange={(event) =>
+                                    setDraftUrls((prev) => ({
+                                      ...prev,
+                                      [provider.id]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder={provider.defaultBaseUrl}
+                                  aria-label={`${provider.name} API endpoint`}
+                                  className="h-8 flex-1 px-3 bg-neutral-100 text-[12px] font-mono text-neutral-800 rounded-lg outline-none border-0"
+                                />
+                                {currentUrl !== provider.defaultBaseUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDraftUrls((prev) => ({
+                                        ...prev,
+                                        [provider.id]: provider.defaultBaseUrl,
+                                      }))
+                                    }
+                                    className="text-[11.5px] text-neutral-400 hover:text-neutral-800 cursor-pointer"
+                                  >
+                                    Reset
+                                  </button>
                                 )}
                               </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-                              <span className="select-none">Presets:</span>
+                            </details>
+                          </div>
+                          {saveError && (
+                            <div className="lg:col-span-2 flex items-center justify-between text-[12px] text-rose-600">
+                              <span>{saveError}</span>
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setDraftUrls((prev) => ({
-                                    ...prev,
-                                    custom: "https://openrouter.ai/api/v1",
-                                  }))
+                                  setSaveErrorMap((prev) => {
+                                    const next = { ...prev };
+                                    delete next[provider.id];
+                                    return next;
+                                  })
                                 }
-                                className="hover:text-neutral-900 cursor-pointer"
+                                aria-label="Dismiss error"
+                                className="text-rose-400 hover:text-rose-700 p-0.5 cursor-pointer"
                               >
-                                OpenRouter
-                              </button>
-                              <span>•</span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setDraftUrls((prev) => ({
-                                    ...prev,
-                                    custom: "http://localhost:11434/v1",
-                                  }))
-                                }
-                                className="hover:text-neutral-900 cursor-pointer"
-                              >
-                                Ollama
-                              </button>
-                              <span>•</span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setDraftUrls((prev) => ({
-                                    ...prev,
-                                    custom: "http://localhost:1234/v1",
-                                  }))
-                                }
-                                className="hover:text-neutral-900 cursor-pointer"
-                              >
-                                LM Studio
+                                <X size={13} />
                               </button>
                             </div>
-                          </div>
-                        )}
-
-                        {/* Minimal Endpoint Override */}
-                        <details className="group pt-0.5">
-                          <summary className="flex items-center gap-1 text-[11.5px] text-neutral-400 hover:text-neutral-700 cursor-pointer select-none [&::-webkit-details-marker]:hidden">
-                            <span>Endpoint</span>
-                            <ChevronDown
-                              size={11}
-                              className="transition-transform group-open:rotate-180"
-                            />
-                          </summary>
-
-                          <div className="pt-2 flex items-center gap-2 max-w-md">
-                            <input
-                              type="url"
-                              value={currentUrl}
-                              onChange={(event) =>
-                                setDraftUrls((prev) => ({
-                                  ...prev,
-                                  [provider.id]: event.target.value,
-                                }))
-                              }
-                              placeholder={provider.defaultBaseUrl}
-                              aria-label={`${provider.name} API endpoint`}
-                              className="h-8 flex-1 px-3 bg-neutral-100 text-[12px] font-mono text-neutral-800 rounded-lg outline-none border-0"
-                            />
-                            {currentUrl !== provider.defaultBaseUrl && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setDraftUrls((prev) => ({
-                                    ...prev,
-                                    [provider.id]: provider.defaultBaseUrl,
-                                  }))
-                                }
-                                className="text-[11.5px] text-neutral-400 hover:text-neutral-800 cursor-pointer"
-                              >
-                                Reset
-                              </button>
-                            )}
-                          </div>
-                        </details>
+                          )}
+                        </div>
                       </div>
                     )}
                   </section>
@@ -949,9 +1225,35 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
               })}
             </div>
           </div>
+        ) : activeCategory === "Skills" ? (
+          <CustomizeSkillsTab
+            subTab={subTab}
+            onSubTabChange={setSubTab}
+            searchQuery={searchQuery}
+            onSkillsCountChange={(yoursCount, discoverCount) => {
+              setSkillsCount(yoursCount);
+              setDirectoryCount(discoverCount);
+            }}
+            fileInputRef={skillFileInputRef}
+            isCreatorOpen={isSkillCreatorOpen}
+            setIsCreatorOpen={setIsSkillCreatorOpen}
+            selectedCategory={selectedSkillCategory}
+            onCategoryChange={setSelectedSkillCategory}
+            scopeFilter={skillScopeFilter}
+            onScopeFilterChange={setSkillScopeFilter}
+            sortBy={skillSortBy}
+            onSortByChange={setSkillSortBy}
+            onCategoriesLoaded={setSkillCategories}
+          />
         ) : (
-          /* Skills, Connectors, and Plugins share the same empty canvas */
-          <div className="flex-1 w-full min-h-[400px]" />
+          <div className="mt-7 flex min-h-[300px] flex-col items-center justify-center rounded-3xl border border-neutral-200/80 bg-white p-10 text-center">
+            <h2 className="text-[17px] font-semibold text-neutral-900">
+              {activeCategory} aren’t available yet
+            </h2>
+            <p className="mt-2 max-w-md text-[13px] leading-relaxed text-neutral-500">
+              This workspace doesn’t have any {activeCategory.toLowerCase()} to configure yet.
+            </p>
+          </div>
         )}
       </div>
     </div>

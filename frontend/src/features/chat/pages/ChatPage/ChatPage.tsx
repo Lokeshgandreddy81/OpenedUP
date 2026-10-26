@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { AppContextType } from "../../../chapters";
 import { ChatWindow } from "../../components/ChatWindow";
 import type { ChatWorkspaceView } from "./ChatWorkspaceScreens";
@@ -10,8 +10,9 @@ interface ChatPageProps {
 }
 
 export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
+  const location = useLocation();
   const navigate = useNavigate();
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(location.search);
   const viewParam = params.get("view");
   const validViews = [
     "chat",
@@ -31,15 +32,7 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
     params.get("category") === "Providers" ? "Providers" : "Connectors";
 
   const handleClose = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/results");
-    }
-  };
-
-  const handleOpenScheduledTasks = () => {
-    navigate("/chat?view=scheduled");
+    navigate("/", { replace: true });
   };
 
   const handleViewChange = (
@@ -66,7 +59,6 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
         docTitle="Chat Assistant"
         initialView={initialView}
         initialCustomizeCategory={initialCustomizeCategory}
-        onOpenScheduledTasks={handleOpenScheduledTasks}
         onViewChange={handleViewChange}
       />
     </div>

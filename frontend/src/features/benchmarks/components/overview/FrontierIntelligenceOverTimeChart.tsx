@@ -24,7 +24,7 @@ function getYCoordinate(score: number): number {
   return PLOT_BOTTOM - ratio * PLOT_HEIGHT;
 }
 
-export interface TimelineModelPoint {
+interface TimelineModelPoint {
   id: string;
   name: string;
   creatorId: string;
@@ -35,13 +35,13 @@ export interface TimelineModelPoint {
   score: number;
 }
 
-export interface CreatorConfig {
+interface CreatorConfig {
   id: string;
   name: string;
   color: string;
 }
 
-export const FRONTIER_CREATORS: CreatorConfig[] = [
+const FRONTIER_CREATORS: CreatorConfig[] = [
   { id: "anthropic", name: "Anthropic", color: "#CC785C" },
   { id: "meta", name: "Meta", color: "#0089F4" },
   { id: "openai", name: "OpenAI", color: "#1F1F1F" },
@@ -64,7 +64,7 @@ export const FRONTIER_CREATORS: CreatorConfig[] = [
  * 100% Verified Chronological Frontier Model Releases (Nov 2022 – Oct 2026)
  * Sourced directly from Artificial Analysis Official Decrypted Production Benchmark Dataset
  */
-export const TIMELINE_MODELS_DATA: TimelineModelPoint[] = [
+const TIMELINE_MODELS_DATA: TimelineModelPoint[] = [
   // ── Anthropic (#cc785c) ──
   {
     id: "anthropic-claude-instant-0",
@@ -1401,7 +1401,7 @@ export const TIMELINE_MODELS_DATA: TimelineModelPoint[] = [
 /**
  * Milestone Ticks on X-Axis matching Artificial Analysis timeline
  */
-export const X_AXIS_TICKS = [
+const X_AXIS_TICKS = [
   { label: "Nov 22", date: "2022-11-01" },
   { label: "May 23", date: "2023-05-01" },
   { label: "Nov 23", date: "2023-11-01" },
@@ -1413,7 +1413,7 @@ export const X_AXIS_TICKS = [
   { label: "Oct 26", date: "2026-10-01" },
 ];
 
-export const Y_AXIS_TICKS = [60, 45, 30, 15, 0];
+const Y_AXIS_TICKS = [60, 45, 30, 15, 0];
 
 export const FrontierIntelligenceOverTimeChart: React.FC = () => {
   const [selectedCreators, setSelectedCreators] = useState<string[]>(

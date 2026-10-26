@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useChatAuth } from "../../../app/auth/ChatAuthContext";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { authenticatedChatFetch } from "../../../app/api/chatApi";
 import { getFirebaseIdToken } from "../../../app/integrations/workspaceLiveSync";
 
@@ -166,6 +166,15 @@ export function deleteArtifactItem(id: string): void {
   if (typeof window === "undefined") return;
   const next = getStoredArtifacts().filter((a) => a.id !== id);
   window.localStorage.setItem(ARTIFACTS_STORAGE_KEY, JSON.stringify(next));
+  try {
+    const versions = JSON.parse(
+      window.localStorage.getItem(ARTIFACT_VERSIONS_STORAGE_KEY) || "{}"
+    ) as Record<string, ArtifactVersion[]>;
+    delete versions[id];
+    window.localStorage.setItem(ARTIFACT_VERSIONS_STORAGE_KEY, JSON.stringify(versions));
+  } catch {
+    window.localStorage.removeItem(ARTIFACT_VERSIONS_STORAGE_KEY);
+  }
   window.dispatchEvent(new CustomEvent(ARTIFACTS_SYNC_EVENT));
 }
 

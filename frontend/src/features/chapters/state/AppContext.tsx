@@ -1,7 +1,5 @@
 import React, {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -9,9 +7,10 @@ import React, {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { authenticatedChatFetch } from "../../../app/api/chatApi";
 import type { ReadingPhase } from "../components/LandingView";
-import { usePrefersReducedMotion } from "../../../app/components/MotionPrimitives";
-import { clearDocumentCache } from "../components/ProofPanel";
+import { usePrefersReducedMotion } from "../../../app/hooks/usePrefersReducedMotion";
+import { clearDocumentCache } from "../services/documentCache";
 import { clearPdfDocumentCache } from "../../../app/files/pdfDocumentCache";
 import type {
   FailedBatchInfo,
@@ -19,9 +18,6 @@ import type {
   RawReceiptFromModel,
   ReceiptRow,
   UploadedPhoto,
-  ReconciliationResult,
-  MerchantTileData,
-  ComputedRow,
 } from "@charan-interiors/contracts";
 import {
   applyCodeVerifiedDuplicates,
@@ -39,58 +35,17 @@ import {
 } from "../services/imageProcessor";
 import {
   type IngestedWorkspaceFile,
+  getFirebaseIdToken,
   getSavedWorkspaceSession,
   initAuth,
 } from "../../../app/integrations/workspaceLiveSync";
 import { sanitizeRawReceipt } from "../services/sanitizeRawReceipt";
+import { getProviderChatRequestConfig } from "../../customize/publicApi";
+import { AppContext } from "./appContextState";
+import type { AppContextType } from "./appContextState";
+export type { AppContextType } from "./appContextState";
 
 const MAX_PARALLEL_BATCHES = 4;
-export interface AppContextType {
-  photos: UploadedPhoto[];
-  setPhotos: React.Dispatch<React.SetStateAction<UploadedPhoto[]>>;
-  rows: ReceiptRow[];
-  setRows: React.Dispatch<React.SetStateAction<ReceiptRow[]>>;
-  privacyAccepted: boolean;
-  setPrivacyAccepted: React.Dispatch<React.SetStateAction<boolean>>;
-  readingPhase: ReadingPhase;
-  totalReceiptsFound: number;
-  recentDiscoveries: Array<{ merchant: string; total: number | null; currency: string }>;
-  failedBatches: FailedBatchInfo[];
-  isWorkspaceModalOpen: boolean;
-  setIsWorkspaceModalOpen: (open: boolean) => void;
-  connectedEmail: string | null;
-  setConnectedEmail: (email: string | null) => void;
-  isDemo: boolean;
-  isPdfDemo: boolean;
-  engineOutput: {
-    computedRows: ComputedRow[];
-    merchantTiles: MerchantTileData[];
-    reconciliation: ReconciliationResult;
-  };
-  handleAddFiles: (fileList: FileList | File[]) => void;
-  handleIngestWorkspaceFiles: (items: IngestedWorkspaceFile[]) => void;
-  handleRemovePhoto: (id: string) => void;
-  handleStartVisualise: () => void;
-  handleRetryFailedBatches: () => void;
-  handleUpdateRow: (rowNumber: number, updater: (prev: ReceiptRow) => ReceiptRow) => void;
-  handleChangeCostCenter: (rowId: string, newCostCenter: string) => void;
-  handleNewPile: () => void;
-}
-
-declare global {
-  interface Window {
-    __SHOBOX_APP_CONTEXT__?: React.Context<AppContextType | null>;
-    __SHOBOX_APP_CONTEXT_VALUE__?: AppContextType;
-  }
-}
-
-const AppContext: React.Context<AppContextType | null> =
-  (typeof window !== "undefined" && window.__SHOBOX_APP_CONTEXT__) ||
-  createContext<AppContextType | null>(null);
-
-if (typeof window !== "undefined") {
-  window.__SHOBOX_APP_CONTEXT__ = AppContext;
-}
 
 export interface AppProviderProps {
   children: ReactNode;
@@ -110,6 +65,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     Array<{ merchant: string; total: number | null; currency: string }>
   >([]);
   const [failedBatches, setFailedBatches] = useState<FailedBatchInfo[]>([]);
+  const [receiptModel, setReceiptModel] = useState("gemini-3.8-flash");
+  const [duplicateReviewError, setDuplicateReviewError] = useState<string | null>(null);
   const [rows, setRows] = useState<ReceiptRow[]>([]);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState<boolean>(false);
   const [connectedEmail, setConnectedEmail] = useState<string | null>(
@@ -141,11 +98,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const pipelineRunIdRef = useRef<number>(0);
   const receiptsByPhotoIdRef = useRef<Map<string, RawReceiptFromModel[]>>(new Map());
 
-  const requestReadBatchWithRetry = async (
+  const requestReadBatch = async (
     batch: UploadedPhoto[],
     totalPhotosCount: number
   ): Promise<RawReceiptFromModel[]> => {
+    const providerConfig = getProviderChatRequestConfig(receiptModel);
     const payload = {
+      model: receiptModel,
+      ...providerConfig.customModelFields,
       photos: batch.map((p) => ({
         globalIndex: p.globalIndex,
         totalPhotos: totalPhotosCount,
@@ -154,83 +114,47 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       })),
     };
 
-    const attemptCall = async (): Promise<RawReceiptFromModel[]> => {
-      const res = await fetch("/api/read-receipts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Batch request failed (${res.status})`);
-      }
-      const data = await res.json();
-      return Array.isArray(data.receipts) ? data.receipts : [];
+    const requestInit: RequestInit = {
+      method: "POST",
+      headers: providerConfig.headers,
+      body: JSON.stringify(payload),
     };
-
-    try {
-      return await attemptCall();
-    } catch {
-      await new Promise((r) => window.setTimeout(r, 400));
-      return await attemptCall();
+    const idToken = await getFirebaseIdToken();
+    const res = idToken
+      ? await authenticatedChatFetch("/api/read-receipts", requestInit)
+      : await fetch("/api/read-receipts", requestInit);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Batch request failed (${res.status})`);
     }
+    const data = await res.json();
+    return Array.isArray(data.receipts) ? data.receipts : [];
   };
 
-  const requestParsePdfWithRetry = async (photo: UploadedPhoto): Promise<ParsedPdfResult> => {
+  const requestParsePdf = async (photo: UploadedPhoto): Promise<ParsedPdfResult> => {
+    const providerConfig = getProviderChatRequestConfig(receiptModel);
     const payload = {
       mimeType: "application/pdf",
       base64Data: photo.base64Data || "",
       fileName: photo.name,
+      model: receiptModel,
+      ...providerConfig.customModelFields,
     };
+    const requestInit: RequestInit = {
+      method: "POST",
+      headers: providerConfig.headers,
+      body: JSON.stringify(payload),
+    };
+    const idToken = await getFirebaseIdToken();
+    const response = idToken
+      ? await authenticatedChatFetch("/api/parse-pdf-chapters", requestInit)
+      : await fetch("/api/parse-pdf-chapters", requestInit);
 
-    const maxAttempts = 3;
-    let lastError: Error | null = null;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const res = await fetch("/api/parse-pdf-chapters", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          let rawError = errData.error || `PDF parse request failed (${res.status})`;
-          try {
-            const parsed = JSON.parse(rawError);
-            if (parsed?.error?.message) {
-              rawError = parsed.error.message;
-            }
-          } catch {
-            // plain text error
-          }
-
-          if (res.status >= 400 && res.status < 500 && res.status !== 429) {
-            throw new Error(rawError);
-          }
-          throw new Error(rawError);
-        }
-
-        return (await res.json()) as ParsedPdfResult;
-      } catch (err: unknown) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-        const isClientError =
-          lastError.message.includes("400") ||
-          lastError.message.includes("Invalid MIME") ||
-          lastError.message.includes("No PDF data");
-        if (isClientError || attempt === maxAttempts) {
-          throw lastError;
-        }
-        const delay = attempt * 1200 + Math.floor(Math.random() * 400);
-        await new Promise((r) => window.setTimeout(r, delay));
-      }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `PDF parse request failed (${response.status})`);
     }
-
-    throw (
-      lastError ||
-      new Error("This model is currently experiencing high demand. Please try again in a moment.")
-    );
+    return (await response.json()) as ParsedPdfResult;
   };
 
   const finalizeMergedReceiptsAndTransition = async (
@@ -313,6 +237,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       duplicate_of: number;
       reason: string;
     }> = [];
+    setDuplicateReviewError(null);
 
     if (!isPurePdfDocument && !isDocChapters) {
       setReadingPhase("checking_duplicates");
@@ -331,10 +256,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
       if (sortedInitialRows.length >= 2 && hasCandidatePair) {
         try {
-          const dupRes = await fetch("/api/check-duplicates", {
+          const providerConfig = getProviderChatRequestConfig(receiptModel);
+          const requestInit: RequestInit = {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: providerConfig.headers,
             body: JSON.stringify({
+              model: receiptModel,
+              ...providerConfig.customModelFields,
               rows: sortedInitialRows.map((r) => ({
                 row: r.row,
                 photo_index: r.photo_index,
@@ -348,15 +276,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 source_type: r.source_meta?.sourceType || "manual_upload",
               })),
             }),
-          });
-          if (dupRes.ok) {
-            const dupData = await dupRes.json();
-            if (Array.isArray(dupData.duplicates)) {
-              modelDuplicates = dupData.duplicates;
-            }
+          };
+          // Signed-in users can resolve saved vault credentials; anonymous users send BYOK headers.
+          const idToken = await getFirebaseIdToken();
+          const dupRes = idToken
+            ? await authenticatedChatFetch("/api/check-duplicates", requestInit)
+            : await fetch("/api/check-duplicates", requestInit);
+          if (!dupRes.ok) {
+            const failure = (await dupRes.json().catch(() => null)) as { error?: unknown } | null;
+            throw new Error(
+              typeof failure?.error === "string"
+                ? failure.error.replace(/^MISSING_API_KEY:[^:]+:/, "")
+                : "Duplicate review failed. Check the selected model and provider connection."
+            );
           }
+          const dupData = (await dupRes.json()) as { duplicates?: unknown };
+          if (!Array.isArray(dupData.duplicates)) {
+            throw new Error("The selected model returned an invalid duplicate review response.");
+          }
+          modelDuplicates = dupData.duplicates;
         } catch (e) {
-          console.warn("Duplicate check call error, falling back to code check:", e);
+          const message = e instanceof Error ? e.message : "Duplicate review failed.";
+          setDuplicateReviewError(message);
+          console.warn("Duplicate review failed; retaining deterministic receipt checks.");
         }
       }
     }
@@ -489,7 +431,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
             if (isSinglePdf) {
               const pdfPhoto = batch[0];
-              const parsedPdf = await requestParsePdfWithRetry(pdfPhoto);
+              const parsedPdf = await requestParsePdf(pdfPhoto);
               if (pipelineRunIdRef.current !== runId) return;
 
               const rawChapters = parsedPdf.chapters || [];
@@ -567,7 +509,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 };
               });
             } else {
-              batchReceipts = await requestReadBatchWithRetry(batch, totalCount);
+              batchReceipts = await requestReadBatch(batch, totalCount);
             }
             if (pipelineRunIdRef.current !== runId) return;
 
@@ -678,7 +620,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       await finalizeMergedReceiptsAndTransition(runId, allPhotosSnapshot);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [reducedMotion]
+    [reducedMotion, receiptModel]
   );
 
   const runBatchesPipelineRef = useRef(runBatchesPipeline);
@@ -884,6 +826,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setRecentDiscoveries([]);
     setFailedBatches([]);
     setReadingPhase("idle");
+    setDuplicateReviewError(null);
     navigate("/");
   }, [navigate]);
 
@@ -903,6 +846,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     totalReceiptsFound,
     recentDiscoveries,
     failedBatches,
+    receiptModel,
+    setReceiptModel,
+    duplicateReviewError,
+    setDuplicateReviewError,
     isWorkspaceModalOpen,
     setIsWorkspaceModalOpen,
     connectedEmail,
@@ -926,40 +873,3 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
 };
-
-const DEFAULT_APP_CONTEXT: AppContextType = {
-  photos: [],
-  setPhotos: () => {},
-  rows: [],
-  setRows: () => {},
-  privacyAccepted: true,
-  setPrivacyAccepted: () => {},
-  readingPhase: "idle",
-  totalReceiptsFound: 0,
-  recentDiscoveries: [],
-  failedBatches: [],
-  isWorkspaceModalOpen: false,
-  setIsWorkspaceModalOpen: () => {},
-  connectedEmail: null,
-  setConnectedEmail: () => {},
-  isDemo: false,
-  isPdfDemo: false,
-  engineOutput: computeShoeboxEngine([], 1),
-  handleAddFiles: () => {},
-  handleIngestWorkspaceFiles: () => {},
-  handleRemovePhoto: () => {},
-  handleStartVisualise: () => {},
-  handleRetryFailedBatches: () => {},
-  handleUpdateRow: () => {},
-  handleChangeCostCenter: () => {},
-  handleNewPile: () => {},
-};
-
-export function useAppContext(): AppContextType {
-  const context = useContext(AppContext);
-  if (context) return context;
-  if (typeof window !== "undefined" && window.__SHOBOX_APP_CONTEXT_VALUE__) {
-    return window.__SHOBOX_APP_CONTEXT_VALUE__;
-  }
-  return DEFAULT_APP_CONTEXT;
-}

@@ -1,13 +1,22 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { FailedBatchInfo, UploadedPhoto } from "@charan-interiors/contracts";
-import { RisingWord, usePrefersReducedMotion } from "../../../app/components/MotionPrimitives";
+import {
+  getChatModels,
+  modelSupportsInput,
+  PROVIDER_CATALOG,
+  type FailedBatchInfo,
+  type UploadedPhoto,
+} from "@charan-interiors/contracts";
+import { RisingWord } from "../../../app/components/MotionPrimitives";
+import { usePrefersReducedMotion } from "../../../app/hooks/usePrefersReducedMotion";
 
 export type ReadingPhase =
   "idle" | "reading_photos" | "checking_duplicates" | "adding_up" | "transitioning_out";
 
 export interface LandingViewProps {
   onGetStarted?: () => void;
+  receiptModel: string;
+  onReceiptModelChange: (model: string) => void;
   photos?: UploadedPhoto[];
   privacyAccepted?: boolean;
   readingPhase?: ReadingPhase;
@@ -27,7 +36,11 @@ export interface LandingViewProps {
   onOpenWorkspaceModal?: () => void;
 }
 
-export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
+export const LandingView: React.FC<LandingViewProps> = ({
+  onGetStarted,
+  receiptModel,
+  onReceiptModelChange,
+}) => {
   const navigate = useNavigate();
   const reducedMotion = usePrefersReducedMotion();
   const [loadStep, setLoadStep] = useState<number>(reducedMotion ? 10 : 0);
@@ -205,8 +218,8 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
                 {
                   num: 3 as const,
                   label: "Reconcile",
-                  spec: "DETERMINISTIC CODE",
-                  text: "Verify arithmetic totals & eliminate duplicate submissions",
+                  spec: "CODE + MODEL REVIEW",
+                  text: "Verify arithmetic totals & review likely duplicate submissions",
                 },
               ].map((step, idx) => (
                 <li
@@ -315,13 +328,39 @@ export const LandingView: React.FC<LandingViewProps> = ({ onGetStarted }) => {
               </kbd>{" "}
               or click to open Chat Assistant
             </p>
+            <label className="mt-5 flex flex-col gap-1.5 text-[12px] text-slate-600">
+              <span>Receipt and duplicate review model</span>
+              <select
+                aria-label="Receipt and duplicate review model"
+                value={receiptModel}
+                onChange={(event) => onReceiptModelChange(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800"
+              >
+                {getChatModels()
+                  .filter(
+                    (model) =>
+                      model.catalogStatus === "verified" && modelSupportsInput(model.id, "image")
+                  )
+                  .map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {`${model.name} (${PROVIDER_CATALOG[model.provider].name})`}
+                    </option>
+                  ))}
+              </select>
+              <span>
+                Choose an image-capable model. Connect its provider key in Customize → Providers.
+              </span>
+            </label>
           </div>
         </div>
 
         {/* ── Bottom: Legal Footnote ── */}
         <div className="flex flex-col gap-3 select-none pt-2" style={fadeIn(7)}>
           <p className="m-0 text-[10.5px] text-slate-400 leading-[1.6] font-normal">
-            Processed securely via Gemini. Subject to Google's{" "}
+            Receipt extraction and duplicate review use the selected image-capable model and its
+            connected provider key; configure it in Customize → Providers. Searchable PDF parsing
+            runs locally, with Gemini as an optional fallback for scanned or unsupported documents.
+            Gemini requests are subject to Google&apos;s{" "}
             <a
               href="https://policies.google.com/terms/generative-ai/use-policy"
               target="_blank"

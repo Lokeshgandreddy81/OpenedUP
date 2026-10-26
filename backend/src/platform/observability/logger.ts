@@ -15,13 +15,32 @@ try {
 const SECRET_PATTERNS = [
   /Bearer\s+[A-Za-z0-9._~+/-]+=*/gi,
   /\bAIza[0-9A-Za-z_-]{30,45}\b/g,
+  /\bAQ\.[A-Za-z0-9_-]{16,}\b/g,
+  /\bya29\.[A-Za-z0-9._-]{20,}\b/g,
   /\bsk-(?:proj-|live-|ant-|or-v1-)?[a-zA-Z0-9_-]{16,}\b/g,
+  /\bxai-[a-zA-Z0-9_-]{16,}\b/g,
   /\bgsk_[a-zA-Z0-9_-]{20,}\b/g,
   /\bpplx-[a-zA-Z0-9_-]{20,}\b/g,
-  /(?:x-provider-key|x-api-key):\s*[^\s,]+/gi,
-  /"(?:x-provider-key|x-api-key|apiKey|injectedApiKey|token|secret|password|authorization)"\s*:\s*"[^"]+"/gi,
+  /(?:x-provider-key|x-api-key|x-goog-api-key):\s*[^\s,]+/gi,
+  /"(?:x-provider-key|x-api-key|x-goog-api-key|apiKey|api_key|injectedApiKey|token|secret|password|authorization)"\s*:\s*"[^"]+"/gi,
   /(?:apiKey|api_key|injectedApiKey|token|secret|password|key)=([^&\s]+)/gi,
 ];
+
+const PRIVATE_PAYLOAD_FIELDS = new Set([
+  "prompt",
+  "systeminstruction",
+  "content",
+  "messages",
+  "input",
+  "output",
+  "body",
+  "transcript",
+  "question",
+  "query",
+  "search",
+  "data",
+  "filename",
+]);
 
 export function redactSecretsString(text: string): string {
   let result = text;
@@ -54,7 +73,8 @@ export function redactSecretsObject<T>(obj: T): T {
       lowerKey.includes("password") ||
       lowerKey.includes("authorization") ||
       lowerKey.includes("credential") ||
-      lowerKey.includes("auth")
+      lowerKey.includes("auth") ||
+      PRIVATE_PAYLOAD_FIELDS.has(lowerKey)
     ) {
       result[key] = "[REDACTED]";
     } else {

@@ -6,7 +6,8 @@ import {
   type CodingAgentModelItem,
   type SafetyRefusalBreakdown,
 } from "../data/codingAgentBenchmarks";
-import { ChartModelLabels, chartLabelSlotWidth } from "../ui/ChartModelLabels";
+import { ChartModelLabels } from "../ui/ChartModelLabels";
+import { chartLabelSlotWidth } from "../ui/chartModelLabelLayout";
 import { ModelsFilterControl } from "../ui/ChartCardControls";
 
 type SafetyTab = "index" | "deepSwe" | "terminalBench" | "sweAtlas";

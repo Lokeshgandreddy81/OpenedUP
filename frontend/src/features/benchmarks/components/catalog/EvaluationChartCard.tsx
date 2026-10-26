@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import type { AIModelBenchmark } from "../types";
-import { CreatorLogo, getCreatorColor } from "../ui/CreatorLogo";
+import { CreatorLogo } from "../ui/CreatorLogo";
+import { getCreatorColor } from "../ui/creatorBranding";
 import { formatEvaluationValue, type BenchmarkEvaluation } from "../data/benchmarkEvaluations";
 
 export interface EvaluationChartCardProps {

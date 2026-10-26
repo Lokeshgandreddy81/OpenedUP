@@ -1,11 +1,18 @@
 import type { ChatRequest } from "@charan-interiors/contracts";
-import { getModelMeta } from "@charan-interiors/contracts";
+import {
+  getUnsupportedInputMessage,
+  modelSupportsInput,
+} from "@charan-interiors/contracts";
 import {
   generateMultiProviderChat,
   generateMultiProviderChatStream,
 } from "../providers/llm.service.js";
 import { runAgenticWorkspaceTools } from "./tools.service.js";
 import { executeSkills } from "./skillRegistry.js";
+import { getSkillRepository } from "../../skills/http/skill.controller.js";
+import { buildSkillsPrompt } from "../../skills/application/promptBuilder.js";
+
+export const CHAT_GENERATION_TIMEOUT_MS = 90_000;
 
 export interface ProcessChatOptions {
   injectedApiKey?: string | undefined;
@@ -28,31 +35,39 @@ export async function processChat(
   providerUsed: string;
 }> {
   const startTime = Date.now();
-  const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort, images } = payload;
+  const { messages, model, customModel, customProvider, effort, images } = payload;
 
-  const meta = getModelMeta(model);
   const imagePages = (payload as { imagePages?: import("../providers/llm.service.js").LlmGenerateParams["imagePages"] }).imagePages;
   const hasImages = Boolean(images?.length || imagePages?.length);
-  if (
-    hasImages &&
-    meta.inputModalities &&
-    !meta.inputModalities.includes("image")
-  ) {
-    throw new Error(
-      `${meta.name} does not support image analysis. Please select a multimodal vision model (such as Claude Opus/Fable, GPT-6, Gemini, Grok, Kimi K3.1, or Qwen 3.8 Max) to analyze images.`
-    );
+  if (hasImages && !modelSupportsInput(model, "image")) {
+    throw new Error(getUnsupportedInputMessage(model, "image"));
   }
 
   // Run agentic workspace inspection tools (rules, chapters, attached files)
   const toolTraces = options?.toolTraces ?? runAgenticWorkspaceTools(payload);
   const skills = executeSkills(payload);
 
+  let progressiveSkillsPrompt = "";
+  try {
+    const skillRepo = getSkillRepository();
+    const visibleSkills = skillRepo.listVisible("dev-user", null, { scope: "builtin" });
+    progressiveSkillsPrompt = buildSkillsPrompt(visibleSkills);
+  } catch {
+    /* fallback gracefully if database is unseeded */
+  }
+
   const { text, modelUsed, providerUsed } = await generateMultiProviderChat({
     modelId: model,
     customModel,
     customProvider,
     messages,
-    systemInstruction: `${toolTraces.enrichedSystemInstruction}\n${skills.instructions}`,
+    systemInstruction: [
+      toolTraces.enrichedSystemInstruction,
+      skills.instructions,
+      progressiveSkillsPrompt,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
     effort,
     images,
     imagePages,
@@ -65,7 +80,7 @@ export async function processChat(
   const thinkingSeconds = Math.max(1, Math.round(elapsedMs / 1000));
 
   return {
-    content: text || "No response received.",
+    content: text,
     thinkingTime: `${thinkingSeconds}s`,
     stepTitle: toolTraces.stepTitle,
     stepDescription: toolTraces.stepDescription,
@@ -85,30 +100,39 @@ export async function processChatStream(
   onDelta: (delta: string) => void
 ) {
   const startTime = Date.now();
-  const { messages, model = "gemini-3.8-flash", customModel, customProvider, effort, images } = payload;
+  const { messages, model, customModel, customProvider, effort, images } = payload;
 
-  const meta = getModelMeta(model);
   const imagePages = (payload as { imagePages?: import("../providers/llm.service.js").LlmGenerateParams["imagePages"] }).imagePages;
   const hasImages = Boolean(images?.length || imagePages?.length);
-  if (
-    hasImages &&
-    meta.inputModalities &&
-    !meta.inputModalities.includes("image")
-  ) {
-    throw new Error(
-      `${meta.name} does not support image analysis. Please select a multimodal vision model (such as Claude Opus/Fable, GPT-6, Gemini, Grok, Kimi K3.1, or Qwen 3.8 Max) to analyze images.`
-    );
+  if (hasImages && !modelSupportsInput(model, "image")) {
+    throw new Error(getUnsupportedInputMessage(model, "image"));
   }
 
   const toolTraces = options?.toolTraces ?? runAgenticWorkspaceTools(payload);
   const skills = executeSkills(payload);
+
+  let progressiveSkillsPrompt = "";
+  try {
+    const skillRepo = getSkillRepository();
+    const visibleSkills = skillRepo.listVisible("dev-user", null, { scope: "builtin" });
+    progressiveSkillsPrompt = buildSkillsPrompt(visibleSkills);
+  } catch {
+    /* fallback gracefully if database is unseeded */
+  }
+
   const generated = await generateMultiProviderChatStream(
     {
       modelId: model,
       customModel,
       customProvider,
       messages,
-      systemInstruction: `${toolTraces.enrichedSystemInstruction}\n${skills.instructions}`,
+      systemInstruction: [
+        toolTraces.enrichedSystemInstruction,
+        skills.instructions,
+        progressiveSkillsPrompt,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
       effort,
       images,
       imagePages,

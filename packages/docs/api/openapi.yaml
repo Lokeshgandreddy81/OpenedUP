@@ -88,7 +88,7 @@ paths:
   /api/check-duplicates:
     post:
       summary: Detect Receipt Duplicates
-      description: Runs code-verified multi-pass fuzzy duplicate detection against receipt line items.
+      description: Uses the selected catalog model through the shared BYOK provider dispatcher to review likely duplicates. Request credentials may come from provider headers or the signed-in user's credential vault.
       requestBody:
         required: true
         content:
@@ -97,11 +97,23 @@ paths:
               type: object
               required:
                 - rows
+                - model
               properties:
                 rows:
                   type: array
                   items:
                     type: object
+                model:
+                  type: string
+                  description: Catalog chat model ID. Required; old requests without a model are rejected.
+                  example: openrouter-nemotron-3.5-lightning-free
+                customModel:
+                  type: string
+                  description: Required when model is custom-model.
+                customProvider:
+                  type: string
+                  enum: [anthropic, openai, google, deepseek, kimi, qwen, xai, custom]
+                  description: Provider used by custom-model.
       responses:
         "200":
           description: Deduped receipts with duplicate_of and duplicate_reason annotations.
@@ -111,7 +123,7 @@ paths:
   /api/read-receipts:
     post:
       summary: Multi-Photo Receipt Vision OCR & Ingestion
-      description: Batched multimodal ingestion of receipt images using Gemini Flash / Pro with cascading fallback.
+      description: Batched multimodal ingestion through the selected image-capable catalog model. Requests without a model are rejected; provider credentials are resolved from BYOK headers or the signed-in user's credential vault.
       requestBody:
         required: true
         content:
@@ -120,7 +132,19 @@ paths:
               type: object
               required:
                 - photos
+                - model
               properties:
+                model:
+                  type: string
+                  description: Image-capable catalog chat model ID. Required; requests without a model are rejected.
+                  example: gemini-3.8-flash
+                customModel:
+                  type: string
+                  description: Required when model is custom-model; custom endpoints are currently not selectable for image extraction.
+                customProvider:
+                  type: string
+                  enum: [anthropic, openai, google, deepseek, kimi, qwen, xai, custom]
+                  description: Provider used by custom-model.
                 photos:
                   type: array
                   items:
@@ -142,7 +166,11 @@ paths:
         "200":
           description: Extracted receipts and metadata.
         "400":
-          description: Invalid photo payload or validation failure.
+          description: Invalid photo payload, missing model, a batch over ten photos / 50 MB encoded image data, or model without app-supported image input.
+        "401":
+          description: No credential is configured for the selected provider.
+        "502":
+          description: Provider failure or malformed receipt extraction response.
 
   /api/parse-pdf-chapters:
     post:
@@ -156,6 +184,7 @@ paths:
               type: object
               required:
                 - base64Data
+                - model
               properties:
                 mimeType:
                   type: string
@@ -164,11 +193,22 @@ paths:
                   type: string
                 fileName:
                   type: string
+                model:
+                  type: string
+                  description: Verified catalog model selected for PDF image/OCR processing.
+                customModel:
+                  type: string
+                  description: Optional upstream model override for a verified catalog provider.
+                customProvider:
+                  type: string
+                  enum: [anthropic, openai, google, deepseek, kimi, qwen, xai, custom]
       responses:
         "200":
           description: Parsed PDF chapter boundaries, summaries, and key topics.
         "400":
-          description: Invalid PDF file or corrupted byte header.
+          description: Invalid PDF or selected model without app-supported image input.
+        "502":
+          description: Provider failure or invalid provider response; local PDF extraction results are retained where available.
 
   /api/chat:
     post:

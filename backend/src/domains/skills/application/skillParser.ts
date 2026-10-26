@@ -6,6 +6,7 @@ import AdmZip from "adm-zip";
 
 export const MAX_SKILL_MD_BYTES = 200 * 1024; // 200 KB
 export const MAX_PACKAGE_BYTES = 20 * 1024 * 1024; // 20 MB
+export const MAX_PACKAGE_FILE_COUNT = 500; // max entries in zip archive
 export const MAX_NAME_LENGTH = 64;
 export const MAX_DESCRIPTION_LENGTH = 1024;
 export const SKILL_NAME_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -17,11 +18,23 @@ export class SkillValidationError extends Error {
   }
 }
 
+export interface ParsedAgentDef {
+  name: string;
+  description: string;
+  tools: string[];
+  systemPrompt: string;
+}
+
 export interface ParsedSkillMd {
   name: string;
   description: string;
   body: string;
   rawFrontmatter: string;
+  icon?: string | null | undefined;
+  author?: string | null | undefined;
+  categories?: string[] | undefined;
+  toolsRequired?: string[] | undefined;
+  changelog?: string | null | undefined;
 }
 
 export interface SkillFileEntry {
@@ -37,6 +50,12 @@ export interface ParsedSkillPackage {
   instructions: string;
   files: SkillFileEntry[];
   totalSizeBytes: number;
+  icon?: string | null | undefined;
+  author?: string | null | undefined;
+  categories?: string[] | undefined;
+  toolsRequired?: string[] | undefined;
+  changelog?: string | null | undefined;
+  agents?: ParsedAgentDef[] | undefined;
 }
 
 export interface RawFileInput {
@@ -54,6 +73,7 @@ export function validateRelativePath(rawPath: string): string {
   }
 
   // Reject null bytes, control characters, Windows drive letters, and tilde home paths
+  // eslint-disable-next-line no-control-regex
   if (/[\0\x00-\x1F]/.test(rawPath)) {
     throw new SkillValidationError(`Path contains null or control characters: ${rawPath}`);
   }
@@ -150,11 +170,36 @@ export function parseSkillMd(rawContent: string | Buffer): ParsedSkillMd {
     );
   }
 
+  // Optional metadata fields
+  const icon = typeof meta["icon"] === "string" ? meta["icon"].trim() : null;
+  const author = typeof meta["author"] === "string" ? meta["author"].trim() : null;
+  const changelog = typeof meta["changelog"] === "string" ? meta["changelog"].trim() : null;
+
+  let categories: string[] | undefined = undefined;
+  if (Array.isArray(meta["categories"])) {
+    categories = meta["categories"].map(String).map((c) => c.trim()).filter(Boolean);
+  } else if (typeof meta["categories"] === "string") {
+    categories = meta["categories"].split(",").map((c) => c.trim()).filter(Boolean);
+  }
+
+  let toolsRequired: string[] | undefined = undefined;
+  const rawTools = meta["tools"] ?? meta["tools_required"] ?? meta["connectors"];
+  if (Array.isArray(rawTools)) {
+    toolsRequired = rawTools.map(String).map((t) => t.trim()).filter(Boolean);
+  } else if (typeof rawTools === "string") {
+    toolsRequired = rawTools.split(",").map((t) => t.trim()).filter(Boolean);
+  }
+
   return {
     name,
     description,
     body,
     rawFrontmatter: rawYaml,
+    icon,
+    author,
+    categories,
+    toolsRequired,
+    changelog,
   };
 }
 
@@ -271,12 +316,51 @@ export function parseSkillPackage(inputs: RawFileInput[]): ParsedSkillPackage {
   const parsedMd = parseSkillMd(skillMdFile.content);
   const totalSizeBytes = validatedFiles.reduce((sum, f) => sum + f.sizeBytes, 0);
 
+  // Parse optional agent definitions under agents/*.md
+  const parsedAgents: ParsedAgentDef[] = [];
+  const agentFiles = validatedFiles.filter(
+    (f) => f.relativePath.startsWith("agents/") && f.relativePath.endsWith(".md")
+  );
+
+  for (const agentFile of agentFiles) {
+    try {
+      const content = agentFile.content.toString("utf8");
+      const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+      if (match) {
+        const meta = yaml.parse(match[1] || "") as Record<string, unknown>;
+        const body = (match[2] || "").trim();
+        const agentName = String(meta["name"] || path.basename(agentFile.relativePath, ".md"));
+        const agentDesc = String(meta["description"] || "");
+        let tools: string[] = [];
+        if (Array.isArray(meta["tools"])) {
+          tools = meta["tools"].map(String).map((t) => t.trim()).filter(Boolean);
+        } else if (typeof meta["tools"] === "string") {
+          tools = meta["tools"].split(",").map((t) => t.trim()).filter(Boolean);
+        }
+        parsedAgents.push({
+          name: agentName,
+          description: agentDesc,
+          tools,
+          systemPrompt: body,
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   return {
     name: parsedMd.name,
     description: parsedMd.description,
     instructions: parsedMd.body,
     files: validatedFiles,
     totalSizeBytes,
+    icon: parsedMd.icon,
+    author: parsedMd.author,
+    categories: parsedMd.categories,
+    toolsRequired: parsedMd.toolsRequired,
+    changelog: parsedMd.changelog,
+    agents: parsedAgents,
   };
 }
 
@@ -296,17 +380,49 @@ export function parseSkillZip(zipBuffer: Buffer): ParsedSkillPackage {
   }
 
   const zipEntries = zip.getEntries();
-  const rawFiles: RawFileInput[] = [];
+  if (zipEntries.length > MAX_PACKAGE_FILE_COUNT) {
+    throw new SkillValidationError(
+      `Zip bomb detected: package contains ${zipEntries.length} entries, exceeding maximum of ${MAX_PACKAGE_FILE_COUNT}.`
+    );
+  }
 
+  let preTotalUncompressed = 0;
+  const seenEntryNames = new Set<string>();
+
+  // Pre-extraction validation: check sizes, traversal, and duplicate entries before uncompressing
   for (const entry of zipEntries) {
     if (entry.isDirectory) continue;
+
+    // Check entryName for path traversal before extracting
+    validateRelativePath(entry.entryName);
+
+    if (seenEntryNames.has(entry.entryName)) {
+      throw new SkillValidationError(`Duplicate entry in zip archive: ${entry.entryName}`);
+    }
+    seenEntryNames.add(entry.entryName);
+
+    // Pre-extraction uncompressed size check (zip bomb prevention)
+    const entrySize = entry.header?.size ?? 0;
+    preTotalUncompressed += entrySize;
+    if (preTotalUncompressed > MAX_PACKAGE_BYTES) {
+      throw new SkillValidationError(
+        `Zip bomb detected: uncompressed size exceeds ${MAX_PACKAGE_BYTES / 1024 / 1024}MB limit.`
+      );
+    }
 
     // Check for symlinks in zip entry attributes (Unix symlink attribute: 0120000)
     const isSymlink = ((entry.attr >>> 16) & 0o170000) === 0o120000;
     if (isSymlink) {
       throw new SkillValidationError(`Symlinks are forbidden in skill packages: ${entry.entryName}`);
     }
+  }
 
+  const rawFiles: RawFileInput[] = [];
+
+  for (const entry of zipEntries) {
+    if (entry.isDirectory) continue;
+
+    const isSymlink = ((entry.attr >>> 16) & 0o170000) === 0o120000;
     const content = entry.getData();
     rawFiles.push({
       relativePath: entry.entryName,

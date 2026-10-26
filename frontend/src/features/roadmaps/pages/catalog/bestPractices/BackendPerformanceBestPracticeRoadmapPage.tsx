@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft, ArrowRight, Zap, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Gauge, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   BACKEND_PERFORMANCE_CONTINUE_LEARNING,
@@ -241,7 +241,7 @@ export const BackendPerformanceBestPracticeRoadmapPage: React.FC<
           <ArrowLeft size={16} strokeWidth={2} />
         </button>
         <span className="text-[12px] font-medium text-slate-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-          <Zap size={14} className="text-amber-500 fill-amber-500" />
+          <Gauge size={14} strokeWidth={1.8} className="text-slate-500" />
           Backend Performance Best Practices
         </span>
       </div>

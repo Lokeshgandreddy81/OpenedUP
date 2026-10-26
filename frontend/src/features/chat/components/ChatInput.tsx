@@ -11,20 +11,26 @@ import {
   Paperclip,
   Boxes,
   Plug,
-  BarChart3,
-  Zap,
   ChevronRight,
   Mic,
   X,
   BookOpenText,
   ArrowUpRight,
+  Sparkles,
+  Puzzle,
 } from "lucide-react";
-import { getChatModels, getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
+import {
+  getChatModels,
+  getModelMeta,
+  modelSupportsInput,
+  PROVIDER_CATALOG,
+} from "@charan-interiors/contracts";
 import { useProviderKeys } from "../../customize/publicApi";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
 import { readChatAttachments, type ChatAttachmentFile } from "../../../app/files/chatAttachments";
 import type { AiModelId, AiModelOption, EffortLevel } from "./chatTypes";
 import { ImageLightboxModal } from "./ImageLightboxModal";
+import type { SkillItem } from "../../skills";
 
 const ProjectsIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 15,
@@ -69,7 +75,13 @@ interface ChatInputProps {
   chapterContextLabel?: string;
   starterPrompts?: Array<{ label: string; prompt: string }>;
   stableFrame?: boolean;
+  landingMode?: boolean;
   isTemporaryChat?: boolean;
+  enabledSkills?: SkillItem[];
+  onRemoveSkill?: (skillId: string) => void;
+  onOpenSkillsModal?: () => void;
+  hasProjectUpdate?: boolean;
+  onSyncProjectSkills?: () => void;
 }
 
 const AVAILABLE_MODELS: AiModelOption[] = getChatModels().map((model) => ({
@@ -98,14 +110,33 @@ const EFFORT_OPTIONS: EffortOption[] = [
   { level: "Low" },
   { level: "Medium", badge: "Recommended" },
   { level: "High" },
+  { level: "Extra", badge: "XHigh" },
   { level: "Max", badge: "5× or more usage", isWarning: true },
 ];
-const GOOGLE_EFFORT_OPTIONS = EFFORT_OPTIONS.filter((option) => option.level !== "Max");
+const GOOGLE_EFFORT_OPTIONS = EFFORT_OPTIONS.filter(
+  (option) => option.level !== "Extra" && option.level !== "Max"
+);
+const COMPACT_REASONING_OPTIONS = EFFORT_OPTIONS.filter((option) =>
+  ["Low", "High", "Max"].includes(option.level)
+);
+const XAI_EFFORT_OPTIONS = EFFORT_OPTIONS.filter((option) => option.level !== "Max");
+const QWEN_EFFORT_OPTIONS = EFFORT_OPTIONS.filter((option) =>
+  ["Low", "Medium", "High"].includes(option.level)
+);
+const OPENROUTER_NEMOTRON_ULTRA_OPTIONS = EFFORT_OPTIONS.filter((option) =>
+  ["Medium", "High"].includes(option.level)
+);
 const NO_EFFORT_OPTIONS: EffortOption[] = [];
 
-function getEffortOptions(provider: string): EffortOption[] {
+function getEffortOptions(provider: string, modelId: AiModelId): EffortOption[] {
   if (provider === "google") return GOOGLE_EFFORT_OPTIONS;
-  if (provider === "anthropic" || provider === "openai") return EFFORT_OPTIONS;
+  if (provider === "openai" || provider === "anthropic") return EFFORT_OPTIONS;
+  if (provider === "deepseek" || provider === "kimi") return COMPACT_REASONING_OPTIONS;
+  if (provider === "qwen") return QWEN_EFFORT_OPTIONS;
+  if (provider === "xai") return XAI_EFFORT_OPTIONS;
+  if (provider === "custom" && modelId === "openrouter-nemotron-3-ultra-free") {
+    return OPENROUTER_NEMOTRON_ULTRA_OPTIONS;
+  }
   return NO_EFFORT_OPTIONS;
 }
 
@@ -120,13 +151,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onOpenProjects,
   onOpenPlugins,
   onOpenSkills,
-  onOpenBenchmarks,
   onOpenProviders,
   initialText = "",
   chapterContextLabel,
   starterPrompts = [],
   stableFrame = false,
-  isTemporaryChat = false,
+  landingMode = false,
+  enabledSkills = [],
+  onRemoveSkill,
+  onOpenSkillsModal,
+  hasProjectUpdate = false,
+  onSyncProjectSkills,
 }) => {
   const [text, setText] = useState(initialText);
   const [attachments, setAttachments] = useState<ChatAttachmentFile[]>([]);
@@ -187,7 +222,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (modelHoverTimeoutRef.current) clearTimeout(modelHoverTimeoutRef.current);
     const rect = target.getBoundingClientRect();
     const cardWidth = 256;
-    const cardHeight = 190;
+    const cardHeight = 230;
     const gap = 10;
     const hasRoomRight = window.innerWidth - rect.right >= cardWidth + gap + 8;
     const hasRoomLeft = rect.left >= cardWidth + gap + 8;
@@ -223,12 +258,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const activeProviderId =
     selectedModel === "custom-model" ? customModelProvider : getModelMeta(selectedModel).provider;
-  const effortOptions = getEffortOptions(activeProviderId);
+  const effortOptions =
+    selectedModel === "custom-model"
+      ? NO_EFFORT_OPTIONS
+      : getEffortOptions(activeProviderId, selectedModel);
   const supportsEffort = effortOptions.length > 0;
 
   useEffect(() => {
     if (supportsEffort && !effortOptions.some((option) => option.level === selectedEffort)) {
-      setSelectedEffort("Medium");
+      setSelectedEffort(
+        effortOptions.some((option) => option.level === "Medium")
+          ? "Medium"
+          : effortOptions[0]?.level ?? "Medium"
+      );
     }
     if (!supportsEffort && activeSubmenu === "effort") setActiveSubmenu(null);
   }, [supportsEffort, effortOptions, selectedEffort, activeSubmenu]);
@@ -324,6 +366,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const handleSubmit = () => {
     if (isThinking || isReadingFiles || isSendDisabled) return;
+    if (
+      attachments.some((attachment) => Boolean(attachment.base64Data)) &&
+      !selectedModelSupportsImages
+    ) {
+      return;
+    }
     const trimmed = text.trim();
     if (!trimmed && attachments.length === 0) return;
     const imageCount = attachments.filter((a) => Boolean(a.base64Data)).length;
@@ -367,10 +415,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       ? customModelId
       : AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.name || AVAILABLE_MODELS[0].name;
 
-  const modelMeta = selectedModel !== "custom-model" ? getModelMeta(selectedModel) : null;
-  const selectedModelSupportsImages =
-    !modelMeta || !modelMeta.inputModalities || modelMeta.inputModalities.includes("image");
+  const selectedModelSupportsImages = modelSupportsInput(selectedModel, "image");
   const hasImageAttachments = attachments.some((a) => Boolean(a.base64Data));
+  const isImageCapabilityBlocked = hasImageAttachments && !selectedModelSupportsImages;
   const selectedInMore = MORE_MODELS.find((m) => m.id === selectedModel);
 
   return (
@@ -405,14 +452,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-2 rounded-[26px] border p-4 sm:p-5 ${
-            stableFrame
-              ? "border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]"
-              : `transition-[border-color,background-color,box-shadow] duration-200 ${
-                  chapterContextLabel
-                    ? "border-slate-200/80 bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)] focus-within:border-slate-300 focus-within:bg-white/80"
-                    : "border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-slate-300 focus-within:bg-white/90 focus-within:shadow-[inset_0_1px_2px_rgba(15,23,42,0.02)]"
-                }`
+          className={`relative flex flex-col gap-2 rounded-[24px] p-4 sm:p-5 ${
+            landingMode
+              ? "border-2 border-slate-300 bg-white shadow-none transition-colors duration-200 focus-within:border-slate-400"
+              : stableFrame
+              ? "border border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]"
+              : chapterContextLabel
+                ? "border border-slate-200/80 bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/80"
+                : "border border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/90 focus-within:shadow-[inset_0_1px_2px_rgba(15,23,42,0.02)]"
           } ${isFileDragActive ? "border-slate-400 bg-slate-100/80 ring-2 ring-slate-900/5" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
@@ -525,7 +572,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           )}
           {hasImageAttachments && !selectedModelSupportsImages && (
             <p role="alert" className="px-1 text-xs leading-5 text-amber-700">
-              ⚠️ {currentModelName} does not support image analysis. Please select a multimodal vision model (in More models) to analyze this image.
+              ⚠️ {currentModelName} does not accept images. Choose a model marked “Images” before sending this attachment.
             </p>
           )}
 
@@ -540,6 +587,52 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </div>
           )}
 
+          {/* Enabled skills chips */}
+          {enabledSkills && enabledSkills.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2 pb-0.5 animate-in fade-in duration-150">
+              {enabledSkills.map((s) => (
+                <span
+                  key={s.id}
+                  className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-0.5 rounded-lg text-[11.5px] font-mono bg-neutral-100 text-neutral-800 group"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 shrink-0" />
+                  <span className="truncate max-w-[160px]">{s.name}</span>
+                  {s.source === "project" && (
+                    <span className="px-1.5 py-0.2 rounded text-[9px] uppercase tracking-wider bg-neutral-200 text-neutral-600 font-sans font-medium">
+                      Project
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onRemoveSkill?.(s.id)}
+                    className="p-0.5 hover:bg-neutral-200 rounded-md text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+                    title={`Disable ${s.name}`}
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              {hasProjectUpdate && onSyncProjectSkills && (
+                <button
+                  type="button"
+                  onClick={onSyncProjectSkills}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer"
+                  title="Project default skills have been updated. Click to sync."
+                >
+                  <Sparkles size={11} className="text-amber-600" />
+                  <span>Update from project</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onOpenSkillsModal}
+                className="text-[11px] text-slate-400 hover:text-slate-700 font-medium px-1.5 py-0.5 transition-colors cursor-pointer"
+              >
+                + Add skill
+              </button>
+            </div>
+          )}
+
           {/* Text input area */}
           <textarea
             data-testid="chat-composer"
@@ -549,7 +642,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Listening… speak now…" : placeholder}
             rows={1}
-            className="chat-composer-input w-full bg-transparent px-1 text-[16px] leading-7 text-slate-900 placeholder:text-slate-400 placeholder:transition-opacity placeholder:duration-200 focus:placeholder:text-slate-300 resize-none outline-none min-h-[40px] max-h-[220px]"
+            className={`chat-composer-input w-full bg-transparent px-1 text-[16px] leading-7 text-slate-900 placeholder:text-slate-400 placeholder:transition-opacity placeholder:duration-200 focus:placeholder:text-slate-300 resize-none outline-none min-h-[40px] max-h-[220px]`}
           />
 
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
@@ -694,19 +787,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       type="button"
                       onClick={() => {
                         setIsPlusMenuOpen(false);
-                        onOpenSkills?.();
+                        if (onOpenSkillsModal) {
+                          onOpenSkillsModal();
+                        } else {
+                          onOpenSkills?.();
+                        }
                       }}
-                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                      className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-neutral-50 transition-colors cursor-pointer group"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Zap
+                        <Puzzle
                           size={15}
                           strokeWidth={1.75}
-                          className="text-slate-600 group-hover:text-slate-900 shrink-0"
+                          className="text-neutral-600 group-hover:text-neutral-900 shrink-0"
                         />
-                        <span className="text-[13px] text-slate-800 font-normal">Skills</span>
+                        <span className="text-[13px] text-neutral-800 font-normal">Skills</span>
                       </div>
-                      <ChevronRight size={13} className="text-slate-400 shrink-0" />
+                      <ChevronRight size={13} className="text-neutral-400 shrink-0" />
                     </button>
                   </div>
                 )}
@@ -888,8 +985,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                               </div>
                               <div className="mb-2">
                                 <div className="w-full text-left px-3.5 py-2.5 rounded-xl flex items-center justify-between bg-slate-100/90 text-slate-950 font-semibold ring-1 ring-inset ring-slate-200/80">
-                                  <span className="truncate text-[14px] font-semibold text-slate-950">
-                                    {selectedInMore.name}
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-[14px] font-semibold text-slate-950">
+                                      {selectedInMore.name}
+                                    </span>
+                                    <span className="mt-0.5 block truncate text-[11px] font-normal text-slate-500">
+                                      {describeModelCapabilities(getModelMeta(selectedInMore.id))}
+                                    </span>
                                   </span>
                                   <Check size={14} className="text-slate-700 shrink-0 stroke-[2.25]" />
                                 </div>
@@ -933,8 +1035,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                                   }`}
                                 >
                                   <div className="flex min-w-0 items-center gap-2 pr-2">
-                                    <span className="truncate text-[14px] font-semibold leading-snug text-slate-950">
-                                      {model.name}
+                                    <span className="min-w-0">
+                                      <span className="block truncate text-[14px] font-semibold leading-snug text-slate-950">
+                                        {model.name}
+                                      </span>
+                                      <span className="mt-0.5 block truncate text-[11px] font-normal text-slate-500">
+                                        {describeModelCapabilities(getModelMeta(model.id))}
+                                      </span>
                                     </span>
                                   </div>
                                   {isSelected && (
@@ -1038,19 +1145,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     isThinking ||
                     isSendDisabled ||
                     isReadingFiles ||
+                    isImageCapabilityBlocked ||
                     (!text.trim() && attachments.length === 0)
                   }
                   aria-busy={isReadingFiles}
                   title={
                     isReadingFiles
                       ? "Reading files…"
+                      : isImageCapabilityBlocked
+                        ? "Choose a model that accepts images to send this attachment"
                       : !text.trim() && attachments.length === 0
                         ? "Type a message to send"
                         : "Send message"
                   }
                   aria-label={isReadingFiles ? "Reading files…" : "Send message"}
                   className={`group h-10 w-10 rounded-full flex items-center justify-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 focus-visible:ring-offset-2 ${
-                    Boolean(text.trim()) || attachments.length > 0
+                    (Boolean(text.trim()) || attachments.length > 0) && !isImageCapabilityBlocked
                       ? "bg-slate-950 text-white shadow-xs hover:bg-slate-800 hover:scale-[1.05] active:scale-95 cursor-pointer"
                       : "bg-slate-200/60 text-slate-400 cursor-not-allowed scale-100 shadow-none"
                   }`}
@@ -1078,7 +1188,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       </div>
       {starterPrompts.length > 0 && (
-        <div className="mx-auto flex w-full max-w-[880px] flex-wrap items-center justify-center gap-2.5 px-4 pt-4 sm:gap-3">
+        <div className="mx-auto flex w-full max-w-[880px] flex-wrap items-center justify-center gap-1.5 px-4 pt-4 sm:gap-2">
           {starterPrompts.map(({ label, prompt }) => (
             <button
               key={label}
@@ -1087,7 +1197,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 setText(prompt);
                 textareaRef.current?.focus();
               }}
-              className="group inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white/90 px-3.5 py-1.5 text-[12.5px] font-medium text-slate-700 shadow-2xs transition-all duration-150 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-950 hover:-translate-y-0.5 hover:shadow-xs active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              className={`group inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-medium transition-all duration-150 active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${landingMode ? "text-slate-600 hover:bg-slate-100/80 hover:text-slate-950" : "border border-slate-200/90 bg-white/90 text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 hover:text-slate-950 hover:-translate-y-0.5 hover:shadow-xs"}`}
             >
               <span>{label}</span>
               <ArrowUpRight
@@ -1157,8 +1267,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                             : "text-slate-800 hover:bg-slate-50"
                         }`}
                       >
-                        <span className="block min-w-0 truncate text-sm font-semibold text-slate-950">
-                          {model.name}
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-slate-950">
+                            {model.name}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11px] text-slate-500">
+                            {describeModelCapabilities(getModelMeta(model.id))}
+                          </span>
                         </span>
                         {isSelected && <Check size={17} className="shrink-0 text-slate-950" />}
                       </button>
@@ -1200,9 +1315,7 @@ function ModelDetailsCard({
     : metadata.provider === "custom"
       ? "OpenRouter"
       : (PROVIDER_CATALOG[metadata.provider]?.name ?? metadata.provider);
-  const inputs = metadata.inputModalities
-    ?.map((modality) => modality[0]?.toUpperCase() + modality.slice(1))
-    .join(", ");
+  const inputs = metadata.inputModalities?.map(modalityLabel).join(", ");
 
   return (
     <div
@@ -1228,8 +1341,14 @@ function ModelDetailsCard({
         )}
         {metadata.supportsReasoning !== undefined && (
           <>
-            <dt>Reasoning</dt>
-            <dd>{metadata.supportsReasoning ? "Allows reasoning" : "No reasoning"}</dd>
+            <dt>Provider reasoning</dt>
+            <dd>{metadata.supportsReasoning ? "Supported" : "Not supported"}</dd>
+          </>
+        )}
+        {metadata.supportsTools !== undefined && (
+          <>
+            <dt>Provider tools</dt>
+            <dd>{metadata.supportsTools ? "Supported" : "Not supported"}</dd>
           </>
         )}
         {metadata.contextWindowTokens && (
@@ -1238,9 +1357,47 @@ function ModelDetailsCard({
             <dd className="tabular-nums font-mono">{metadata.contextWindowTokens.toLocaleString()}</dd>
           </>
         )}
+        {metadata.maxOutputTokens && (
+          <>
+            <dt>Max output</dt>
+            <dd className="tabular-nums font-mono">
+              {metadata.maxOutputTokens.toLocaleString()} tokens
+            </dd>
+          </>
+        )}
       </dl>
+      {metadata.supportsTools && (
+        <p className="mt-2 border-t border-slate-100 pt-2 text-[10px] leading-4 text-slate-500">
+          Provider tool support is documented; chat does not send native provider tools yet.
+        </p>
+      )}
     </div>
   );
+}
+
+function describeModelCapabilities(metadata: ReturnType<typeof getModelMeta>): string {
+  return [
+    metadata.inputModalities?.includes("image") ? "Images" : "Text only",
+    metadata.contextWindowTokens
+      ? `${formatTokenLimit(metadata.contextWindowTokens)} context`
+      : undefined,
+    metadata.supportsReasoning ? "Reasoning" : undefined,
+    metadata.supportsTools ? "Provider tools" : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function modalityLabel(modality: string): string {
+  return modality[0]?.toUpperCase() + modality.slice(1);
+}
+
+function formatTokenLimit(tokens: number): string {
+  if (tokens >= 1_000_000) {
+    return `${(tokens / 1_000_000).toFixed(2).replace(/\.?0+$/, "")}M`;
+  }
+  if (tokens >= 1_000) return `${Math.round(tokens / 1_000)}K`;
+  return tokens.toLocaleString();
 }
 
 function formatFileSize(bytes: number) {

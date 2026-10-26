@@ -9,8 +9,14 @@ import {
   type UpdateScheduledTaskRequest,
   type ImportScheduledTasksRequest,
 } from "@charan-interiors/contracts";
-import { processChat } from "../../chat/application/chat.service.js";
-import { actionableProviderError } from "../../chat/providers/providerErrors.js";
+import {
+  CHAT_GENERATION_TIMEOUT_MS,
+  processChat,
+} from "../../chat/application/chat.service.js";
+import {
+  actionableProviderError,
+  classifyProviderFailure,
+} from "../../chat/providers/providerErrors.js";
 import { ConversationRepository } from "../../conversations/repositories/conversationRepository.js";
 import {
   getProviderCredential,
@@ -150,6 +156,7 @@ export class ScheduledTaskService {
   private async execute(run: ClaimedScheduledRun): Promise<void> {
     const task = this.tasks.getForExecution(run.taskId);
     if (!task) return;
+    const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
 
     try {
       const model = MODEL_REGISTRY[task.model];
@@ -168,7 +175,11 @@ export class ScheduledTaskService {
           model: task.model,
           effort: task.effort,
         },
-        { injectedApiKey: credential.apiKey, injectedBaseUrl: credential.baseUrl }
+        {
+          injectedApiKey: credential.apiKey,
+          injectedBaseUrl: credential.baseUrl,
+          signal: timeoutSignal,
+        }
       );
       let conversationId: string | null = null;
       if (task.notifications === "Important updates") {
@@ -188,14 +199,21 @@ export class ScheduledTaskService {
       });
     } catch (error) {
       const rawMessage = error instanceof Error ? error.message : "Scheduled task failed.";
+      const failureCategory = classifyProviderFailure(error, timeoutSignal.aborted);
       logEvent("Scheduled task run failed", {
         taskId: task.id,
         runId: run.id,
+        provider: MODEL_REGISTRY[task.model]?.provider,
+        model: task.model,
+        failureCategory,
         errorType: error instanceof Error ? error.name : "UnknownError",
       });
-      const safeMessage = rawMessage.startsWith("MISSING_API_KEY:")
-        ? rawMessage.split(":").slice(2).join(":")
-        : actionableProviderError(rawMessage);
+      const safeMessage =
+        failureCategory === "timeout"
+          ? "This model took too long to respond. Try again or choose another model."
+          : rawMessage.startsWith("MISSING_API_KEY:")
+            ? rawMessage.split(":").slice(2).join(":")
+            : actionableProviderError(rawMessage);
 
       let conversationId: string | null = null;
       if (task.notifications === "Important updates" || task.notifications === "Failed runs only") {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PROVIDER_CATALOG, getModelMeta, type ProviderId } from "@charan-interiors/contracts";
-import { useChatAuth } from "../../../app/auth/ChatAuthContext";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { authenticatedChatFetch } from "../../../app/api/chatApi";
 
 const KEYS_STORAGE_KEY = "openedup_byok_keys_v1";
@@ -52,8 +52,9 @@ if (typeof window !== "undefined") {
   purgeSensitiveKeysFromPersistentStorage();
 }
 
-let cachedAccountProviders: ProviderId[] = [];
-let pendingCredentialsFetch: Promise<ProviderId[]> | null = null;
+let activeAccountUserId: string | undefined;
+const cachedAccountProvidersByUser = new Map<string, ProviderId[]>();
+const pendingCredentialsFetches = new Map<string, Promise<ProviderId[]>>();
 
 function notifySync(includeCrossTab = true): void {
   if (typeof window === "undefined") return;
@@ -67,34 +68,39 @@ function notifySync(includeCrossTab = true): void {
   }
 }
 
-async function fetchAccountProviders(userId?: string): Promise<ProviderId[]> {
-  if (!userId) {
-    cachedAccountProviders = [];
-    return [];
-  }
-  if (pendingCredentialsFetch) return pendingCredentialsFetch;
+export async function fetchAccountProviders(
+  userId?: string,
+  fetchCredentials: typeof authenticatedChatFetch = authenticatedChatFetch
+): Promise<ProviderId[]> {
+  if (!userId) return [];
+  const cached = cachedAccountProvidersByUser.get(userId) ?? [];
+  const pending = pendingCredentialsFetches.get(userId);
+  if (pending) return pending;
 
-  pendingCredentialsFetch = (async () => {
+  const request = (async () => {
     try {
-      const accountResponse = await authenticatedChatFetch("/api/credentials");
+      const accountResponse = await fetchCredentials("/api/credentials");
       if (accountResponse.ok) {
         const accountData = (await accountResponse.json()) as { providers: ProviderId[] };
         const valid = (Array.isArray(accountData.providers) ? accountData.providers : []).filter(
           (p) => p in PROVIDER_CATALOG
         );
-        cachedAccountProviders = valid;
-        window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+        cachedAccountProvidersByUser.set(userId, valid);
+        if (activeAccountUserId === userId && typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+        }
         return valid;
       }
-      return cachedAccountProviders;
+      return cached;
     } catch {
-      return cachedAccountProviders;
+      return cached;
     } finally {
-      pendingCredentialsFetch = null;
+      pendingCredentialsFetches.delete(userId);
     }
   })();
 
-  return pendingCredentialsFetch;
+  pendingCredentialsFetches.set(userId, request);
+  return request;
 }
 
 export function clearMemoryKeys(): void {
@@ -205,11 +211,17 @@ export function hasKeyForProvider(providerOrModel: ProviderId | string): boolean
     providerOrModel === "custom-model"
       ? getCustomModelProvider()
       : (providerOrModel as ProviderId);
-  return Boolean(getStoredKeys()[provider]?.trim()) || cachedAccountProviders.includes(provider);
+  const accountProviders = activeAccountUserId
+    ? (cachedAccountProvidersByUser.get(activeAccountUserId) ?? [])
+    : [];
+  return Boolean(getStoredKeys()[provider]?.trim()) || accountProviders.includes(provider);
 }
 
 export function hasAccountKeyForProvider(provider: ProviderId): boolean {
-  return cachedAccountProviders.includes(provider);
+  const accountProviders = activeAccountUserId
+    ? (cachedAccountProvidersByUser.get(activeAccountUserId) ?? [])
+    : [];
+  return accountProviders.includes(provider);
 }
 
 export function hasKeyForModel(modelId: string): boolean {
@@ -270,8 +282,8 @@ export function useProviderKeys() {
   const { user } = useChatAuth();
   const [keys, setKeys] = useState<StoredKeysMap>(() => getProviderKeyDrafts());
   const [baseUrls, setBaseUrls] = useState<StoredUrlsMap>(() => getStoredBaseUrls());
-  const [accountProviders, setAccountProviders] = useState<ProviderId[]>(
-    () => cachedAccountProviders
+  const [accountProviders, setAccountProviders] = useState<ProviderId[]>(() =>
+    user?.uid ? (cachedAccountProvidersByUser.get(user.uid) ?? []) : []
   );
   const [customModelId, setCustomModelIdState] = useState(() => getCustomModelId());
   const [customModelProvider, setCustomModelProviderState] = useState(() =>
@@ -283,12 +295,15 @@ export function useProviderKeys() {
   const refresh = useCallback(() => {
     setKeys(getProviderKeyDrafts());
     setBaseUrls(getStoredBaseUrls());
-    setAccountProviders([...cachedAccountProviders]);
+    setAccountProviders(
+      currentUserId ? [...(cachedAccountProvidersByUser.get(currentUserId) ?? [])] : []
+    );
     setCustomModelIdState(getCustomModelId());
     setCustomModelProviderState(getCustomModelProvider());
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
+    let isCurrentAccount = true;
     if (lastUserIdRef.current !== currentUserId) {
       if (lastUserIdRef.current) {
         memoryKeys = {};
@@ -296,18 +311,25 @@ export function useProviderKeys() {
           delete legacyKeysToImport[k as ProviderId];
         }
       }
-      cachedAccountProviders = [];
+      activeAccountUserId = currentUserId;
       setKeys(getProviderKeyDrafts());
-      setAccountProviders([]);
+      setAccountProviders(
+        currentUserId ? (cachedAccountProvidersByUser.get(currentUserId) ?? []) : []
+      );
       notifySync(false);
+    } else {
+      activeAccountUserId = currentUserId;
     }
     lastUserIdRef.current = currentUserId;
 
     if (currentUserId) {
       void fetchAccountProviders(currentUserId).then((providers) => {
-        setAccountProviders(providers);
+        if (isCurrentAccount) setAccountProviders(providers);
       });
     }
+    return () => {
+      isCurrentAccount = false;
+    };
   }, [currentUserId]);
 
   useEffect(() => {
@@ -328,8 +350,9 @@ export function useProviderKeys() {
       ) {
         refresh();
         if (currentUserId) {
-          void fetchAccountProviders(currentUserId).then((providers) => {
-            setAccountProviders(providers);
+          const requestUserId = currentUserId;
+          void fetchAccountProviders(requestUserId).then((providers) => {
+            if (activeAccountUserId === requestUserId) setAccountProviders(providers);
           });
         }
       }
@@ -345,7 +368,6 @@ export function useProviderKeys() {
 
   const setProviderKey = useCallback(
     async (provider: ProviderId, apiKey: string, baseUrl?: string) => {
-      saveStoredKey(provider, apiKey, baseUrl);
       if (user && apiKey.trim()) {
         const response = await authenticatedChatFetch("/api/credentials", {
           method: "PUT",
@@ -354,10 +376,15 @@ export function useProviderKeys() {
         });
         if (!response.ok) throw new Error("Could not save provider key to your account.");
         delete memoryKeys[provider];
-        if (!cachedAccountProviders.includes(provider))
-          cachedAccountProviders = [...cachedAccountProviders, provider];
+        saveStoredKey(provider, "", baseUrl);
+        const accountProviders = cachedAccountProvidersByUser.get(user.uid) ?? [];
+        if (!accountProviders.includes(provider)) {
+          cachedAccountProvidersByUser.set(user.uid, [...accountProviders, provider]);
+        }
         // Other mounted views and other browser tabs need the updated account-backed status
         notifySync(true);
+      } else {
+        saveStoredKey(provider, apiKey, baseUrl);
       }
       if (apiKey.trim()) delete legacyKeysToImport[provider];
       refresh();
@@ -390,7 +417,11 @@ export function useProviderKeys() {
           }
         );
         if (!response.ok) throw new Error("Could not remove provider key from your account.");
-        cachedAccountProviders = cachedAccountProviders.filter((item) => item !== provider);
+        const accountProviders = cachedAccountProvidersByUser.get(user.uid) ?? [];
+        cachedAccountProvidersByUser.set(
+          user.uid,
+          accountProviders.filter((item) => item !== provider)
+        );
       }
       removeStoredKey(provider);
       refresh();

@@ -18,7 +18,7 @@
       "@charan-interiors/contracts": ["../packages/contracts/src/index.ts"]
     }
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "tests/**/*", "scripts/**/*"],
   "references": [
     {
       "path": "../packages/contracts"

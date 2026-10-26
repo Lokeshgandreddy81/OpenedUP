@@ -4,59 +4,30 @@ import type {
   ChatRequest,
   WorkspaceRulesRequest,
 } from "@charan-interiors/contracts";
-import { processChat, processChatStream } from "../application/chat.service.js";
+import {
+  CHAT_GENERATION_TIMEOUT_MS,
+  processChat,
+  processChatStream,
+} from "../application/chat.service.js";
 import { answerChapterQuestion } from "../application/chapterChat.service.js";
-import { isValidApiKey, sanitizeApiKey, sanitizeBaseUrl } from "../../../platform/config/index.js";
+import { isValidApiKey } from "../../../platform/config/index.js";
 import {
   runAgenticWorkspaceTools,
   getWorkspaceRules,
   saveWorkspaceRules,
 } from "../application/tools.service.js";
 import { logEvent, redactSecretsString } from "../../../platform/observability/logger.js";
-import { getModelMeta, PROVIDER_CATALOG, type ProviderId } from "@charan-interiors/contracts";
-import { getProviderCredential } from "../../credentials/application/credentialVault.js";
+import {
+  getUnsupportedInputMessage,
+  modelSupportsInput,
+  PROVIDER_CATALOG,
+} from "@charan-interiors/contracts";
+import {
+  providerForModelRequest,
+  resolveRequestProviderCredential,
+} from "../../credentials/application/requestCredential.js";
 import { SKILLS } from "../application/skillRegistry.js";
-import { actionableProviderError } from "../providers/providerErrors.js";
-
-function extractHeaderCredential(req: Request): {
-  headerApiKey: string | undefined;
-  headerBaseUrl: string | undefined;
-} {
-  const rawKey = Array.isArray(req.headers["x-provider-key"])
-    ? req.headers["x-provider-key"][0]
-    : req.headers["x-provider-key"];
-  const headerApiKey = sanitizeApiKey(rawKey);
-
-  const rawUrl = Array.isArray(req.headers["x-provider-base-url"])
-    ? req.headers["x-provider-base-url"][0]
-    : req.headers["x-provider-base-url"];
-  const headerBaseUrl = sanitizeBaseUrl(rawUrl);
-
-  return { headerApiKey, headerBaseUrl };
-}
-
-function requestProviderCredential(
-  req: Request,
-  payload: Pick<ChatRequest, "model" | "customModel" | "customProvider">,
-  headerApiKey?: string,
-  headerBaseUrl?: string
-) {
-  const provider =
-    payload.model === "custom-model"
-      ? payload.customProvider || "custom"
-      : (getModelMeta(payload.model || "gemini-3.8-flash").provider as ProviderId);
-  let savedCredential = null;
-  if (req.principal) {
-    try {
-      savedCredential = getProviderCredential(req.principal.uid, provider);
-    } catch {
-      savedCredential = null;
-    }
-  }
-  const apiKey = headerApiKey?.trim() || savedCredential?.apiKey;
-  const baseUrl = headerBaseUrl?.trim() || savedCredential?.baseUrl;
-  return { apiKey, baseUrl };
-}
+import { actionableProviderError, classifyProviderFailure } from "../providers/providerErrors.js";
 
 function isLoopbackRequest(req: Request): boolean {
   const address = req.socket.remoteAddress?.replace(/^::ffff:/, "");
@@ -70,10 +41,7 @@ function requireUserCredential(
   apiKey: string | undefined
 ): boolean {
   if (isValidApiKey(apiKey)) return true;
-  const provider =
-    payload.model === "custom-model"
-      ? payload.customProvider || "custom"
-      : (getModelMeta(payload.model || "gemini-3.8-flash").provider as ProviderId);
+  const provider = providerForModelRequest(payload);
   const providerName = PROVIDER_CATALOG[provider].name;
   if (!req.principal) res.setHeader("WWW-Authenticate", "Bearer");
   res.status(401).json({
@@ -89,33 +57,39 @@ function publicProviderError(message: string): string {
 
 export async function handleChat(req: Request, res: Response, _next: NextFunction): Promise<void> {
   const startTime = Date.now();
+  const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
+  const payload = req.body as ChatRequest;
   try {
-    const payload = req.body as ChatRequest;
-    const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
-
-    const credential = requestProviderCredential(req, payload, headerApiKey, headerBaseUrl);
+    const credential = resolveRequestProviderCredential(req, payload);
     if (!requireUserCredential(req, res, payload, credential.apiKey)) return;
 
     const result = await processChat(payload, {
       injectedApiKey: credential.apiKey,
       injectedBaseUrl: credential.baseUrl,
+      signal: timeoutSignal,
     });
     res.json(result);
   } catch (error: unknown) {
     const elapsedMs = Date.now() - startTime;
     const message = error instanceof Error ? error.message : "Failed to process chat";
     logEvent("ERROR /api/chat", {
+      requestId: req.id,
       errorType: error instanceof Error ? error.name : "UnknownError",
-      model: (req.body as ChatRequest | undefined)?.model,
+      provider: providerForModelRequest(payload),
+      model: payload.model,
+      failureCategory: classifyProviderFailure(error, timeoutSignal.aborted),
       elapsedMs,
     });
     const isBadRequest =
       message.startsWith("UNKNOWN_MODEL:") ||
       message.startsWith("MISSING_CUSTOM_MODEL:") ||
-      message.includes("does not support image analysis") ||
-      message.includes("does not accept PDF page images");
+      message.includes("does not support image analysis");
     const status = message.startsWith("MISSING_API_KEY:") ? 401 : isBadRequest ? 400 : 500;
-    const errorText = status === 500 ? publicProviderError(message) : redactSecretsString(message);
+    const errorText = timeoutSignal.aborted
+      ? "This model took too long to respond. Try again or choose another model."
+      : status === 500
+        ? publicProviderError(message)
+        : redactSecretsString(message);
     res.status(status).json({ error: errorText, requestId: req.id });
   }
 }
@@ -127,14 +101,16 @@ export async function handleChatStream(
 ): Promise<void> {
   const startTime = Date.now();
   const payload = req.body as ChatRequest;
-  const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
-  let credential: ReturnType<typeof requestProviderCredential>;
+  let credential: ReturnType<typeof resolveRequestProviderCredential>;
   try {
-    credential = requestProviderCredential(req, payload, headerApiKey, headerBaseUrl);
+    credential = resolveRequestProviderCredential(req, payload);
   } catch (error: unknown) {
     logEvent("ERROR /api/chat/stream credential lookup", {
+      requestId: req.id,
       errorType: error instanceof Error ? error.name : "UnknownError",
+      provider: providerForModelRequest(payload),
       model: payload.model,
+      failureCategory: classifyProviderFailure(error),
     });
     res.status(500).json({
       error: "Provider credentials could not be loaded. Check the server configuration.",
@@ -144,11 +120,10 @@ export async function handleChatStream(
   }
   if (!requireUserCredential(req, res, payload, credential.apiKey)) return;
 
-  const modelId = payload.model || "gemini-3.8-flash";
-  const meta = getModelMeta(modelId);
-  if (payload.images?.length && meta.inputModalities && !meta.inputModalities.includes("image")) {
+  const modelId = payload.model;
+  if (payload.images?.length && !modelSupportsInput(modelId, "image")) {
     res.status(400).json({
-      error: `${meta.name} does not support image analysis. Please select a multimodal vision model (such as Claude Opus/Fable, GPT-6, Gemini, Grok, Kimi K3.1, or Qwen 3.8 Max) to analyze images.`,
+      error: getUnsupportedInputMessage(modelId, "image"),
       requestId: req.id,
     });
     return;
@@ -158,6 +133,9 @@ export async function handleChatStream(
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   const abortController = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
+  const requestSignal = AbortSignal.any([abortController.signal, timeoutSignal]);
+  let emittedAnyDelta = false;
   res.on("close", () => {
     if (!res.writableEnded) abortController.abort();
   });
@@ -180,9 +158,12 @@ export async function handleChatStream(
         injectedApiKey: credential.apiKey,
         injectedBaseUrl: credential.baseUrl,
         toolTraces,
-        signal: abortController.signal,
+        signal: requestSignal,
       },
-      (delta) => sendEvent("token", { delta })
+      (delta) => {
+        emittedAnyDelta = true;
+        sendEvent("token", { delta });
+      }
     );
 
     sendEvent("done", {
@@ -199,12 +180,20 @@ export async function handleChatStream(
     const elapsedMs = Date.now() - startTime;
     const message = error instanceof Error ? error.message : "Failed to stream chat";
     logEvent("ERROR /api/chat/stream", {
+      requestId: req.id,
       errorType: error instanceof Error ? error.name : "UnknownError",
+      provider: providerForModelRequest(payload),
       model: payload.model,
+      failureCategory: classifyProviderFailure(error, timeoutSignal.aborted),
       elapsedMs,
     });
     if (!res.destroyed && !res.writableEnded) {
-      sendEvent("error", { error: publicProviderError(message), partial: true });
+      sendEvent("error", {
+        error: timeoutSignal.aborted
+          ? "This model took too long to respond. Try again or choose another model."
+          : publicProviderError(message),
+        partial: emittedAnyDelta,
+      });
       res.end();
     }
   }
@@ -216,36 +205,42 @@ export async function handleChapterChat(
   _next: NextFunction
 ): Promise<void> {
   const request = req.body as ChapterChatRequest;
-  const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
-
-  let credential: ReturnType<typeof requestProviderCredential>;
+  let credential: ReturnType<typeof resolveRequestProviderCredential>;
   try {
-    credential = requestProviderCredential(req, request, headerApiKey, headerBaseUrl);
+    credential = resolveRequestProviderCredential(req, request);
   } catch {
     res.status(400).json({ error: "The selected model is unavailable." });
     return;
   }
   if (!requireUserCredential(req, res, request, credential.apiKey)) return;
 
+  const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
   try {
     const result = await answerChapterQuestion(request, {
       ...(credential.apiKey ? { apiKey: credential.apiKey } : {}),
       ...(credential.baseUrl ? { baseUrl: credential.baseUrl } : {}),
+      signal: timeoutSignal,
     });
     res.json(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Chapter chat failed.";
     logEvent("ERROR /api/chat/chapter", {
+      requestId: req.id,
       errorType: error instanceof Error ? error.name : "UnknownError",
+      provider: providerForModelRequest(request),
       model: request.model,
+      failureCategory: classifyProviderFailure(error, timeoutSignal.aborted),
     });
     const isBadRequest =
       message.startsWith("UNKNOWN_MODEL:") ||
       message.startsWith("MISSING_CUSTOM_MODEL:") ||
-      message.includes("does not support image analysis") ||
-      message.includes("does not accept PDF page images");
+      message.includes("does not support image analysis");
     const status = isBadRequest ? 400 : 500;
-    const errorText = status === 500 ? publicProviderError(message) : redactSecretsString(message);
+    const errorText = timeoutSignal.aborted
+      ? "This model took too long to respond. Try again or choose another model."
+      : status === 500
+        ? publicProviderError(message)
+        : redactSecretsString(message);
     res.status(status).json({ error: errorText, requestId: req.id });
   }
 }
@@ -256,23 +251,18 @@ export async function handleChapterChatStream(
   _next: NextFunction
 ): Promise<void> {
   const request = req.body as ChapterChatRequest;
-  const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
-
-  let credential: ReturnType<typeof requestProviderCredential>;
+  let credential: ReturnType<typeof resolveRequestProviderCredential>;
   try {
-    credential = requestProviderCredential(req, request, headerApiKey, headerBaseUrl);
+    credential = resolveRequestProviderCredential(req, request);
   } catch {
     res.status(400).json({ error: "The selected model is unavailable." });
     return;
   }
   if (!requireUserCredential(req, res, request, credential.apiKey)) return;
 
-  if (
-    request.imagePages?.length &&
-    !getModelMeta(request.model).inputModalities?.includes("image")
-  ) {
+  if (request.imagePages?.length && !modelSupportsInput(request.model, "image")) {
     res.status(400).json({
-      error: "The selected model does not accept PDF page images.",
+      error: getUnsupportedInputMessage(request.model, "image"),
       requestId: req.id,
     });
     return;
@@ -285,7 +275,7 @@ export async function handleChapterChatStream(
   res.flushHeaders();
 
   const abortController = new AbortController();
-  const timeoutSignal = AbortSignal.timeout(90_000);
+  const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
   const requestSignal = AbortSignal.any([abortController.signal, timeoutSignal]);
   res.on("close", () => {
     if (!res.writableEnded) abortController.abort();
@@ -310,8 +300,11 @@ export async function handleChapterChatStream(
     if (abortController.signal.aborted) return;
     const message = error instanceof Error ? error.message : "Chapter chat failed.";
     logEvent("ERROR /api/chat/chapter/stream", {
+      requestId: req.id,
       errorType: error instanceof Error ? error.name : "UnknownError",
+      provider: providerForModelRequest(request),
       model: request.model,
+      failureCategory: classifyProviderFailure(error, timeoutSignal.aborted),
     });
     sendEvent("error", {
       error: timeoutSignal.aborted

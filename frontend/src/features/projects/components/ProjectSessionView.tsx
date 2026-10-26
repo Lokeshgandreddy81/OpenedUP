@@ -6,7 +6,7 @@ import {
   getProviderChatRequestConfig,
   useProviderKeys,
 } from "../../customize/publicApi";
-import { useChatAuth } from "../../../app/auth/ChatAuthContext";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
 import {
   ChatInput,
@@ -17,6 +17,7 @@ import {
 } from "../../chat";
 import {
   chatAttachmentsForContext,
+  chatImageAttachments,
   type ChatAttachmentFile,
 } from "../../../app/files/chatAttachments";
 import type { ProjectItem, ProjectSession, ProjectSessionMessage } from "./projectTypes";
@@ -60,6 +61,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
   const isGenerating = isGeneratingLocal || isInitialGenerating;
   const [thinkingElapsedSeconds, setThinkingElapsedSeconds] = useState(0);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const userStoppedRequestRef = useRef(false);
   const thinkingStartedAtRef = useRef<number | null>(null);
 
   const { hasKey } = useProviderKeys();
@@ -135,12 +137,16 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
 
     let replyContent = "";
     const assistantId = `msg-a-${Date.now()}`;
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
+    userStoppedRequestRef.current = false;
+    const requestTimeoutId = window.setTimeout(() => controller.abort(), 90_000);
     try {
       const providerConfig = getProviderChatRequestConfig(model);
-      const controller = new AbortController();
-      activeRequestRef.current = controller;
+      const imageAttachments = chatImageAttachments([...attachments, ...(project.files || [])]);
       const requestBody = JSON.stringify({
         messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+        ...(imageAttachments.length > 0 ? { images: imageAttachments } : {}),
         model,
         ...providerConfig.customModelFields,
         effort,
@@ -165,17 +171,47 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          throw new Error(
-            `${providerConfig.providerName} API Key Required: Connect your ${providerConfig.providerName} key in Customize → Providers to run ${providerConfig.modelName} in "${project.name}".`
-          );
-        } else {
-          const message =
+        if (
+          response.status === 401 &&
+          typeof errData.error === "string" &&
+          errData.error.startsWith("MISSING_API_KEY:")
+        ) {
+          const missingKeyMsg: ProjectSessionMessage = {
+            id: assistantId,
+            role: "assistant",
+            content: `**${providerConfig.providerName} API key required**\n\nConnect a key in **Customize → Providers** to use **${providerConfig.modelName}** in "${project.name}".`,
+            timestamp: new Date().toISOString(),
+            actionChips: ["Connect API Key"],
+            ...(attachments.length === 0 && trimmed
+              ? { retryPayload: { prompt: trimmed, model, effort, attachments: [] } }
+              : {}),
+          };
+          onUpdateSession({
+            ...session,
+            modelId: model,
+            messages: [...newMessages, missingKeyMsg],
+            updatedAt: Date.now(),
+          });
+          return;
+        }
+        const validationDetails = Array.isArray(errData.details)
+          ? errData.details
+              .map((detail: { path?: unknown; message?: unknown }) =>
+                [detail.path, detail.message].filter(Boolean).join(": ")
+              )
+              .filter(Boolean)
+              .join("; ")
+          : "";
+        const message =
+          [
             typeof errData.error === "string"
               ? errData.error
-              : `Chat request failed (${response.status}).`;
-          throw new Error(message);
-        }
+              : `Chat request failed (${response.status}).`,
+            validationDetails,
+          ]
+            .filter(Boolean)
+            .join(": ");
+        throw new Error(message);
       }
 
       const updateStreamedReply = (content: string) => {
@@ -217,7 +253,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
       });
     } catch (error: unknown) {
       activeRequestRef.current = null;
-      if (error instanceof DOMException && error.name === "AbortError") {
+      if (userStoppedRequestRef.current) {
         onUpdateSession({
           ...session,
           modelId: model,
@@ -239,10 +275,18 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         });
         return;
       }
+      const errorMessage =
+        error instanceof Error
+          ? error.name === "AbortError"
+            ? "The chat request was cancelled or timed out. Please try again."
+            : error.message
+          : "Chat service unavailable.";
       const errorMsg: ProjectSessionMessage = {
         id: assistantId,
         role: "assistant",
-        content: `I couldn’t get a response from the model. ${error instanceof Error ? error.message : "Chat service unavailable."}`,
+        content: replyContent
+          ? `${replyContent}\n\n_Response stopped early: ${errorMessage}_`
+          : `I couldn’t get a response from the model. ${errorMessage}`,
         timestamp: new Date().toISOString(),
         generationStatus: "error",
         ...(attachments.length === 0 && trimmed
@@ -255,7 +299,9 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         updatedAt: Date.now(),
       });
     } finally {
+      window.clearTimeout(requestTimeoutId);
       activeRequestRef.current = null;
+      userStoppedRequestRef.current = false;
       thinkingStartedAtRef.current = null;
       setIsGeneratingLocal(false);
     }
@@ -396,8 +442,12 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
             }}
             isThinking={isGenerating}
             onStopThinking={() => {
-              if (activeRequestRef.current) activeRequestRef.current.abort();
-              else onStopInitialGeneration();
+              if (activeRequestRef.current) {
+                userStoppedRequestRef.current = true;
+                activeRequestRef.current.abort();
+              } else {
+                onStopInitialGeneration();
+              }
             }}
             placeholder={`Message in ${project.name}…`}
             selectedModel={selectedModelId}

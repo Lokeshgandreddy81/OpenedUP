@@ -17,7 +17,9 @@ const RoadmapsScreen = lazyWithRetry(() =>
   import("../../../roadmaps").then((feature) => ({ default: feature.RoadmapsScreen }))
 );
 const ChaptersScreen = lazyWithRetry(() =>
-  import("../../../chapters").then((feature) => ({ default: feature.ChatChaptersScreen }))
+  import("../../../chapters/publicApi").then((feature) => ({
+    default: feature.ChatChaptersScreen,
+  }))
 );
 const ScheduledTasksScreen = lazyWithRetry(() =>
   import("../../../scheduled").then((feature) => ({ default: feature.ChatScheduledTasksScreen }))
@@ -38,6 +40,7 @@ export interface ChatWorkspaceScreensProps {
   activeView: ChatWorkspaceView;
   customizeInitialCategory: CustomizeCategory;
   projectsNavKey: number;
+  benchmarksNavKey: number;
   isScheduledTasksOpen: boolean;
   onSelectView: (view: "chat") => void;
   onNavigateToChat: (prompt?: string) => void;
@@ -54,6 +57,7 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
   activeView,
   customizeInitialCategory,
   projectsNavKey,
+  benchmarksNavKey,
   isScheduledTasksOpen,
   onSelectView,
   onNavigateToChat,
@@ -119,7 +123,7 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
     case "benchmarks":
       screen = (
         <PageRoute
-          key={activeView}
+          key={`${activeView}-${benchmarksNavKey}`}
           name="Benchmarks"
           fallback={<ChatScreenLoading name="Benchmarks" />}
         >

@@ -20,6 +20,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "start": "npm run build && npm run --workspace=backend start",
+    "e2e:skills": "npm run --workspace=@charan-interiors/backend e2e:skills",
     "check:feature-boundaries": "node frontend/scripts/check-feature-boundaries.mjs"
   },
   "devDependencies": {

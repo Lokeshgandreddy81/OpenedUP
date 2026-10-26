@@ -1,33 +1,11 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { User } from "firebase/auth";
 import {
   getFirebaseIdToken,
   signInForChat,
   subscribeToChatAuth,
 } from "../integrations/workspaceLiveSync";
-
-export interface ChatIdentity {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-}
-
-interface ChatAuthContextValue {
-  user: ChatIdentity | null;
-  loading: boolean;
-  signInError: string | null;
-  signIn: () => Promise<void>;
-  getIdToken: () => Promise<string | null>;
-}
-
-const ChatAuthContext = createContext<ChatAuthContextValue | null>(null);
-const ANONYMOUS_CHAT_AUTH: ChatAuthContextValue = {
-  user: null,
-  loading: false,
-  signInError: null,
-  signIn: async () => {},
-  getIdToken: async () => null,
-};
+import { ChatAuthContext, type ChatIdentity } from "./chatAuthState";
 
 function toIdentity(user: User | null): ChatIdentity | null {
   return user ? { uid: user.uid, email: user.email, displayName: user.displayName } : null;
@@ -64,8 +42,3 @@ export const ChatAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   return <ChatAuthContext.Provider value={value}>{children}</ChatAuthContext.Provider>;
 };
-
-export function useChatAuth(): ChatAuthContextValue {
-  const value = useContext(ChatAuthContext);
-  return value ?? ANONYMOUS_CHAT_AUTH;
-}

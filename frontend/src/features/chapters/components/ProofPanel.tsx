@@ -18,10 +18,17 @@ import {
   splitDocumentName,
   stripChapterNumberPrefix,
 } from "../services/engine";
-import { RollingNumber, usePrefersReducedMotion } from "../../../app/components/MotionPrimitives";
+import { RollingNumber } from "../../../app/components/MotionPrimitives";
+import { usePrefersReducedMotion } from "../../../app/hooks/usePrefersReducedMotion";
 import { PdfCanvasPages } from "./PdfCanvasPages";
 import { ChapterChatPanel, type ChapterChatMessage } from "./ChapterChatPanel";
 import { COST_CENTER_OPTIONS } from "./WorkspaceSyncModal";
+import {
+  getCachedPdfDocument,
+  setCachedPdfDocument,
+  getCachedSlicedBlob,
+  setCachedSlicedBlob,
+} from "../services/documentCache";
 
 interface ProofPanelProps {
   row: ComputedRow;
@@ -46,38 +53,6 @@ interface ProofPanelProps {
 const CATEGORIES: ReceiptCategory[] = ["Meals", "Travel", "Lodging", "Office", "Other"];
 
 // Document-level parsed PDFDocument cache to avoid re-parsing multi-MB PDFs on every chapter click
-const parsedPdfDocCache = new Map<string, PDFDocument>();
-// Sliced chapter Blob URL cache keyed by `${photoId}_p${start}_${end}`
-const slicedBlobUrlCache = new Map<string, { url: string; aspect: number; photoId: string }>();
-
-const MAX_CACHED_PARSED_DOCS = 6;
-const MAX_CACHED_SLICED_BLOBS = 30;
-
-export function clearDocumentCache(photoId?: string): void {
-  if (photoId) {
-    parsedPdfDocCache.delete(photoId);
-    for (const [key, item] of Array.from(slicedBlobUrlCache.entries())) {
-      if (item.photoId === photoId) {
-        try {
-          URL.revokeObjectURL(item.url);
-        } catch {
-          // ignore
-        }
-        slicedBlobUrlCache.delete(key);
-      }
-    }
-  } else {
-    parsedPdfDocCache.clear();
-    for (const item of Array.from(slicedBlobUrlCache.values())) {
-      try {
-        URL.revokeObjectURL(item.url);
-      } catch {
-        // ignore
-      }
-    }
-    slicedBlobUrlCache.clear();
-  }
-}
 
 export const ProofPanel: React.FC<ProofPanelProps> = ({
   row,
@@ -177,7 +152,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
       const cacheKey = `${photo.id}_p${startPageNum}_${endPageNum}`;
 
       // 1. Instant Cache Hit (0ms latency on repeated visits)
-      const cached = slicedBlobUrlCache.get(cacheKey);
+      const cached = getCachedSlicedBlob(cacheKey);
       if (cached) {
         setChapterPdfUrl(cached.url);
         setChapterAspect(cached.aspect > 0 ? cached.aspect : null);
@@ -190,7 +165,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
       setSliceFailed(false);
       try {
         // 2. Reuse cached parsed PDFDocument if available
-        let srcDoc = parsedPdfDocCache.get(photo.id);
+        let srcDoc = getCachedPdfDocument(photo.id);
         if (!srcDoc) {
           let arrayBuffer: ArrayBuffer;
           if (photo.file) {
@@ -215,13 +190,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
           }
 
           srcDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-          if (parsedPdfDocCache.size >= MAX_CACHED_PARSED_DOCS) {
-            const oldestPhotoId = parsedPdfDocCache.keys().next().value;
-            if (oldestPhotoId) {
-              parsedPdfDocCache.delete(oldestPhotoId);
-            }
-          }
-          parsedPdfDocCache.set(photo.id, srcDoc);
+          setCachedPdfDocument(photo.id, srcDoc);
         }
 
         const totalDocPages = srcDoc.getPageCount();
@@ -247,22 +216,7 @@ export const ProofPanel: React.FC<ProofPanelProps> = ({
         });
         const createdUrl = URL.createObjectURL(blob);
 
-        if (slicedBlobUrlCache.size >= MAX_CACHED_SLICED_BLOBS) {
-          const oldestKey = slicedBlobUrlCache.keys().next().value;
-          if (oldestKey) {
-            const evicted = slicedBlobUrlCache.get(oldestKey);
-            if (evicted) {
-              try {
-                URL.revokeObjectURL(evicted.url);
-              } catch {
-                // ignore
-              }
-              slicedBlobUrlCache.delete(oldestKey);
-            }
-          }
-        }
-
-        slicedBlobUrlCache.set(cacheKey, {
+        setCachedSlicedBlob(cacheKey, {
           url: createdUrl,
           aspect,
           photoId: photo.id,

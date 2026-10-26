@@ -7,11 +7,11 @@ import {
   Check,
   MoreVertical,
   Trash2,
-  Sparkles,
+  ListChecks,
   FileText,
 } from "lucide-react";
 import { getProviderChatRequestConfig } from "../../../customize/publicApi";
-import { useChatAuth } from "../../../../app/auth/ChatAuthContext";
+import { useChatAuth } from "../../../../app/auth/useChatAuth";
 import { authenticatedChatFetch, consumeChatStream } from "../../../../app/api/chatApi";
 import type {
   ProjectItem,
@@ -23,6 +23,7 @@ import { ProjectWorkspaceView } from "../../components/ProjectWorkspaceView";
 import { ProjectSessionView } from "../../components/ProjectSessionView";
 import {
   chatAttachmentsForContext,
+  chatImageAttachments,
   readChatAttachments,
   type ChatAttachmentFile,
 } from "../../../../app/files/chatAttachments";
@@ -33,40 +34,6 @@ import {
   saveAccountProjects,
   saveLocalProjects,
 } from "../../components/projectStore";
-
-const DEFAULT_DEMO_PROJECT: ProjectItem = {
-  id: "proj-demo-yes",
-  name: "Yes",
-  description: "Job",
-  colorTag: "stone",
-  createdAt: Date.now() - 3600000,
-  updatedAt: Date.now(),
-  sessionCount: 1,
-  sessions: [
-    {
-      id: "sess-demo-greeting",
-      projectId: "proj-demo-yes",
-      title: "Greeting",
-      createdAt: Date.now() - 38 * 60 * 1000,
-      updatedAt: Date.now() - 38 * 60 * 1000,
-      messages: [
-        {
-          id: "msg-1",
-          role: "user",
-          content: "hi",
-          timestamp: "Just now",
-        },
-        {
-          id: "msg-2",
-          role: "assistant",
-          content: "Hi! What can I help you with today?",
-          timestamp: "Just now",
-        },
-      ],
-    },
-  ],
-  files: [],
-};
 
 export const ProjectsScreen: React.FC<{
   onOpenProviders: () => void;
@@ -84,15 +51,13 @@ export const ProjectsScreen: React.FC<{
   onOpenArtifacts,
 }) => {
   const { user, loading: authLoading } = useChatAuth();
-  // Load projects from localStorage (defaults to demo project "Yes" if empty)
+  // Load projects from localStorage
   const [projects, setProjects] = useState<ProjectItem[]>(() => {
     try {
-      const saved = getLocalProjects();
-      if (saved.length > 0) return saved;
+      return getLocalProjects();
     } catch {
-      // ignore
+      return [];
     }
-    return [DEFAULT_DEMO_PROJECT];
   });
   const [loadedAccountUid, setLoadedAccountUid] = useState<string | null>(null);
   const [loadingAccountProjects, setLoadingAccountProjects] = useState(false);
@@ -109,7 +74,7 @@ export const ProjectsScreen: React.FC<{
     if (authLoading) return;
     if (!user) {
       const local = getLocalProjects();
-      setProjects(local.length > 0 ? local : [DEFAULT_DEMO_PROJECT]);
+      setProjects(local);
       setLoadedAccountUid(null);
       setLoadingAccountProjects(false);
       setProjectSyncError("");
@@ -159,19 +124,16 @@ export const ProjectsScreen: React.FC<{
 
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
-      if (
-        window.location.search.includes("view=workspace") ||
-        window.location.search.includes("view=session")
-      ) {
-        return "proj-demo-yes";
-      }
+      const params = new URLSearchParams(window.location.search);
+      return params.get("projectId");
     }
     return null;
   });
 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
-    if (typeof window !== "undefined" && window.location.search.includes("view=session")) {
-      return "sess-demo-greeting";
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("sessionId");
     }
     return null;
   });
@@ -199,6 +161,7 @@ export const ProjectsScreen: React.FC<{
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const [generatingSessionId, setGeneratingSessionId] = useState<string | null>(null);
   const initialRequestControllerRef = useRef<AbortController | null>(null);
+  const userStoppedInitialRequestRef = useRef(false);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
   // Keep anonymous projects local; account projects are saved as ordered server snapshots.
   useEffect(() => {
@@ -303,31 +266,21 @@ export const ProjectsScreen: React.FC<{
     }
   }, [isSearchOpen]);
 
-  // Active project calculation (with demo fallback for testing)
+  // Active project calculation
   const activeProject = useMemo(() => {
     if (!activeProjectId) return null;
-    const found = projects.find((p) => p.id === activeProjectId);
-    if (found) return found;
-    if (activeProjectId === "proj-demo-yes") {
-      return DEFAULT_DEMO_PROJECT;
-    }
-    return projects[0] || DEFAULT_DEMO_PROJECT;
+    return projects.find((p) => p.id === activeProjectId) || null;
   }, [projects, activeProjectId]);
 
   // Active session calculation
   const activeSession = useMemo(() => {
     if (!activeProject || !activeSessionId) return null;
-    const found = activeProject.sessions?.find((s) => s.id === activeSessionId);
-    if (found) return found;
-    if (activeSessionId === "sess-demo-greeting" && activeProject.sessions?.[0]) {
-      return activeProject.sessions[0];
-    }
-    return activeProject.sessions?.[0] || null;
+    return activeProject.sessions?.find((s) => s.id === activeSessionId) || activeProject.sessions?.[0] || null;
   }, [activeProject, activeSessionId]);
 
   // Filtered & sorted projects for the list view
   const filteredProjects = useMemo(() => {
-    let list = Array.isArray(projects) ? [...projects] : [DEFAULT_DEMO_PROJECT];
+    let list = Array.isArray(projects) ? [...projects] : [];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -447,13 +400,16 @@ export const ProjectsScreen: React.FC<{
 
     const controller = new AbortController();
     initialRequestControllerRef.current = controller;
+    userStoppedInitialRequestRef.current = false;
+    const requestTimeoutId = window.setTimeout(() => controller.abort(), 90_000);
     const assistantId = `msg-a-${Date.now()}`;
     const startedAt = Date.now();
     let replyContent = "";
     const updateAssistant = (
       content: string,
       isStreaming: boolean,
-      generationStatus?: "stopped" | "error"
+      generationStatus?: "stopped" | "error",
+      actionChips?: string[]
     ) => {
       const assistantMessage: ProjectSession["messages"][number] = {
         id: assistantId,
@@ -464,7 +420,8 @@ export const ProjectsScreen: React.FC<{
           ? { isStreaming: true }
           : { thinkingTime: `${Math.max(1, Math.ceil((Date.now() - startedAt) / 1000))}s` }),
         ...(generationStatus ? { generationStatus } : {}),
-        ...(generationStatus && attachments.length === 0
+        ...(actionChips?.length ? { actionChips } : {}),
+        ...((generationStatus || actionChips?.length) && attachments.length === 0
           ? {
               retryPayload: {
                 prompt: initialPrompt,
@@ -498,12 +455,17 @@ export const ProjectsScreen: React.FC<{
 
     try {
       const providerConfig = getProviderChatRequestConfig(modelId);
+      const imageAttachments = chatImageAttachments([
+        ...attachments,
+        ...(targetProject.files || []),
+      ]);
       const requestInit = {
         method: "POST",
         headers: providerConfig.headers,
         signal: controller.signal,
         body: JSON.stringify({
           messages: [{ role: "user", content: initialPrompt }],
+          ...(imageAttachments.length > 0 ? { images: imageAttachments } : {}),
           model: modelId,
           ...providerConfig.customModelFields,
           effort,
@@ -523,12 +485,36 @@ export const ProjectsScreen: React.FC<{
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
+        if (
+          response.status === 401 &&
+          typeof errData.error === "string" &&
+          errData.error.startsWith("MISSING_API_KEY:")
+        ) {
+          updateAssistant(
+            `**${providerConfig.providerName} API key required**\n\nConnect a key in **Customize → Providers** to use **${providerConfig.modelName}** in "${targetProject.name}".`,
+            false,
+            undefined,
+            ["Connect API Key"]
+          );
+          return;
+        }
+        const validationDetails = Array.isArray(errData.details)
+          ? errData.details
+              .map((detail: { path?: unknown; message?: unknown }) =>
+                [detail.path, detail.message].filter(Boolean).join(": ")
+              )
+              .filter(Boolean)
+              .join("; ")
+          : "";
         const errorMessage =
-          response.status === 401
-            ? `${providerConfig.providerName} API Key Required: Connect your ${providerConfig.providerName} key in Customize → Providers to run ${providerConfig.modelName}.`
-            : typeof errData.error === "string"
+          [
+            typeof errData.error === "string"
               ? errData.error
-              : `Chat request failed (${response.status}).`;
+              : `Chat request failed (${response.status}).`,
+            validationDetails,
+          ]
+            .filter(Boolean)
+            .join(": ");
         throw new Error(errorMessage);
       }
 
@@ -538,16 +524,26 @@ export const ProjectsScreen: React.FC<{
       });
       updateAssistant(replyContent, false);
     } catch (error: unknown) {
-      if (error instanceof DOMException && error.name === "AbortError") {
+      if (userStoppedInitialRequestRef.current) {
         updateAssistant(replyContent, false, "stopped");
       } else {
+        const errorMessage =
+          error instanceof Error
+            ? error.name === "AbortError"
+              ? "The chat request was cancelled or timed out. Please try again."
+              : error.message
+            : "Chat service unavailable.";
         updateAssistant(
-          `I couldn’t get a response from the model. ${error instanceof Error ? error.message : "Chat service unavailable."}`,
+          replyContent
+            ? `${replyContent}\n\n_Response stopped early: ${errorMessage}_`
+            : `I couldn’t get a response from the model. ${errorMessage}`,
           false,
           "error"
         );
       }
     } finally {
+      window.clearTimeout(requestTimeoutId);
+      userStoppedInitialRequestRef.current = false;
       initialRequestControllerRef.current = null;
       setGeneratingSessionId((current) => (current === newSessionId ? null : current));
     }
@@ -555,7 +551,15 @@ export const ProjectsScreen: React.FC<{
 
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setProjects((prev) => prev.filter((p) => p.id !== id));
+    setProjects((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      try {
+        saveLocalProjects(next);
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     setCardMenuOpenId(null);
   };
 
@@ -645,7 +649,15 @@ export const ProjectsScreen: React.FC<{
             setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
           }}
           onDeleteProject={(pId) => {
-            setProjects((prev) => prev.filter((p) => p.id !== pId));
+            setProjects((prev) => {
+              const next = prev.filter((p) => p.id !== pId);
+              try {
+                saveLocalProjects(next);
+              } catch {
+                // ignore
+              }
+              return next;
+            });
             setActiveProjectId(null);
             setViewState("list");
           }}
@@ -670,8 +682,10 @@ export const ProjectsScreen: React.FC<{
           onOpenArtifacts={onOpenArtifacts}
           isInitialGenerating={generatingSessionId === activeSession.id}
           onStopInitialGeneration={() => {
-            if (generatingSessionId === activeSession.id)
+            if (generatingSessionId === activeSession.id) {
+              userStoppedInitialRequestRef.current = true;
               initialRequestControllerRef.current?.abort();
+            }
           }}
           onBackToWorkspace={() => {
             setViewState("workspace");
@@ -916,7 +930,7 @@ export const ProjectsScreen: React.FC<{
                   return (
                     <article
                       key={project.id}
-                      className="group relative flex min-h-[160px] cursor-pointer select-none flex-col justify-between rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-200 hover:border-neutral-300 hover:shadow-[0_4px_16px_rgba(0,0,0,0.04)] sm:p-5"
+                      className="group relative flex min-h-[160px] cursor-pointer select-none flex-col justify-between rounded-2xl border border-neutral-300 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] transition-colors duration-150 hover:border-neutral-400 hover:bg-neutral-50/60 sm:p-5"
                     >
                       <button
                         type="button"
@@ -928,19 +942,19 @@ export const ProjectsScreen: React.FC<{
                         className="absolute inset-0 z-0 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900"
                       />
                       <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between pointer-events-none">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start justify-between gap-3 pb-3">
                           <div className="min-w-0">
                             <h3 className="truncate font-serif text-[18px] sm:text-[19px] leading-snug font-normal text-neutral-900 transition-colors group-hover:text-neutral-950">
                               {project.name}
                             </h3>
                             {project.description && (
-                              <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-neutral-500">
+                              <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-neutral-600">
                                 {project.description}
                               </p>
                             )}
                             {project.customInstructions && (
-                              <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-500">
-                                <Sparkles size={12} className="text-neutral-500" />
+                              <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-neutral-100/80 px-2 py-1 text-[11px] font-medium text-neutral-600">
+                                <ListChecks size={12} className="text-neutral-500" />
                                 <span>Custom instructions</span>
                               </div>
                             )}
@@ -974,9 +988,9 @@ export const ProjectsScreen: React.FC<{
                                   type="button"
                                   onClick={(e) => handleDeleteProject(project.id, e)}
                                   onKeyDown={(event) => event.stopPropagation()}
-                                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
+                                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-neutral-800 transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 font-medium"
                                 >
-                                  <Trash2 size={13} />
+                                  <Trash2 size={13} className="text-neutral-700 shrink-0" />
                                   <span>Delete project</span>
                                 </button>
                               </div>
@@ -984,7 +998,7 @@ export const ProjectsScreen: React.FC<{
                           </div>
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-[12px] text-neutral-500">
+                        <div className="mt-3.5 flex items-center justify-between text-[12px] text-neutral-500">
                           <span className="font-medium text-neutral-600">
                             {project.sessions?.length ?? 0}{" "}
                             {(project.sessions?.length ?? 0) === 1 ? "session" : "sessions"}

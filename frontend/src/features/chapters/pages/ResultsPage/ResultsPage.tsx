@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ChatChaptersScreen } from "../ChatChaptersScreen";
 import { ResultsPageErrorBoundary } from "./ErrorBoundary";
-import { useAppContext } from "../../state/AppContext";
+import { useAppContext } from "../../state/useAppContext";
 
 export const ResultsPageContent: React.FC = () => {
   const navigate = useNavigate();

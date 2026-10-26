@@ -167,9 +167,9 @@ export const ProjectWorkspaceView: React.FC<ProjectWorkspaceViewProps> = ({
                       setIsHeaderMenuOpen(false);
                       onDeleteProject(project.id);
                     }}
-                    className="w-full text-left px-3.5 py-2 text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 cursor-pointer font-medium"
+                    className="w-full text-left px-3.5 py-2 text-neutral-800 hover:bg-neutral-100 hover:text-neutral-950 flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={13} className="text-neutral-700 shrink-0" />
                     <span>Delete project</span>
                   </button>
                 </div>

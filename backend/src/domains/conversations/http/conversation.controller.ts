@@ -23,8 +23,14 @@ export function getConversation(req: Request, res: Response): void {
 
 export function createConversation(req: Request, res: Response): void {
   const body = req.body as CreateConversationRequest;
+  const requestBody = req.body as CreateConversationRequest & {
+    projectId?: unknown;
+    project_id?: unknown;
+  };
+  const requestedProjectId = requestBody.projectId ?? requestBody.project_id;
+  const projectId = typeof requestedProjectId === "string" ? requestedProjectId : undefined;
   res.status(201).json({
-    conversation: conversations.create(req.principal!.uid, body.title, body.model),
+    conversation: conversations.create(req.principal!.uid, body.title, body.model, projectId),
   });
 }
 

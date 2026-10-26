@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AppProvider, useAppContext, WorkspaceSyncModal } from "./features/chapters";
+import { AppProvider, useAppContext, WorkspaceSyncModal } from "./features/chapters/publicApi";
 import { ChatAuthProvider } from "./app/auth/ChatAuthContext";
 import { PageRoute } from "./app/components/PageRoute";
 import { lazyWithRetry } from "./app/components/lazyWithRetry";

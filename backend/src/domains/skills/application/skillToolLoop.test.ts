@@ -66,7 +66,7 @@ test("AnthropicToolLoop - completes tool call turn and finishes loop", async () 
   // Turn 2: model sees tool_result and returns final greeting text
   let turn = 0;
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = (async (input: any, init?: any) => {
+  globalThis.fetch = (async () => {
     turn++;
     if (turn === 1) {
       return new Response(
@@ -98,7 +98,7 @@ test("AnthropicToolLoop - completes tool call turn and finishes loop", async () 
   try {
     const loopResult = await runAnthropicToolLoop({
       apiKey: "sk-ant-test-key",
-      baseUrl: "https://api.anthropic.com/v1",
+      baseUrl: "https://1.1.1.1/v1",
       model: "claude-3-5-sonnet",
       messages: [{ role: "user", content: "Hello there!" }],
       systemInstruction: "You are a helpful assistant.",
