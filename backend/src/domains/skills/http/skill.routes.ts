@@ -10,6 +10,7 @@ import {
   setConversationSkills,
   getProjectSkills,
   setProjectSkills,
+  downloadConversationFile,
 } from "./skill.controller.js";
 
 const upload = multer({
@@ -35,3 +36,6 @@ skillRouter.put("/conversations/:id/skills", setConversationSkills);
 // Project skills
 skillRouter.get("/projects/:id/skills", getProjectSkills);
 skillRouter.put("/projects/:id/skills", setProjectSkills);
+
+// Downloadable conversation attachments
+skillRouter.get("/conversations/:id/files/:filename", downloadConversationFile);

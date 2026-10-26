@@ -327,6 +327,10 @@ export function getProjectSkills(req: Request, res: Response): void {
   res.json({ skills });
 }
 
+import path from "node:path";
+import fs from "node:fs";
+import { getSandboxBaseDir } from "../application/sandboxManager.js";
+
 export function setProjectSkills(req: Request, res: Response): void {
   const repo = getSkillRepository();
   const { userId, orgId } = resolvePrincipal(req);
@@ -352,4 +356,26 @@ export function setProjectSkills(req: Request, res: Response): void {
 
   const enabled = repo.setProjectSkills(projectId, skillIds);
   res.json({ skills: enabled });
+}
+
+export function downloadConversationFile(req: Request, res: Response): void {
+  const conversationId = req.params["id"]!;
+  const filename = path.basename(req.params["filename"]!);
+
+  const baseDir = getSandboxBaseDir(conversationId);
+  const attachmentPath = path.join(baseDir, "attachments", filename);
+  const workspacePath = path.join(baseDir, "workspace", filename);
+
+  const targetPath = fs.existsSync(attachmentPath)
+    ? attachmentPath
+    : fs.existsSync(workspacePath)
+      ? workspacePath
+      : null;
+
+  if (!targetPath) {
+    res.status(404).json({ error: "File not found.", requestId: req.id });
+    return;
+  }
+
+  res.download(targetPath, filename);
 }
