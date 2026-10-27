@@ -290,7 +290,9 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
         <main className="mt-12 space-y-14 sm:mt-16 sm:space-y-16">
           {(!isSearching || filteredRoles.length > 0) && (
             <section aria-label="Role-based roadmaps" className="py-1">
-              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">Roles</h2>
+              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">
+                Roles
+              </h2>
 
               <div className={ROADMAP_GRID_CLASS}>{filteredRoles.map(renderRoadmapCard)}</div>
             </section>
@@ -298,14 +300,18 @@ export const RoadmapExplorer: React.FC<RoadmapExplorerProps> = ({ onBack, isEmbe
 
           {(!isSearching || filteredSkills.length > 0) && (
             <section aria-label="Skills roadmaps" className="py-1">
-              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">Skills</h2>
+              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">
+                Skills
+              </h2>
               <div className={ROADMAP_GRID_CLASS}>{filteredSkills.map(renderRoadmapCard)}</div>
             </section>
           )}
 
           {(!isSearching || filteredBestPractices.length > 0) && (
             <section aria-label="Best practices roadmaps" className="py-1">
-              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">Best practices</h2>
+              <h2 className="font-serif text-[30px] font-medium tracking-tight text-neutral-950 sm:text-[34px]">
+                Best practices
+              </h2>
               <div className={ROADMAP_GRID_CLASS}>
                 {filteredBestPractices.map(renderRoadmapCard)}
               </div>

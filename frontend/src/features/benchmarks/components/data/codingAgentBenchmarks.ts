@@ -1108,7 +1108,8 @@ export function resolveCodingAgentToModelId(agentModelId: string): string {
   if (agentModelId.includes("gemini-4-argon")) return "gemini-4-argon-high";
   if (agentModelId.includes("grok-4-7")) return "grok-4-7-xhigh";
   if (agentModelId.includes("glm-5-3")) return "glm-5-3-max";
-  if (agentModelId.includes("kimi-k3-1") || agentModelId.includes("kimi-k3.1")) return "kimi-k3-1-pro";
+  if (agentModelId.includes("kimi-k3-1") || agentModelId.includes("kimi-k3.1"))
+    return "kimi-k3-1-pro";
   if (agentModelId.includes("kimi-k3")) return "kimi-k3-max";
   if (agentModelId.includes("muse-wonder-full")) return "muse-wonder-full-max";
   if (agentModelId.includes("muse-wonder")) return "muse-wonder-max";

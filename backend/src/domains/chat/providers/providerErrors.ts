@@ -12,10 +12,7 @@ export type ProviderFailureCategory =
   | "unknown";
 
 /** Classify a failure into a low-cardinality diagnostic value without retaining its text. */
-export function classifyProviderFailure(
-  error: unknown,
-  timedOut = false
-): ProviderFailureCategory {
+export function classifyProviderFailure(error: unknown, timedOut = false): ProviderFailureCategory {
   if (timedOut) return "timeout";
   const name = error instanceof Error ? error.name : "";
   const message = error instanceof Error ? error.message : String(error ?? "");
@@ -108,9 +105,7 @@ export function actionableProviderError(message: string): string {
     return "This model's OpenRouter provider is currently unavailable. Choose another model and try again later.";
   }
 
-  if (
-    /provider(?: base)? url (?:must|cannot)|private or local network address/i.test(sanitized)
-  ) {
+  if (/provider(?: base)? url (?:must|cannot)|private or local network address/i.test(sanitized)) {
     return "The configured provider endpoint URL is invalid or points to a restricted local network address. Check the endpoint in Customize → Providers.";
   }
 

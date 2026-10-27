@@ -56,45 +56,43 @@ export type Modality = "text" | "vision" | "audio";
 // --- Benchmark Quality Metrics ---
 
 export interface QualityMetrics {
-  /** Composite Artificial Analysis Intelligence Index (0 to 100) */
-  intelligenceIndex: number;
+  /** Null means the source does not report a score for that evaluation. */
+  /** Composite Artificial Analysis Intelligence Index (0 to 100); null when unreported. */
+  intelligenceIndex: number | null;
   /** MMLU-Pro multi-task language understanding accuracy (0 to 100) */
-  mmluPro: number;
+  mmluPro: number | null;
   /** GPQA Diamond expert graduate-level QA accuracy (0 to 100) */
-  gpqaDiamond: number;
+  gpqaDiamond: number | null;
   /** SWE-bench Verified real-world software engineering resolve rate (0 to 100) */
-  sweBenchVerified: number;
-  /** Humanity's Last Exam complex multidisciplinary reasoning accuracy (0 to 100).
-   *  Only evaluated frontier models carry a score; 0 means not evaluated. */
-  humanitiesLastExam: number;
+  sweBenchVerified: number | null;
+  /** Humanity's Last Exam complex multidisciplinary reasoning accuracy (0 to 100); null when unreported. */
+  humanitiesLastExam: number | null;
   /** LMSYS Chatbot Arena Elo rating (e.g. 1250 - 1450) */
-  chatbotArenaElo: number;
+  chatbotArenaElo: number | null;
   /** Omniscience factual accuracy score (0 to 100) */
-  omniscienceAccuracy: number;
+  omniscienceAccuracy: number | null;
   /** Omniscience hallucination-free rate (0 to 100) */
-  omniscienceNonHallucination: number;
+  omniscienceNonHallucination: number | null;
   /** MATH-500 competition-level mathematics accuracy (0 to 100) */
-  math500: number;
-  /** AA-Briefcase v1.1 agentic knowledge work score (0 to 100). The Briefcase Elo
-   *  rescaled to (Elo-500)/2000; only evaluated frontier models carry a score. */
-  briefcaseV11: number;
-  /** GDPval-AA v2.1 agentic real-world work tasks score (0 to 100). The GDPval Elo
-   *  rescaled to (Elo-500)/2000; only evaluated frontier models carry a score. */
-  gdpvalAa: number;
+  math500: number | null;
+  /** AA-Briefcase v1.1 agentic knowledge work score (0 to 100); null when unreported. */
+  briefcaseV11: number | null;
+  /** GDPval-AA v2.1 agentic real-world work tasks score (0 to 100); null when unreported. */
+  gdpvalAa: number | null;
   /** Terminal-Bench 4.0 agentic coding & terminal use pass rate (0 to 100).
    *  Only evaluated frontier models carry a score. */
-  terminalBench40: number;
+  terminalBench40: number | null;
   /** FrontierCode 1.1 agentic software engineering in open-source repositories
    *  score (0 to 100). Only evaluated frontier models carry a score. */
-  frontierCode11: number;
+  frontierCode11: number | null;
   /** AA-AnalystAgent quantitative analysis on spreadsheets & documents score
    *  (0 to 100). Only evaluated frontier models carry a score. */
-  analystAgentAa: number;
+  analystAgentAa: number | null;
   /** ITBench-AA Kubernetes incident root-cause analysis score (0 to 100).
    *  Only evaluated frontier models carry a score. */
-  itBenchAa: number;
+  itBenchAa: number | null;
   /** AutomationBench-AA agentic SaaS workflow success rate (0 to 100) */
-  automationBenchAa: number;
+  automationBenchAa: number | null;
 }
 
 // --- Benchmark Performance Metrics ---
@@ -119,8 +117,12 @@ export interface PerformanceMetrics {
 // --- Benchmark Pricing Metrics ---
 
 export interface PricingMetrics {
-  /** USD blended price per 1M tokens based on standard 3:1 input/output token ratio */
+  /** USD blended price per 1M tokens on the shared 3:1 input/output comparison basis. */
   blendedPricePer1M: number;
+  /** A source-published blended price that uses a different token mix. */
+  sourceBlendedPricePer1M?: number;
+  /** The source token mix used for sourceBlendedPricePer1M. */
+  sourceBlendedPriceBasis?: string;
   /** Input token price per 1M tokens in USD */
   inputPricePer1M: number;
   /** Output token price per 1M tokens in USD */
@@ -236,11 +238,7 @@ export interface ParetoOptions {
 // --- UI Navigation, Filtering & Sorting ---
 
 export type BenchmarkCategory =
-  | "overview"
-  | "benchmarks"
-  | "coding-agents"
-  | "leaderboard"
-  | "compare";
+  "overview" | "benchmarks" | "coding-agents" | "leaderboard" | "compare";
 
 export interface ImageModelBenchmark {
   id: string;

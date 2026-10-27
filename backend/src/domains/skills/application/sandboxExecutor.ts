@@ -179,7 +179,8 @@ export class UnsafeLocalSandboxExecutor implements SandboxExecutor {
       // Check if command explicitly references reading outside workspace
       return {
         stdout: "",
-        stderr: "Security Policy Violation: Error: Command rejected due to security policy: Access to host environment files or directory traversal is blocked.",
+        stderr:
+          "Security Policy Violation: Error: Command rejected due to security policy: Access to host environment files or directory traversal is blocked.",
         exitCode: 1,
       };
     }

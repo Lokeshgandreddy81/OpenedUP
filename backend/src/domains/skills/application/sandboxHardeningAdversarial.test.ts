@@ -158,12 +158,18 @@ describe("Phase 1: Sandbox Hardening & Adversarial Testing", () => {
     const attackerSandbox = initSandbox(attackerConvId, [dummySkill]);
 
     // Attempt 1: Path traversal via Read tool
-    const readAttempt = executeRead(`../../${victimConvId}/workspace/secret_journal.txt`, attackerSandbox);
+    const readAttempt = executeRead(
+      `../../${victimConvId}/workspace/secret_journal.txt`,
+      attackerSandbox
+    );
     assert.equal(readAttempt.isError, true);
     assert.match(readAttempt.content, /Path traversal escape/i);
 
     // Attempt 2: Bash relative traversal
-    const bashAttempt = await executeBash(`cat ../../${victimConvId}/workspace/secret_journal.txt`, attackerSandbox);
+    const bashAttempt = await executeBash(
+      `cat ../../${victimConvId}/workspace/secret_journal.txt`,
+      attackerSandbox
+    );
     assert.equal(bashAttempt.isError, true);
     assert.doesNotMatch(bashAttempt.content, /confidential user journal entries/);
 

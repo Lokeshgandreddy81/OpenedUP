@@ -1,6 +1,10 @@
 import { fetchProvider } from "../../chat/providers/llm.service.js";
 import { redactSecretsString } from "../../../platform/observability/logger.js";
-import { SKILL_TOOL_DEFINITION, handleSkillToolCall, type SkillToolResult } from "./skillToolHandler.js";
+import {
+  SKILL_TOOL_DEFINITION,
+  handleSkillToolCall,
+  type SkillToolResult,
+} from "./skillToolHandler.js";
 import { SkillRepository } from "../repositories/skillRepository.js";
 import { readSkillFileFromDisk } from "./skillStorage.js";
 import { parseSkillMd } from "./skillParser.js";

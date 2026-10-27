@@ -332,4 +332,3 @@ export function getCreatorName(creator: string): string {
       .replace(/[^a-z0-9]/g, "") || "";
   return CREATOR_DISPLAY_NAMES[cleanKey] || creator;
 }
-

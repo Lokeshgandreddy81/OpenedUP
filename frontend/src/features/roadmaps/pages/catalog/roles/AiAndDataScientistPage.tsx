@@ -303,7 +303,8 @@ export const AiAndDataScientistPage: React.FC<AiAndDataScientistPageProps> = ({
               AI and Data Scientist
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-[14px] leading-relaxed text-slate-600">
-              Comprehensive step-by-step curriculum to becoming a modern AI &amp; Data Scientist in 2026.
+              Comprehensive step-by-step curriculum to becoming a modern AI &amp; Data Scientist in
+              2026.
             </p>
           </div>
 

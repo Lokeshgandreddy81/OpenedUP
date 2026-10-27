@@ -26,14 +26,17 @@ export function createRateLimiter(options: RateLimiterOptions) {
 
   const hits = new Map<string, RateLimitRecord>();
 
-  const cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of hits.entries()) {
-      if (record.resetTime <= now) {
-        hits.delete(key);
+  const cleanupInterval = setInterval(
+    () => {
+      const now = Date.now();
+      for (const [key, record] of hits.entries()) {
+        if (record.resetTime <= now) {
+          hits.delete(key);
+        }
       }
-    }
-  }, Math.min(windowMs, 60_000));
+    },
+    Math.min(windowMs, 60_000)
+  );
 
   if (cleanupInterval.unref) {
     cleanupInterval.unref();

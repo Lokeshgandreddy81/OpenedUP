@@ -52,7 +52,6 @@ export interface CustomizeSkillsTabProps {
   onCategoriesLoaded?: (categories: Array<{ id: string; name: string }>) => void;
 }
 
-
 export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
   subTab = "Yours",
   onSubTabChange,
@@ -96,10 +95,7 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
   useEffect(() => {
     if (!isCategoryDropdownOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        categoryDropdownRef.current &&
-        !categoryDropdownRef.current.contains(e.target as Node)
-      ) {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
         setIsCategoryDropdownOpen(false);
       }
     };
@@ -185,7 +181,12 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       } else if (lowerName.endsWith(".pdf")) {
         // Direct PDF import
         const { content } = await extractPdfText(file);
-        const cleanName = file.name.replace(/\.pdf$/i, "").toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "") || "pdf-skill";
+        const cleanName =
+          file.name
+            .replace(/\.pdf$/i, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, "-")
+            .replace(/^-+|-+$/g, "") || "pdf-skill";
         const created = await createSkillFromJson({
           name: cleanName,
           description: `Imported PDF knowledge base from ${file.name}`,
@@ -201,7 +202,12 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       } else if (lowerName.endsWith(".md") || lowerName.endsWith(".txt")) {
         // Direct Markdown / text file import
         const text = await file.text();
-        const cleanName = file.name.replace(/\.[^/.]+$/, "").toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "") || "custom-skill";
+        const cleanName =
+          file.name
+            .replace(/\.[^/.]+$/, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, "-")
+            .replace(/^-+|-+$/g, "") || "custom-skill";
         const hasFrontmatter = text.trimStart().startsWith("---");
         const skillMd = hasFrontmatter
           ? text
@@ -403,7 +409,10 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       )}
 
       {error && (
-        <div role="alert" className="flex items-center gap-2 p-3.5 bg-rose-50 rounded-2xl text-[12.5px] text-rose-700">
+        <div
+          role="alert"
+          className="flex items-center gap-2 p-3.5 bg-rose-50 rounded-2xl text-[12.5px] text-rose-700"
+        >
           <AlertCircle size={15} className="shrink-0" />
           <span>{error}</span>
         </div>
@@ -415,7 +424,8 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
           <div className="flex items-center gap-2.5">
             <Clock size={15} className="text-neutral-700" />
             <span className="text-[13px] font-medium text-neutral-900">
-              {reviewQueue.length} {reviewQueue.length === 1 ? "skill awaits" : "skills await"} admin review
+              {reviewQueue.length} {reviewQueue.length === 1 ? "skill awaits" : "skills await"}{" "}
+              admin review
             </span>
           </div>
           <button
@@ -438,16 +448,12 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
             >
               <div className="space-y-1.5 min-w-0 flex-1">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[14px] font-semibold text-neutral-900">
-                    {item.name}
-                  </span>
+                  <span className="text-[14px] font-semibold text-neutral-900">{item.name}</span>
                   <span className="text-[10.5px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-medium">
                     Pending review
                   </span>
                   {getScopeBadge(item.scope)}
-                  <span className="text-[11px] font-mono text-neutral-400">
-                    v{item.version}
-                  </span>
+                  <span className="text-[11px] font-mono text-neutral-400">v{item.version}</span>
                 </div>
                 <p className="text-[12px] text-neutral-500 line-clamp-2 leading-relaxed">
                   {formatSkillDescription(item.description)}
@@ -618,7 +624,9 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
 
                     {/* Metadata Footer */}
                     <div className="text-[11.5px] text-neutral-400 mt-2 flex items-center gap-1.5">
-                      <span>{isBuiltinSkill(skill) ? "Built-in" : skill.sourceLabel || "Community"}</span>
+                      <span>
+                        {isBuiltinSkill(skill) ? "Built-in" : skill.sourceLabel || "Community"}
+                      </span>
                     </div>
                   </div>
                 </div>

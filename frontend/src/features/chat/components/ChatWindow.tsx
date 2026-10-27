@@ -5,7 +5,10 @@ import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 import { useInstalledPluginIds } from "../../plugins/publicApi";
 import type { CustomizeCategory } from "../../customize";
-import { ChatWorkspaceScreens, type ChatWorkspaceView } from "../pages/ChatPage/ChatWorkspaceScreens";
+import {
+  ChatWorkspaceScreens,
+  type ChatWorkspaceView,
+} from "../pages/ChatPage/ChatWorkspaceScreens";
 import { getKeyForModel, getProviderChatRequestConfig } from "../../customize/publicApi";
 import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { authenticatedChatFetch, consumeChatStream } from "../../../app/api/chatApi";
@@ -942,8 +945,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           ).catch(() => undefined);
         }
       }
-      const attachmentsToPass: ChatAttachmentFile[] | undefined =
-        messageToEdit?.attachments?.map((a) => ({
+      const attachmentsToPass: ChatAttachmentFile[] | undefined = messageToEdit?.attachments?.map(
+        (a) => ({
           id: a.id || `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: a.name,
           size: a.size,
@@ -953,7 +956,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           base64Data: a.base64Data,
           mimeType: a.mimeType,
           previewUrl: a.previewUrl,
-        }));
+        })
+      );
       await handleSendMessage(
         newContent,
         selectedModel,
@@ -1100,7 +1104,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <span className="text-slate-300 text-[13px] select-none">/</span>
                 <p
                   className="truncate text-[13px] font-medium text-slate-600 max-w-[160px] sm:max-w-[280px] md:max-w-[400px]"
-                  title={isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"}
+                  title={
+                    isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"
+                  }
                 >
                   {isTemporaryChat ? "Temporary chat" : activeConversation?.title || "New chat"}
                 </p>
@@ -1118,7 +1124,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     return !prev;
                   });
                 }}
-                title={isTemporaryChat ? "Turn off temporary chat" : "Turn on temporary chat (history not saved)"}
+                title={
+                  isTemporaryChat
+                    ? "Turn off temporary chat"
+                    : "Turn on temporary chat (history not saved)"
+                }
                 aria-label="Temporary chat"
                 className={`h-8 px-2 sm:px-2.5 rounded-lg flex items-center gap-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer ${
                   isTemporaryChat
@@ -1134,7 +1144,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   {isTemporaryChat ? "Temporary On" : "Temporary"}
                 </span>
               </button>
-
             </div>
           </header>
 
@@ -1151,7 +1160,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       Temporary Chat
                     </h2>
                     <p className="mt-3 text-[15px] leading-6 text-slate-500 max-w-md mx-auto">
-                      Chats in this mode won&apos;t be saved in your history, won&apos;t use memories, and disappear when you leave.
+                      Chats in this mode won&apos;t be saved in your history, won&apos;t use
+                      memories, and disappear when you leave.
                     </p>
                   </div>
                 ) : (

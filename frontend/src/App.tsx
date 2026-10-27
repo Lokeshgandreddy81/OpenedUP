@@ -122,10 +122,7 @@ export const AppShell: React.FC = () => {
             </PageRoute>
           }
         />
-        <Route
-          path="/image-arena"
-          element={<Navigate to="/benchmarks" replace />}
-        />
+        <Route path="/image-arena" element={<Navigate to="/benchmarks" replace />} />
         <Route
           path="/coding-agents"
           element={

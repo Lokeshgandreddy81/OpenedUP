@@ -71,6 +71,7 @@ const LANGUAGE_MODELS_DATA: {
       },
       { name: "Muse\nWonder (max)", creator: "meta", value: 52, label: "52", color: "#0084FF" },
       { name: "GPT-6.1\nSol (max)", creator: "openai", value: 52, label: "52", color: "#171717" },
+      { name: "GPT-6.1\nTerra (max)", creator: "openai", value: 48, label: "48", color: "#171717" },
       { name: "Grok 4.7 (xhigh)", creator: "spacexai", value: 46, label: "46", color: "#736CD3" },
       { name: "MiMo-V2.6-Pro", creator: "xiaomi", value: 46, label: "46", color: "#FF6900" },
       { name: "GLM-5.3 (max)", creator: "zai", value: 45, label: "45", color: "#2563EB" },
@@ -107,6 +108,13 @@ const LANGUAGE_MODELS_DATA: {
       { name: "Grok 4.7 (xhigh)", creator: "spacexai", value: 97, label: "97", color: "#736CD3" },
       { name: "GLM-5.3 (max)", creator: "zai", value: 93, label: "93", color: "#2563EB" },
       {
+        name: "GPT-6.1\nTerra (max)",
+        creator: "openai",
+        value: 90.9,
+        label: "90.9",
+        color: "#171717",
+      },
+      {
         name: "Claude Fable\n5.1 (max with\nfallback)",
         creator: "anthropic",
         value: 71,
@@ -131,7 +139,49 @@ const LANGUAGE_MODELS_DATA: {
     accentColor: "#F97316",
     metricLabel: "Lower is better",
     items: [
+      {
+        name: "GPT-6.1 Terra (low)",
+        creator: "openai",
+        value: 0.05,
+        label: "$0.05",
+        color: "#171717",
+      },
+      {
+        name: "GPT-6.1 Terra (medium)",
+        creator: "openai",
+        value: 0.1,
+        label: "$0.10",
+        color: "#171717",
+      },
+      {
+        name: "GPT-6.1 Terra (non-reasoning)",
+        creator: "openai",
+        value: 0.11,
+        label: "$0.11",
+        color: "#171717",
+      },
       { name: "MiMo-V2.6-Pro", creator: "xiaomi", value: 0.13, label: "$0.13", color: "#FF6900" },
+      {
+        name: "GPT-6.1 Terra (high)",
+        creator: "openai",
+        value: 0.13,
+        label: "$0.13",
+        color: "#171717",
+      },
+      {
+        name: "GPT-6.1 Terra (xhigh)",
+        creator: "openai",
+        value: 0.19,
+        label: "$0.19",
+        color: "#171717",
+      },
+      {
+        name: "GPT-6.1 Terra (max)",
+        creator: "openai",
+        value: 0.4,
+        label: "$0.40",
+        color: "#171717",
+      },
       {
         name: "DeepSeek V4.1\nFlash (max)",
         creator: "deepseek",
@@ -200,7 +250,7 @@ const LANGUAGE_MODELS_DATA: {
   },
 };
 
-// ─── Full 26-Model Intelligence Index Dataset (from screenshot) ─────────────
+// ─── Curated Artificial Analysis Intelligence Index models ───────────────────
 
 interface FullIndexModelItem {
   name: string;
@@ -213,7 +263,7 @@ interface FullIndexModelItem {
   country: "us" | "cn" | "fr" | "ae";
 }
 
-const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
+const INTELLIGENCE_INDEX_MODELS: FullIndexModelItem[] = [
   {
     name: "Claude Sonnet\n5.5 (max\nwith fallback)",
     creator: "anthropic",
@@ -288,6 +338,15 @@ const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
     country: "us",
   },
   {
+    name: "GPT-6.1 Terra\n(max)",
+    creator: "openai",
+    score: 48,
+    color: "#171717",
+    weights: "proprietary",
+    modality: "multimodal",
+    country: "us",
+  },
+  {
     name: "Grok 4.7 (xhigh)",
     creator: "spacexai",
     score: 46,
@@ -324,6 +383,15 @@ const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
     country: "cn",
   },
   {
+    name: "GPT-6.1 Terra (xhigh)",
+    creator: "openai",
+    score: 45,
+    color: "#171717",
+    weights: "proprietary",
+    modality: "multimodal",
+    country: "us",
+  },
+  {
     name: "Step 5 Preview",
     creator: "stepfun",
     score: 44,
@@ -331,6 +399,15 @@ const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
     weights: "open_restricted",
     modality: "multimodal",
     country: "cn",
+  },
+  {
+    name: "GPT-6.1 Terra (high)",
+    creator: "openai",
+    score: 44,
+    color: "#171717",
+    weights: "proprietary",
+    modality: "multimodal",
+    country: "us",
   },
   {
     name: "Claude Haiku\n5.5 (max)",
@@ -355,6 +432,15 @@ const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
     creator: "google",
     score: 41,
     color: "#34A853",
+    weights: "proprietary",
+    modality: "multimodal",
+    country: "us",
+  },
+  {
+    name: "GPT-6.1 Terra (medium)",
+    creator: "openai",
+    score: 41,
+    color: "#171717",
     weights: "proprietary",
     modality: "multimodal",
     country: "us",
@@ -396,6 +482,15 @@ const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
     country: "us",
   },
   {
+    name: "GPT-6.1 Terra (low)",
+    creator: "openai",
+    score: 36,
+    color: "#171717",
+    weights: "proprietary",
+    modality: "multimodal",
+    country: "us",
+  },
+  {
     name: "Qwen 3.6\n27B (xhigh)",
     creator: "alibaba",
     score: 34,
@@ -403,6 +498,15 @@ const INTELLIGENCE_INDEX_26_MODELS: FullIndexModelItem[] = [
     weights: "open_weights",
     modality: "multimodal",
     country: "cn",
+  },
+  {
+    name: "GPT-6.1 Terra\n(non-reasoning)",
+    creator: "openai",
+    score: 33,
+    color: "#171717",
+    weights: "proprietary",
+    modality: "multimodal",
+    country: "us",
   },
   {
     name: "K2 Horizon\n375B A23B",
@@ -624,7 +728,7 @@ export const IntelligenceIndexFullChart: React.FC = () => {
         </div>
       </div>
 
-      {/* Chart Canvas: 26 Models Bar Chart (Seamlessly immersed into background) */}
+      {/* Chart Canvas: Intelligence Index models (Seamlessly immersed into background) */}
       <div className="relative mt-4 overflow-x-auto no-scrollbar">
         <div className="min-w-[1480px] pl-32 pr-8">
           {/* Vertical Bars */}
@@ -632,7 +736,7 @@ export const IntelligenceIndexFullChart: React.FC = () => {
             className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
             style={{ height: `${CHART_HEIGHT}px` }}
           >
-            {INTELLIGENCE_INDEX_26_MODELS.map((item, idx) => {
+            {INTELLIGENCE_INDEX_MODELS.map((item, idx) => {
               const ratio = item.score / maxScore;
               const barHeightPx = Math.max(34, Math.round(ratio * (CHART_HEIGHT - 38)));
               const barColor = getBarColor(item);
@@ -670,7 +774,7 @@ export const IntelligenceIndexFullChart: React.FC = () => {
 
           {/* Creator Brand Logo Row */}
           <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
-            {INTELLIGENCE_INDEX_26_MODELS.map((item, idx) => (
+            {INTELLIGENCE_INDEX_MODELS.map((item, idx) => (
               <div
                 key={idx}
                 className="flex-1 flex justify-center items-center py-0.5"
@@ -685,7 +789,7 @@ export const IntelligenceIndexFullChart: React.FC = () => {
 
           {/* Angled Model Labels: Hanging cleanly below logos, angled at -55deg */}
           <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
-            {INTELLIGENCE_INDEX_26_MODELS.map((item, idx) => (
+            {INTELLIGENCE_INDEX_MODELS.map((item, idx) => (
               <div key={idx} className="flex-1 flex justify-center items-start relative">
                 <div
                   className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
@@ -724,12 +828,36 @@ const TASK_COST_MODELS: TaskCostModelItem[] = [
     segments: [{ value: 0.001, label: "", opacity: 1.0 }],
   },
   {
+    name: "GPT-6.1 Terra (low)",
+    creator: "openai",
+    color: "#171717",
+    totalCost: 0.05,
+    totalLabel: "$0.05",
+    segments: [{ value: 0.05, label: "", opacity: 1.0 }],
+  },
+  {
     name: "GPT-6\nLuna (max)",
     creator: "openai",
     color: "#171717",
     totalCost: 0.07,
     totalLabel: "$0.07",
     segments: [{ value: 0.07, label: "", opacity: 1.0 }],
+  },
+  {
+    name: "GPT-6.1 Terra (medium)",
+    creator: "openai",
+    color: "#171717",
+    totalCost: 0.1,
+    totalLabel: "$0.10",
+    segments: [{ value: 0.1, label: "", opacity: 1.0 }],
+  },
+  {
+    name: "GPT-6.1 Terra (non-reasoning)",
+    creator: "openai",
+    color: "#171717",
+    totalCost: 0.11,
+    totalLabel: "$0.11",
+    segments: [{ value: 0.11, label: "", opacity: 1.0 }],
   },
   {
     name: "MiMo-V2.6-Pro",
@@ -740,9 +868,25 @@ const TASK_COST_MODELS: TaskCostModelItem[] = [
     segments: [{ value: 0.13, label: "", opacity: 1.0 }],
   },
   {
+    name: "GPT-6.1 Terra (high)",
+    creator: "openai",
+    color: "#171717",
+    totalCost: 0.13,
+    totalLabel: "$0.13",
+    segments: [{ value: 0.13, label: "", opacity: 1.0 }],
+  },
+  {
     name: "Nemotron\n3.5 Super VL",
     creator: "nvidia",
     color: "#65A30D",
+    totalCost: 0.19,
+    totalLabel: "$0.19",
+    segments: [{ value: 0.19, label: "", opacity: 1.0 }],
+  },
+  {
+    name: "GPT-6.1 Terra (xhigh)",
+    creator: "openai",
+    color: "#171717",
     totalCost: 0.19,
     totalLabel: "$0.19",
     segments: [{ value: 0.19, label: "", opacity: 1.0 }],
@@ -762,6 +906,14 @@ const TASK_COST_MODELS: TaskCostModelItem[] = [
     totalCost: 0.28,
     totalLabel: "$0.28",
     segments: [{ value: 0.28, label: "", opacity: 1.0 }],
+  },
+  {
+    name: "GPT-6.1 Terra (max)",
+    creator: "openai",
+    color: "#171717",
+    totalCost: 0.4,
+    totalLabel: "$0.40",
+    segments: [{ value: 0.4, label: "", opacity: 1.0 }],
   },
   {
     name: "DeepSeek V4.1\nFlash (max)",
@@ -1786,6 +1938,12 @@ interface ContextWindowModelItem {
 }
 
 const TASK_CONTEXT_MODELS: ContextWindowModelItem[] = [
+  { name: "GPT-6.1 Terra (max)", creator: "openai", color: "#171717", tokens: 1000000 },
+  { name: "GPT-6.1 Terra (xhigh)", creator: "openai", color: "#171717", tokens: 1000000 },
+  { name: "GPT-6.1 Terra (high)", creator: "openai", color: "#171717", tokens: 1000000 },
+  { name: "GPT-6.1 Terra (medium)", creator: "openai", color: "#171717", tokens: 1000000 },
+  { name: "GPT-6.1 Terra (low)", creator: "openai", color: "#171717", tokens: 1000000 },
+  { name: "GPT-6.1 Terra (non-reasoning)", creator: "openai", color: "#171717", tokens: 1000000 },
   { name: "Muse Spark\nOpen (xhigh)", creator: "meta", color: "#0084FF", tokens: 1000000 },
   { name: "Beam 1.0", creator: "reflection", color: "#14532D", tokens: 1000000 },
   { name: "Kimi K3.1 Pro", creator: "kimi", color: "#047AFE", tokens: 1000000 },
@@ -2921,82 +3079,82 @@ export const ModelsOverviewView: React.FC = () => {
           <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.intelligence} align="left" />
         </div>
 
-            <div className="w-full border-b border-transparent" />
+        <div className="w-full border-b border-transparent" />
 
-            {/* 2. Speed: 55% width on the right */}
-            <div className="w-full lg:w-[55%] self-end pl-0 lg:pl-6">
-              <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.speed} align="right" />
-            </div>
+        {/* 2. Speed: 55% width on the right */}
+        <div className="w-full lg:w-[55%] self-end pl-0 lg:pl-6">
+          <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.speed} align="right" />
+        </div>
 
-            <div className="w-full border-b border-transparent" />
+        <div className="w-full border-b border-transparent" />
 
-            {/* 3. Cost per Task: 55% width concurrent back on the left */}
-            <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
-              <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.cost} align="left" />
-            </div>
+        {/* 3. Cost per Task: 55% width concurrent back on the left */}
+        <div className="w-full lg:w-[55%] self-start pr-0 lg:pr-6">
+          <BenchmarkBarCard config={LANGUAGE_MODELS_DATA.cost} align="left" />
+        </div>
 
-            <div className="w-full border-b border-transparent" />
+        <div className="w-full border-b border-transparent" />
 
-            {/* 4. Artificial Analysis Intelligence Index */}
-            <div className="w-full max-w-[1560px] mx-auto flex justify-center">
-              <IntelligenceIndexFullChart />
-            </div>
+        {/* 4. Artificial Analysis Intelligence Index */}
+        <div className="w-full max-w-[1560px] mx-auto flex justify-center">
+          <IntelligenceIndexFullChart />
+        </div>
 
-            <div className="w-full border-b border-transparent" />
+        <div className="w-full border-b border-transparent" />
 
-            {/* 5. Task Metrics for the Intelligence Index: Down after intelligence */}
-            <div className="w-full max-w-[1560px] mx-auto flex justify-center">
-              <IntelligenceTaskMetricsFullChart />
-            </div>
+        {/* 5. Task Metrics for the Intelligence Index: Down after intelligence */}
+        <div className="w-full max-w-[1560px] mx-auto flex justify-center">
+          <IntelligenceTaskMetricsFullChart />
+        </div>
 
-            <div className="w-full border-b border-transparent my-6" />
+        <div className="w-full border-b border-transparent my-6" />
 
-            {/* 6. Frontier Language Model Intelligence, Over Time */}
-            <div className="w-full max-w-[1560px] mx-auto flex justify-center">
-              <FrontierIntelligenceOverTimeChart />
-            </div>
+        {/* 6. Frontier Language Model Intelligence, Over Time */}
+        <div className="w-full max-w-[1560px] mx-auto flex justify-center">
+          <FrontierIntelligenceOverTimeChart />
+        </div>
 
-            <div className="w-full border-b border-transparent my-6" />
+        <div className="w-full border-b border-transparent my-6" />
 
-            {/* 7. Artificial Analysis Coding Agent Indexes */}
-            <div className="w-full max-w-[1560px] mx-auto flex justify-center">
-              <CodingAgentIndexesFullChart />
-            </div>
+        {/* 7. Artificial Analysis Coding Agent Indexes */}
+        <div className="w-full max-w-[1560px] mx-auto flex justify-center">
+          <CodingAgentIndexesFullChart />
+        </div>
 
-            <div className="w-full border-b border-transparent my-6" />
+        <div className="w-full border-b border-transparent my-6" />
 
-            {/* 8. Capability Indexes (Finance & Accounting, Strategy & Ops, Legal, Healthcare & Medical, Engineering, Economics) */}
-            <div className="w-full">
-              <CapabilityIndexesSection />
-            </div>
+        {/* 8. Capability Indexes (Finance & Accounting, Strategy & Ops, Legal, Healthcare & Medical, Engineering, Economics) */}
+        <div className="w-full">
+          <CapabilityIndexesSection />
+        </div>
 
-            <div className="w-full border-b border-transparent my-6" />
+        <div className="w-full border-b border-transparent my-6" />
 
-            {/* 9. Token Use */}
-            <div className="w-full">
-              <TokenUseFullSection />
-            </div>
+        {/* 9. Token Use */}
+        <div className="w-full">
+          <TokenUseFullSection />
+        </div>
 
-            <div className="w-full border-b border-transparent my-6" />
+        <div className="w-full border-b border-transparent my-6" />
 
-            {/* 10. Cost */}
-            <div className="w-full">
-              <CostFullSection />
-            </div>
+        {/* 10. Cost */}
+        <div className="w-full">
+          <CostFullSection />
+        </div>
 
-            <div className="w-full border-b border-transparent my-6" />
+        <div className="w-full border-b border-transparent my-6" />
 
-            {/* 11. Context Window */}
-            <div className="w-full">
-              <ContextWindowFullSection />
-            </div>
+        {/* 11. Context Window */}
+        <div className="w-full">
+          <ContextWindowFullSection />
+        </div>
 
-            <div className="w-full border-b border-transparent my-6" />
+        <div className="w-full border-b border-transparent my-6" />
 
-            {/* 12. End-to-End Response Time */}
-            <div className="w-full">
-              <ResponseTimeFullSection />
-            </div>
+        {/* 12. End-to-End Response Time */}
+        <div className="w-full">
+          <ResponseTimeFullSection />
+        </div>
       </div>
 
       <ModelsOverviewFaq />

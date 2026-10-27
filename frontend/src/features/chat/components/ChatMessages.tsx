@@ -415,17 +415,26 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           className="chat-thinking-status inline-flex items-center gap-1.5 px-1 py-0.5 text-[12px] font-medium text-neutral-500 select-none"
                           role="status"
                         >
-                          <LoaderCircle size={12} className="animate-spin text-neutral-400" aria-hidden="true" />
+                          <LoaderCircle
+                            size={12}
+                            className="animate-spin text-neutral-400"
+                            aria-hidden="true"
+                          />
                           <span
                             role="timer"
                             aria-label={`${isRespondingOnThisResponse ? "Responding" : "Thinking"} for ${thinkingElapsedSeconds} seconds`}
                           >
-                            {isRespondingOnThisResponse ? "Responding" : (thinkingLabel || "Thinking")} ·{" "}
-                            {thinkingElapsedSeconds}s
+                            {isRespondingOnThisResponse
+                              ? "Responding"
+                              : thinkingLabel || "Thinking"}{" "}
+                            · {thinkingElapsedSeconds}s
                           </span>
                         </div>
                       ) : isError ? (
-                        <div className="chat-thinking-status inline-flex items-center gap-1.5 text-[12.5px] text-rose-700" role="alert">
+                        <div
+                          className="chat-thinking-status inline-flex items-center gap-1.5 text-[12.5px] text-rose-700"
+                          role="alert"
+                        >
                           <CircleAlert size={14} aria-hidden="true" />
                           <span>Couldn’t complete this response</span>
                         </div>
@@ -435,10 +444,12 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           <span>Response stopped</span>
                         </div>
                       ) : (
-                        <div
-                          className="inline-flex items-center gap-1.5 px-1 py-0.5 text-[12px] font-medium text-neutral-400 select-none"
-                        >
-                          <Clock3 size={12} className="text-neutral-400 stroke-[1.5]" aria-hidden="true" />
+                        <div className="inline-flex items-center gap-1.5 px-1 py-0.5 text-[12px] font-medium text-neutral-400 select-none">
+                          <Clock3
+                            size={12}
+                            className="text-neutral-400 stroke-[1.5]"
+                            aria-hidden="true"
+                          />
                           <span>Thought for {thinkingDuration}</span>
                         </div>
                       )}
@@ -593,7 +604,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                 {thinkingLabel}
                 {thinkingElapsedSeconds > 0 ? (
                   <>
-                    <span aria-hidden="true" className="text-slate-300">·</span>
+                    <span aria-hidden="true" className="text-slate-300">
+                      ·
+                    </span>
                     <span className="tabular-nums font-mono text-[11px] font-semibold text-slate-500">
                       {thinkingElapsedSeconds}s
                     </span>
@@ -610,17 +623,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         <button
           type="button"
           onClick={jumpToLatest}
-          className="absolute bottom-5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-slate-200/90 bg-white/95 px-4 py-2 text-xs font-medium text-slate-700 shadow-md shadow-slate-900/10 backdrop-blur-sm transition-all hover:bg-white hover:border-slate-300 hover:text-slate-950 hover:shadow-lg active:scale-95 animate-in fade-in slide-in-from-bottom-2 duration-200"
+          className="absolute bottom-5 left-1/2 z-20 inline-flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border-0 bg-transparent text-neutral-900 transition-colors hover:bg-neutral-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 animate-in fade-in slide-in-from-bottom-2 duration-200"
           aria-label="Jump to latest message"
+          title="Jump to latest message"
         >
-          {hasStreamingAssistant && (
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600" />
-            </span>
-          )}
-          <ArrowDown size={14} className="text-slate-500" />
-          <span>Latest response</span>
+          <ArrowDown size={19} strokeWidth={2.75} aria-hidden="true" />
         </button>
       )}
 

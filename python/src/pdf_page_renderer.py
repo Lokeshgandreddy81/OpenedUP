@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import fitz
+import pymupdf
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ class RenderError(Exception):
 
 def _render_pages(pdf_path: Path, output_dir: Path, limits: RenderLimits) -> list[dict[str, Any]]:
     try:
-        document = fitz.open(pdf_path)
+        document = pymupdf.open(pdf_path)
     except Exception as exc:
         raise RenderError("invalid_pdf") from exc
 
@@ -54,7 +54,7 @@ def _render_pages(pdf_path: Path, output_dir: Path, limits: RenderLimits) -> lis
             for page in pages:
                 bounds = page.rect
                 scale = min(edge / bounds.width, edge / bounds.height) * 0.999
-                pixmap = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
+                pixmap = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
                 jpeg_bytes = pixmap.tobytes("jpeg", jpg_quality=quality)
                 encoded_size = 4 * ((len(jpeg_bytes) + 2) // 3)
                 if (

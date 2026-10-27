@@ -24,10 +24,7 @@ export function getRequestIdentity(req: Request): RequestIdentity {
     req.principal?.uid ||
     "dev-user";
 
-  const orgId =
-    (req.headers["x-org-id"] as string) ||
-    process.env["DEV_ORG_ID"] ||
-    null;
+  const orgId = (req.headers["x-org-id"] as string) || process.env["DEV_ORG_ID"] || null;
 
   let role: "user" | "admin" = (process.env["DEV_ROLE"] as "user" | "admin") || "user";
   if (req.headers["x-is-admin"] === "true" || req.headers["x-role"] === "admin") {

@@ -204,9 +204,13 @@ const CODING_AND_TOOLING: AiAndDataScientistRoadmapSection = {
           ],
           n("SQL & Database Querying", "personal", "skill-sql")
         ),
-        g([n("Git Branching, Commits & PRs", "personal", "skill-git-github")], n("Version Control", "personal", "skill-git-github")),
+        g(
+          [n("Git Branching, Commits & PRs", "personal", "skill-git-github")],
+          n("Version Control", "personal", "skill-git-github")
+        ),
       ],
-      projectIdea: "Build an automated SQL-to-Pandas analytics ETL pipeline querying relational databases",
+      projectIdea:
+        "Build an automated SQL-to-Pandas analytics ETL pipeline querying relational databases",
     }),
   ],
 };
@@ -221,7 +225,11 @@ const DATA_WRANGLING_AND_EDA: AiAndDataScientistRoadmapSection = {
         g(
           [
             n("NumPy: Multidimensional Arrays & Vectorization", "personal"),
-            n("Pandas: DataFrames, Filtering, Slicing & Merging", "personal", "skill-python-data-analysis"),
+            n(
+              "Pandas: DataFrames, Filtering, Slicing & Merging",
+              "personal",
+              "skill-python-data-analysis"
+            ),
             n("Handling Missing Values & Outlier Detection", "personal"),
             n("Data Imputation & Type Casting", "personal"),
           ],
@@ -240,7 +248,8 @@ const DATA_WRANGLING_AND_EDA: AiAndDataScientistRoadmapSection = {
           n("Visualization & Feature Engineering", "personal")
         ),
       ],
-      projectIdea: "Perform end-to-end EDA on a complex multi-million row dataset with automated outlier reports",
+      projectIdea:
+        "Perform end-to-end EDA on a complex multi-million row dataset with automated outlier reports",
     }),
   ],
 };
@@ -283,7 +292,8 @@ const MACHINE_LEARNING_PILLAR: AiAndDataScientistRoadmapSection = {
           n("Model Evaluation & Tuning", "personal")
         ),
       ],
-      projectIdea: "Train an ensemble Gradient Boosting model (XGBoost + LightGBM) with Optuna hyperparameter tuning",
+      projectIdea:
+        "Train an ensemble Gradient Boosting model (XGBoost + LightGBM) with Optuna hyperparameter tuning",
     }),
   ],
 };
@@ -334,7 +344,8 @@ const DEEP_LEARNING_PILLAR: AiAndDataScientistRoadmapSection = {
           n("Natural Language Processing (NLP)", "personal")
         ),
       ],
-      projectIdea: "Build and train a custom PyTorch Vision or Text Transformer classifier with transfer learning",
+      projectIdea:
+        "Build and train a custom PyTorch Vision or Text Transformer classifier with transfer learning",
     }),
   ],
 };
@@ -383,7 +394,8 @@ const MODERN_AI_AND_LLMS: AiAndDataScientistRoadmapSection = {
           n("Model Adaptation & Fine-Tuning", "personal")
         ),
       ],
-      projectIdea: "Deploy an enterprise RAG agent with hybrid search reranking and local tool calling capabilities",
+      projectIdea:
+        "Deploy an enterprise RAG agent with hybrid search reranking and local tool calling capabilities",
     }),
   ],
 };
@@ -421,14 +433,19 @@ const MLOPS_AND_DELIVERY: AiAndDataScientistRoadmapSection = {
       left: [
         g(
           [
-            n("AI Coding Assistants (Cursor, Claude Code, Copilot)", "personal", "skill-claude-code"),
+            n(
+              "AI Coding Assistants (Cursor, Claude Code, Copilot)",
+              "personal",
+              "skill-claude-code"
+            ),
             n("Rapid Prototyping UIs (Streamlit, Gradio)", "personal"),
             n("Automated Code Generation & Unit Testing", "personal"),
           ],
           n("AI-Assisted Development", "personal")
         ),
       ],
-      projectIdea: "Ship an end-to-end full-stack AI data application using Streamlit/FastAPI with automated CI/CD",
+      projectIdea:
+        "Ship an end-to-end full-stack AI data application using Streamlit/FastAPI with automated CI/CD",
     }),
   ],
 };

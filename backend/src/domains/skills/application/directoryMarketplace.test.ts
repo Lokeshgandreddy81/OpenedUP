@@ -16,7 +16,10 @@ describe("Phase 5: Directory / Marketplace & Detail Page Tests", () => {
 
   test("Directory lists seeded directory skills with categories and agents", () => {
     const dirSkills = repo.listDirectorySkills();
-    assert.ok(dirSkills.length >= 4, `Expected at least 4 directory skills, found ${dirSkills.length}`);
+    assert.ok(
+      dirSkills.length >= 4,
+      `Expected at least 4 directory skills, found ${dirSkills.length}`
+    );
 
     const researchSkill = dirSkills.find((s) => s.name === "web-research-analyst");
     assert.ok(researchSkill, "web-research-analyst must be in directory");

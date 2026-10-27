@@ -82,12 +82,6 @@ function format500TokenTime(model: AIModelBenchmark): string {
   if (e2e && e2e > 0) {
     return formatLatency(e2e);
   }
-  const ttft = model.performance.ttftSeconds.median;
-  const speed = model.performance.outputSpeedTokensPerSec.median;
-  if (ttft > 0 && speed > 0) {
-    const calc = ttft + 500 / speed;
-    return formatLatency(calc);
-  }
   return "—";
 }
 
@@ -336,8 +330,8 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
           valB = b.creatorDisplayName.toLowerCase();
           break;
         case "intelligenceIndex":
-          valA = a.quality.intelligenceIndex;
-          valB = b.quality.intelligenceIndex;
+          valA = a.quality.intelligenceIndex ?? -1;
+          valB = b.quality.intelligenceIndex ?? -1;
           break;
         case "blendedPrice":
           valA = a.pricing.blendedPricePer1M;
@@ -828,7 +822,9 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
                     {/* 4. Intelligence Index */}
                     <td className="py-4 px-4 text-center">
                       <span className="font-bold text-sm text-neutral-950 font-mono">
-                        {Math.round(m.quality.intelligenceIndex)}
+                        {m.quality.intelligenceIndex == null
+                          ? "—"
+                          : Math.round(m.quality.intelligenceIndex)}
                       </span>
                     </td>
 

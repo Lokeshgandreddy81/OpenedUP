@@ -26,8 +26,7 @@ export const READ_TOOL_DEFINITION = {
 
 export const WRITE_TOOL_DEFINITION = {
   name: "Write",
-  description:
-    "Write text content to a file inside the sandbox workspace directory.",
+  description: "Write text content to a file inside the sandbox workspace directory.",
   input_schema: {
     type: "object",
     properties: {
@@ -62,8 +61,7 @@ export const BASH_TOOL_DEFINITION = {
 
 export const SEND_USER_FILE_TOOL_DEFINITION = {
   name: "SendUserFile",
-  description:
-    "Send a file from the sandbox workspace to the user as a downloadable attachment.",
+  description: "Send a file from the sandbox workspace to the user as a downloadable attachment.",
   input_schema: {
     type: "object",
     properties: {
@@ -98,11 +96,7 @@ export async function executeSandboxTool(
   repo: SkillRepository = new SkillRepository()
 ): Promise<{ content: string; isError?: boolean }> {
   const sandboxPaths =
-    paths ||
-    initSandbox(
-      conversationId,
-      repo.getConversationSkills(conversationId)
-    );
+    paths || initSandbox(conversationId, repo.getConversationSkills(conversationId));
 
   switch (toolName) {
     case "Read": {

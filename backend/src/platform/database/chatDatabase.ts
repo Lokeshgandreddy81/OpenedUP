@@ -391,18 +391,26 @@ function migrateChatDatabase(database: ChatDatabase): void {
 
   const userVersion = (database.pragma("user_version", { simple: true }) as number) ?? 0;
   if (userVersion < 6) {
-    const convSkillCols = (database.pragma("table_info(conversation_skills)") as Array<{ name: string }>).map((c) => c.name);
+    const convSkillCols = (
+      database.pragma("table_info(conversation_skills)") as Array<{ name: string }>
+    ).map((c) => c.name);
     if (!convSkillCols.includes("explicitly_selected")) {
-      database.exec("ALTER TABLE conversation_skills ADD COLUMN explicitly_selected INTEGER NOT NULL DEFAULT 0;");
+      database.exec(
+        "ALTER TABLE conversation_skills ADD COLUMN explicitly_selected INTEGER NOT NULL DEFAULT 0;"
+      );
     }
     if (!convSkillCols.includes("preloaded_at")) {
       database.exec("ALTER TABLE conversation_skills ADD COLUMN preloaded_at INTEGER;");
     }
     if (!convSkillCols.includes("source")) {
-      database.exec("ALTER TABLE conversation_skills ADD COLUMN source TEXT NOT NULL DEFAULT 'direct';");
+      database.exec(
+        "ALTER TABLE conversation_skills ADD COLUMN source TEXT NOT NULL DEFAULT 'direct';"
+      );
     }
 
-    const skillCols = (database.pragma("table_info(skills)") as Array<{ name: string }>).map((c) => c.name);
+    const skillCols = (database.pragma("table_info(skills)") as Array<{ name: string }>).map(
+      (c) => c.name
+    );
     if (!skillCols.includes("icon")) {
       database.exec("ALTER TABLE skills ADD COLUMN icon TEXT;");
     }
@@ -419,13 +427,17 @@ function migrateChatDatabase(database: ChatDatabase): void {
       database.exec("ALTER TABLE skills ADD COLUMN tools_required TEXT;");
     }
     if (!skillCols.includes("approval_status")) {
-      database.exec("ALTER TABLE skills ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'approved';");
+      database.exec(
+        "ALTER TABLE skills ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'approved';"
+      );
     }
     if (!skillCols.includes("rejection_reason")) {
       database.exec("ALTER TABLE skills ADD COLUMN rejection_reason TEXT;");
     }
 
-    const skillUsageCols = (database.pragma("table_info(skill_usage)") as Array<{ name: string }>).map((c) => c.name);
+    const skillUsageCols = (
+      database.pragma("table_info(skill_usage)") as Array<{ name: string }>
+    ).map((c) => c.name);
     if (!skillUsageCols.includes("tool_name")) {
       database.exec("ALTER TABLE skill_usage ADD COLUMN tool_name TEXT DEFAULT 'Skill';");
     }

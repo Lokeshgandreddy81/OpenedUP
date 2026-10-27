@@ -428,11 +428,16 @@ export const ProviderLeaderboard: React.FC<ProviderLeaderboardProps> = ({
                   <span>
                     Quality Index:{" "}
                     <strong className="text-slate-800">
-                      {selectedModel.quality.intelligenceIndex}
+                      {selectedModel.quality.intelligenceIndex ?? "—"}
                     </strong>
                   </span>
                   <span>•</span>
-                  <span>SWE-bench: {selectedModel.quality.sweBenchVerified}%</span>
+                  <span>
+                    SWE-bench:{" "}
+                    {selectedModel.quality.sweBenchVerified == null
+                      ? "Not reported"
+                      : `${selectedModel.quality.sweBenchVerified}%`}
+                  </span>
                 </div>
               </div>
             </div>

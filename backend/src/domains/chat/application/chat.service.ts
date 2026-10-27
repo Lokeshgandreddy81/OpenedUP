@@ -1,8 +1,5 @@
 import type { ChatRequest } from "@charan-interiors/contracts";
-import {
-  getUnsupportedInputMessage,
-  modelSupportsInput,
-} from "@charan-interiors/contracts";
+import { getUnsupportedInputMessage, modelSupportsInput } from "@charan-interiors/contracts";
 import {
   generateMultiProviderChat,
   generateMultiProviderChatStream,
@@ -37,7 +34,11 @@ export async function processChat(
   const startTime = Date.now();
   const { messages, model, customModel, customProvider, effort, images } = payload;
 
-  const imagePages = (payload as { imagePages?: import("../providers/llm.service.js").LlmGenerateParams["imagePages"] }).imagePages;
+  const imagePages = (
+    payload as {
+      imagePages?: import("../providers/llm.service.js").LlmGenerateParams["imagePages"];
+    }
+  ).imagePages;
   const hasImages = Boolean(images?.length || imagePages?.length);
   if (hasImages && !modelSupportsInput(model, "image")) {
     throw new Error(getUnsupportedInputMessage(model, "image"));
@@ -102,7 +103,11 @@ export async function processChatStream(
   const startTime = Date.now();
   const { messages, model, customModel, customProvider, effort, images } = payload;
 
-  const imagePages = (payload as { imagePages?: import("../providers/llm.service.js").LlmGenerateParams["imagePages"] }).imagePages;
+  const imagePages = (
+    payload as {
+      imagePages?: import("../providers/llm.service.js").LlmGenerateParams["imagePages"];
+    }
+  ).imagePages;
   const hasImages = Boolean(images?.length || imagePages?.length);
   if (hasImages && !modelSupportsInput(model, "image")) {
     throw new Error(getUnsupportedInputMessage(model, "image"));

@@ -313,7 +313,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <h1 className="text-[26px] sm:text-[28px] md:text-[30px] font-serif text-neutral-900 font-normal tracking-tight truncate">
-              {activeCategory === "Providers" ? "AI Providers & BYOK" : activeCategory === "Skills" ? "Skills" : "Customize"}
+              {activeCategory === "Providers"
+                ? "AI Providers & BYOK"
+                : activeCategory === "Skills"
+                  ? "Skills"
+                  : "Customize"}
             </h1>
             <p className="mt-1 text-[13px] text-neutral-500 line-clamp-2 sm:line-clamp-none">
               {activeCategory === "Providers"
@@ -367,7 +371,11 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
             <div className="w-[1px] h-4 bg-neutral-200 mx-1 sm:mx-3 shrink-0 hidden sm:block" />
 
             {/* Sub-tab segmented control: Yours | Discover */}
-            <div className="bg-[#F1F1F4] p-0.5 rounded-lg inline-flex items-center" role="tablist" aria-label="Provider views">
+            <div
+              className="bg-[#F1F1F4] p-0.5 rounded-lg inline-flex items-center"
+              role="tablist"
+              aria-label="Provider views"
+            >
               {(["Yours", "Discover"] as CustomizeSubTab[]).map((tab) => {
                 const isActive = subTab === tab;
                 const countBadge =
@@ -411,295 +419,297 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
           {/* Right: Search, Filter icon, + Add button */}
           {(activeCategory === "Providers" || activeCategory === "Skills") && (
-          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
-            {/* Search Input */}
-            <div className="relative flex-1 sm:flex-initial flex items-center min-w-0">
-              <Search
-                size={14}
-                className="absolute left-2.5 text-neutral-400 pointer-events-none"
-              />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={
-                  activeCategory === "Providers"
-                    ? "Search providers, models, or tags"
-                    : activeCategory === "Skills"
-                      ? "Search skills by name, description, or capabilities"
-                      : "Search"
-                }
-                className="h-10 sm:h-9 pl-8 pr-7 w-full sm:w-56 md:w-72 text-[13px] text-neutral-900 placeholder-neutral-500 bg-neutral-50 rounded-xl outline-none focus:ring-2 focus:ring-neutral-900/40 transition-shadow"
-              />
-              {searchQuery && (
+            <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+              {/* Search Input */}
+              <div className="relative flex-1 sm:flex-initial flex items-center min-w-0">
+                <Search
+                  size={14}
+                  className="absolute left-2.5 text-neutral-400 pointer-events-none"
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={
+                    activeCategory === "Providers"
+                      ? "Search providers, models, or tags"
+                      : activeCategory === "Skills"
+                        ? "Search skills by name, description, or capabilities"
+                        : "Search"
+                  }
+                  className="h-10 sm:h-9 pl-8 pr-7 w-full sm:w-56 md:w-72 text-[13px] text-neutral-900 placeholder-neutral-500 bg-neutral-50 rounded-xl outline-none focus:ring-2 focus:ring-neutral-900/40 transition-shadow"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear search"
+                    className="absolute right-2 text-neutral-500 hover:text-neutral-800 min-h-[36px] min-w-[36px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded-lg"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Sliders Button with Popover */}
+              <div className="relative shrink-0" data-filter-dropdown>
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
-                  aria-label="Clear search"
-                  className="absolute right-2 text-neutral-500 hover:text-neutral-800 min-h-[36px] min-w-[36px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 rounded-lg"
+                  aria-label="Filter"
+                  title="Filter options"
+                  onClick={() => setIsFilterMenuOpen((v) => !v)}
+                  className={`w-10 h-10 sm:w-8 sm:h-8 shrink-0 rounded-lg flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 relative ${
+                    isFilterMenuOpen || hasActiveFilters
+                      ? "bg-neutral-950 text-white shadow-xs"
+                      : "text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80"
+                  }`}
                 >
-                  <X size={13} />
+                  <SlidersFilterIcon
+                    size={15}
+                    className={
+                      isFilterMenuOpen || hasActiveFilters ? "text-white" : "text-neutral-800"
+                    }
+                  />
+                  {hasActiveFilters && !isFilterMenuOpen && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-950 absolute top-1 right-1 ring-2 ring-white" />
+                  )}
                 </button>
-              )}
-            </div>
 
-            {/* Filter Sliders Button with Popover */}
-            <div className="relative shrink-0" data-filter-dropdown>
-              <button
-                type="button"
-                aria-label="Filter"
-                title="Filter options"
-                onClick={() => setIsFilterMenuOpen((v) => !v)}
-                className={`w-10 h-10 sm:w-8 sm:h-8 shrink-0 rounded-lg flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 relative ${
-                  isFilterMenuOpen || hasActiveFilters
-                    ? "bg-neutral-950 text-white shadow-xs"
-                    : "text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100/80"
-                }`}
-              >
-                <SlidersFilterIcon
-                  size={15}
-                  className={isFilterMenuOpen || hasActiveFilters ? "text-white" : "text-neutral-800"}
-                />
-                {hasActiveFilters && !isFilterMenuOpen && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-950 absolute top-1 right-1 ring-2 ring-white" />
-                )}
-              </button>
+                {isFilterMenuOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-white p-4 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.2)] ring-1 ring-neutral-200/80 z-40 animate-in fade-in zoom-in-95 duration-100 text-[13px] text-neutral-700 select-none max-h-[85vh] overflow-y-auto"
+                  >
+                    <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+                      <span className="font-semibold text-[13.5px] text-neutral-900">
+                        {activeCategory === "Skills" ? "Filter Skills" : "Filter Providers"}
+                      </span>
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          onClick={resetFilters}
+                          className="text-[11.5px] text-neutral-500 hover:text-neutral-900 cursor-pointer"
+                        >
+                          Reset all
+                        </button>
+                      )}
+                    </div>
 
-              {isFilterMenuOpen && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-white p-4 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.2)] ring-1 ring-neutral-200/80 z-40 animate-in fade-in zoom-in-95 duration-100 text-[13px] text-neutral-700 select-none max-h-[85vh] overflow-y-auto"
-                >
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-                    <span className="font-semibold text-[13.5px] text-neutral-900">
-                      {activeCategory === "Skills" ? "Filter Skills" : "Filter Providers"}
-                    </span>
-                    {hasActiveFilters && (
+                    {activeCategory === "Skills" ? (
+                      <div className="space-y-4 pt-3">
+                        {/* Category selection */}
+                        <div>
+                          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
+                            Category
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {["All", ...skillCategories.map((c) => c.name)].map((cat) => {
+                              const isSelected = selectedSkillCategory === cat;
+                              return (
+                                <button
+                                  key={cat}
+                                  type="button"
+                                  onClick={() => setSelectedSkillCategory(cat)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11.5px] transition-colors cursor-pointer ${
+                                    isSelected
+                                      ? "bg-neutral-950 text-white font-medium shadow-2xs"
+                                      : "bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 font-normal"
+                                  }`}
+                                >
+                                  {cat}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Scope selection */}
+                        <div>
+                          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
+                            Source / Visibility
+                          </span>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {[
+                              { id: "all", label: "All scopes" },
+                              { id: "builtin", label: "Built-in" },
+                              { id: "org", label: "Organization" },
+                              { id: "user", label: "Personal" },
+                            ].map((item) => {
+                              const isSelected = skillScopeFilter === item.id;
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => setSkillScopeFilter(item.id)}
+                                  className={`px-2.5 py-1.5 rounded-lg text-[12px] text-left transition-colors cursor-pointer ${
+                                    isSelected
+                                      ? "bg-neutral-950 text-white font-medium"
+                                      : "bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700"
+                                  }`}
+                                >
+                                  {item.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Sort selection */}
+                        <div>
+                          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
+                            Sort By
+                          </span>
+                          <div className="flex items-center gap-1.5 bg-neutral-100 p-0.5 rounded-lg text-[12px]">
+                            {[
+                              { id: "popular", label: "Most popular" },
+                              { id: "name", label: "Name (A–Z)" },
+                              { id: "newest", label: "Newest" },
+                            ].map((item) => {
+                              const isSelected = skillSortBy === item.id;
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() =>
+                                    setSkillSortBy(item.id as "popular" | "name" | "newest")
+                                  }
+                                  className={`flex-1 py-1 px-2 rounded-md transition-colors text-center cursor-pointer ${
+                                    isSelected
+                                      ? "bg-white text-neutral-950 font-medium shadow-xs"
+                                      : "text-neutral-500 hover:text-neutral-900"
+                                  }`}
+                                >
+                                  {item.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Providers Filter */
+                      <div className="space-y-4 pt-3">
+                        <div>
+                          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
+                            Quick Presets
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {["All", "Reasoning", "Vision", "Fast", "Free"].map((tag) => (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => {
+                                  setSearchQuery(tag === "All" ? "" : tag.toLowerCase());
+                                  setIsFilterMenuOpen(false);
+                                }}
+                                className="px-2.5 py-1 rounded-lg text-[11.5px] bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 cursor-pointer"
+                              >
+                                {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-3 mt-4 border-t border-neutral-100 flex items-center justify-end">
                       <button
                         type="button"
-                        onClick={resetFilters}
-                        className="text-[11.5px] text-neutral-500 hover:text-neutral-900 cursor-pointer"
+                        onClick={() => setIsFilterMenuOpen(false)}
+                        className="px-3.5 py-1.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-[12px] font-medium transition-colors cursor-pointer"
                       >
-                        Reset all
+                        Done
                       </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* + Add Button with Chevron Dropdown */}
+              <div className="relative shrink-0" data-add-button>
+                <button
+                  type="button"
+                  aria-expanded={isAddMenuOpen}
+                  aria-controls="customize-add-options"
+                  onClick={() => setIsAddMenuOpen((v) => !v)}
+                  className="h-10 sm:h-9 bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-3.5 sm:px-4 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer shadow-sm active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
+                >
+                  <Plus size={15} strokeWidth={1.75} />
+                  <span>Add</span>
+                  <ChevronDown
+                    size={14}
+                    strokeWidth={1.75}
+                    className={`text-white/80 transition-transform ${isAddMenuOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isAddMenuOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    id="customize-add-options"
+                    className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-white p-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.2)] ring-1 ring-neutral-200/80 z-40 animate-in fade-in zoom-in-95 duration-100 text-[13.5px] text-neutral-700 select-none"
+                  >
+                    {activeCategory === "Skills" ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddMenuOpen(false);
+                            setIsSkillCreatorOpen(true);
+                          }}
+                          className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                        >
+                          Create custom skill
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddMenuOpen(false);
+                            skillFileInputRef.current?.click();
+                          }}
+                          className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                        >
+                          Import skill (.md, .pdf, .zip)
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddMenuOpen(false);
+                            setActiveCategory("Providers");
+                          }}
+                          className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                        >
+                          Connect API key
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddMenuOpen(false);
+                            setActiveCategory("Connectors");
+                          }}
+                          className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                        >
+                          Add connector
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddMenuOpen(false);
+                            setActiveCategory("Plugins");
+                          }}
+                          className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
+                        >
+                          Add plugin
+                        </button>
+                      </>
                     )}
                   </div>
-
-                  {activeCategory === "Skills" ? (
-                    <div className="space-y-4 pt-3">
-                      {/* Category selection */}
-                      <div>
-                        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
-                          Category
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {["All", ...skillCategories.map((c) => c.name)].map((cat) => {
-                            const isSelected = selectedSkillCategory === cat;
-                            return (
-                              <button
-                                key={cat}
-                                type="button"
-                                onClick={() => setSelectedSkillCategory(cat)}
-                                className={`px-2.5 py-1 rounded-lg text-[11.5px] transition-colors cursor-pointer ${
-                                  isSelected
-                                    ? "bg-neutral-950 text-white font-medium shadow-2xs"
-                                    : "bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 font-normal"
-                                }`}
-                              >
-                                {cat}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Scope selection */}
-                      <div>
-                        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
-                          Source / Visibility
-                        </span>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {[
-                            { id: "all", label: "All scopes" },
-                            { id: "builtin", label: "Built-in" },
-                            { id: "org", label: "Organization" },
-                            { id: "user", label: "Personal" },
-                          ].map((item) => {
-                            const isSelected = skillScopeFilter === item.id;
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => setSkillScopeFilter(item.id)}
-                                className={`px-2.5 py-1.5 rounded-lg text-[12px] text-left transition-colors cursor-pointer ${
-                                  isSelected
-                                    ? "bg-neutral-950 text-white font-medium"
-                                    : "bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700"
-                                }`}
-                              >
-                                {item.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Sort selection */}
-                      <div>
-                        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
-                          Sort By
-                        </span>
-                        <div className="flex items-center gap-1.5 bg-neutral-100 p-0.5 rounded-lg text-[12px]">
-                          {[
-                            { id: "popular", label: "Most popular" },
-                            { id: "name", label: "Name (A–Z)" },
-                            { id: "newest", label: "Newest" },
-                          ].map((item) => {
-                            const isSelected = skillSortBy === item.id;
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() =>
-                                  setSkillSortBy(item.id as "popular" | "name" | "newest")
-                                }
-                                className={`flex-1 py-1 px-2 rounded-md transition-colors text-center cursor-pointer ${
-                                  isSelected
-                                    ? "bg-white text-neutral-950 font-medium shadow-xs"
-                                    : "text-neutral-500 hover:text-neutral-900"
-                                }`}
-                              >
-                                {item.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Providers Filter */
-                    <div className="space-y-4 pt-3">
-                      <div>
-                        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-2">
-                          Quick Presets
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {["All", "Reasoning", "Vision", "Fast", "Free"].map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => {
-                                setSearchQuery(tag === "All" ? "" : tag.toLowerCase());
-                                setIsFilterMenuOpen(false);
-                              }}
-                              className="px-2.5 py-1 rounded-lg text-[11.5px] bg-neutral-100 hover:bg-neutral-200/70 text-neutral-700 cursor-pointer"
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-3 mt-4 border-t border-neutral-100 flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setIsFilterMenuOpen(false)}
-                      className="px-3.5 py-1.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-[12px] font-medium transition-colors cursor-pointer"
-                    >
-                      Done
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-
-            {/* + Add Button with Chevron Dropdown */}
-            <div className="relative shrink-0" data-add-button>
-              <button
-                type="button"
-                aria-expanded={isAddMenuOpen}
-                aria-controls="customize-add-options"
-                onClick={() => setIsAddMenuOpen((v) => !v)}
-                className="h-10 sm:h-9 bg-neutral-950 text-white hover:bg-neutral-800 text-[13px] font-medium px-3.5 sm:px-4 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer shadow-sm active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
-              >
-                <Plus size={15} strokeWidth={1.75} />
-                <span>Add</span>
-                <ChevronDown
-                  size={14}
-                  strokeWidth={1.75}
-                  className={`text-white/80 transition-transform ${isAddMenuOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {isAddMenuOpen && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  id="customize-add-options"
-                  className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-white p-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.2)] ring-1 ring-neutral-200/80 z-40 animate-in fade-in zoom-in-95 duration-100 text-[13.5px] text-neutral-700 select-none"
-                >
-                  {activeCategory === "Skills" ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAddMenuOpen(false);
-                          setIsSkillCreatorOpen(true);
-                        }}
-                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
-                      >
-                        Create custom skill
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAddMenuOpen(false);
-                          skillFileInputRef.current?.click();
-                        }}
-                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
-                      >
-                        Import skill (.md, .pdf, .zip)
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAddMenuOpen(false);
-                          setActiveCategory("Providers");
-                        }}
-                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left font-medium transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
-                      >
-                        Connect API key
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAddMenuOpen(false);
-                          setActiveCategory("Connectors");
-                        }}
-                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
-                      >
-                        Add connector
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAddMenuOpen(false);
-                          setActiveCategory("Plugins");
-                        }}
-                        className="flex min-h-[40px] w-full items-center rounded-xl px-3.5 text-left transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-none focus-visible:bg-neutral-100"
-                      >
-                        Add plugin
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
           )}
         </div>
 
@@ -779,10 +789,10 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 return (
                   <section
                     key={provider.id}
-                    className="w-full rounded-2xl bg-white hover:bg-neutral-50/70 transition-colors"
+                    className="w-full rounded-2xl bg-white transition-colors hover:bg-neutral-50/50"
                   >
-                    {/* Header Row - Completely borderless, no pills, minimal text */}
-                    <div className="flex items-center justify-between gap-4 px-5 py-3.5">
+                    {/* Provider, connection state, and controls stay aligned across rows. */}
+                    <div className="provider-row-header grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 sm:gap-x-6 sm:px-5 sm:py-3.5">
                       <button
                         type="button"
                         aria-expanded={expandedProviderId === provider.id}
@@ -791,52 +801,42 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                             current === provider.id ? null : provider.id
                           )
                         }
-                        className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer focus-visible:outline-none"
+                        className="flex min-w-0 items-center gap-3 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 focus-visible:ring-offset-2 rounded-lg"
                       >
                         <CreatorLogo
                           creator={PROVIDER_LOGO_CREATOR[provider.id]}
                           size={24}
                           title={provider.name}
                         />
-                        <div className="min-w-0 flex-1 flex flex-col items-start gap-1 lg:flex-row lg:items-center lg:gap-3">
-                          <span className="text-[15px] font-medium text-neutral-900">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                          <span className="truncate text-[14px] font-medium text-neutral-900 sm:text-[14.5px]">
                             {provider.name}
                           </span>
-
-                          {/* Minimalist dot status - NO PILLS */}
-                          <span className="whitespace-nowrap text-[12px] text-neutral-500 flex items-center gap-1.5 select-none">
-                            <span
-                              className={`inline-block w-1.5 h-1.5 rounded-full ${
-                                isAccountConnected
-                                  ? "bg-emerald-500"
-                                  : isConnected
-                                    ? "bg-amber-500"
-                                  : "bg-neutral-400"
-                              }`}
-                            />
-                            <span>
-                              {isAccountConnected
-                                ? "Connected"
-                                : isConnected
-                                  ? "Session"
-                                  : "Not connected"}
-                            </span>
-                          </span>
-
                           {hasUnsavedDraft && (
-                            <span className="text-[11px] text-orange-600 font-medium select-none">
-                              ● Unsaved
+                            <span className="text-[11px] font-medium text-neutral-900 select-none">
+                              Unsaved
                             </span>
                           )}
                         </div>
                       </button>
 
-                      <div className="flex shrink-0 items-center gap-3">
+                      {/* Provider status occupies a consistent, centered column. */}
+                      <span className="provider-row-status flex items-center justify-self-end gap-2 whitespace-nowrap text-[12px] text-neutral-600 select-none sm:text-[12.5px]">
+                        <span>
+                          {isAccountConnected
+                            ? "Connected"
+                            : isConnected
+                              ? "Session"
+                              : "Not connected"}
+                        </span>
+                      </span>
+
+                      <div className="provider-row-actions col-span-2 flex shrink-0 items-center justify-end gap-4 sm:col-span-1">
                         <a
                           href={provider.docsUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[12px] text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
+                          className="inline-flex items-center gap-1.5 rounded-md py-1 text-[12px] text-neutral-500 transition-colors hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300"
                           title={`Get ${provider.name} API key`}
                         >
                           <span>Get key</span>
@@ -865,14 +865,14 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
                     {/* Expanded Area - Zero Inset Containers, Zero Visible Borders, Minimal Dead Text, Models Dropdown */}
                     {expandedProviderId === provider.id && (
-                      <div className="px-5 pb-5 pt-2">
-                        <div className="grid max-w-7xl grid-cols-1 gap-x-10 gap-y-5 lg:grid-cols-2">
+                      <div className="px-4 pb-4 pt-1 sm:px-5 sm:pb-5 sm:pt-2">
+                        <div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-5 lg:grid-cols-2">
                           <div className="min-w-0">
                             <label
                               htmlFor={`provider-key-${provider.id}`}
                               className="mb-2 block text-[12px] font-medium text-neutral-700"
                             >
-                              API key
+                              {provider.name} API key
                             </label>
                             <div className="flex w-full min-w-0 items-center gap-2">
                               <div className="relative flex-1">
@@ -891,7 +891,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                       ? "••••••••••••••••"
                                       : provider.keyPlaceholder || `Paste ${provider.name} key`
                                   }
-                                  className="w-full h-11 px-3 pr-8 bg-neutral-100 text-[12.5px] font-mono text-neutral-900 rounded-xl outline-none placeholder:font-sans placeholder:text-neutral-400 focus:bg-neutral-150/60 focus-visible:ring-2 focus-visible:ring-neutral-300 transition-colors border-0"
+                                  className="w-full h-10 px-3 pr-8 bg-neutral-100 text-[12.5px] font-mono text-neutral-900 rounded-xl outline-none placeholder:font-sans placeholder:text-neutral-400 focus:bg-neutral-150/60 focus-visible:ring-2 focus-visible:ring-neutral-300 transition-colors border-0"
                                 />
                                 <button
                                   type="button"
@@ -922,7 +922,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                         boxShadow: "none",
                                       }
                                 }
-                                className="inline-flex h-11 min-w-[120px] shrink-0 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-[13px] font-medium text-white shadow-sm shadow-neutral-950/10 transition-all duration-150 hover:bg-neutral-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed"
+                                className="inline-flex h-10 min-w-[112px] shrink-0 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-[12.5px] font-medium text-white transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed"
                               >
                                 {!isSaving &&
                                   (isConnected && endpointChanged && !currentInput.trim() ? (
@@ -990,7 +990,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                             curr === provider.id ? null : provider.id
                                           )
                                         }
-                                        className="w-full h-11 px-3 bg-neutral-100 hover:bg-neutral-150/70 text-[12.5px] text-neutral-800 rounded-xl outline-none cursor-pointer flex items-center justify-between transition-colors select-none border-0 focus-visible:ring-2 focus-visible:ring-neutral-300"
+                                        className="w-full h-10 px-3 bg-neutral-100 hover:bg-neutral-150/70 text-[12.5px] text-neutral-800 rounded-xl outline-none cursor-pointer flex items-center justify-between transition-colors select-none border-0 focus-visible:ring-2 focus-visible:ring-neutral-300"
                                       >
                                         <span className="truncate">
                                           {currentModel?.name}
@@ -1053,7 +1053,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                             {provider.id === "custom" && (
                               <div className="flex flex-col gap-2 pt-1">
                                 <span className="text-[12px] font-medium text-neutral-700">
-                                  Custom model
+                                  OpenRouter model
                                 </span>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-[12px] text-neutral-400 shrink-0 select-none">

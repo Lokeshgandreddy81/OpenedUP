@@ -69,4 +69,3 @@ export function clearDocumentCache(photoId?: string): void {
     slicedBlobUrlCache.clear();
   }
 }
-

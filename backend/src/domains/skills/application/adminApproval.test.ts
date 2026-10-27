@@ -181,7 +181,10 @@ Follow best practices.`;
     );
     assert.equal(getRejStatus(), 200);
     assert.equal(getRejBody().skill.approvalStatus, "rejected");
-    assert.equal(getRejBody().skill.rejectionReason, "Security violation: missing documentation on scripts.");
+    assert.equal(
+      getRejBody().skill.rejectionReason,
+      "Security violation: missing documentation on scripts."
+    );
   });
 
   test("Visibility rules: author always sees their own skills; others only see approved skills", () => {

@@ -731,7 +731,9 @@ test("provider failures reduce to safe diagnostic categories", () => {
     "authentication"
   );
   assert.equal(
-    classifyProviderFailure(new Error("Provider API error: authentication_error: invalid x-api-key")),
+    classifyProviderFailure(
+      new Error("Provider API error: authentication_error: invalid x-api-key")
+    ),
     "authentication"
   );
   assert.equal(
@@ -784,7 +786,10 @@ test("statusless permission and API errors produce actionable provider guidance"
   const apiError = new Error("Provider API error: api_error: internal provider failure");
 
   assert.equal(classifyProviderFailure(permissionError), "authentication");
-  assert.match(actionableProviderError(permissionError.message), /permissions.*Customize → Providers/i);
+  assert.match(
+    actionableProviderError(permissionError.message),
+    /permissions.*Customize → Providers/i
+  );
   assert.equal(classifyProviderFailure(apiError), "provider_unavailable");
   assert.match(actionableProviderError(apiError.message), /temporarily unavailable.*Retry/i);
 });
@@ -891,10 +896,13 @@ test("OpenAI-compatible generation sends the selected model and returns provider
 });
 
 test("an empty successful provider response is surfaced as an error, never fallback text", async (t) => {
-  t.mock.method(globalThis, "fetch", async () =>
-    new Response(JSON.stringify({ choices: [{ message: { content: "   " } }] }), {
-      headers: { "Content-Type": "application/json" },
-    })
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response(JSON.stringify({ choices: [{ message: { content: "   " } }] }), {
+        headers: { "Content-Type": "application/json" },
+      })
   );
 
   await assert.rejects(
@@ -1107,7 +1115,9 @@ test("Anthropic non-streaming requests forward all advertised effort levels for 
   }
   assert.deepEqual(
     bodies.map((body) => (body.output_config as { effort: string }).effort),
-    models.flatMap(() => efforts.map((effort) => effort === "Extra" ? "xhigh" : effort.toLowerCase()))
+    models.flatMap(() =>
+      efforts.map((effort) => (effort === "Extra" ? "xhigh" : effort.toLowerCase()))
+    )
   );
   assert.ok(bodies.every((body) => body.max_tokens === 128000));
 });
@@ -1221,10 +1231,9 @@ test("OpenAI generation forwards all advertised effort levels for every catalog 
       url: input instanceof Request ? input.url : String(input),
       body: JSON.parse(String(init?.body)) as Record<string, unknown>,
     });
-    return new Response(
-      JSON.stringify({ choices: [{ message: { content: "OpenAI reply" } }] }),
-      { headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ choices: [{ message: { content: "OpenAI reply" } }] }), {
+      headers: { "Content-Type": "application/json" },
+    });
   });
 
   const models = getChatModelsForProvider("openai");
@@ -1579,7 +1588,9 @@ test("Anthropic streaming requests forward all advertised effort levels for ever
   }
   assert.deepEqual(
     bodies.map((body) => (body.output_config as { effort: string }).effort),
-    models.flatMap(() => efforts.map((effort) => effort === "Extra" ? "xhigh" : effort.toLowerCase()))
+    models.flatMap(() =>
+      efforts.map((effort) => (effort === "Extra" ? "xhigh" : effort.toLowerCase()))
+    )
   );
   assert.ok(bodies.every((body) => body.max_tokens === 128000));
 });

@@ -65,7 +65,9 @@ import { getChatModels, modelSupportsInput, PROVIDER_CATALOG } from "@charan-int
 const LazyRoadmapCanvas = lazy(() =>
   import("../../roadmaps").then((feature) => ({ default: feature.RoadmapCanvas }))
 );
-const LazyChatWindow = lazy(() => import("../../chat").then((feature) => ({ default: feature.ChatWindow })));
+const LazyChatWindow = lazy(() =>
+  import("../../chat").then((feature) => ({ default: feature.ChatWindow }))
+);
 const LazyBenchmarksView = lazy(() =>
   import("../../benchmarks").then((feature) => ({ default: feature.BenchmarksView }))
 );
@@ -2444,68 +2446,68 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
       {/* AI Assistant Chat Feature Screen */}
       {isChatOpen && (
         <Suspense fallback={null}>
-        <LazyChatWindow
-          isOpen={isChatOpen}
-          initialView={chatInitialView}
-          initialCustomizeCategory="Providers"
-          onViewChange={(v) => {
-            if (v === "chapters") {
+          <LazyChatWindow
+            isOpen={isChatOpen}
+            initialView={chatInitialView}
+            initialCustomizeCategory="Providers"
+            onViewChange={(v) => {
+              if (v === "chapters") {
+                setIsChatOpen(false);
+                setActiveNavTab("chapters");
+                setIsSidebarOpen(true);
+              } else if (v === "roadmaps") {
+                setIsChatOpen(false);
+                setActiveNavTab("roadmap");
+                setIsSidebarOpen(true);
+              } else {
+                setChatInitialView(v);
+                setActiveNavTab("chat");
+              }
+            }}
+            onClose={() => {
               setIsChatOpen(false);
               setActiveNavTab("chapters");
-              setIsSidebarOpen(true);
-            } else if (v === "roadmaps") {
-              setIsChatOpen(false);
-              setActiveNavTab("roadmap");
-              setIsSidebarOpen(true);
-            } else {
-              setChatInitialView(v);
-              setActiveNavTab("chat");
-            }
-          }}
-          onClose={() => {
-            setIsChatOpen(false);
-            setActiveNavTab("chapters");
-          }}
-          chapters={computedRows}
-          docTitle={sidebarTitle}
-          onOpenScheduledTasks={() => setIsScheduledTasksOpen(true)}
-        />
+            }}
+            chapters={computedRows}
+            docTitle={sidebarTitle}
+            onOpenScheduledTasks={() => setIsScheduledTasksOpen(true)}
+          />
         </Suspense>
       )}
 
       {/* AI Benchmarks Feature Screen (Inspired by artificialanalysis.ai) */}
       {isBenchmarksOpen && (
         <Suspense fallback={null}>
-        <LazyBenchmarksView
-          isOpen={isBenchmarksOpen}
-          onClose={() => {
-            setIsBenchmarksOpen(false);
-            setActiveNavTab("chapters");
-          }}
-        />
+          <LazyBenchmarksView
+            isOpen={isBenchmarksOpen}
+            onClose={() => {
+              setIsBenchmarksOpen(false);
+              setActiveNavTab("chapters");
+            }}
+          />
         </Suspense>
       )}
 
       {/* Scheduled Tasks Screen (ChatGPT Scheduled Tasks Design) */}
       {isScheduledTasksOpen && (
         <Suspense fallback={null}>
-        <LazyScheduledTasksView
-          isOpen={isScheduledTasksOpen}
-          onNavigateToProviders={() => {
-            setIsScheduledTasksOpen(false);
-            setChatInitialView("customize");
-            setIsChatOpen(true);
-          }}
-          onClose={() => {
-            setIsScheduledTasksOpen(false);
-            setActiveNavTab("chapters");
-          }}
-          openedFromChat={isChatOpen}
-          onNavigateToChat={() => {
-            setIsScheduledTasksOpen(false);
-            setIsChatOpen(true);
-          }}
-        />
+          <LazyScheduledTasksView
+            isOpen={isScheduledTasksOpen}
+            onNavigateToProviders={() => {
+              setIsScheduledTasksOpen(false);
+              setChatInitialView("customize");
+              setIsChatOpen(true);
+            }}
+            onClose={() => {
+              setIsScheduledTasksOpen(false);
+              setActiveNavTab("chapters");
+            }}
+            openedFromChat={isChatOpen}
+            onNavigateToChat={() => {
+              setIsScheduledTasksOpen(false);
+              setIsChatOpen(true);
+            }}
+          />
         </Suspense>
       )}
     </div>

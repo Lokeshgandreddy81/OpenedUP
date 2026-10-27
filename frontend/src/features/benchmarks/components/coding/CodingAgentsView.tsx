@@ -244,7 +244,9 @@ export const CodingAgentsView: React.FC<CodingAgentsViewProps> = () => {
             >
               <span>{section.label}</span>
               {section.isNew && (
-                <span className={`text-[9px] font-bold px-1 rounded ${isActive ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-700"}`}>
+                <span
+                  className={`text-[9px] font-bold px-1 rounded ${isActive ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-700"}`}
+                >
                   NEW
                 </span>
               )}

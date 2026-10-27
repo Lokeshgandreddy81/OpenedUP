@@ -22,17 +22,12 @@ const TEXT_TYPES = new Set([
   "application/json",
   "application/xml",
 ]);
-const IMAGE_TYPES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-  "image/gif",
-]);
+const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"]);
 
 function normalizeMimeType(mime: string): string {
   const lower = (mime || "").toLowerCase().split(";")[0].trim();
-  if (lower === "image/jpg" || lower === "image/pjpeg" || lower === "image/jfif") return "image/jpeg";
+  if (lower === "image/jpg" || lower === "image/pjpeg" || lower === "image/jfif")
+    return "image/jpeg";
   return lower || "image/jpeg";
 }
 

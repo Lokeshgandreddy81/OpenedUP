@@ -51,6 +51,24 @@ interface ChapterChatPanelProps {
 const DEFAULT_MODEL = "openrouter-nemotron-3.5-lightning-free";
 type ChapterChatPhase = "searching" | "thinking" | "responding";
 
+const STARTER_PROMPTS = [
+  {
+    label: "Summarize key ideas",
+    detail: "Get a concise overview of this chapter.",
+    prompt: "Summarize the chapter’s key ideas",
+  },
+  {
+    label: "Explain a key idea",
+    detail: "Break down a concept from the text.",
+    prompt: "Explain a key idea from the chapter",
+  },
+  {
+    label: "What should I remember?",
+    detail: "Review the most important takeaways.",
+    prompt: "What should I remember?",
+  },
+] as const;
+
 interface ChapterChatStreamResult {
   answer: string;
   abstained: boolean;
@@ -135,6 +153,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
   const isMountedRef = React.useRef(true);
 
   const sourceKey = `${chapterId}:${startPage}:${endPage}`;
+  const pageRange = startPage === endPage ? `page ${startPage}` : `pages ${startPage}–${endPage}`;
 
   React.useEffect(() => {
     isMountedRef.current = true;
@@ -529,56 +548,73 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
           </p>
         )}
         {history.length === 0 ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5 pb-6 animate-in fade-in duration-200">
-            {source && !isExtracting && !sourceError && (
-              <div className="w-full max-w-[390px] px-1">
-                <p className="mb-2.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Try a prompt
+          <div className="flex min-h-0 flex-1 overflow-y-auto px-5 py-6">
+            <div className="m-auto w-full max-w-[440px] animate-in fade-in duration-200">
+              <div className="mb-5 px-1">
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Chapter chat
                 </p>
-                <div className="overflow-hidden rounded-2xl border border-slate-200/75 bg-white/80 divide-y divide-slate-100/90">
-                  {[
-                    ["Summarize key ideas", "Summarize the chapter’s key ideas"],
-                    ["Explain a key idea", "Explain a key idea from the chapter"],
-                    ["What should I remember?", "What should I remember?"],
-                  ].map(([label, prompt]) => (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => void sendQuestion(prompt, selectedModel)}
-                      className="group flex min-h-12 w-full items-center justify-between gap-4 px-4 py-3 text-left text-[14px] font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
-                    >
-                      <span>{label}</span>
-                      <ArrowRight
-                        size={15}
-                        strokeWidth={1.75}
-                        className="shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700"
-                        aria-hidden="true"
-                      />
-                    </button>
-                  ))}
-                </div>
+                <h2 className="text-[19px] font-semibold tracking-tight text-slate-900">
+                  Ask about this chapter
+                </h2>
+                <p className="mt-1.5 text-[13px] leading-5 text-slate-500">
+                  Answers use {pageRange} and link back to the supporting pages.
+                </p>
               </div>
-            )}
-            {(isExtracting || sourceError) && (
-              <p
-                role="status"
-                className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs ${sourceError ? "bg-amber-50 text-amber-800" : "text-slate-500"}`}
-              >
-                {isExtracting && !sourceError && (
-                  <LoaderCircle size={13} className="animate-spin" />
+              {source &&
+                !isExtracting &&
+                !sourceError &&
+                (source.pages.some((page) => page.text.trim()) || supportsVision) && (
+                  <section aria-label="Suggested chapter questions">
+                    <p className="mb-2.5 px-1 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                      Try a prompt
+                    </p>
+                    <div className="overflow-hidden rounded-2xl border border-slate-200/75 bg-white/80 divide-y divide-slate-100/90">
+                      {STARTER_PROMPTS.map(({ label, detail, prompt }) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => void sendQuestion(prompt, selectedModel)}
+                          className="group flex min-h-[68px] w-full items-center justify-between gap-4 px-4 py-3 text-left text-[14px] font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
+                        >
+                          <span className="flex min-w-0 flex-col gap-0.5">
+                            <span>{label}</span>
+                            <span className="text-[12px] font-normal leading-4 text-slate-500">
+                              {detail}
+                            </span>
+                          </span>
+                          <ArrowRight
+                            size={15}
+                            strokeWidth={1.75}
+                            className="shrink-0 text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </section>
                 )}
-                {sourceError || "Preparing chapter text…"}
-              </p>
-            )}
-            {source &&
-              !isExtracting &&
-              !source.pages.some((page) => page.text.trim()) &&
-              !supportsVision && (
-                <p role="status" className="mt-4 max-w-sm text-center text-xs text-slate-500">
-                  This scan needs a model with image support. Select a vision-capable model to ask
-                  about it.
+              {(isExtracting || sourceError) && (
+                <p
+                  role={sourceError ? "alert" : "status"}
+                  className={`mt-4 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${sourceError ? "bg-amber-50 text-amber-800" : "bg-slate-50 text-slate-500"}`}
+                >
+                  {isExtracting && !sourceError && (
+                    <LoaderCircle size={13} className="animate-spin" />
+                  )}
+                  {sourceError || "Preparing chapter text…"}
                 </p>
               )}
+              {source &&
+                !isExtracting &&
+                !source.pages.some((page) => page.text.trim()) &&
+                !supportsVision && (
+                  <p role="status" className="mt-4 max-w-sm text-center text-xs text-slate-500">
+                    This scan needs a model with image support. Select a vision-capable model to ask
+                    about it.
+                  </p>
+                )}
+            </div>
           </div>
         ) : (
           <ChatMessages
@@ -657,7 +693,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
           onChangeModel={(model) => {
             setSelectedModel(model);
           }}
-          chapterContextLabel="Selected chapter"
+          chapterContextLabel={title}
         />
       </div>
     </section>

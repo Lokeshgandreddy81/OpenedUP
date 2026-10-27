@@ -212,7 +212,10 @@ test("Projects import is idempotent and replacement validates before changing sa
     body: JSON.stringify({ projects: [invalidReplacement] }),
   });
   assert.equal(rejected.status, 400);
-  const rejectionBody = (await rejected.json()) as { error: string; details: Array<{ path: string }> };
+  const rejectionBody = (await rejected.json()) as {
+    error: string;
+    details: Array<{ path: string }>;
+  };
   assert.equal(rejectionBody.error, "Validation failed");
   assert.ok(rejectionBody.details.some((detail) => detail.path === "projects.0.sessions"));
 
@@ -295,20 +298,16 @@ test("account project snapshots preserve uploaded image context for later sessio
     body: JSON.stringify({ projects: [project] }),
   });
   assert.equal(saved.status, 200);
-  const savedBody = (await saved.json()) as { projects: Array<{ files?: Array<Record<string, unknown>> }> };
+  const savedBody = (await saved.json()) as {
+    projects: Array<{ files?: Array<Record<string, unknown>> }>;
+  };
   assert.equal(savedBody.projects[0]?.files?.[0]?.mimeType, "image/png");
-  assert.equal(
-    savedBody.projects[0]?.files?.[0]?.base64Data,
-    project.files[0]?.base64Data
-  );
+  assert.equal(savedBody.projects[0]?.files?.[0]?.base64Data, project.files[0]?.base64Data);
 
   const reloaded = await nativeFetch(apiUrl, { headers });
   const reloadedBody = (await reloaded.json()) as {
     projects: Array<{ files?: Array<Record<string, unknown>> }>;
   };
   assert.equal(reloadedBody.projects[0]?.files?.[0]?.mimeType, "image/png");
-  assert.equal(
-    reloadedBody.projects[0]?.files?.[0]?.base64Data,
-    project.files[0]?.base64Data
-  );
+  assert.equal(reloadedBody.projects[0]?.files?.[0]?.base64Data, project.files[0]?.base64Data);
 });

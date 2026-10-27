@@ -177,17 +177,29 @@ export function parseSkillMd(rawContent: string | Buffer): ParsedSkillMd {
 
   let categories: string[] | undefined = undefined;
   if (Array.isArray(meta["categories"])) {
-    categories = meta["categories"].map(String).map((c) => c.trim()).filter(Boolean);
+    categories = meta["categories"]
+      .map(String)
+      .map((c) => c.trim())
+      .filter(Boolean);
   } else if (typeof meta["categories"] === "string") {
-    categories = meta["categories"].split(",").map((c) => c.trim()).filter(Boolean);
+    categories = meta["categories"]
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
   }
 
   let toolsRequired: string[] | undefined = undefined;
   const rawTools = meta["tools"] ?? meta["tools_required"] ?? meta["connectors"];
   if (Array.isArray(rawTools)) {
-    toolsRequired = rawTools.map(String).map((t) => t.trim()).filter(Boolean);
+    toolsRequired = rawTools
+      .map(String)
+      .map((t) => t.trim())
+      .filter(Boolean);
   } else if (typeof rawTools === "string") {
-    toolsRequired = rawTools.split(",").map((t) => t.trim()).filter(Boolean);
+    toolsRequired = rawTools
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
   }
 
   return {
@@ -237,8 +249,19 @@ export function validatePackageFiles(rawFiles: RawFileInput[]): SkillFileEntry[]
 
     // Binary restriction: disallow executable/binary files outside scripts/ and templates/
     const ext = path.extname(cleanPath).toLowerCase();
-    const disallowedBinaryExts = [".exe", ".dll", ".so", ".dylib", ".bin", ".elf", ".app", ".bat", ".cmd"];
-    const isInScriptsOrTemplates = cleanPath.startsWith("scripts/") || cleanPath.startsWith("templates/");
+    const disallowedBinaryExts = [
+      ".exe",
+      ".dll",
+      ".so",
+      ".dylib",
+      ".bin",
+      ".elf",
+      ".app",
+      ".bat",
+      ".cmd",
+    ];
+    const isInScriptsOrTemplates =
+      cleanPath.startsWith("scripts/") || cleanPath.startsWith("templates/");
     if (disallowedBinaryExts.includes(ext) && !isInScriptsOrTemplates) {
       throw new SkillValidationError(
         `Binary files are only permitted inside scripts/ or templates/: ${cleanPath}`
@@ -308,9 +331,7 @@ export function parseSkillPackage(inputs: RawFileInput[]): ParsedSkillPackage {
   // Find SKILL.md at package root
   const skillMdFile = validatedFiles.find((f) => f.relativePath === "SKILL.md");
   if (!skillMdFile) {
-    throw new SkillValidationError(
-      "Missing required 'SKILL.md' at the root of the skill package."
-    );
+    throw new SkillValidationError("Missing required 'SKILL.md' at the root of the skill package.");
   }
 
   const parsedMd = parseSkillMd(skillMdFile.content);
@@ -333,9 +354,15 @@ export function parseSkillPackage(inputs: RawFileInput[]): ParsedSkillPackage {
         const agentDesc = String(meta["description"] || "");
         let tools: string[] = [];
         if (Array.isArray(meta["tools"])) {
-          tools = meta["tools"].map(String).map((t) => t.trim()).filter(Boolean);
+          tools = meta["tools"]
+            .map(String)
+            .map((t) => t.trim())
+            .filter(Boolean);
         } else if (typeof meta["tools"] === "string") {
-          tools = meta["tools"].split(",").map((t) => t.trim()).filter(Boolean);
+          tools = meta["tools"]
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
         }
         parsedAgents.push({
           name: agentName,
@@ -413,7 +440,9 @@ export function parseSkillZip(zipBuffer: Buffer): ParsedSkillPackage {
     // Check for symlinks in zip entry attributes (Unix symlink attribute: 0120000)
     const isSymlink = ((entry.attr >>> 16) & 0o170000) === 0o120000;
     if (isSymlink) {
-      throw new SkillValidationError(`Symlinks are forbidden in skill packages: ${entry.entryName}`);
+      throw new SkillValidationError(
+        `Symlinks are forbidden in skill packages: ${entry.entryName}`
+      );
     }
   }
 

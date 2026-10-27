@@ -275,7 +275,11 @@ export const ProjectsScreen: React.FC<{
   // Active session calculation
   const activeSession = useMemo(() => {
     if (!activeProject || !activeSessionId) return null;
-    return activeProject.sessions?.find((s) => s.id === activeSessionId) || activeProject.sessions?.[0] || null;
+    return (
+      activeProject.sessions?.find((s) => s.id === activeSessionId) ||
+      activeProject.sessions?.[0] ||
+      null
+    );
   }, [activeProject, activeSessionId]);
 
   // Filtered & sorted projects for the list view
@@ -506,15 +510,14 @@ export const ProjectsScreen: React.FC<{
               .filter(Boolean)
               .join("; ")
           : "";
-        const errorMessage =
-          [
-            typeof errData.error === "string"
-              ? errData.error
-              : `Chat request failed (${response.status}).`,
-            validationDetails,
-          ]
-            .filter(Boolean)
-            .join(": ");
+        const errorMessage = [
+          typeof errData.error === "string"
+            ? errData.error
+            : `Chat request failed (${response.status}).`,
+          validationDetails,
+        ]
+          .filter(Boolean)
+          .join(": ");
         throw new Error(errorMessage);
       }
 

@@ -20,10 +20,13 @@ import {
 } from "./skillStorage.js";
 
 describe("Phase 2: Upload & Package Security Tests", () => {
-  function createZip(entries: Array<{ path: string; content: string | Buffer; attr?: number }>): Buffer {
+  function createZip(
+    entries: Array<{ path: string; content: string | Buffer; attr?: number }>
+  ): Buffer {
     const zip = new AdmZip();
     for (const entry of entries) {
-      const data = typeof entry.content === "string" ? Buffer.from(entry.content, "utf8") : entry.content;
+      const data =
+        typeof entry.content === "string" ? Buffer.from(entry.content, "utf8") : entry.content;
       zip.addFile(entry.path, data);
       if (entry.attr) {
         const zipEntry = zip.getEntry(entry.path);
@@ -38,30 +41,30 @@ describe("Phase 2: Upload & Package Security Tests", () => {
   test("Zip & Package: rejects path traversal (..) in relative path and package", () => {
     assert.throws(
       () => validateRelativePath("../evil.txt"),
-      (err: unknown) => err instanceof SkillValidationError && err.message.includes("Path traversal")
+      (err: unknown) =>
+        err instanceof SkillValidationError && err.message.includes("Path traversal")
     );
 
     assert.throws(
       () =>
-        validatePackageFiles([
-          { relativePath: "../evil.txt", content: Buffer.from("malicious") },
-        ]),
-      (err: unknown) => err instanceof SkillValidationError && err.message.includes("Path traversal")
+        validatePackageFiles([{ relativePath: "../evil.txt", content: Buffer.from("malicious") }]),
+      (err: unknown) =>
+        err instanceof SkillValidationError && err.message.includes("Path traversal")
     );
   });
 
   test("Zip & Package: rejects absolute path in package", () => {
     assert.throws(
       () => validateRelativePath("/etc/shadow"),
-      (err: unknown) => err instanceof SkillValidationError && err.message.includes("Path traversal")
+      (err: unknown) =>
+        err instanceof SkillValidationError && err.message.includes("Path traversal")
     );
 
     assert.throws(
       () =>
-        validatePackageFiles([
-          { relativePath: "/etc/shadow", content: Buffer.from("malicious") },
-        ]),
-      (err: unknown) => err instanceof SkillValidationError && err.message.includes("Path traversal")
+        validatePackageFiles([{ relativePath: "/etc/shadow", content: Buffer.from("malicious") }]),
+      (err: unknown) =>
+        err instanceof SkillValidationError && err.message.includes("Path traversal")
     );
   });
 
@@ -76,7 +79,9 @@ describe("Phase 2: Upload & Package Security Tests", () => {
 
     assert.throws(
       () => parseSkillZip(zipBuffer),
-      (err: unknown) => err instanceof SkillValidationError && err.message.includes("Zip bomb detected: package contains")
+      (err: unknown) =>
+        err instanceof SkillValidationError &&
+        err.message.includes("Zip bomb detected: package contains")
     );
   });
 
@@ -89,7 +94,9 @@ describe("Phase 2: Upload & Package Security Tests", () => {
 
     assert.throws(
       () => parseSkillZip(zipBuffer),
-      (err: unknown) => err instanceof SkillValidationError && err.message.includes("Zip bomb detected: uncompressed size")
+      (err: unknown) =>
+        err instanceof SkillValidationError &&
+        err.message.includes("Zip bomb detected: uncompressed size")
     );
   });
 
@@ -100,7 +107,8 @@ describe("Phase 2: Upload & Package Security Tests", () => {
           { relativePath: "file.txt", content: Buffer.from("1") },
           { relativePath: "file.txt", content: Buffer.from("2") },
         ]),
-      (err: unknown) => err instanceof SkillValidationError && err.message.includes("Duplicate file entry")
+      (err: unknown) =>
+        err instanceof SkillValidationError && err.message.includes("Duplicate file entry")
     );
   });
 
@@ -112,7 +120,9 @@ describe("Phase 2: Upload & Package Security Tests", () => {
 
     assert.throws(
       () => parseSkillZip(zipBuffer),
-      (err: unknown) => err instanceof SkillValidationError && err.message.includes("Binary files are only permitted")
+      (err: unknown) =>
+        err instanceof SkillValidationError &&
+        err.message.includes("Binary files are only permitted")
     );
   });
 
@@ -172,7 +182,8 @@ describe("Phase 2: Upload & Package Security Tests", () => {
       fs.writeFileSync(path.join(v1Dir, "data.txt"), "Tampered content!");
       assert.throws(
         () => readSkillFileWithVerification(v1Dir, "data.txt", sha256),
-        (err: unknown) => err instanceof SkillIntegrityError && err.message.includes("hash mismatch")
+        (err: unknown) =>
+          err instanceof SkillIntegrityError && err.message.includes("hash mismatch")
       );
     } finally {
       fs.rmSync(tmpStorage, { recursive: true, force: true });

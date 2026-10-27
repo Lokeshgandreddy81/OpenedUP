@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import {
-  Search,
-  Upload,
-  X,
-  Check,
-  Loader2,
-  AlertCircle,
-  Trash2,
-} from "lucide-react";
+import { Search, Upload, X, Check, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import {
   getSkills,
   setConversationSkills,
@@ -158,7 +150,11 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
           scope: "user",
           approvalStatus: "approved",
         });
-      } else if (lowerName.endsWith(".md") || lowerName.endsWith(".markdown") || lowerName.endsWith(".txt")) {
+      } else if (
+        lowerName.endsWith(".md") ||
+        lowerName.endsWith(".markdown") ||
+        lowerName.endsWith(".txt")
+      ) {
         const text = await file.text();
         const cleanName =
           file.name
@@ -351,9 +347,7 @@ const SkillRow: React.FC<SkillRowProps> = ({ skill, isEnabled, onToggle, onDelet
     <div
       onClick={onToggle}
       className={`group p-3.5 rounded-2xl transition-all cursor-pointer flex items-center justify-between gap-3 ${
-        isEnabled
-          ? "bg-neutral-100"
-          : "bg-neutral-50/70 hover:bg-neutral-100/70"
+        isEnabled ? "bg-neutral-100" : "bg-neutral-50/70 hover:bg-neutral-100/70"
       }`}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -366,9 +360,7 @@ const SkillRow: React.FC<SkillRowProps> = ({ skill, isEnabled, onToggle, onDelet
               {skill.name}
             </span>
             {skill.version > 1 && (
-              <span className="text-[10.5px] font-mono text-neutral-400">
-                v{skill.version}
-              </span>
+              <span className="text-[10.5px] font-mono text-neutral-400">v{skill.version}</span>
             )}
           </div>
           <p className="text-[11.5px] text-neutral-500 line-clamp-1 mt-0.5">

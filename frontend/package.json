@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@charan-interiors/contracts": "*",
@@ -36,6 +37,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.3",
     "vite": "^8.3.0"
   }

@@ -82,10 +82,7 @@ test("1. Master key derivation and permission enforcement", () => {
 
     // 1.4 Corrupted key file (invalid length) throws descriptive error
     fs.writeFileSync(keyFile, Buffer.from("too-short-key"));
-    assert.throws(
-      () => getEncryptionKey(),
-      /expected 32 bytes/
-    );
+    assert.throws(() => getEncryptionKey(), /expected 32 bytes/);
 
     // 1.5 BYOK_ENCRYPTION_KEY env var takes precedence
     const customKey = crypto.randomBytes(32);
@@ -95,18 +92,12 @@ test("1. Master key derivation and permission enforcement", () => {
 
     // 1.6 Invalid BYOK_ENCRYPTION_KEY length throws error
     process.env["BYOK_ENCRYPTION_KEY"] = Buffer.from("short").toString("base64");
-    assert.throws(
-      () => getEncryptionKey(),
-      /must be a base64-encoded 32-byte key/
-    );
+    assert.throws(() => getEncryptionKey(), /must be a base64-encoded 32-byte key/);
 
     // 1.7 Production environment mandates BYOK_ENCRYPTION_KEY
     delete process.env["BYOK_ENCRYPTION_KEY"];
     process.env["NODE_ENV"] = "production";
-    assert.throws(
-      () => getEncryptionKey(),
-      /BYOK_ENCRYPTION_KEY is required in production/
-    );
+    assert.throws(() => getEncryptionKey(), /BYOK_ENCRYPTION_KEY is required in production/);
   } finally {
     cleanup();
   }
@@ -287,7 +278,7 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
 
     // 4.3 Bit-flipping ciphertext tampering resistance
     const tamperedCiphertext = Buffer.from(aliceRow.ciphertext);
-    tamperedCiphertext[0] = ((tamperedCiphertext[0] ?? 0) ^ 0x01); // flip 1 bit
+    tamperedCiphertext[0] = (tamperedCiphertext[0] ?? 0) ^ 0x01; // flip 1 bit
     db.prepare(
       "UPDATE provider_credentials SET ciphertext = ? WHERE user_id = ? AND provider_id = ?"
     ).run(tamperedCiphertext, aliceId, "openai");
@@ -300,7 +291,7 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
 
     // 4.4 Bit-flipping auth tag tampering resistance
     const tamperedTag = Buffer.from(aliceRow.auth_tag);
-    tamperedTag[0] = ((tamperedTag[0] ?? 0) ^ 0xff);
+    tamperedTag[0] = (tamperedTag[0] ?? 0) ^ 0xff;
     db.prepare(
       "UPDATE provider_credentials SET auth_tag = ?, ciphertext = ? WHERE user_id = ? AND provider_id = ?"
     ).run(tamperedTag, aliceRow.ciphertext, aliceId, "openai");
@@ -313,7 +304,7 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
 
     // 4.5 Bit-flipping nonce tampering resistance
     const tamperedNonce = Buffer.from(aliceRow.nonce);
-    tamperedNonce[0] = ((tamperedNonce[0] ?? 0) ^ 0x55);
+    tamperedNonce[0] = (tamperedNonce[0] ?? 0) ^ 0x55;
     db.prepare(
       "UPDATE provider_credentials SET nonce = ?, auth_tag = ?, ciphertext = ? WHERE user_id = ? AND provider_id = ?"
     ).run(tamperedNonce, aliceRow.auth_tag, aliceRow.ciphertext, aliceId, "openai");
@@ -329,19 +320,13 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
       "UPDATE provider_credentials SET nonce = ? WHERE user_id = ? AND provider_id = ?"
     ).run(Buffer.alloc(8, 0), aliceId, "openai");
 
-    assert.throws(
-      () => getProviderCredential(aliceId, "openai"),
-      /Invalid nonce length/
-    );
+    assert.throws(() => getProviderCredential(aliceId, "openai"), /Invalid nonce length/);
 
     db.prepare(
       "UPDATE provider_credentials SET nonce = ?, auth_tag = ? WHERE user_id = ? AND provider_id = ?"
     ).run(aliceRow.nonce, Buffer.alloc(8, 0), aliceId, "openai");
 
-    assert.throws(
-      () => getProviderCredential(aliceId, "openai"),
-      /Invalid auth tag length/
-    );
+    assert.throws(() => getProviderCredential(aliceId, "openai"), /Invalid auth tag length/);
   } finally {
     cleanup();
   }
@@ -379,7 +364,10 @@ test("6. Agent 1: Secure in-memory buffer wiping and scoped execution", () => {
   assert.equal(buf.toString("utf8"), "super-secret-temporary-key");
   secureWipeBuffer(buf);
   // Ensure buffer is wiped and zeroes out
-  assert.ok(buf.every((byte) => byte === 0), "Buffer must be zero-filled");
+  assert.ok(
+    buf.every((byte) => byte === 0),
+    "Buffer must be zero-filled"
+  );
 
   // withDecryptedCredential safely wraps access
   const { cleanup } = setupIsolatedEnv();
@@ -573,7 +561,11 @@ test("13. Agent 2 & 3: Defensive clone on cached materials and soft quarantine",
   // Subsequent fetch must NOT be corrupted
   const retrievedAgain = CryptographicMaterialsCache.get("tenant-dek");
   assert.ok(retrievedAgain);
-  assert.notDeepEqual(retrievedAgain, retrieved, "Cache must return defensive copy to prevent caller mutation");
+  assert.notDeepEqual(
+    retrievedAgain,
+    retrieved,
+    "Cache must return defensive copy to prevent caller mutation"
+  );
   assert.deepEqual(retrievedAgain, rawKey);
 
   // Soft-quarantine check
@@ -584,7 +576,9 @@ test("13. Agent 2 & 3: Defensive clone on cached materials and soft quarantine",
     saveProviderCredential("quarantine-user", "openai", { apiKey: "test-key" });
 
     // Quarantine without shredding
-    const qResult = purgeOrQuarantineCredential("quarantine-user", "openai", { quarantineOnly: true });
+    const qResult = purgeOrQuarantineCredential("quarantine-user", "openai", {
+      quarantineOnly: true,
+    });
     assert.equal(qResult.quarantined, true);
     assert.equal(qResult.shredded, false);
 

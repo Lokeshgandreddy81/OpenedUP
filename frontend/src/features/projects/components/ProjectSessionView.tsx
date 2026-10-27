@@ -202,15 +202,14 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
               .filter(Boolean)
               .join("; ")
           : "";
-        const message =
-          [
-            typeof errData.error === "string"
-              ? errData.error
-              : `Chat request failed (${response.status}).`,
-            validationDetails,
-          ]
-            .filter(Boolean)
-            .join(": ");
+        const message = [
+          typeof errData.error === "string"
+            ? errData.error
+            : `Chat request failed (${response.status}).`,
+          validationDetails,
+        ]
+          .filter(Boolean)
+          .join(": ");
         throw new Error(message);
       }
 

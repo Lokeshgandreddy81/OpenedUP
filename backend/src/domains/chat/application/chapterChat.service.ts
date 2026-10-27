@@ -1,8 +1,5 @@
 import type { ChapterChatRequest, ChatMessage } from "@charan-interiors/contracts";
-import {
-  getUnsupportedInputMessage,
-  modelSupportsInput,
-} from "@charan-interiors/contracts";
+import { getUnsupportedInputMessage, modelSupportsInput } from "@charan-interiors/contracts";
 import { generateMultiProviderChatStream } from "../providers/llm.service.js";
 
 export interface ChapterCitation {

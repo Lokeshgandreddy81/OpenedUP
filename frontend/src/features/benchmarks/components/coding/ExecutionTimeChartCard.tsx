@@ -260,10 +260,7 @@ export const ExecutionTimeChartCard: React.FC = () => {
 
   return (
     <div className="w-full max-w-[1560px] mx-auto font-sans px-1">
-      <div
-        ref={containerRef}
-        className="w-full bg-white rounded-2xl relative select-none"
-      >
+      <div ref={containerRef} className="w-full bg-white rounded-2xl relative select-none">
         {/* ── Tab bar ── */}
         <div className="flex items-center gap-1 px-6 sm:px-8 pt-4 pb-3 border-b border-transparent">
           {TIME_TABS.map((tab) => {

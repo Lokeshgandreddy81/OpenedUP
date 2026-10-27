@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  X,
-  Plus,
-  Check,
-  FileCode,
-  Loader2,
-  Wrench,
-  Bot,
-  Copy,
-  Trash2,
-} from "lucide-react";
+import { X, Plus, Check, FileCode, Loader2, Wrench, Bot, Copy, Trash2 } from "lucide-react";
 import {
   getSkillContents,
   addDirectorySkillToLibrary,
@@ -50,7 +40,11 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete '${skillData?.name || "this skill"}'? This cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete '${skillData?.name || "this skill"}'? This cannot be undone.`
+      )
+    ) {
       return;
     }
     setIsDeleting(true);
@@ -130,9 +124,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                 {formatSkillTitle(skillData?.name || "")}
               </h2>
               <div className="flex items-center gap-2 mt-1 text-xs text-neutral-400">
-                <span className="font-mono text-neutral-500 font-normal">
-                  {skillData?.name}
-                </span>
+                <span className="font-mono text-neutral-500 font-normal">{skillData?.name}</span>
                 {skillData?.author && (
                   <>
                     <span className="text-neutral-300">·</span>
@@ -152,7 +144,11 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                 className="h-10 px-4 rounded-xl text-xs sm:text-[13px] font-medium text-neutral-800 hover:text-neutral-950 bg-neutral-100 hover:bg-neutral-200/80 border border-neutral-200/70 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="Delete this skill"
               >
-                {isDeleting ? <Loader2 size={14} className="animate-spin text-neutral-700" /> : <Trash2 size={14} className="text-neutral-700" />}
+                {isDeleting ? (
+                  <Loader2 size={14} className="animate-spin text-neutral-700" />
+                ) : (
+                  <Trash2 size={14} className="text-neutral-700" />
+                )}
                 <span className="leading-none text-neutral-900">Delete</span>
               </button>
             )}
@@ -252,9 +248,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
             </div>
           ) : error ? (
             <div className="p-6">
-              <div className="p-4 bg-rose-50 rounded-2xl text-rose-700 text-sm">
-                {error}
-              </div>
+              <div className="p-4 bg-rose-50 rounded-2xl text-rose-700 text-sm">{error}</div>
             </div>
           ) : activeTab === "overview" ? (
             <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1">
@@ -291,7 +285,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                     Scope
                   </span>
                   <span className="text-xs sm:text-[13px] font-medium text-neutral-800 capitalize">
-                    {isBuiltinSkill(skillData) ? "Built-in" : (skillData?.scope || "Personal")}
+                    {isBuiltinSkill(skillData) ? "Built-in" : skillData?.scope || "Personal"}
                   </span>
                 </div>
               </div>
@@ -382,12 +376,19 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <FileCode size={14} className={isSelected ? "text-neutral-900 shrink-0" : "text-neutral-400 shrink-0"} />
+                        <FileCode
+                          size={14}
+                          className={
+                            isSelected ? "text-neutral-900 shrink-0" : "text-neutral-400 shrink-0"
+                          }
+                        />
                         <span className="truncate">{file.relativePath}</span>
                       </div>
                       {file.sizeBytes && (
                         <span className="text-[10.5px] shrink-0 text-neutral-400 font-normal">
-                          {file.sizeBytes < 1024 ? `${file.sizeBytes} B` : `${(file.sizeBytes / 1024).toFixed(1)} KB`}
+                          {file.sizeBytes < 1024
+                            ? `${file.sizeBytes} B`
+                            : `${(file.sizeBytes / 1024).toFixed(1)} KB`}
                         </span>
                       )}
                     </button>
@@ -411,7 +412,11 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                     onClick={handleCopyContent}
                     className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-neutral-200/80 hover:bg-neutral-50 text-neutral-700 hover:text-neutral-950 transition-colors cursor-pointer text-xs font-sans font-medium shadow-2xs"
                   >
-                    {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} className="text-neutral-500" />}
+                    {copied ? (
+                      <Check size={13} className="text-emerald-600" />
+                    ) : (
+                      <Copy size={13} className="text-neutral-500" />
+                    )}
                     <span>{copied ? "Copied" : "Copy content"}</span>
                   </button>
                 </div>
@@ -475,7 +480,8 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                   <Bot size={36} className="mx-auto mb-3 text-neutral-300" />
                   <p className="text-base font-semibold text-neutral-700">No specialized agents</p>
                   <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-md mx-auto">
-                    This skill operates through direct instructions and sandbox scripts, without configuring secondary agent personalities.
+                    This skill operates through direct instructions and sandbox scripts, without
+                    configuring secondary agent personalities.
                   </p>
                 </div>
               )}

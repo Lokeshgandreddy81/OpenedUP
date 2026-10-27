@@ -21,13 +21,13 @@ export const EvaluationChartCard: React.FC<EvaluationChartCardProps> = ({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const ranked = useMemo(() => {
-    const scored = models.filter((model) => evaluation.metric(model) > 0);
+    const scored = models.filter((model) => (evaluation.metric(model) ?? 0) > 0);
     return [...scored]
-      .sort((a, b) => evaluation.metric(b) - evaluation.metric(a))
+      .sort((a, b) => (evaluation.metric(b) ?? 0) - (evaluation.metric(a) ?? 0))
       .slice(0, modelLimit > 0 ? modelLimit : scored.length);
   }, [models, evaluation, modelLimit]);
 
-  const maxValue = ranked.length > 0 ? evaluation.metric(ranked[0]) : 1;
+  const maxValue = ranked.length > 0 ? (evaluation.metric(ranked[0]) ?? 1) : 1;
   const scaleMax = maxValue * 1.12;
 
   const gridStyle: React.CSSProperties = {
@@ -70,7 +70,7 @@ export const EvaluationChartCard: React.FC<EvaluationChartCardProps> = ({
             <div className="pointer-events-none absolute inset-x-0 bottom-0 border-b border-neutral-200" />
 
             {ranked.map((model) => {
-              const value = evaluation.metric(model);
+              const value = evaluation.metric(model) ?? 0;
               const formatted = formatEvaluationValue(evaluation, value);
               const heightPercent = barHeightPercent(value);
               const isHovered = hoveredId === model.id;

@@ -95,14 +95,13 @@ The repository is structured into four focused top-level directories:
 │   │   ├── projects/               # Projects, sessions and file context
 │   │   ├── roadmaps/               # Roadmap screens, renderer and catalog data
 │   │   └── scheduled/              # Scheduled task screens and UI
-│   ├── src/test/                   # Frontend unit and component tests
-│   ├── tests/e2e/                  # Playwright browser tests
+│   ├── src/                        # Feature code and colocated unit tests
 │   └── infra/docker/               # Frontend Nginx configuration
 ├── backend/                        # Single-process modular Express application
 │   ├── src/app.ts                  # Middleware and domain composition root
 │   ├── src/domains/                # HTTP, application, provider and repository modules
 │   ├── src/platform/               # Auth, config, database, HTTP and observability
-│   └── tests/                      # Backend unit and integration tests
+│   └── src/                        # Backend domains and colocated unit tests
 ├── python/                         # Scalable Python document processing and chunking
 │   ├── src/                        # PDF chapter extractor & roadmap generator
 │   ├── pyproject.toml              # Ruff configuration
@@ -300,6 +299,7 @@ Run all scripts from the repository root:
 | :--------------------- | :-------------------------------------------------------------------------- |
 | `npm run dev`          | Boots application in development mode with live Vite HMR.                   |
 | `npm run build`        | Compiles frontend assets with Vite and compiles server bundle with esbuild. |
+| `npm test`             | Runs unit tests in workspaces that define a test script.                    |
 | `npm start`            | Builds the workspaces and starts the production API server.                 |
 | `npm run typecheck`    | Validates strict TypeScript types with 0 emit across all workspaces.        |
 | `npm run lint`         | Runs ESLint flat configuration check with zero allowable errors.            |
@@ -311,12 +311,13 @@ Run all scripts from the repository root:
 
 ## Verification
 
-CI runs formatting, typechecking, feature-boundary checks, lint, and builds on the supported Node versions. The security workflow scans for secrets and dependency vulnerabilities. Run the same checks locally before opening a pull request:
+CI runs formatting, typechecking, workspace tests, Python tests and lint, feature-boundary checks, lint, and builds on the supported Node version. The security workflow scans for secrets and dependency vulnerabilities. Run the Node checks locally before opening a pull request:
 
 ```bash
 npm ci
 npm run format:check
 npm run typecheck
+npm test
 npm run check:feature-boundaries
 npm run lint
 npm run build

@@ -13,12 +13,13 @@ Usage:
     python3 scripts/pdf_roadmap_generator.py <path_to_pdf> [--format json|markdown]
 """
 
-import sys
-import os
 import json
+import os
 import re
-from typing import List, Dict, Any, Optional
+import sys
 from collections import defaultdict, deque
+from importlib.util import find_spec
+from typing import Any, Dict, Optional
 
 # Add parent script dir to sys.path to import chapter extractor
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -35,11 +36,7 @@ try:
 except ImportError:
     HAS_PYMUPDF = False
 
-try:
-    import pypdf
-    HAS_PYPDF = True
-except ImportError:
-    HAS_PYPDF = False
+HAS_PYPDF = find_spec("pypdf") is not None
 
 
 def clean_text(text: str) -> str:

@@ -12,9 +12,7 @@ import {
   removeCredential,
   getAttestation,
 } from "./credential.controller.js";
-import {
-  getProviderCredential,
-} from "../application/credentialVault.js";
+import { getProviderCredential } from "../application/credentialVault.js";
 import { getChatDatabase } from "../../../platform/database/chatDatabase.js";
 
 function setupIsolatedEnv() {
@@ -174,7 +172,10 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => 
     const attestRes = mockResponse();
     getAttestation(reqBase, attestRes);
     assert.equal(attestRes.statusCode, 200);
-    const attestBody = attestRes.body as { attestation?: { status: string; algorithm: string }; health?: { healthy: boolean } };
+    const attestBody = attestRes.body as {
+      attestation?: { status: string; algorithm: string };
+      health?: { healthy: boolean };
+    };
     assert.equal(attestBody.attestation?.status, "healthy");
     assert.equal(attestBody.attestation?.algorithm, "AES-256-GCM+HKDF");
     assert.equal(attestBody.health?.healthy, true);

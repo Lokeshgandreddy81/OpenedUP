@@ -94,7 +94,9 @@ export function validateSkillDraft(draft: SkillDraftInput): {
   if (!name) {
     errors.push("Skill name is required.");
   } else if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)) {
-    errors.push("Skill name must be lowercase alphanumeric with optional hyphens (e.g., 'csv-summary').");
+    errors.push(
+      "Skill name must be lowercase alphanumeric with optional hyphens (e.g., 'csv-summary')."
+    );
   }
 
   // 2. Description validation

@@ -40,5 +40,5 @@ export function buildSkillsPrompt(enabledSkills: SkillRecord[]): string {
   return `<available_skills>
 ${skillBlocks}
 </available_skills>
-When a user request matches a skill's description, call the Skill tool with that skill's name BEFORE doing the task, then follow its instructions. Skills listed above are the only ones available.`;
+When a user request matches a skill's description, call the Skill tool with that skill's name BEFORE doing the task, then follow its instructions. Skills listed above are the only ones available. Use skills silently: never include skill names, raw tool inputs or outputs, JSON payloads, execution traces, or labels such as "Skill Input" and "Skill Output" in the user-facing response. Return only the polished answer. For simple greetings, respond briefly and naturally; do not list capabilities unless asked.`;
 }

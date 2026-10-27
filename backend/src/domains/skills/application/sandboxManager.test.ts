@@ -119,7 +119,13 @@ test("Sandbox - Bash tool executes commands inside workspace and runs python scr
     // 2. Create sample data and run csv-summary python script
     executeWrite("data.csv", "name,role,salary\nAlice,Eng,120\nBob,Design,110\n", paths);
 
-    const scriptPath = path.join(paths.skillsMountDir, "builtin", "csv-summary", "scripts", "summarize.py");
+    const scriptPath = path.join(
+      paths.skillsMountDir,
+      "builtin",
+      "csv-summary",
+      "scripts",
+      "summarize.py"
+    );
     const pyRes = await executeBash(`python3 "${scriptPath}" data.csv`, paths);
     assert.ok(!pyRes.isError);
     assert.ok(pyRes.content.includes("Columns (3): name, role, salary"));
@@ -149,7 +155,9 @@ test("Sandbox - SendUserFile creates downloadable attachment", () => {
     assert.ok(!sendRes.isError);
     assert.ok(sendRes.attachment);
     assert.equal(sendRes.attachment?.fileName, "report.pdf");
-    assert.ok(sendRes.attachment?.downloadUrl.includes("/api/conversations/conv-sandbox-1/files/report.pdf"));
+    assert.ok(
+      sendRes.attachment?.downloadUrl.includes("/api/conversations/conv-sandbox-1/files/report.pdf")
+    );
 
     // Verify file copied to attachments directory
     const attachmentPath = path.join(paths.attachmentsDir, "report.pdf");

@@ -19,7 +19,9 @@ import {
 function getAuthenticatedUid(req: Request, res: Response): string | null {
   const uid = req.principal?.uid;
   if (!uid) {
-    res.status(401).json({ error: "Unauthorized: Missing user authentication.", requestId: req.id });
+    res
+      .status(401)
+      .json({ error: "Unauthorized: Missing user authentication.", requestId: req.id });
     return null;
   }
   return uid;
@@ -64,7 +66,8 @@ export function updateCredentialEndpoint(req: Request, res: Response): void {
   } catch (err) {
     if (err instanceof CredentialDecryptionError) {
       res.status(422).json({
-        error: "Existing credential cannot be decrypted (key mismatch or corrupted data). Please re-enter the API key.",
+        error:
+          "Existing credential cannot be decrypted (key mismatch or corrupted data). Please re-enter the API key.",
       });
       return;
     }
@@ -85,4 +88,3 @@ export function removeCredential(req: Request, res: Response): void {
 }
 
 export { getProviderCredential };
-

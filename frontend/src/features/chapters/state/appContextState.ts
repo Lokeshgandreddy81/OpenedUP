@@ -47,7 +47,6 @@ export interface AppContextType {
   handleNewPile: () => void;
 }
 
-
 declare global {
   interface Window {
     __SHOBOX_APP_CONTEXT__?: React.Context<AppContextType | null>;
@@ -62,7 +61,6 @@ export const AppContext: React.Context<AppContextType | null> =
 if (typeof window !== "undefined") {
   window.__SHOBOX_APP_CONTEXT__ = AppContext;
 }
-
 
 export const DEFAULT_APP_CONTEXT: AppContextType = {
   photos: [],
@@ -95,4 +93,3 @@ export const DEFAULT_APP_CONTEXT: AppContextType = {
   handleChangeCostCenter: () => {},
   handleNewPile: () => {},
 };
-

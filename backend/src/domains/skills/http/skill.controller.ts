@@ -270,25 +270,33 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
 
       if (!zipBuffer || zipBuffer.length === 0) {
         res.status(400).json({
-          error: "Missing skill package. Upload a file (.zip, .md, .pdf), provide zipBase64, or provide skillMd.",
+          error:
+            "Missing skill package. Upload a file (.zip, .md, .pdf), provide zipBase64, or provide skillMd.",
           requestId: req.id,
         });
         return;
       }
 
       const originalName = (req.file?.originalname || "").toLowerCase();
-      if (originalName.endsWith(".md") || originalName.endsWith(".markdown") || originalName.endsWith(".txt")) {
+      if (
+        originalName.endsWith(".md") ||
+        originalName.endsWith(".markdown") ||
+        originalName.endsWith(".txt")
+      ) {
         const textContent = zipBuffer.toString("utf8");
         const baseName =
-          path.parse(req.file?.originalname || "custom-skill").name
-            .toLowerCase()
+          path
+            .parse(req.file?.originalname || "custom-skill")
+            .name.toLowerCase()
             .replace(/[^a-z0-9-]/g, "-")
             .replace(/^-+|-+$/g, "") || "custom-skill";
         const hasFm = textContent.trimStart().startsWith("---");
         const skillMd = hasFm
           ? textContent
           : `---\nname: ${baseName}\ndescription: Used for custom instructions from ${req.file?.originalname}\n---\n${textContent}`;
-        parsed = parseSkillPackage([{ relativePath: "SKILL.md", content: Buffer.from(skillMd, "utf8") }]);
+        parsed = parseSkillPackage([
+          { relativePath: "SKILL.md", content: Buffer.from(skillMd, "utf8") },
+        ]);
       } else {
         parsed = parseSkillZip(zipBuffer);
       }
@@ -486,7 +494,8 @@ export async function updateSkill(req: Request, res: Response): Promise<void> {
 
       if (!zipBuffer || zipBuffer.length === 0) {
         res.status(400).json({
-          error: "Missing updated skill package. Upload a zip file, provide zipBase64, or provide skillMd.",
+          error:
+            "Missing updated skill package. Upload a zip file, provide zipBase64, or provide skillMd.",
           requestId: req.id,
         });
         return;
@@ -609,7 +618,9 @@ export function syncConversationProjectSkills(req: Request, res: Response): void
   const projectId = (req.body?.projectId || req.query["projectId"]) as string;
 
   if (!projectId) {
-    res.status(400).json({ error: "projectId is required to sync project skills.", requestId: req.id });
+    res
+      .status(400)
+      .json({ error: "projectId is required to sync project skills.", requestId: req.id });
     return;
   }
 
@@ -887,8 +898,7 @@ export async function testScratchSkill(req: Request, res: Response): Promise<voi
     traces.push({
       toolName: "Skill",
       input: { skill: created.name },
-      output:
-        skillResult.content.slice(0, 500) + (skillResult.content.length > 500 ? "..." : ""),
+      output: skillResult.content.slice(0, 500) + (skillResult.content.length > 500 ? "..." : ""),
       isError: Boolean(skillResult.isError),
     });
 

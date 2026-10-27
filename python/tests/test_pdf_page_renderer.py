@@ -7,15 +7,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
-import fitz
-from pdf_page_renderer import DEFAULT_LIMITS, RenderError, RenderLimits, _render_pages
+import pymupdf
 
+from pdf_page_renderer import DEFAULT_LIMITS, RenderError, RenderLimits, _render_pages
 
 RENDERER = Path(__file__).parents[1] / "src" / "pdf_page_renderer.py"
 
 
 def create_pdf(path: Path, page_count: int) -> None:
-    document = fitz.open()
+    document = pymupdf.open()
     for page_number in range(page_count):
         page = document.new_page(width=612, height=792)
         page.insert_text((72, 72), f"Test page {page_number + 1}")
@@ -38,7 +38,7 @@ class PdfPageRendererTests(unittest.TestCase):
                 self.assertEqual(metadata["mimeType"], "image/jpeg")
                 self.assertLessEqual(max(metadata["width"], metadata["height"]), 1600)
                 image_path = output_dir / metadata["fileName"]
-                with fitz.open(image_path) as image_doc:
+                with pymupdf.open(image_path) as image_doc:
                     self.assertEqual(image_doc.page_count, 1)
                 self.assertLessEqual(metadata["encodedByteCount"], 1_500_000)
             self.assertLessEqual(sum(page["encodedByteCount"] for page in pages), 8_000_000)

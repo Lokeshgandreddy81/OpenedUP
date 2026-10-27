@@ -10,6 +10,7 @@ import type {
   TileColorToken,
 } from "@charan-interiors/contracts";
 import {
+  formatDisplayTitle,
   normalizeChapterNumber,
   extractChapterNumberFromObject,
   isChapterItem,
@@ -19,6 +20,7 @@ import {
 
 export type { ComputedRow };
 export {
+  formatDisplayTitle,
   normalizeChapterNumber,
   extractChapterNumberFromObject,
   isChapterItem,
@@ -157,50 +159,6 @@ export function formatDisplayDate(dateStr: string | null): string {
     return `${match[3]}/${match[2]}/${match[1]}`;
   }
   return dateStr;
-}
-
-// Turn a raw file-ish name into a human title: drop the path, underscores and
-// dashes become spaces, a leading index is stripped (the number lives in its own
-// column), and lowercase words get title-cased. Existing casing (AI, macOS) is
-// preserved, as are join words like "of" and "with".
-export function formatDisplayTitle(raw: string): string {
-  const cleaned = (raw || "")
-    .split("/")
-    .pop()!
-    .replace(/[-_]+/g, " ")
-    .replace(/^\s*\d+[.)]?\s+/, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!cleaned) return raw;
-  const joinWords = new Set([
-    "a",
-    "an",
-    "and",
-    "as",
-    "at",
-    "but",
-    "by",
-    "for",
-    "from",
-    "in",
-    "into",
-    "of",
-    "on",
-    "or",
-    "the",
-    "to",
-    "vs",
-    "with",
-  ]);
-  return cleaned
-    .split(" ")
-    .map((word, i) => {
-      if (/[A-Z]/.test(word)) return word;
-      const lower = word.toLowerCase();
-      if (i > 0 && joinWords.has(lower)) return lower;
-      return lower.charAt(0).toUpperCase() + lower.slice(1);
-    })
-    .join(" ");
 }
 
 /**

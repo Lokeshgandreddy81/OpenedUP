@@ -100,7 +100,10 @@ export function checkSkillToolRateLimit(conversationId: string): RateLimitResult
   return { allowed: true };
 }
 
-export function checkBashRateLimit(conversationId: string, userId?: string | null): RateLimitResult {
+export function checkBashRateLimit(
+  conversationId: string,
+  userId?: string | null
+): RateLimitResult {
   const now = Date.now();
   const windowMs = 60 * 1000; // 1 minute
   const limit = getBashCallsPerMinLimit();

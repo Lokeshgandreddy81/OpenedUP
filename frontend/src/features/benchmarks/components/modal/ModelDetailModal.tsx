@@ -168,7 +168,7 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                     Intelligence Index
                   </span>
                   <div className="text-xl font-bold text-slate-900 mt-1 tabular-nums">
-                    {model.quality.intelligenceIndex}
+                    {model.quality.intelligenceIndex ?? "—"}
                     <span className="text-xs text-slate-400 font-normal"> / 100</span>
                   </div>
                 </div>
@@ -201,6 +201,13 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                     ${model.pricing.blendedPricePer1M.toFixed(2)}
                     <span className="text-xs text-slate-400 font-normal"> / 1M</span>
                   </div>
+                  {model.pricing.sourceBlendedPricePer1M != null &&
+                    model.pricing.sourceBlendedPriceBasis && (
+                      <div className="text-[10px] text-slate-500 mt-1">
+                        AA blend: ${model.pricing.sourceBlendedPricePer1M.toFixed(2)} / 1M ·{" "}
+                        {model.pricing.sourceBlendedPriceBasis}
+                      </div>
+                    )}
                 </div>
               </div>
 
@@ -280,7 +287,7 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                   </span>
                 </div>
                 <span className="text-base font-bold text-[#0047FF] tabular-nums">
-                  {model.quality.intelligenceIndex} / 100
+                  {model.quality.intelligenceIndex ?? "—"} / 100
                 </span>
               </div>
 
@@ -378,7 +385,7 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                     unit: "Elo",
                   },
                 ]
-                  .filter((item) => item.val > 0)
+                  .filter((item) => item.val !== null && item.val > 0)
                   .map((item) => (
                     <div
                       key={item.label}
@@ -393,7 +400,7 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                       <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-[#0047FF] transition-all duration-300"
-                          style={{ width: `${Math.min(100, (item.val / item.max) * 100)}%` }}
+                          style={{ width: `${Math.min(100, ((item.val ?? 0) / item.max) * 100)}%` }}
                         />
                       </div>
                     </div>
@@ -443,7 +450,9 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                     <span className="text-[11px] font-semibold uppercase">500-Token Time</span>
                   </div>
                   <div className="text-2xl font-bold text-slate-900 tabular-nums">
-                    {model.performance.endToEnd500TokensSec}
+                    {model.performance.endToEnd500TokensSec > 0
+                      ? model.performance.endToEnd500TokensSec
+                      : "—"}
                     <span className="text-xs text-slate-400 font-normal"> s</span>
                   </div>
                   <div className="text-[11px] text-slate-500 mt-1">End-to-end response</div>

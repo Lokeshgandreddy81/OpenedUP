@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+@media (min-width: 640px) {
+  .provider-row-header {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .provider-row-status {
+    grid-column: 2;
+    justify-self: center;
+  }
+
+  .provider-row-actions {
+    grid-column: 3;
+  }
+}
+
 @theme {
   --color-brand-purple: #0047ff;
   --color-brand-purple-dark: #0038cc;

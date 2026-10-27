@@ -56,7 +56,11 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
             aria-label={isZoomed ? "Zoom out" : "Zoom in"}
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-slate-200 hover:bg-white/20 hover:text-white transition-colors cursor-pointer"
           >
-            {isZoomed ? <ZoomOut size={16} strokeWidth={1.75} /> : <ZoomIn size={16} strokeWidth={1.75} />}
+            {isZoomed ? (
+              <ZoomOut size={16} strokeWidth={1.75} />
+            ) : (
+              <ZoomIn size={16} strokeWidth={1.75} />
+            )}
           </button>
           <a
             href={src}
@@ -104,7 +108,8 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
         className="text-[12px] text-slate-400 pt-2 text-center"
         onClick={(e) => e.stopPropagation()}
       >
-        Press <kbd className="px-1.5 py-0.5 rounded bg-white/15 text-slate-200 font-mono">Esc</kbd> or click outside to close · Click image to zoom
+        Press <kbd className="px-1.5 py-0.5 rounded bg-white/15 text-slate-200 font-mono">Esc</kbd>{" "}
+        or click outside to close · Click image to zoom
       </div>
     </div>,
     document.body

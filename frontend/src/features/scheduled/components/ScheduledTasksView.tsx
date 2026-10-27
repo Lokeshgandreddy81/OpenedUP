@@ -897,9 +897,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   <div className="flex items-center justify-between gap-1.5 min-w-0">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       {/* Transparent icon */}
-                      <span className="text-[14px] shrink-0 select-none">
-                        {task.icon}
-                      </span>
+                      <span className="text-[14px] shrink-0 select-none">{task.icon}</span>
 
                       {/* Title & Frequency */}
                       <div className="min-w-0 flex-1">
@@ -1024,7 +1022,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
               </button>
               <span className="text-xs font-medium text-slate-500">Scheduled Tasks</span>
               <ChevronRight size={13} className="text-slate-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-900 truncate">Browse Templates</span>
+              <span className="text-xs font-semibold text-slate-900 truncate">
+                Browse Templates
+              </span>
             </div>
           )}
 
@@ -1171,7 +1171,10 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Model
                   </span>
-                  <CreatorLogo creator={resolveModelCreator(selectedTask.model || "gpt-6-astra")} size={15} />
+                  <CreatorLogo
+                    creator={resolveModelCreator(selectedTask.model || "gpt-6-astra")}
+                    size={15}
+                  />
                 </div>
                 <div>
                   <div className="text-[14px] font-semibold text-slate-900 truncate leading-snug">
@@ -1189,7 +1192,11 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     Delivery
                   </span>
-                  <MessageSquarePlus size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
+                  <MessageSquarePlus
+                    size={14}
+                    strokeWidth={1.75}
+                    className="text-slate-500 shrink-0"
+                  />
                 </div>
                 <div>
                   <div className="text-[14px] font-semibold text-slate-900 truncate leading-snug">
@@ -1292,9 +1299,12 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                       <div className="flex items-center justify-center text-slate-950 mb-0.5">
                         <History size={22} strokeWidth={1.75} />
                       </div>
-                      <p className="text-xs font-semibold text-slate-900">No executions recorded yet</p>
+                      <p className="text-xs font-semibold text-slate-900">
+                        No executions recorded yet
+                      </p>
                       <p className="text-[11.5px] text-slate-400 max-w-xs">
-                        Run this task manually with &quot;Run Now&quot; or wait for its scheduled trigger.
+                        Run this task manually with &quot;Run Now&quot; or wait for its scheduled
+                        trigger.
                       </p>
                       <button
                         type="button"
@@ -1324,9 +1334,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                             <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
                               <div className="flex items-center gap-2">
                                 <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-800">
-                                  {isSuccess && <CheckCircle2 size={12} className="text-slate-700" />}
+                                  {isSuccess && (
+                                    <CheckCircle2 size={12} className="text-slate-700" />
+                                  )}
                                   {isFailed && <AlertCircle size={12} className="text-slate-700" />}
-                                  {isRunning && <RotateCw size={12} className="animate-spin text-slate-700" />}
+                                  {isRunning && (
+                                    <RotateCw size={12} className="animate-spin text-slate-700" />
+                                  )}
                                   <span className="capitalize">{run.status}</span>
                                 </span>
 
@@ -1537,10 +1551,10 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                         {modalFrequency === "daily"
                           ? "Daily"
                           : modalFrequency === "weekdays"
-                          ? "Weekdays"
-                          : modalFrequency === "weekly"
-                          ? "Weekly"
-                          : "Monthly"}
+                            ? "Weekdays"
+                            : modalFrequency === "weekly"
+                              ? "Weekly"
+                              : "Monthly"}
                       </span>
                       <ChevronDown
                         size={14}
@@ -1642,7 +1656,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                                 }`}
                               >
                                 <span>Every {day}</span>
-                                {isSelected && <Check size={14} strokeWidth={1.75} className="shrink-0 text-zinc-800" />}
+                                {isSelected && (
+                                  <Check
+                                    size={14}
+                                    strokeWidth={1.75}
+                                    className="shrink-0 text-zinc-800"
+                                  />
+                                )}
                               </button>
                             );
                           })}

@@ -42,7 +42,13 @@ export interface SkillVersion {
 
 export interface SkillContents extends SkillItem {
   categories: string[];
-  agents: Array<{ id: string; name: string; description: string; tools: string[]; systemPrompt: string }>;
+  agents: Array<{
+    id: string;
+    name: string;
+    description: string;
+    tools: string[];
+    systemPrompt: string;
+  }>;
   files: Array<{
     relativePath: string;
     sizeBytes: number;
@@ -258,7 +264,12 @@ export async function testScratchSkill(
 ): Promise<{
   success: boolean;
   scratchConversationId: string;
-  toolTraces: Array<{ toolName: string; input: Record<string, unknown>; output: string; isError: boolean }>;
+  toolTraces: Array<{
+    toolName: string;
+    input: Record<string, unknown>;
+    output: string;
+    isError: boolean;
+  }>;
   finalText: string;
   iterations: number;
 }> {
@@ -351,11 +362,14 @@ export async function syncConversationProjectSkills(
   conversationId: string,
   projectId: string
 ): Promise<{ skills: SkillItem[]; synced: boolean }> {
-  const res = await safeFetch(`/api/conversations/${encodeURIComponent(conversationId)}/skills/sync-project`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ projectId }),
-  });
+  const res = await safeFetch(
+    `/api/conversations/${encodeURIComponent(conversationId)}/skills/sync-project`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId }),
+    }
+  );
   if (!res.ok) throw new Error("Failed to sync project skills");
   return await res.json();
 }

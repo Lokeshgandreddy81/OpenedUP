@@ -29,10 +29,7 @@ export function resolveSkillVersionDir(scope: string, name: string, version: num
 /**
  * Writes skill files immutably to the disk target directory.
  */
-export function writeSkillFilesToDisk(
-  targetDir: string,
-  files: SkillFileEntry[]
-): void {
+export function writeSkillFilesToDisk(targetDir: string, files: SkillFileEntry[]): void {
   fs.mkdirSync(targetDir, { recursive: true });
 
   for (const file of files) {
@@ -45,10 +42,7 @@ export function writeSkillFilesToDisk(
 /**
  * Reads a specific file from disk for a skill.
  */
-export function readSkillFileFromDisk(
-  storagePath: string,
-  relativePath: string
-): Buffer | null {
+export function readSkillFileFromDisk(storagePath: string, relativePath: string): Buffer | null {
   const fullPath = path.join(storagePath, relativePath);
   if (!fs.existsSync(fullPath)) return null;
   return fs.readFileSync(fullPath);

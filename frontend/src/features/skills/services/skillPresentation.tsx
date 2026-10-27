@@ -1,5 +1,14 @@
 import React from "react";
-import { BarChart3, Bot, Code2, Database, FileText, GraduationCap, Search, Video } from "lucide-react";
+import {
+  BarChart3,
+  Bot,
+  Code2,
+  Database,
+  FileText,
+  GraduationCap,
+  Search,
+  Video,
+} from "lucide-react";
 
 const BUILTIN_SKILL_NAMES = new Set([
   "hello-format",
@@ -14,8 +23,11 @@ export function isBuiltinSkill(
   skill: { name?: string; scope?: string } | null | undefined
 ): boolean {
   if (!skill) return false;
-  return skill.scope === "builtin" || skill.scope === "directory" ||
-    (skill.name !== undefined && BUILTIN_SKILL_NAMES.has(skill.name));
+  return (
+    skill.scope === "builtin" ||
+    skill.scope === "directory" ||
+    (skill.name !== undefined && BUILTIN_SKILL_NAMES.has(skill.name))
+  );
 }
 
 export function formatSkillDescription(desc: string): string {
@@ -64,7 +76,12 @@ export function getSkillIcon(name: string, size = 20): React.ReactNode {
   if (n.includes("math") || n.includes("calc") || n.includes("learn") || n.includes("academy")) {
     return <GraduationCap size={size} className={iconClassName} />;
   }
-  if (n.includes("video") || n.includes("youtube") || n.includes("media") || n.includes("transcriber")) {
+  if (
+    n.includes("video") ||
+    n.includes("youtube") ||
+    n.includes("media") ||
+    n.includes("transcriber")
+  ) {
     return <Video size={size} className={iconClassName} />;
   }
   if (n.includes("sql") || n.includes("database") || n.includes("schema")) {
@@ -76,7 +93,12 @@ export function getSkillIcon(name: string, size = 20): React.ReactNode {
   if (n.includes("doc") || n.includes("writer") || n.includes("markdown")) {
     return <FileText size={size} className={iconClassName} />;
   }
-  if (n.includes("fastapi") || n.includes("code") || n.includes("scaffold") || n.includes("backend")) {
+  if (
+    n.includes("fastapi") ||
+    n.includes("code") ||
+    n.includes("scaffold") ||
+    n.includes("backend")
+  ) {
     return <Code2 size={size} className={iconClassName} />;
   }
   if (n.includes("csv") || n.includes("summary") || n.includes("finance") || n.includes("chart")) {

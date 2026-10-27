@@ -64,10 +64,7 @@ test("Directory listing prefers the marketplace copy over a legacy built-in dupl
 
   const listed = repo.listDirectorySkills();
 
-  assert.equal(
-    listed.filter((skill) => skill.name === "duplicate-marketplace-skill").length,
-    1
-  );
+  assert.equal(listed.filter((skill) => skill.name === "duplicate-marketplace-skill").length, 1);
   assert.equal(
     listed.find((skill) => skill.name === "duplicate-marketplace-skill")?.id,
     directoryCopy.id

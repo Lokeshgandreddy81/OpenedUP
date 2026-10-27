@@ -8,14 +8,8 @@ import { SkillRepository } from "./repositories/skillRepository.js";
 import { seedBuiltinSkills } from "./application/seedBuiltinSkills.js";
 import { buildSkillsPrompt } from "./application/promptBuilder.js";
 import { runAnthropicToolLoop } from "./application/anthropicToolLoop.js";
-import {
-  initSandbox,
-  executeWrite,
-} from "./application/sandboxManager.js";
-import {
-  SANDBOX_TOOLS,
-  executeSandboxTool,
-} from "./application/sandboxTools.js";
+import { initSandbox, executeWrite } from "./application/sandboxManager.js";
+import { SANDBOX_TOOLS, executeSandboxTool } from "./application/sandboxTools.js";
 import { SKILL_TOOL_DEFINITION } from "./application/skillToolHandler.js";
 
 function setupE2EEnvironment() {
@@ -68,12 +62,18 @@ test("Skills E2E Integration - Full progressive loading & multi-tool workflow", 
     const systemPrompt = buildSkillsPrompt(enabledSkills);
     assert.ok(systemPrompt.includes("<available_skills>"));
     assert.ok(systemPrompt.includes("<name>csv-summary</name>"));
-    assert.ok(systemPrompt.includes("<location>/mnt/skills/builtin/csv-summary/SKILL.md</location>"));
+    assert.ok(
+      systemPrompt.includes("<location>/mnt/skills/builtin/csv-summary/SKILL.md</location>")
+    );
     assert.ok(!systemPrompt.includes("import sys")); // instructions body is NOT yet injected
 
     // 4. Initialize sandbox & prepare test CSV file in workspace
     const sandboxPaths = initSandbox(conversationId, enabledSkills);
-    executeWrite("sales.csv", "order_id,product,amount\n101,Desk,450\n102,Chair,150\n", sandboxPaths);
+    executeWrite(
+      "sales.csv",
+      "order_id,product,amount\n101,Desk,450\n102,Chair,150\n",
+      sandboxPaths
+    );
 
     // 5. Simulate multi-turn tool-use loop:
     // Turn 1: Model calls 'Skill' tool with 'csv-summary' (Level 2)
@@ -121,7 +121,7 @@ test("Skills E2E Integration - Full progressive loading & multi-tool workflow", 
                 id: "toolu_step2_bash",
                 name: "Bash",
                 input: {
-                  command: 'python3 /mnt/skills/builtin/csv-summary/scripts/summarize.py sales.csv',
+                  command: "python3 /mnt/skills/builtin/csv-summary/scripts/summarize.py sales.csv",
                 },
               },
             ],

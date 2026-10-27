@@ -9,10 +9,7 @@ import {
   type UpdateScheduledTaskRequest,
   type ImportScheduledTasksRequest,
 } from "@charan-interiors/contracts";
-import {
-  CHAT_GENERATION_TIMEOUT_MS,
-  processChat,
-} from "../../chat/application/chat.service.js";
+import { CHAT_GENERATION_TIMEOUT_MS, processChat } from "../../chat/application/chat.service.js";
 import {
   actionableProviderError,
   classifyProviderFailure,
@@ -147,7 +144,9 @@ export class ScheduledTaskService {
   private assertModel(modelId: string): void {
     if (!MODEL_REGISTRY[modelId]?.isChatModel) {
       const safeModelId = redactSecretsString(
-        String(modelId).replace(/[^\x21-\x7E]/g, "").slice(0, 64)
+        String(modelId)
+          .replace(/[^\x21-\x7E]/g, "")
+          .slice(0, 64)
       );
       throw new Error(`UNKNOWN_MODEL:${safeModelId}:Choose a model from the available model list.`);
     }

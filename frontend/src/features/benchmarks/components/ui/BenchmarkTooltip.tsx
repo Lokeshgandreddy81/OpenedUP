@@ -75,12 +75,12 @@ export const BenchmarkTooltipContent: React.FC<BenchmarkTooltipContentProps> = (
           </div>
           <div className="mt-0.5 flex items-baseline gap-1">
             <span className="font-bold text-base text-slate-900 tabular-nums">
-              {model.quality.intelligenceIndex.toFixed(1)}
+              {model.quality.intelligenceIndex?.toFixed(1) ?? "—"}
             </span>
             <span className="text-[10px] text-slate-400">/ 100</span>
           </div>
           <span className="text-[10px] text-slate-400 truncate">
-            MMLU-Pro: {model.quality.mmluPro}%
+            MMLU-Pro: {model.quality.mmluPro == null ? "Not reported" : `${model.quality.mmluPro}%`}
           </span>
         </div>
 
@@ -97,10 +97,7 @@ export const BenchmarkTooltipContent: React.FC<BenchmarkTooltipContentProps> = (
             <span className="text-[10px] text-slate-400">tk/s</span>
           </div>
           <span className="text-[10px] text-slate-400 truncate">
-            P90:{" "}
-            {model.performance.outputSpeedTokensPerSec.p90 ??
-              model.performance.outputSpeedTokensPerSec.median}{" "}
-            tk/s
+            P90: {model.performance.outputSpeedTokensPerSec.p90 ?? "—"} tk/s
           </span>
         </div>
 
@@ -112,11 +109,16 @@ export const BenchmarkTooltipContent: React.FC<BenchmarkTooltipContentProps> = (
           </div>
           <div className="mt-0.5 flex items-baseline gap-1">
             <span className="font-bold text-base text-slate-900 tabular-nums">
-              {model.performance.ttftSeconds.median.toFixed(2)}s
+              {model.performance.ttftSeconds.median > 0
+                ? `${model.performance.ttftSeconds.median.toFixed(2)}s`
+                : "—"}
             </span>
           </div>
           <span className="text-[10px] text-slate-400 truncate">
-            500 tok: {model.performance.endToEnd500TokensSec.toFixed(1)}s
+            500 tok:{" "}
+            {model.performance.endToEnd500TokensSec > 0
+              ? `${model.performance.endToEnd500TokensSec.toFixed(1)}s`
+              : "—"}
           </span>
         </div>
 
@@ -138,6 +140,13 @@ export const BenchmarkTooltipContent: React.FC<BenchmarkTooltipContentProps> = (
           <span className="text-[10px] text-slate-400 truncate">
             In: ${model.pricing.inputPricePer1M} | Out: ${model.pricing.outputPricePer1M}
           </span>
+          {model.pricing.sourceBlendedPricePer1M != null &&
+            model.pricing.sourceBlendedPriceBasis && (
+              <span className="text-[10px] text-slate-400 truncate">
+                AA blend: ${model.pricing.sourceBlendedPricePer1M.toFixed(2)} / 1M ·{" "}
+                {model.pricing.sourceBlendedPriceBasis}
+              </span>
+            )}
         </div>
       </div>
 

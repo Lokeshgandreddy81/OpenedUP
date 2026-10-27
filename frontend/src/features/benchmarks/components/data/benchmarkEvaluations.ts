@@ -24,7 +24,7 @@ export interface BenchmarkEvaluation {
   /** Optional pill rendered next to the chart title (e.g. "Updated") */
   badge?: string;
   /** Extracts the evaluation score from a model */
-  metric: (model: AIModelBenchmark) => number;
+  metric: (model: AIModelBenchmark) => number | null;
 }
 
 export const BENCHMARK_EVALUATIONS: BenchmarkEvaluation[] = [

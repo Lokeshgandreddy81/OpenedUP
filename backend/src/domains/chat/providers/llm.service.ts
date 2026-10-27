@@ -379,8 +379,7 @@ export async function generateMultiProviderChatStream(
   );
   const effort = resolveEffort(params.effort);
   const supportsNativeEffort =
-    params.modelId !== "custom-model" &&
-    supportsProviderReasoningEffort(provider, params.modelId);
+    params.modelId !== "custom-model" && supportsProviderReasoningEffort(provider, params.modelId);
   const effectiveEffort = supportsNativeEffort ? effort : "medium";
   const maxTokens = supportsNativeEffort
     ? (getModelMeta(params.modelId).maxOutputTokens ?? 8192)
@@ -1146,8 +1145,7 @@ export async function generateMultiProviderChat(
 
   const effort = resolveEffort(params.effort);
   const supportsNativeEffort =
-    params.modelId !== "custom-model" &&
-    supportsProviderReasoningEffort(provider, params.modelId);
+    params.modelId !== "custom-model" && supportsProviderReasoningEffort(provider, params.modelId);
   const effectiveEffort = supportsNativeEffort ? effort : "medium";
   const maxTokens = supportsNativeEffort
     ? (getModelMeta(params.modelId).maxOutputTokens ?? 8192)

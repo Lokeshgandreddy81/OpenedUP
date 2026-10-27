@@ -17,12 +17,12 @@ Output:
 ParsedPdfResult JSON printed to stdout.
 """
 
-import sys
-import os
-import json
-import re
-import math
 import collections
+import json
+import math
+import os
+import re
+import sys
 
 # ---------------------------------------------------------------------------
 # Text & Decoration Normalization Utilities
@@ -259,13 +259,13 @@ def select_optimal_toc_markers(toc: list, total_pages: int) -> list:
         return []
 
     levels = sorted(list(set(item[0] for item in cleaned_toc)))
-    items_by_level = {l: [it for it in cleaned_toc if it[0] == l] for l in levels}
+    items_by_level = {level: [item for item in cleaned_toc if item[0] == level] for level in levels}
 
     # If min level has only 1 item (usually document title/wrapper) and deeper levels have >= 2 items, bypass wrapper
     curr_min = levels[0]
     while curr_min in items_by_level and len(items_by_level[curr_min]) == 1:
-        deeper = [l for l in levels if l > curr_min]
-        if deeper and any(len(items_by_level[l]) >= 2 for l in deeper):
+        deeper = [level for level in levels if level > curr_min]
+        if deeper and any(len(items_by_level[level]) >= 2 for level in deeper):
             curr_min = deeper[0]
         else:
             break
@@ -309,9 +309,9 @@ def select_optimal_toc_markers(toc: list, total_pages: int) -> list:
     else:
         best_lvl = curr_min
         if len(lvl1_items) < 2:
-            for l in levels:
-                if len(items_by_level[l]) >= 2:
-                    best_lvl = l
+            for level in levels:
+                if len(items_by_level[level]) >= 2:
+                    best_lvl = level
                     break
         selected_raw = [(it[1], it[2]) for it in items_by_level.get(best_lvl, cleaned_toc)]
 
@@ -628,8 +628,8 @@ def ensure_front_and_back_matter(markers: list, page_texts: list, total_pages: i
         last_fm_kw = None
         for p in range(1, first_sp):
             txt = page_texts[p - 1] if p - 1 < len(page_texts) else ""
-            lines = [clean_markdown_decorations(l.strip()) for l in txt.split('\n') if l.strip()]
-            for l_idx, line in enumerate(lines[:8]):
+            lines = [clean_markdown_decorations(line.strip()) for line in txt.split('\n') if line.strip()]
+            for line_index, line in enumerate(lines[:8]):
                 if is_footer_or_watermark(line):
                     continue
                 m_fm = FRONT_MATTER_HEADING_REGEX.match(line)
@@ -640,8 +640,8 @@ def ensure_front_and_back_matter(markers: list, page_texts: list, total_pages: i
                     last_fm_kw = matched_kw
 
                     raw_title = line
-                    if len(line.split()) <= 2 and l_idx + 1 < len(lines):
-                        nxt = lines[l_idx + 1]
+                    if len(line.split()) <= 2 and line_index + 1 < len(lines):
+                        nxt = lines[line_index + 1]
                         if len(nxt) <= 80 and not nxt.endswith('.') and not FRONT_MATTER_HEADING_REGEX.match(nxt):
                             raw_title = f"{line.title()}: {nxt}"
                     else:
@@ -685,8 +685,8 @@ def ensure_front_and_back_matter(markers: list, page_texts: list, total_pages: i
         last_bm_kw = None
         for p in range(last_sp + 1, total_pages + 1):
             txt = page_texts[p - 1] if p - 1 < len(page_texts) else ""
-            lines = [clean_markdown_decorations(l.strip()) for l in txt.split('\n') if l.strip()]
-            for l_idx, line in enumerate(lines[:8]):
+            lines = [clean_markdown_decorations(line.strip()) for line in txt.split('\n') if line.strip()]
+            for line_index, line in enumerate(lines[:8]):
                 if is_footer_or_watermark(line):
                     continue
                 m_bm = BACK_MATTER_HEADING_REGEX.match(line)
@@ -697,8 +697,8 @@ def ensure_front_and_back_matter(markers: list, page_texts: list, total_pages: i
                     last_bm_kw = matched_kw
 
                     raw_title = line
-                    if len(line.split()) <= 2 and l_idx + 1 < len(lines):
-                        nxt = lines[l_idx + 1]
+                    if len(line.split()) <= 2 and line_index + 1 < len(lines):
+                        nxt = lines[line_index + 1]
                         if len(nxt) <= 80 and not nxt.endswith('.') and not BACK_MATTER_HEADING_REGEX.match(nxt):
                             raw_title = f"{line.title()}: {nxt}"
                     else:
@@ -841,11 +841,11 @@ def slice_subpage_text(sp: int, ep: int, marker: dict, next_marker: dict, page_t
 
     # Clean out watermarks and separators from final extracted text
     cleaned_lines = []
-    for l in section_txt.split("\n"):
-        cl = clean_markdown_decorations(l)
+    for source_line in section_txt.split("\n"):
+        cl = clean_markdown_decorations(source_line)
         if not cl or cl == "---" or is_footer_or_watermark(cl):
             continue
-        cleaned_lines.append(l)
+        cleaned_lines.append(source_line)
 
     return clean_text("\n".join(cleaned_lines))
 
@@ -889,8 +889,8 @@ def parse_with_pymupdf(pdf_path: str, fallback_file_name: str = ""):
                     continue
                 block_spans = []
                 block_max_sz = 0.0
-                for l in b.get("lines", []):
-                    for s in l.get("spans", []):
+                for block_line in b.get("lines", []):
+                    for s in block_line.get("spans", []):
                         t = clean_markdown_decorations(s.get("text", "")).strip()
                         sz = round(float(s.get("size", 0)), 1)
                         if not t or is_footer_or_watermark(t) or is_dummy_title(t):
@@ -935,8 +935,8 @@ def parse_with_pymupdf(pdf_path: str, fallback_file_name: str = ""):
         # Check if doc uses explicit Chapter/Part keywords
         has_ch_kw = False
         for pt in page_texts:
-            for l in pt.split('\n'):
-                cl = clean_markdown_decorations(l)
+            for source_line in pt.split('\n'):
+                cl = clean_markdown_decorations(source_line)
                 if CHAPTER_PREFIX_REGEX.match(cl):
                     has_ch_kw = True
                     break
@@ -953,9 +953,8 @@ def parse_with_pymupdf(pdf_path: str, fallback_file_name: str = ""):
         )
 
         for pg_idx in range(total_pages):
-            page = doc[pg_idx]
             raw_text = page_texts[pg_idx]
-            raw_lines = [l.strip() for l in raw_text.split("\n") if l.strip()]
+            raw_lines = [line.strip() for line in raw_text.split("\n") if line.strip()]
             if not raw_lines:
                 continue
 
@@ -972,7 +971,7 @@ def parse_with_pymupdf(pdf_path: str, fallback_file_name: str = ""):
                 continue
 
             # Check if this page introduces the printed Table of Contents
-            has_toc_title = any(TOC_TITLE_REGEX.search(l) for l in raw_lines[:6])
+            has_toc_title = any(TOC_TITLE_REGEX.search(line) for line in raw_lines[:6])
             if has_toc_title:
                 in_toc = True
                 raw_markers.append({
@@ -988,10 +987,10 @@ def parse_with_pymupdf(pdf_path: str, fallback_file_name: str = ""):
             # Suppress false chapter matches while inside the printed Table of Contents
             if in_toc:
                 ch_count = sum(
-                    1 for l in raw_lines
-                    if CHAPTER_PREFIX_REGEX.match(clean_markdown_decorations(l))
-                    or re.search(r'\.{4,}\s*\d+', l)
-                    or clean_markdown_decorations(l).lower().startswith('appendix')
+                    1 for line in raw_lines
+                    if CHAPTER_PREFIX_REGEX.match(clean_markdown_decorations(line))
+                    or re.search(r'\.{4,}\s*\d+', line)
+                    or clean_markdown_decorations(line).lower().startswith('appendix')
                 )
                 if ch_count >= 2 or len(raw_lines) <= 4:
                     continue
@@ -1000,13 +999,13 @@ def parse_with_pymupdf(pdf_path: str, fallback_file_name: str = ""):
 
             # Filter running headers, page numbers, watermarks
             content_lines = []
-            for l in raw_lines:
-                cl = clean_markdown_decorations(l)
+            for source_line in raw_lines:
+                cl = clean_markdown_decorations(source_line)
                 if not cl or is_footer_or_watermark(cl):
                     continue
                 if re.search(r'\|\s*Page\s+\d+', cl, re.I) or re.match(r'^\d+$', cl):
                     continue
-                content_lines.append(l)
+                content_lines.append(source_line)
 
             if not content_lines:
                 continue
@@ -1255,8 +1254,8 @@ def parse_with_pypdf(pdf_path: str, fallback_file_name: str = ""):
 
         has_ch_kw = False
         for pt in page_texts:
-            for l in pt.split('\n'):
-                cl = clean_markdown_decorations(l)
+            for source_line in pt.split('\n'):
+                cl = clean_markdown_decorations(source_line)
                 if CHAPTER_PREFIX_REGEX.match(cl):
                     has_ch_kw = True
                     break
@@ -1274,7 +1273,7 @@ def parse_with_pypdf(pdf_path: str, fallback_file_name: str = ""):
 
         for pg_idx in range(total_pages):
             raw_text = page_texts[pg_idx]
-            raw_lines = [l.strip() for l in raw_text.split("\n") if l.strip()]
+            raw_lines = [line.strip() for line in raw_text.split("\n") if line.strip()]
             if not raw_lines:
                 continue
 
@@ -1289,7 +1288,7 @@ def parse_with_pypdf(pdf_path: str, fallback_file_name: str = ""):
                 })
                 continue
 
-            has_toc_title = any(TOC_TITLE_REGEX.search(l) for l in raw_lines[:6])
+            has_toc_title = any(TOC_TITLE_REGEX.search(line) for line in raw_lines[:6])
             if has_toc_title:
                 in_toc = True
                 raw_markers.append({
@@ -1304,10 +1303,10 @@ def parse_with_pypdf(pdf_path: str, fallback_file_name: str = ""):
 
             if in_toc:
                 ch_count = sum(
-                    1 for l in raw_lines
-                    if CHAPTER_PREFIX_REGEX.match(clean_markdown_decorations(l))
-                    or re.search(r'\.{4,}\s*\d+', l)
-                    or clean_markdown_decorations(l).lower().startswith('appendix')
+                    1 for line in raw_lines
+                    if CHAPTER_PREFIX_REGEX.match(clean_markdown_decorations(line))
+                    or re.search(r'\.{4,}\s*\d+', line)
+                    or clean_markdown_decorations(line).lower().startswith('appendix')
                 )
                 if ch_count >= 2 or len(raw_lines) <= 4:
                     continue
@@ -1315,13 +1314,13 @@ def parse_with_pypdf(pdf_path: str, fallback_file_name: str = ""):
                     in_toc = False
 
             content_lines = []
-            for l in raw_lines:
-                cl = clean_markdown_decorations(l)
+            for source_line in raw_lines:
+                cl = clean_markdown_decorations(source_line)
                 if not cl or is_footer_or_watermark(cl):
                     continue
                 if re.search(r'\|\s*Page\s+\d+', cl, re.I) or re.match(r'^\d+$', cl):
                     continue
-                content_lines.append(l)
+                content_lines.append(source_line)
 
             if not content_lines:
                 continue

@@ -62,12 +62,7 @@ export class ConversationRepository {
     };
   }
 
-  create(
-    userId: string,
-    title: string,
-    model: string,
-    projectId?: string
-  ): StoredConversation {
+  create(userId: string, title: string, model: string, projectId?: string): StoredConversation {
     const now = Date.now();
     const id = randomUUID();
     this.db

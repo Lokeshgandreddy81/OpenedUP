@@ -94,9 +94,14 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
       (m) =>
         m.role === "assistant" &&
         Array.isArray(m.content) &&
-        m.content.some((c) => c.type === "tool_use" && c.name === "Skill" && c.input?.skill === "hello-format")
+        m.content.some(
+          (c) => c.type === "tool_use" && c.name === "Skill" && c.input?.skill === "hello-format"
+        )
     );
-    assert.ok(syntheticToolUse, "Turn 1 must contain synthetic tool_use for explicitly selected skill");
+    assert.ok(
+      syntheticToolUse,
+      "Turn 1 must contain synthetic tool_use for explicitly selected skill"
+    );
 
     const syntheticToolResult = receivedMessages.find(
       (m) =>
@@ -147,7 +152,11 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
     });
 
     const unselectedUnpreloaded = repo.getUnpreloadedExplicitSkills(convAutoId);
-    assert.equal(unselectedUnpreloaded.length, 0, "Unselected skill must NOT be marked for preloading");
+    assert.equal(
+      unselectedUnpreloaded.length,
+      0,
+      "Unselected skill must NOT be marked for preloading"
+    );
 
     let autoTurnMessages: AnthropicMessage[] = [];
     const mockAutoFetch = async (
@@ -185,6 +194,10 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
         Array.isArray(m.content) &&
         m.content.some((c) => c.type === "tool_use" && c.name === "Skill")
     );
-    assert.equal(hasSyntheticToolUse, false, "Auto-matched skill must NOT be preloaded as synthetic tool call");
+    assert.equal(
+      hasSyntheticToolUse,
+      false,
+      "Auto-matched skill must NOT be preloaded as synthetic tool call"
+    );
   });
 });

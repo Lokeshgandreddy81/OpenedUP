@@ -113,170 +113,184 @@ test("ScheduledTaskService - Autonomous background execution with credential vau
     assert.equal(persistedConversation, true);
   });
 
-  await t.test("2. Missing API key triggers actionable error and persists failure notification to conversation", async () => {
-    let finishedStatus = "";
-    let finishedError = "";
-    let finishedConversationId: string | undefined;
-    const appendedMessages: AppendedMessage[] = [];
+  await t.test(
+    "2. Missing API key triggers actionable error and persists failure notification to conversation",
+    async () => {
+      let finishedStatus = "";
+      let finishedError = "";
+      let finishedConversationId: string | undefined;
+      const appendedMessages: AppendedMessage[] = [];
 
-    const mockTasksRepo = {
-      enqueueDueRuns: () => 1,
-      claimNextRun: () => ({
-        id: "run-2",
-        taskId: "task-2",
-        userId: "user-456",
-        trigger: "scheduled" as const,
-        status: "running" as const,
-        scheduledFor: Date.now(),
-        createdAt: Date.now(),
-        startedAt: Date.now(),
-        finishedAt: null,
-        output: null,
-        error: null,
-        modelUsed: null,
-        providerUsed: null,
-        conversationId: null,
-      }),
-      getForExecution: (_id: string): MockTask => ({
-        id: "task-2",
-        userId: "user-456",
-        title: "Market Report",
-        prompt: "Analyze latest market stats",
-        icon: "📊",
-        frequency: "daily",
-        time: "08:00",
-        timezone: "UTC",
-        isActive: true,
-        model: "gpt-6-astra",
-        effort: "High",
-        notifications: "Important updates",
-        startInNewChat: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        lastRunAt: null,
-        nextRunAt: null,
-        conversationId: null,
-      }),
-      setConversationId: () => {},
-      finishRun: (params: { status: string; error?: string; conversationId?: string }) => {
-        finishedStatus = params.status;
-        finishedError = params.error || "";
-        finishedConversationId = params.conversationId;
-      },
-    } as unknown as TaskRepositoryDouble;
+      const mockTasksRepo = {
+        enqueueDueRuns: () => 1,
+        claimNextRun: () => ({
+          id: "run-2",
+          taskId: "task-2",
+          userId: "user-456",
+          trigger: "scheduled" as const,
+          status: "running" as const,
+          scheduledFor: Date.now(),
+          createdAt: Date.now(),
+          startedAt: Date.now(),
+          finishedAt: null,
+          output: null,
+          error: null,
+          modelUsed: null,
+          providerUsed: null,
+          conversationId: null,
+        }),
+        getForExecution: (_id: string): MockTask => ({
+          id: "task-2",
+          userId: "user-456",
+          title: "Market Report",
+          prompt: "Analyze latest market stats",
+          icon: "📊",
+          frequency: "daily",
+          time: "08:00",
+          timezone: "UTC",
+          isActive: true,
+          model: "gpt-6-astra",
+          effort: "High",
+          notifications: "Important updates",
+          startInNewChat: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          lastRunAt: null,
+          nextRunAt: null,
+          conversationId: null,
+        }),
+        setConversationId: () => {},
+        finishRun: (params: { status: string; error?: string; conversationId?: string }) => {
+          finishedStatus = params.status;
+          finishedError = params.error || "";
+          finishedConversationId = params.conversationId;
+        },
+      } as unknown as TaskRepositoryDouble;
 
-    const mockConversationsRepo = {
-      get: () => null,
-      create: () => ({ id: "conv-missing-key" }),
-      appendMessage: (_userId: string, _convId: string, msg: AppendedMessage) => {
-        appendedMessages.push(msg);
-      },
-    } as unknown as ConversationRepositoryDouble;
+      const mockConversationsRepo = {
+        get: () => null,
+        create: () => ({ id: "conv-missing-key" }),
+        appendMessage: (_userId: string, _convId: string, msg: AppendedMessage) => {
+          appendedMessages.push(msg);
+        },
+      } as unknown as ConversationRepositoryDouble;
 
-    const mockLoadCredential = () => null; // Missing key
+      const mockLoadCredential = () => null; // Missing key
 
-    const service = new ScheduledTaskService(
-      mockTasksRepo,
-      mockConversationsRepo,
-      (async (_payload: ChatRequest, _options?: ProcessChatOptions) => { throw new Error("not expected"); }) as unknown as GeneratorDouble,
-      mockLoadCredential as unknown as CredentialLoaderDouble
-    );
+      const service = new ScheduledTaskService(
+        mockTasksRepo,
+        mockConversationsRepo,
+        (async (_payload: ChatRequest, _options?: ProcessChatOptions) => {
+          throw new Error("not expected");
+        }) as unknown as GeneratorDouble,
+        mockLoadCredential as unknown as CredentialLoaderDouble
+      );
 
-    const executed = await service.executeNext();
-    assert.equal(executed, true);
-    assert.equal(finishedStatus, "failed");
-    assert.match(finishedError, /Connect your OpenAI key in Customize → Providers to run this task/);
-    assert.equal(finishedConversationId, "conv-missing-key");
-    assert.equal(appendedMessages.length, 2);
-    // User message
-    assert.equal(appendedMessages[0]!.role, "user");
-    assert.equal(appendedMessages[0]!.content, "Analyze latest market stats");
-    // Assistant actionable notification message
-    assert.equal(appendedMessages[1]!.role, "assistant");
-    assert.equal(appendedMessages[1]!.status, "interrupted");
-    assert.match(appendedMessages[1]!.content, /⚠️ Scheduled task "Market Report" could not run/);
-    assert.match(appendedMessages[1]!.content, /Customize → Providers/);
-  });
+      const executed = await service.executeNext();
+      assert.equal(executed, true);
+      assert.equal(finishedStatus, "failed");
+      assert.match(
+        finishedError,
+        /Connect your OpenAI key in Customize → Providers to run this task/
+      );
+      assert.equal(finishedConversationId, "conv-missing-key");
+      assert.equal(appendedMessages.length, 2);
+      // User message
+      assert.equal(appendedMessages[0]!.role, "user");
+      assert.equal(appendedMessages[0]!.content, "Analyze latest market stats");
+      // Assistant actionable notification message
+      assert.equal(appendedMessages[1]!.role, "assistant");
+      assert.equal(appendedMessages[1]!.status, "interrupted");
+      assert.match(appendedMessages[1]!.content, /⚠️ Scheduled task "Market Report" could not run/);
+      assert.match(appendedMessages[1]!.content, /Customize → Providers/);
+    }
+  );
 
-  await t.test("3. Revoked / rejected API key triggers actionable error and persists failure notification", async () => {
-    let finishedStatus = "";
-    let finishedError = "";
-    const appendedMessages: AppendedMessage[] = [];
+  await t.test(
+    "3. Revoked / rejected API key triggers actionable error and persists failure notification",
+    async () => {
+      let finishedStatus = "";
+      let finishedError = "";
+      const appendedMessages: AppendedMessage[] = [];
 
-    const mockTasksRepo = {
-      enqueueDueRuns: () => 1,
-      claimNextRun: () => ({
-        id: "run-3",
-        taskId: "task-3",
-        userId: "user-789",
-        trigger: "scheduled" as const,
-        status: "running" as const,
-        scheduledFor: Date.now(),
-        createdAt: Date.now(),
-        startedAt: Date.now(),
-        finishedAt: null,
-        output: null,
-        error: null,
-        modelUsed: null,
-        providerUsed: null,
-        conversationId: null,
-      }),
-      getForExecution: (_id: string): MockTask => ({
-        id: "task-3",
-        userId: "user-789",
-        title: "Daily Briefing",
-        prompt: "Give me the morning briefing",
-        icon: "⏱️",
-        frequency: "weekdays",
-        time: "07:30",
-        timezone: "UTC",
-        isActive: true,
-        model: "claude-opus-5.5",
-        effort: "Medium",
-        notifications: "Failed runs only", // specifically wants failure alerts
-        startInNewChat: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        lastRunAt: null,
-        nextRunAt: null,
-        conversationId: null,
-      }),
-      setConversationId: () => {},
-      finishRun: (params: { status: string; error?: string; conversationId?: string }) => {
-        finishedStatus = params.status;
-        finishedError = params.error || "";
-      },
-    } as unknown as TaskRepositoryDouble;
+      const mockTasksRepo = {
+        enqueueDueRuns: () => 1,
+        claimNextRun: () => ({
+          id: "run-3",
+          taskId: "task-3",
+          userId: "user-789",
+          trigger: "scheduled" as const,
+          status: "running" as const,
+          scheduledFor: Date.now(),
+          createdAt: Date.now(),
+          startedAt: Date.now(),
+          finishedAt: null,
+          output: null,
+          error: null,
+          modelUsed: null,
+          providerUsed: null,
+          conversationId: null,
+        }),
+        getForExecution: (_id: string): MockTask => ({
+          id: "task-3",
+          userId: "user-789",
+          title: "Daily Briefing",
+          prompt: "Give me the morning briefing",
+          icon: "⏱️",
+          frequency: "weekdays",
+          time: "07:30",
+          timezone: "UTC",
+          isActive: true,
+          model: "claude-opus-5.5",
+          effort: "Medium",
+          notifications: "Failed runs only", // specifically wants failure alerts
+          startInNewChat: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          lastRunAt: null,
+          nextRunAt: null,
+          conversationId: null,
+        }),
+        setConversationId: () => {},
+        finishRun: (params: { status: string; error?: string; conversationId?: string }) => {
+          finishedStatus = params.status;
+          finishedError = params.error || "";
+        },
+      } as unknown as TaskRepositoryDouble;
 
-    const mockConversationsRepo = {
-      get: () => null,
-      create: () => ({ id: "conv-revoked-key" }),
-      appendMessage: (_userId: string, _convId: string, msg: AppendedMessage) => {
-        appendedMessages.push(msg);
-      },
-    } as unknown as ConversationRepositoryDouble;
+      const mockConversationsRepo = {
+        get: () => null,
+        create: () => ({ id: "conv-revoked-key" }),
+        appendMessage: (_userId: string, _convId: string, msg: AppendedMessage) => {
+          appendedMessages.push(msg);
+        },
+      } as unknown as ConversationRepositoryDouble;
 
-    // Upstream 401 Unauthorized / revoked key error
-    const mockGenerateChat = async () => {
-      throw new Error("HTTP 401 Unauthorized: invalid x-api-key");
-    };
+      // Upstream 401 Unauthorized / revoked key error
+      const mockGenerateChat = async () => {
+        throw new Error("HTTP 401 Unauthorized: invalid x-api-key");
+      };
 
-    const mockLoadCredential = () => ({ apiKey: "sk-ant-revoked-key" });
+      const mockLoadCredential = () => ({ apiKey: "sk-ant-revoked-key" });
 
-    const service = new ScheduledTaskService(
-      mockTasksRepo,
-      mockConversationsRepo,
-      mockGenerateChat as unknown as GeneratorDouble,
-      mockLoadCredential as unknown as CredentialLoaderDouble
-    );
+      const service = new ScheduledTaskService(
+        mockTasksRepo,
+        mockConversationsRepo,
+        mockGenerateChat as unknown as GeneratorDouble,
+        mockLoadCredential as unknown as CredentialLoaderDouble
+      );
 
-    const executed = await service.executeNext();
-    assert.equal(executed, true);
-    assert.equal(finishedStatus, "failed");
-    assert.match(finishedError, /The provider rejected this API key\. Check the key and selected provider in Customize → Providers/);
-    assert.equal(appendedMessages.length, 2);
-    assert.match(appendedMessages[1]!.content, /The provider rejected this API key/);
-  });
+      const executed = await service.executeNext();
+      assert.equal(executed, true);
+      assert.equal(finishedStatus, "failed");
+      assert.match(
+        finishedError,
+        /The provider rejected this API key\. Check the key and selected provider in Customize → Providers/
+      );
+      assert.equal(appendedMessages.length, 2);
+      assert.match(appendedMessages[1]!.content, /The provider rejected this API key/);
+    }
+  );
 
   await t.test("4. 'Failed runs only' does not spam conversation on success", async () => {
     let conversationCreated = false;
@@ -352,82 +366,88 @@ test("ScheduledTaskService - Autonomous background execution with credential vau
     assert.equal(conversationCreated, false);
   });
 
-  await t.test("5. Timed-out provider generation persists timeout message instead of generic error", async () => {
-    let finishedStatus = "";
-    let finishedError = "";
-    const appendedMessages: AppendedMessage[] = [];
+  await t.test(
+    "5. Timed-out provider generation persists timeout message instead of generic error",
+    async () => {
+      let finishedStatus = "";
+      let finishedError = "";
+      const appendedMessages: AppendedMessage[] = [];
 
-    const mockTasksRepo = {
-      enqueueDueRuns: () => 1,
-      claimNextRun: () => ({
-        id: "run-5",
-        taskId: "task-5",
-        userId: "user-timeout",
-        trigger: "scheduled" as const,
-        status: "running" as const,
-        scheduledFor: Date.now(),
-        createdAt: Date.now(),
-        startedAt: Date.now(),
-        finishedAt: null,
-        output: null,
-        error: null,
-        modelUsed: null,
-        providerUsed: null,
-        conversationId: null,
-      }),
-      getForExecution: (_id: string): MockTask => ({
-        id: "task-5",
-        userId: "user-timeout",
-        title: "Slow Task",
-        prompt: "Run slow check",
-        icon: "⏱️",
-        frequency: "daily",
-        time: "09:00",
-        timezone: "UTC",
-        isActive: true,
-        model: "claude-opus-5.5",
-        effort: "Medium",
-        notifications: "Failed runs only",
-        startInNewChat: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        lastRunAt: null,
-        nextRunAt: null,
-        conversationId: null,
-      }),
-      setConversationId: () => {},
-      finishRun: (params: { status: string; error?: string }) => {
-        finishedStatus = params.status;
-        finishedError = params.error || "";
-      },
-    } as unknown as TaskRepositoryDouble;
+      const mockTasksRepo = {
+        enqueueDueRuns: () => 1,
+        claimNextRun: () => ({
+          id: "run-5",
+          taskId: "task-5",
+          userId: "user-timeout",
+          trigger: "scheduled" as const,
+          status: "running" as const,
+          scheduledFor: Date.now(),
+          createdAt: Date.now(),
+          startedAt: Date.now(),
+          finishedAt: null,
+          output: null,
+          error: null,
+          modelUsed: null,
+          providerUsed: null,
+          conversationId: null,
+        }),
+        getForExecution: (_id: string): MockTask => ({
+          id: "task-5",
+          userId: "user-timeout",
+          title: "Slow Task",
+          prompt: "Run slow check",
+          icon: "⏱️",
+          frequency: "daily",
+          time: "09:00",
+          timezone: "UTC",
+          isActive: true,
+          model: "claude-opus-5.5",
+          effort: "Medium",
+          notifications: "Failed runs only",
+          startInNewChat: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          lastRunAt: null,
+          nextRunAt: null,
+          conversationId: null,
+        }),
+        setConversationId: () => {},
+        finishRun: (params: { status: string; error?: string }) => {
+          finishedStatus = params.status;
+          finishedError = params.error || "";
+        },
+      } as unknown as TaskRepositoryDouble;
 
-    const mockConversationsRepo = {
-      get: () => null,
-      create: () => ({ id: "conv-timeout" }),
-      appendMessage: (_userId: string, _convId: string, msg: AppendedMessage) => {
-        appendedMessages.push(msg);
-      },
-    } as unknown as ConversationRepositoryDouble;
+      const mockConversationsRepo = {
+        get: () => null,
+        create: () => ({ id: "conv-timeout" }),
+        appendMessage: (_userId: string, _convId: string, msg: AppendedMessage) => {
+          appendedMessages.push(msg);
+        },
+      } as unknown as ConversationRepositoryDouble;
 
-    const mockGenerateChat = async () => {
-      const timeoutErr = new Error("The operation was aborted due to timeout");
-      timeoutErr.name = "TimeoutError";
-      throw timeoutErr;
-    };
+      const mockGenerateChat = async () => {
+        const timeoutErr = new Error("The operation was aborted due to timeout");
+        timeoutErr.name = "TimeoutError";
+        throw timeoutErr;
+      };
 
-    const service = new ScheduledTaskService(
-      mockTasksRepo,
-      mockConversationsRepo,
-      mockGenerateChat as unknown as GeneratorDouble,
-      (() => ({ apiKey: "sk-ant-valid" })) as unknown as CredentialLoaderDouble
-    );
+      const service = new ScheduledTaskService(
+        mockTasksRepo,
+        mockConversationsRepo,
+        mockGenerateChat as unknown as GeneratorDouble,
+        (() => ({ apiKey: "sk-ant-valid" })) as unknown as CredentialLoaderDouble
+      );
 
-    const executed = await service.executeNext();
-    assert.equal(executed, true);
-    assert.equal(finishedStatus, "failed");
-    assert.equal(finishedError, "This model took too long to respond. Try again or choose another model.");
-    assert.equal(appendedMessages.length, 2);
-    assert.match(appendedMessages[1]!.content, /This model took too long to respond/);
-  });
+      const executed = await service.executeNext();
+      assert.equal(executed, true);
+      assert.equal(finishedStatus, "failed");
+      assert.equal(
+        finishedError,
+        "This model took too long to respond. Try again or choose another model."
+      );
+      assert.equal(appendedMessages.length, 2);
+      assert.match(appendedMessages[1]!.content, /This model took too long to respond/);
+    }
+  );
 });

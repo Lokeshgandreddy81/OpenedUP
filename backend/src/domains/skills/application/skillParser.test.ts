@@ -101,7 +101,8 @@ Body text`;
 });
 
 test("SkillParser - parseSkillMd: rejects SKILL.md over 200KB", () => {
-  const hugeContent = `---
+  const hugeContent =
+    `---
 name: valid-name
 description: Valid description
 ---
@@ -159,9 +160,7 @@ Always greet the user warmly.`);
 test("SkillParser - parseSkillPackage: rejects package missing SKILL.md", () => {
   assert.throws(
     () =>
-      parseSkillPackage([
-        { relativePath: "scripts/run.py", content: Buffer.from("print('hi')") },
-      ]),
+      parseSkillPackage([{ relativePath: "scripts/run.py", content: Buffer.from("print('hi')") }]),
     (err: Error) => err instanceof SkillValidationError && err.message.includes("SKILL.md")
   );
 });

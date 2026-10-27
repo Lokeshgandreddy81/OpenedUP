@@ -73,7 +73,12 @@ export const SkillCreatorModal: React.FC<SkillCreatorModalProps> = ({
   const [testPrompt, setTestPrompt] = useState("Summarize this sample test input data.");
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
-    toolTraces: Array<{ toolName: string; input: Record<string, unknown>; output: string; isError: boolean }>;
+    toolTraces: Array<{
+      toolName: string;
+      input: Record<string, unknown>;
+      output: string;
+      isError: boolean;
+    }>;
     finalText: string;
   } | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
@@ -109,10 +114,7 @@ export const SkillCreatorModal: React.FC<SkillCreatorModalProps> = ({
       .split(",")
       .map((c) => c.trim())
       .filter(Boolean);
-    const catYaml =
-      cats.length > 0
-        ? `categories:\n${cats.map((c) => `  - ${c}`).join("\n")}`
-        : "";
+    const catYaml = cats.length > 0 ? `categories:\n${cats.map((c) => `  - ${c}`).join("\n")}` : "";
 
     return `---
 name: ${name.trim() || "untitled-skill"}
@@ -156,11 +158,19 @@ ${instructions}`;
         if (lowerName.endsWith(".pdf")) {
           // Extract text from PDF
           const { content } = await extractPdfText(file);
-          if (activeFileIndex === -1 && (!instructions || instructions.startsWith("# Instructions"))) {
+          if (
+            activeFileIndex === -1 &&
+            (!instructions || instructions.startsWith("# Instructions"))
+          ) {
             // Populate instructions directly
             setInstructions(content);
             if (!name) {
-              setName(file.name.replace(/\.pdf$/i, "").toLowerCase().replace(/[^a-z0-9-]/g, "-"));
+              setName(
+                file.name
+                  .replace(/\.pdf$/i, "")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9-]/g, "-")
+              );
             }
           } else {
             addedFiles.push({
@@ -168,14 +178,25 @@ ${instructions}`;
               content,
             });
           }
-        } else if (lowerName.endsWith(".md") || lowerName.endsWith(".txt") || lowerName.endsWith(".py") || lowerName.endsWith(".json") || lowerName.endsWith(".sh") || lowerName.endsWith(".yaml") || lowerName.endsWith(".yml")) {
+        } else if (
+          lowerName.endsWith(".md") ||
+          lowerName.endsWith(".txt") ||
+          lowerName.endsWith(".py") ||
+          lowerName.endsWith(".json") ||
+          lowerName.endsWith(".sh") ||
+          lowerName.endsWith(".yaml") ||
+          lowerName.endsWith(".yml")
+        ) {
           const text = await file.text();
 
           if (lowerName === "skill.md") {
             // Populate main SKILL.md instructions
             setInstructions(text);
           } else {
-            const path = lowerName.endsWith(".py") || lowerName.endsWith(".sh") ? `scripts/${file.name}` : file.name;
+            const path =
+              lowerName.endsWith(".py") || lowerName.endsWith(".sh")
+                ? `scripts/${file.name}`
+                : file.name;
             addedFiles.push({
               relativePath: path,
               content: text,
@@ -286,7 +307,6 @@ ${instructions}`;
     <div className="fixed inset-0 z-50 bg-neutral-950/40 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 select-none animate-in fade-in duration-150">
       {/* 30%+ bigger size: max-w-5xl h-[88vh] max-h-[860px] */}
       <div className="bg-white rounded-3xl shadow-[0_30px_90px_-20px_rgba(0,0,0,0.3)] w-full max-w-5xl h-[88vh] max-h-[860px] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 border border-neutral-200/50">
-        
         {/* Hidden desktop file picker for .md, .pdf, .py, .txt, .json */}
         <input
           ref={desktopFileInputRef}
@@ -343,7 +363,10 @@ ${instructions}`;
           {saveError && (
             <div className="p-3.5 bg-rose-50 rounded-2xl text-rose-700 text-xs flex items-center justify-between">
               <span>{saveError}</span>
-              <button onClick={() => setSaveError(null)} className="text-rose-500 hover:text-rose-700">
+              <button
+                onClick={() => setSaveError(null)}
+                className="text-rose-500 hover:text-rose-700"
+              >
                 <X size={14} />
               </button>
             </div>
@@ -360,7 +383,9 @@ ${instructions}`;
                   <input
                     type="text"
                     value={name}
-                    onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    onChange={(e) =>
+                      setName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+                    }
                     placeholder="e.g. data-analyst-pro"
                     className="w-full px-3.5 py-2.5 bg-[#F8F8FA] focus:bg-white text-neutral-900 text-xs sm:text-[13px] font-mono rounded-xl border border-neutral-200/70 focus:border-neutral-400 outline-none transition-colors placeholder:text-neutral-400"
                   />
@@ -414,7 +439,9 @@ ${instructions}`;
                                 {scopeLabels[s].subtitle}
                               </span>
                             </div>
-                            {isSelected && <Check size={14} className="text-neutral-900 shrink-0" />}
+                            {isSelected && (
+                              <Check size={14} className="text-neutral-900 shrink-0" />
+                            )}
                           </button>
                         );
                       })}
@@ -426,9 +453,7 @@ ${instructions}`;
               {/* Description */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-neutral-700">
-                    Description
-                  </label>
+                  <label className="text-xs font-semibold text-neutral-700">Description</label>
                   <span className="text-[11px] font-mono text-neutral-400">
                     {description.length}/1024
                   </span>
@@ -486,7 +511,10 @@ ${instructions}`;
                         : "text-neutral-600 hover:bg-neutral-100 border border-transparent font-medium"
                     }`}
                   >
-                    <FileText size={12} className={activeFileIndex === -1 ? "text-neutral-900" : "text-neutral-400"} />
+                    <FileText
+                      size={12}
+                      className={activeFileIndex === -1 ? "text-neutral-900" : "text-neutral-400"}
+                    />
                     <span>SKILL.md</span>
                   </button>
 
@@ -500,7 +528,12 @@ ${instructions}`;
                           : "text-neutral-600 hover:bg-neutral-100 border border-transparent font-medium"
                       }`}
                     >
-                      <FileCode size={12} className={activeFileIndex === idx ? "text-neutral-900" : "text-neutral-400"} />
+                      <FileCode
+                        size={12}
+                        className={
+                          activeFileIndex === idx ? "text-neutral-900" : "text-neutral-400"
+                        }
+                      />
                       <span>{file.relativePath}</span>
                       <button
                         type="button"
@@ -520,7 +553,9 @@ ${instructions}`;
                 <div className="rounded-2xl overflow-hidden border border-neutral-200/80 bg-[#FAFAFC] font-mono text-xs">
                   <div className="bg-[#F4F4F6] border-b border-neutral-200/70 px-4 py-2.5 flex items-center justify-between text-neutral-500 text-xs shrink-0">
                     <span className="text-neutral-800 font-semibold">
-                      {activeFileIndex === -1 ? "SKILL.md" : extraFiles[activeFileIndex]?.relativePath}
+                      {activeFileIndex === -1
+                        ? "SKILL.md"
+                        : extraFiles[activeFileIndex]?.relativePath}
                     </span>
                     <span className="text-neutral-400 font-normal">UTF-8</span>
                   </div>
@@ -557,15 +592,11 @@ ${instructions}`;
                     <Terminal size={15} className="text-neutral-700" />
                     Scratch Simulation Sandbox
                   </span>
-                  <span className="text-xs font-mono text-neutral-400">
-                    Ephemeral
-                  </span>
+                  <span className="text-xs font-mono text-neutral-400">Ephemeral</span>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-700 block">
-                    Test Prompt
-                  </label>
+                  <label className="text-xs font-medium text-neutral-700 block">Test Prompt</label>
                   <input
                     type="text"
                     value={testPrompt}
@@ -582,7 +613,11 @@ ${instructions}`;
                     disabled={isTesting}
                     className="h-8 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
                   >
-                    {isTesting ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+                    {isTesting ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Play size={13} />
+                    )}
                     <span>{isTesting ? "Executing..." : "Run Test"}</span>
                   </button>
                 </div>
@@ -610,21 +645,31 @@ ${instructions}`;
                           <span className="font-semibold text-neutral-900">
                             {idx + 1}. {trace.toolName}
                           </span>
-                          <span className={trace.isError ? "text-rose-600 font-medium" : "text-emerald-600 font-medium"}>
+                          <span
+                            className={
+                              trace.isError
+                                ? "text-rose-600 font-medium"
+                                : "text-emerald-600 font-medium"
+                            }
+                          >
                             {trace.isError ? "Error" : "Success"}
                           </span>
                         </div>
 
                         <div className="p-3.5 space-y-2 text-xs">
                           <div>
-                            <span className="text-neutral-400 block text-[11px] uppercase">Input</span>
+                            <span className="text-neutral-400 block text-[11px] uppercase">
+                              Input
+                            </span>
                             <pre className="text-neutral-700 overflow-x-auto whitespace-pre-wrap mt-0.5">
                               {JSON.stringify(trace.input, null, 2)}
                             </pre>
                           </div>
 
                           <div>
-                            <span className="text-neutral-400 block text-[11px] uppercase">Output</span>
+                            <span className="text-neutral-400 block text-[11px] uppercase">
+                              Output
+                            </span>
                             <pre className="text-neutral-700 overflow-x-auto whitespace-pre-wrap mt-0.5">
                               {trace.output}
                             </pre>
@@ -635,7 +680,9 @@ ${instructions}`;
                   </div>
 
                   <div className="p-4 bg-[#F8F8FA] border border-neutral-200/60 rounded-2xl space-y-1">
-                    <span className="text-xs font-semibold text-neutral-900 block">Final Output</span>
+                    <span className="text-xs font-semibold text-neutral-900 block">
+                      Final Output
+                    </span>
                     <p className="text-xs sm:text-[13px] text-neutral-700 leading-relaxed whitespace-pre-wrap font-mono">
                       {testResult.finalText}
                     </p>

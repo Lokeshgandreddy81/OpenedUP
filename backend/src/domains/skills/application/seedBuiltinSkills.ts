@@ -1,12 +1,6 @@
 import { SkillRepository, type SkillScope } from "../repositories/skillRepository.js";
-import {
-  parseSkillPackage,
-  type RawFileInput,
-} from "./skillParser.js";
-import {
-  resolveSkillVersionDir,
-  writeSkillFilesToDisk,
-} from "./skillStorage.js";
+import { parseSkillPackage, type RawFileInput } from "./skillParser.js";
+import { resolveSkillVersionDir, writeSkillFilesToDisk } from "./skillStorage.js";
 
 const HELLO_FORMAT_MD = `---
 name: hello-format
@@ -16,9 +10,7 @@ author: Charan Interiors Core
 categories: [Productivity]
 ---
 # Hello Format Instructions
-Always greet the user warmly with their preferred title or name.
-Provide a clean bulleted breakdown of how you can assist them today.
-End with a supportive, professional closing.
+For a greeting, reply with one brief, natural sentence. Do not print the skill name, input, output, JSON, or execution details. Do not list capabilities unless the user asks what you can help with.
 `;
 
 const CSV_SUMMARY_MD = `---

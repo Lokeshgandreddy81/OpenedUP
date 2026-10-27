@@ -269,7 +269,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setSelectedEffort(
         effortOptions.some((option) => option.level === "Medium")
           ? "Medium"
-          : effortOptions[0]?.level ?? "Medium"
+          : (effortOptions[0]?.level ?? "Medium")
       );
     }
     if (!supportsEffort && activeSubmenu === "effort") setActiveSubmenu(null);
@@ -404,7 +404,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setAttachments((current) => [...current, ...result.files]);
       setFileError(result.errors.join(" "));
     } catch {
-      setFileError("One or more files could not be read. Try again with an image, PDF, or text file.");
+      setFileError(
+        "One or more files could not be read. Try again with an image, PDF, or text file."
+      );
     } finally {
       setIsReadingFiles(false);
     }
@@ -456,10 +458,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             landingMode
               ? "border-2 border-slate-300 bg-white shadow-none transition-colors duration-200 focus-within:border-slate-400"
               : stableFrame
-              ? "border border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]"
-              : chapterContextLabel
-                ? "border border-slate-200/80 bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/80"
-                : "border border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/90 focus-within:shadow-[inset_0_1px_2px_rgba(15,23,42,0.02)]"
+                ? "border border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]"
+                : chapterContextLabel
+                  ? "border border-slate-200/80 bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/80"
+                  : "border border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/90 focus-within:shadow-[inset_0_1px_2px_rgba(15,23,42,0.02)]"
           } ${isFileDragActive ? "border-slate-400 bg-slate-100/80 ring-2 ring-slate-900/5" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
@@ -477,7 +479,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           />
 
           {(attachments.length > 0 || isReadingFiles) && (
-            <div className="flex flex-wrap items-center gap-2.5 px-1 py-1 animate-in fade-in slide-in-from-bottom-1 duration-150" aria-label="Attached files">
+            <div
+              className="flex flex-wrap items-center gap-2.5 px-1 py-1 animate-in fade-in slide-in-from-bottom-1 duration-150"
+              aria-label="Attached files"
+            >
               {attachments.map((file) => {
                 const previewUrl =
                   file.previewUrl ||
@@ -513,7 +518,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setAttachments((current) => current.filter((item) => item.id !== file.id));
+                          setAttachments((current) =>
+                            current.filter((item) => item.id !== file.id)
+                          );
                         }}
                         className="absolute top-1 right-1 h-5 w-5 rounded-full bg-slate-900/80 hover:bg-slate-950 text-white shadow-xs flex items-center justify-center transition-all hover:scale-110 active:scale-90 cursor-pointer z-10"
                         aria-label={`Remove ${file.name}`}
@@ -572,7 +579,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           )}
           {hasImageAttachments && !selectedModelSupportsImages && (
             <p role="alert" className="px-1 text-xs leading-5 text-amber-700">
-              ⚠️ {currentModelName} does not accept images. Choose a model marked “Images” before sending this attachment.
+              ⚠️ {currentModelName} does not accept images. Choose a model marked “Images” before
+              sending this attachment.
             </p>
           )}
 
@@ -583,7 +591,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             >
               <Paperclip size={22} className="text-blue-600 animate-bounce" />
               <span className="text-sm font-semibold">Drop files to attach to message</span>
-              <span className="text-xs text-blue-600 font-normal">Supports images, PDFs, text, and code</span>
+              <span className="text-xs text-blue-600 font-normal">
+                Supports images, PDFs, text, and code
+              </span>
             </div>
           )}
 
@@ -993,7 +1003,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                                       {describeModelCapabilities(getModelMeta(selectedInMore.id))}
                                     </span>
                                   </span>
-                                  <Check size={14} className="text-slate-700 shrink-0 stroke-[2.25]" />
+                                  <Check
+                                    size={14}
+                                    className="text-slate-700 shrink-0 stroke-[2.25]"
+                                  />
                                 </div>
                               </div>
                               <div className="my-1.5 border-t border-slate-200" />
@@ -1026,7 +1039,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                                     showModelHoverCard(model, event.currentTarget)
                                   }
                                   onMouseLeave={scheduleModelHoverCardClose}
-                                  onFocus={(event) => showModelHoverCard(model, event.currentTarget)}
+                                  onFocus={(event) =>
+                                    showModelHoverCard(model, event.currentTarget)
+                                  }
                                   onBlur={scheduleModelHoverCardClose}
                                   className={`w-full text-left px-3.5 py-3 rounded-xl flex items-center justify-between transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                                     isSelected
@@ -1075,7 +1090,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                                     : "text-slate-700 hover:bg-slate-50"
                                 }`}
                               >
-                                <span className="text-[13px] font-medium text-slate-800">Effort</span>
+                                <span className="text-[13px] font-medium text-slate-800">
+                                  Effort
+                                </span>
                                 <div className="flex items-center gap-1.5 text-slate-400">
                                   <span className="text-[12px] text-slate-500 font-normal">
                                     {selectedEffort}
@@ -1123,7 +1140,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 {isDictating && (
                   <span className="absolute inset-0 rounded-full bg-rose-400 opacity-25 animate-ping pointer-events-none" />
                 )}
-                <Mic size={18} strokeWidth={isDictating ? 2.2 : 1.8} className={isDictating ? "animate-pulse" : ""} />
+                <Mic
+                  size={18}
+                  strokeWidth={isDictating ? 2.2 : 1.8}
+                  className={isDictating ? "animate-pulse" : ""}
+                />
               </button>
 
               {/* Send / Stop Action Button */}
@@ -1154,9 +1175,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       ? "Reading files…"
                       : isImageCapabilityBlocked
                         ? "Choose a model that accepts images to send this attachment"
-                      : !text.trim() && attachments.length === 0
-                        ? "Type a message to send"
-                        : "Send message"
+                        : !text.trim() && attachments.length === 0
+                          ? "Type a message to send"
+                          : "Send message"
                   }
                   aria-label={isReadingFiles ? "Reading files…" : "Send message"}
                   className={`group h-10 w-10 rounded-full flex items-center justify-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 focus-visible:ring-offset-2 ${
@@ -1172,7 +1193,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       size={17}
                       strokeWidth={2.2}
                       className={`transition-transform duration-150 ${
-                        Boolean(text.trim()) || attachments.length > 0 ? "group-hover:-translate-y-0.5" : ""
+                        Boolean(text.trim()) || attachments.length > 0
+                          ? "group-hover:-translate-y-0.5"
+                          : ""
                       }`}
                     />
                   )}
@@ -1354,7 +1377,9 @@ function ModelDetailsCard({
         {metadata.contextWindowTokens && (
           <>
             <dt>Context</dt>
-            <dd className="tabular-nums font-mono">{metadata.contextWindowTokens.toLocaleString()}</dd>
+            <dd className="tabular-nums font-mono">
+              {metadata.contextWindowTokens.toLocaleString()}
+            </dd>
           </>
         )}
         {metadata.maxOutputTokens && (

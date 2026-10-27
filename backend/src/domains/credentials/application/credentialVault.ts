@@ -64,7 +64,9 @@ export function getEncryptionKey(): Buffer {
   try {
     const existing = fs.readFileSync(file);
     if (existing.length !== 32) {
-      throw new Error(`Master key file at ${file} is invalid: expected 32 bytes, got ${existing.length}.`);
+      throw new Error(
+        `Master key file at ${file} is invalid: expected 32 bytes, got ${existing.length}.`
+      );
     }
     try {
       const stat = fs.statSync(file);
@@ -93,7 +95,9 @@ export function getEncryptionKey(): Buffer {
       if ((writeErr as NodeJS.ErrnoException)?.code === "EEXIST") {
         const raceKey = fs.readFileSync(file);
         if (raceKey.length !== 32) {
-          throw new Error(`Master key file at ${file} is invalid: expected 32 bytes, got ${raceKey.length}.`);
+          throw new Error(
+            `Master key file at ${file} is invalid: expected 32 bytes, got ${raceKey.length}.`
+          );
         }
         return raceKey;
       }
@@ -112,7 +116,10 @@ export function getFallbackEncryptionKeys(): Buffer[] {
   const envVal = process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"]?.trim();
   if (!envVal) return [];
 
-  const tokens = envVal.split(/[,:]+/).map((t) => t.trim()).filter(Boolean);
+  const tokens = envVal
+    .split(/[,:]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
   const keys: Buffer[] = [];
 
   for (const token of tokens) {
@@ -120,7 +127,9 @@ export function getFallbackEncryptionKeys(): Buffer[] {
     if (buf.length === 32) {
       keys.push(buf);
     } else {
-      console.warn(`[BYOK Vault] Ignoring invalid fallback key length: expected 32 bytes, got ${buf.length}.`);
+      console.warn(
+        `[BYOK Vault] Ignoring invalid fallback key length: expected 32 bytes, got ${buf.length}.`
+      );
     }
   }
   return keys;
@@ -223,7 +232,9 @@ export class CryptographicMaterialsCache {
  */
 export function generateBlindIndex(plaintext: string, saltOrKey?: Buffer | string): string {
   const key = saltOrKey
-    ? (typeof saltOrKey === "string" ? Buffer.from(saltOrKey, "utf8") : saltOrKey)
+    ? typeof saltOrKey === "string"
+      ? Buffer.from(saltOrKey, "utf8")
+      : saltOrKey
     : getEncryptionKey();
   const hmac = crypto.createHmac("sha256", key);
   hmac.update(plaintext.trim().toLowerCase());
@@ -264,11 +275,7 @@ export function getVaultAttestationFingerprint(): {
 
     const fallbacks = getFallbackEncryptionKeys();
     const fallbackFingerprints = fallbacks.map((k) =>
-      crypto
-        .createHmac("sha256", "OpenedUp-Attestation-v1")
-        .update(k)
-        .digest("hex")
-        .slice(0, 16)
+      crypto.createHmac("sha256", "OpenedUp-Attestation-v1").update(k).digest("hex").slice(0, 16)
     );
 
     return {
@@ -365,10 +372,7 @@ export function saveProviderCredential(
   cipher.setAAD(aad);
 
   const plaintextBuffer = Buffer.from(JSON.stringify(credential), "utf8");
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintextBuffer),
-    cipher.final(),
-  ]);
+  const ciphertext = Buffer.concat([cipher.update(plaintextBuffer), cipher.final()]);
   const authTag = cipher.getAuthTag();
   secureWipeBuffer(plaintextBuffer);
 
@@ -459,9 +463,7 @@ export function getProviderCredential(
     );
   }
   if (!Buffer.isBuffer(row.ciphertext) || row.ciphertext.length === 0) {
-    throw new CredentialDecryptionError(
-      `Invalid ciphertext buffer for provider ${provider}.`
-    );
+    throw new CredentialDecryptionError(`Invalid ciphertext buffer for provider ${provider}.`);
   }
 
   const primaryKey = getEncryptionKey();
@@ -525,7 +527,9 @@ export function updateProviderEndpoint(
 export function listProviderCredentials(userId: string): ProviderId[] {
   return (
     getChatDatabase()
-      .prepare("SELECT provider_id FROM provider_credentials WHERE user_id = ? ORDER BY provider_id ASC")
+      .prepare(
+        "SELECT provider_id FROM provider_credentials WHERE user_id = ? ORDER BY provider_id ASC"
+      )
       .all(userId) as Array<{ provider_id: ProviderId }>
   ).map((row) => row.provider_id);
 }

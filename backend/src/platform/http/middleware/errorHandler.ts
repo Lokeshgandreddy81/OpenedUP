@@ -26,7 +26,9 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     typeof (err as { status?: number })?.status === "number"
       ? (err as { status: number }).status
       : 500;
-  const safeMessage = redactSecretsString(err instanceof Error ? err.message : "Internal Server Error");
+  const safeMessage = redactSecretsString(
+    err instanceof Error ? err.message : "Internal Server Error"
+  );
 
   logger.error({
     requestId,

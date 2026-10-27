@@ -402,7 +402,11 @@ export function executeSendUserFile(
   conversationId: string,
   paths: SandboxPaths,
   title?: string
-): { content: string; isError?: boolean; attachment?: { downloadUrl: string; fileName: string; sizeBytes: number } } {
+): {
+  content: string;
+  isError?: boolean;
+  attachment?: { downloadUrl: string; fileName: string; sizeBytes: number };
+} {
   try {
     const { fullPath } = resolveSandboxPath(filePath, paths, false);
 

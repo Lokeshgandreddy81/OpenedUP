@@ -75,7 +75,8 @@ export async function renderPdfPagesForOcr(pdfBuffer: Buffer): Promise<RenderedP
         timeout: 20_000,
       }));
     } catch (error) {
-      const details = error && typeof error === "object" ? error as { stderr?: unknown; stdout?: unknown } : {};
+      const details =
+        error && typeof error === "object" ? (error as { stderr?: unknown; stdout?: unknown }) : {};
       const output = `${String(details.stderr || "")} ${String(details.stdout || "")}`;
       if (output.includes("page_limit_exceeded")) {
         throw new AppError("Scanned PDFs must have eight pages or fewer for provider OCR.", 400);
@@ -321,7 +322,8 @@ export async function parsePdfChapters(
     accurateTitle || fileName || "Document"
   );
   const result: ParsedPdfResult = {
-    document_title: parsedResult.data.document_title || accurateTitle || fileName || "Untitled Document",
+    document_title:
+      parsedResult.data.document_title || accurateTitle || fileName || "Untitled Document",
     total_pages: calculatedTotal,
     total_chapters: normalizedChapters.length,
     has_explicit_structure: Boolean(parsedResult.data.has_explicit_structure ?? true),

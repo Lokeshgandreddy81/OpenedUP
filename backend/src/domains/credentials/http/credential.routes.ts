@@ -46,4 +46,3 @@ credentialRouter.patch(
   updateCredentialEndpoint
 );
 credentialRouter.delete("/:provider", mutationRateLimiter, removeCredential);
-

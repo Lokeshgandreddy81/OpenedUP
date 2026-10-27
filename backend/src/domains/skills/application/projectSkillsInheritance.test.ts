@@ -69,7 +69,11 @@ describe("Phase 4: Project-Level Default Skills & Inheritance", () => {
     // Check that existing conversation A is NOT silently altered
     const skillsAfterProjectChange = skillRepo.getConversationSkills(convA.id);
     assert.equal(skillsAfterProjectChange.length, 1);
-    assert.equal(skillsAfterProjectChange[0]!.name, "hello-format", "Existing conversation must not be silently altered");
+    assert.equal(
+      skillsAfterProjectChange[0]!.name,
+      "hello-format",
+      "Existing conversation must not be silently altered"
+    );
 
     // Verify update detection: project has csv-summary, conversation has hello-format
     const projectSkills = skillRepo.getProjectSkills(projectId);
@@ -94,6 +98,10 @@ describe("Phase 4: Project-Level Default Skills & Inheritance", () => {
     // Assert synced
     const syncedSkills = skillRepo.getConversationSkills(convA.id);
     assert.equal(syncedSkills.length, 1);
-    assert.equal(syncedSkills[0]!.name, "csv-summary", "After sync, conversation has updated project skills");
+    assert.equal(
+      syncedSkills[0]!.name,
+      "csv-summary",
+      "After sync, conversation has updated project skills"
+    );
   });
 });

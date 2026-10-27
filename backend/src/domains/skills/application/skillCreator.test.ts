@@ -3,15 +3,8 @@ import assert from "node:assert/strict";
 import type { Request, Response } from "express";
 import { openChatDatabase } from "../../../platform/database/chatDatabase.js";
 import { SkillRepository } from "../repositories/skillRepository.js";
-import {
-  validateSkillDraft,
-  evaluateDescriptionQuality,
-} from "./skillValidator.js";
-import {
-  setSkillRepository,
-  createSkill,
-  testScratchSkill,
-} from "../http/skill.controller.js";
+import { validateSkillDraft, evaluateDescriptionQuality } from "./skillValidator.js";
+import { setSkillRepository, createSkill, testScratchSkill } from "../http/skill.controller.js";
 
 interface TestResponseBody {
   error: string;

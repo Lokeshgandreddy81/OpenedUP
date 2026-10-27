@@ -1,24 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Request, Response } from "express";
-import {
-  redactSecretsString,
-  redactSecretsObject,
-} from "../../platform/observability/logger.js";
-import {
-  isValidApiKey,
-  sanitizeApiKey,
-  sanitizeBaseUrl,
-} from "../../platform/config/index.js";
+import { redactSecretsString, redactSecretsObject } from "../../platform/observability/logger.js";
+import { isValidApiKey, sanitizeApiKey, sanitizeBaseUrl } from "../../platform/config/index.js";
 import { sanitizeLogUrl } from "../../platform/http/middleware/requestLogger.js";
 import { errorHandler } from "../../platform/http/middleware/errorHandler.js";
 import { createRateLimiter } from "../../platform/http/middleware/rateLimiter.js";
 import { actionableProviderError } from "../chat/providers/providerErrors.js";
 import { resolveProviderCredentials } from "../chat/providers/llm.service.js";
-import {
-  listCredentials,
-  removeCredential,
-} from "./http/credential.controller.js";
+import { listCredentials, removeCredential } from "./http/credential.controller.js";
 
 function mockResponse() {
   let statusCode = 200;
@@ -96,7 +86,10 @@ test("ADVERSARIAL AUDIT 1: No BYOK keys in logs, structured logs, stack traces, 
     const cleanPromptUrl = sanitizeLogUrl(
       "/api/chat?prompt=private+customer+question&content=private+answer&question=secret%20question&keep=1"
     );
-    assert.doesNotMatch(cleanPromptUrl, /private\+customer\+question|private\+answer|secret%20question/);
+    assert.doesNotMatch(
+      cleanPromptUrl,
+      /private\+customer\+question|private\+answer|secret%20question/
+    );
     assert.match(cleanPromptUrl, /keep=1/);
 
     // 1.3 Object redaction
@@ -255,7 +248,10 @@ test("ADVERSARIAL AUDIT 4: Rate-limiting and authorization guards on /api/creden
   const resBadProvider = mockResponse();
   removeCredential(reqBadProvider, resBadProvider);
   assert.equal(resBadProvider.statusCode, 400);
-  assert.deepEqual(resBadProvider.body, { error: "Invalid provider specified.", requestId: undefined });
+  assert.deepEqual(resBadProvider.body, {
+    error: "Invalid provider specified.",
+    requestId: undefined,
+  });
 
   // 4.3 Rate limiter enforcement
   const limiter = createRateLimiter({

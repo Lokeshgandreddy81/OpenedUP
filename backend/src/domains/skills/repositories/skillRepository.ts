@@ -171,9 +171,8 @@ export class SkillRepository {
   }
 
   get(id: string): SkillRecord | null {
-    const row = this.db
-      .prepare(`SELECT * FROM skills WHERE id = ?`)
-      .get(id) as Record<string, unknown> | undefined;
+    const row = this.db.prepare(`SELECT * FROM skills WHERE id = ?`).get(id) as
+      Record<string, unknown> | undefined;
 
     return row ? this.mapSkill(row) : null;
   }
@@ -225,7 +224,9 @@ export class SkillRepository {
     params.push(userId, userId);
 
     if (orgId) {
-      visibilityClauses.push("(scope = 'org' AND org_id = ? AND (approval_status = 'approved' OR owner_id = ?))");
+      visibilityClauses.push(
+        "(scope = 'org' AND org_id = ? AND (approval_status = 'approved' OR owner_id = ?))"
+      );
       params.push(orgId, userId);
     } else {
       visibilityClauses.push("(scope = 'org' AND owner_id = ?)");
@@ -384,7 +385,9 @@ export class SkillRepository {
         )
         .run(conversationId, enabledBy || "guest", now, now);
 
-      this.db.prepare("DELETE FROM conversation_skills WHERE conversation_id = ?").run(conversationId);
+      this.db
+        .prepare("DELETE FROM conversation_skills WHERE conversation_id = ?")
+        .run(conversationId);
       const insert = this.db.prepare(
         `INSERT INTO conversation_skills (
           conversation_id, skill_id, enabled_at, enabled_by, explicitly_selected, preloaded_at, source
@@ -398,7 +401,10 @@ export class SkillRepository {
     return this.getConversationSkills(conversationId);
   }
 
-  getConversationSkillMeta(conversationId: string, skillId: string): ConversationSkillRecord | null {
+  getConversationSkillMeta(
+    conversationId: string,
+    skillId: string
+  ): ConversationSkillRecord | null {
     const row = this.db
       .prepare(
         `SELECT conversation_id, skill_id, enabled_at, enabled_by, explicitly_selected, preloaded_at, source
@@ -729,9 +735,8 @@ export class SkillRepository {
 
   // --- Categories & Directory ---
   ensureCategory(name: string, description?: string): string {
-    const existing = this.db
-      .prepare("SELECT id FROM categories WHERE name = ?")
-      .get(name) as { id: string } | undefined;
+    const existing = this.db.prepare("SELECT id FROM categories WHERE name = ?").get(name) as
+      { id: string } | undefined;
     if (existing) return existing.id;
 
     const id = randomUUID();
@@ -770,7 +775,10 @@ export class SkillRepository {
     }));
   }
 
-  listDirectorySkills(options?: { category?: string | undefined; query?: string | undefined }): SkillRecord[] {
+  listDirectorySkills(options?: {
+    category?: string | undefined;
+    query?: string | undefined;
+  }): SkillRecord[] {
     let sql = `
       SELECT DISTINCT s.*
       FROM skills s
@@ -831,7 +839,9 @@ export class SkillRepository {
 
   listPendingApproval(): SkillRecord[] {
     const rows = this.db
-      .prepare("SELECT * FROM skills WHERE approval_status = 'pending_review' ORDER BY updated_at DESC")
+      .prepare(
+        "SELECT * FROM skills WHERE approval_status = 'pending_review' ORDER BY updated_at DESC"
+      )
       .all() as Array<Record<string, unknown>>;
     return rows.map((r) => this.mapSkill(r));
   }

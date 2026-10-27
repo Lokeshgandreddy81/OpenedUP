@@ -12,7 +12,9 @@ import { runAnthropicToolLoop } from "../application/anthropicToolLoop.js";
 async function main(): Promise<void> {
   const apiKey = process.env["ANTHROPIC_API_KEY"];
   if (!apiKey) {
-    console.error("Error: ANTHROPIC_API_KEY environment variable is required to run live E2E test.");
+    console.error(
+      "Error: ANTHROPIC_API_KEY environment variable is required to run live E2E test."
+    );
     console.log("Usage: ANTHROPIC_API_KEY=sk-ant-... npm run e2e:skills");
     process.exit(1);
   }
@@ -71,14 +73,17 @@ async function main(): Promise<void> {
     executeCustomTool: async (toolName, input) => {
       console.log(`\n  -> [TOOL CALL] ${toolName} with input: ${JSON.stringify(input)}`);
       const toolRes = await executeSandboxTool(toolName, input, conversationId, sandbox, repo);
-      const preview = toolRes.content.length > 200 ? toolRes.content.slice(0, 200) + "..." : toolRes.content;
+      const preview =
+        toolRes.content.length > 200 ? toolRes.content.slice(0, 200) + "..." : toolRes.content;
       console.log(`  <- [TOOL RESULT] (${toolRes.isError ? "ERROR" : "OK"}): ${preview}`);
       return toolRes;
     },
   });
 
   console.log("\n=======================================================");
-  console.log(`Completed in ${result.iterations} iteration(s) with stop reason: ${result.stopReason}`);
+  console.log(
+    `Completed in ${result.iterations} iteration(s) with stop reason: ${result.stopReason}`
+  );
   console.log("=======================================================");
   console.log("\n--- Full Tool Call Trace ---");
   for (const [index, trace] of result.toolTraces.entries()) {

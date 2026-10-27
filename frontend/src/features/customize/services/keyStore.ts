@@ -208,9 +208,7 @@ export function removeStoredKey(provider: ProviderId): void {
 
 export function hasKeyForProvider(providerOrModel: ProviderId | string): boolean {
   const provider =
-    providerOrModel === "custom-model"
-      ? getCustomModelProvider()
-      : (providerOrModel as ProviderId);
+    providerOrModel === "custom-model" ? getCustomModelProvider() : (providerOrModel as ProviderId);
   const accountProviders = activeAccountUserId
     ? (cachedAccountProvidersByUser.get(activeAccountUserId) ?? [])
     : [];
@@ -445,9 +443,7 @@ export function useProviderKeys() {
   const hasKey = useCallback(
     (providerOrModel: ProviderId | string) => {
       const provider =
-        providerOrModel === "custom-model"
-          ? customModelProvider
-          : (providerOrModel as ProviderId);
+        providerOrModel === "custom-model" ? customModelProvider : (providerOrModel as ProviderId);
       if (memoryKeys[provider]?.trim()) return true;
       return accountProviders.includes(provider);
     },
