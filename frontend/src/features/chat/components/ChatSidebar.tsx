@@ -282,7 +282,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           onClick={onBack}
           title="Go back"
           aria-label="Go back"
-          className="flex items-center gap-1.5 text-[13px] text-slate-600 hover:text-slate-950 px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer font-medium min-h-[36px] sm:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
+          className="flex items-center gap-1.5 text-[14px] text-slate-900 hover:text-black px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer font-bold min-h-[36px] sm:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
           <ArrowLeft size={18} strokeWidth={2} />
           <span>Back</span>
@@ -304,13 +304,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <button
           type="button"
           onClick={onOpenScheduledTasks}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 rounded-lg text-[14px] transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "scheduled"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 font-normal"
+              ? "bg-slate-100 text-slate-950 font-extrabold"
+              : "text-slate-900 hover:text-slate-950 hover:bg-slate-100/70 font-bold"
           }`}
         >
-          <Clock size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
+          <Clock size={15} strokeWidth={2} className="text-slate-600 shrink-0" />
           <span className="truncate">Scheduled tasks</span>
         </button>
 
@@ -320,100 +320,100 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             onSelectView?.("chat");
             onNewChat();
           }}
-          className="w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] font-normal text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 rounded-lg text-[14px] font-bold text-slate-900 hover:text-slate-950 hover:bg-slate-100/70 transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
-          <SquarePen size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
+          <SquarePen size={15} strokeWidth={2} className="text-slate-600 shrink-0" />
           <span>New chat</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("projects")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 rounded-lg text-[14px] transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
             activeView === "projects"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+              ? "bg-slate-100 text-slate-950 font-extrabold"
+              : "text-slate-900 hover:text-slate-950 hover:bg-slate-100/70 font-bold"
           }`}
         >
-          <ProjectsIcon size={14} />
+          <ProjectsIcon size={15} className="text-slate-600 shrink-0" />
           <span>Projects</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("artifacts")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 rounded-lg text-[14px] transition-colors cursor-pointer text-left ${
             activeView === "artifacts"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+              ? "bg-slate-100 text-slate-950 font-extrabold"
+              : "text-slate-900 hover:text-slate-950 hover:bg-slate-100/70 font-bold"
           }`}
         >
-          <Shapes size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
+          <Shapes size={15} strokeWidth={2} className="text-slate-600 shrink-0" />
           <span>Artifacts</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("customize")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 rounded-lg text-[14px] transition-colors cursor-pointer text-left ${
             activeView === "customize"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+              ? "bg-slate-100 text-slate-950 font-extrabold"
+              : "text-slate-900 hover:text-slate-950 hover:bg-slate-100/70 font-bold"
           }`}
         >
-          <Briefcase size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
+          <Briefcase size={15} strokeWidth={2} className="text-slate-600 shrink-0" />
           <span>Customize</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("benchmarks")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 rounded-lg text-[14px] transition-colors cursor-pointer text-left ${
             activeView === "benchmarks"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+              ? "bg-slate-100 text-slate-950 font-extrabold"
+              : "text-slate-900 hover:text-slate-950 hover:bg-slate-100/70 font-bold"
           }`}
         >
-          <BarChart3 size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
+          <BarChart3 size={15} strokeWidth={2} className="text-slate-600 shrink-0" />
           <span>Benchmarks</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("chapters")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 rounded-lg text-[14px] transition-colors cursor-pointer text-left ${
             activeView === "chapters"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+              ? "bg-slate-100 text-slate-950 font-extrabold"
+              : "text-slate-900 hover:text-slate-950 hover:bg-slate-100/70 font-bold"
           }`}
         >
-          <BookOpen size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
+          <BookOpen size={15} strokeWidth={2} className="text-slate-600 shrink-0" />
           <span>Chapters</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectView?.("roadmaps")}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-lg text-[13px] transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-2.5 px-2.5 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 rounded-lg text-[14px] transition-colors cursor-pointer text-left ${
             activeView === "roadmaps"
-              ? "bg-[#ECECF1] text-slate-950 font-medium"
-              : "text-slate-700 hover:text-slate-950 hover:bg-slate-100/70 font-normal"
+              ? "bg-slate-100 text-slate-950 font-extrabold"
+              : "text-slate-900 hover:text-slate-950 hover:bg-slate-100/70 font-bold"
           }`}
         >
-          <GitFork size={14} strokeWidth={1.75} className="text-slate-500 shrink-0" />
+          <GitFork size={15} strokeWidth={2} className="text-slate-600 shrink-0" />
           <span>Roadmaps</span>
         </button>
       </div>
 
       {/* Recents section */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-2 pb-3 no-native-scrollbar no-scrollbar">
-        <div className="px-2.5 py-1 text-[11px] font-medium text-slate-600 tracking-wide select-none">
+      <div className="mt-1 flex-1 min-h-0 flex flex-col overflow-y-auto border-t border-slate-100 px-2 pt-2 pb-3 no-native-scrollbar no-scrollbar">
+        <div className="px-2.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-800 select-none">
           Recents
         </div>
 
         <div className="flex flex-col gap-0.5 mt-0.5">
           {conversations.filter((c) => !c.isArchived).length === 0 ? (
-            <div className="px-2.5 py-4 text-[12px] text-slate-500 font-normal select-none">
+            <div className="px-2.5 py-4 text-[13px] text-slate-700 font-semibold select-none">
               No recent chats
             </div>
           ) : (
@@ -432,10 +432,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     key={conv.id}
                     role="group"
                     aria-label={`Conversation: ${conv.title}`}
-                    className={`group relative flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[13px] transition-colors select-none ${
+                    className={`group relative flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[14px] transition-colors select-none ${
                       isActive
-                        ? "bg-slate-100/90 text-slate-900 font-normal"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                        ? "bg-slate-100 text-slate-950 font-extrabold"
+                        : "text-slate-800 hover:text-slate-950 hover:bg-slate-50 font-semibold"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1 pr-1">
@@ -471,7 +471,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                             onSelectConversation(conv.id);
                           }}
                           aria-current={isActive ? "true" : undefined}
-                          className="min-w-0 flex-1 truncate rounded-sm text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
+                          className="min-w-0 flex-1 truncate rounded-sm text-left text-[14px] outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
                         >
                           {conv.title}
                         </button>
@@ -566,13 +566,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       {/* Account identity */}
       <div className="mt-auto flex min-w-0 items-center gap-2 border-t border-slate-200/80 px-3 pt-2.5 pb-1 select-none">
         {/* Avatar initial circle */}
-        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[11px] font-medium shrink-0">
+        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-800 flex items-center justify-center text-[11px] font-semibold shrink-0">
           {accountInitial}
         </div>
-        <div className="flex min-w-0 items-center gap-1.5 text-[13px]">
-          <span className="truncate font-normal text-slate-800">{accountLabel}</span>
-          <span className="text-slate-500 font-normal">·</span>
-          <span className="text-slate-600 font-normal">Free</span>
+        <div className="flex min-w-0 items-center gap-1.5 text-[14px]">
+          <span className="truncate font-extrabold text-slate-950">{accountLabel}</span>
+          <span className="text-slate-500 font-medium">·</span>
+          <span className="text-slate-800 font-semibold">Free</span>
         </div>
       </div>
 

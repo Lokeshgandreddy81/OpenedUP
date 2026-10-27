@@ -1187,7 +1187,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     }}
                     isThinking={isThinking}
                     onStopThinking={stopGeneration}
-                    placeholder={isTemporaryChat ? "Message Temporary Chat…" : "Message Shoebox…"}
+                    placeholder={isTemporaryChat ? "Message Temporary Chat…" : "Ask anything…"}
                     selectedModel={selectedModel}
                     onChangeModel={handleModelChange}
                     onOpenProjects={() => handleSelectView("projects")}
@@ -1324,7 +1324,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   }}
                   isThinking={isThinking}
                   onStopThinking={stopGeneration}
-                  placeholder={isTemporaryChat ? "Message Temporary Chat…" : "Message Shoebox…"}
+                  placeholder={isTemporaryChat ? "Message Temporary Chat…" : "Ask anything…"}
                   selectedModel={selectedModel}
                   onChangeModel={handleModelChange}
                   onOpenProjects={() => handleSelectView("projects")}
