@@ -4,12 +4,10 @@ import {
   BookmarkPlus,
   CircleAlert,
   Check,
-  Clock3,
   Copy,
   FileText,
   ImageIcon,
   KeyRound,
-  LoaderCircle,
   Pencil,
   RotateCcw,
   Square,
@@ -18,6 +16,7 @@ import {
 import type { ChatMessage } from "./chatTypes";
 import { AssistantResponse } from "./AssistantResponse";
 import { ImageLightboxModal } from "./ImageLightboxModal";
+import { TosaraThinkingAnimation } from "./TosaraThinkingAnimation";
 
 const MessageTimestamp: React.FC<{ timestamp?: string }> = ({ timestamp }) => {
   if (!timestamp) return null;
@@ -412,17 +411,14 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     <div className="mb-2.5">
                       {isThinkingOnThisResponse ? (
                         <div
-                          className="chat-thinking-status inline-flex items-center gap-1.5 px-1 py-0.5 text-[12px] font-medium text-neutral-500 select-none"
+                          className="chat-thinking-status inline-flex items-center gap-1.5 py-0.5 text-[12px] font-medium text-neutral-500 select-none leading-none"
                           role="status"
                         >
-                          <LoaderCircle
-                            size={12}
-                            className="animate-spin text-neutral-400"
-                            aria-hidden="true"
-                          />
+                          <TosaraThinkingAnimation size="inline" color="#737373" />
                           <span
                             role="timer"
                             aria-label={`${isRespondingOnThisResponse ? "Responding" : "Thinking"} for ${thinkingElapsedSeconds} seconds`}
+                            className="leading-none"
                           >
                             {isRespondingOnThisResponse
                               ? "Responding"
@@ -444,13 +440,9 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                           <span>Response stopped</span>
                         </div>
                       ) : (
-                        <div className="inline-flex items-center gap-1.5 px-1 py-0.5 text-[12px] font-medium text-neutral-400 select-none">
-                          <Clock3
-                            size={12}
-                            className="text-neutral-400 stroke-[1.5]"
-                            aria-hidden="true"
-                          />
-                          <span>Thought for {thinkingDuration}</span>
+                        <div className="inline-flex items-center gap-1.5 py-0.5 text-[12px] font-medium text-neutral-400 select-none leading-none">
+                          <TosaraThinkingAnimation size="inline" fixedStage={8} color="#9ca3af" />
+                          <span className="leading-none">Thought for {thinkingDuration}</span>
                         </div>
                       )}
                     </div>
@@ -467,7 +459,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                   {renderMessageSupplement?.(message)}
 
                   <div
-                    className={`mt-2 flex h-8 items-center gap-1 text-[13px] text-slate-500 ${hasCompletedResponse ? "" : "invisible"}`}
+                    className={`mt-2 -ml-2 flex h-8 items-center gap-1 text-[13px] text-slate-500 ${hasCompletedResponse ? "" : "invisible"}`}
                     aria-hidden={!hasCompletedResponse}
                   >
                     {hasCompletedResponse && !isError && onSaveArtifact && (
@@ -595,12 +587,12 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
           {isThinking && latestMessage?.role === "user" && !hasStreamingAssistant && (
             <div
-              className="chat-thinking-status chat-thinking-pill inline-flex max-w-full self-start items-center gap-2 text-[13px] font-medium text-slate-700 animate-in fade-in duration-200"
+              className="chat-thinking-status chat-thinking-pill inline-flex max-w-full self-start items-center gap-2 text-[13px] font-medium text-slate-700 animate-in fade-in duration-200 leading-none"
               role="timer"
               aria-label={`${thinkingLabel} for ${thinkingElapsedSeconds} seconds`}
             >
-              <LoaderCircle size={14} className="animate-spin text-indigo-500" aria-hidden="true" />
-              <span className="inline-flex items-center gap-1.5">
+              <TosaraThinkingAnimation size="inline" color="#64748b" />
+              <span className="inline-flex items-center gap-1.5 leading-none">
                 {thinkingLabel}
                 {thinkingElapsedSeconds > 0 ? (
                   <>

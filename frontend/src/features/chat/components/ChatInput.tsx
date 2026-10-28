@@ -454,15 +454,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-2 rounded-[22px] p-4 sm:p-5 ${
+          className={`relative flex flex-col gap-2 rounded-[20px] p-3 sm:p-4 ${
             landingMode
-              ? "border-2 border-slate-300 bg-white shadow-[0_8px_28px_-24px_rgba(15,23,42,0.24)] transition-[border-color,box-shadow] duration-200 focus-within:border-slate-500 focus-within:shadow-[0_8px_28px_-20px_rgba(15,23,42,0.3)]"
+              ? "border border-slate-200/70 bg-white shadow-[0_1px_8px_-1px_rgba(15,23,42,0.05),0_0_0_1px_rgba(15,23,42,0.02)] transition-[border-color,box-shadow] duration-200 hover:border-slate-300/80 focus-within:border-[#0047FF]/20 focus-within:shadow-[0_2px_16px_-2px_rgba(0,71,255,0.06),0_0_0_1px_rgba(0,71,255,0.04)]"
               : stableFrame
-                ? "border border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]"
+                ? "border border-slate-200/60 bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)]"
                 : chapterContextLabel
-                  ? "border border-slate-200/80 bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/80"
-                  : "border border-slate-200/90 bg-slate-50/70 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/90 focus-within:shadow-[inset_0_1px_2px_rgba(15,23,42,0.02)]"
-          } ${isFileDragActive ? "border-slate-400 bg-slate-100/80 ring-2 ring-slate-900/5" : ""}`}
+                  ? "border border-slate-200/60 bg-slate-50/30 shadow-[inset_0_1px_2px_rgba(15,23,42,0.02)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/90"
+                  : "border border-slate-200/70 bg-white shadow-[0_1px_8px_-1px_rgba(15,23,42,0.05),0_0_0_1px_rgba(15,23,42,0.02)] transition-[border-color,box-shadow] duration-200 hover:border-slate-300/80 focus-within:border-[#0047FF]/20 focus-within:shadow-[0_2px_16px_-2px_rgba(0,71,255,0.06),0_0_0_1px_rgba(0,71,255,0.04)]"
+          } ${isFileDragActive ? "border-[#0047FF]/30 bg-blue-50/20 ring-2 ring-[#0047FF]/8" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
           <input
@@ -652,11 +652,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Listening… speak now…" : placeholder}
             rows={1}
-            className={`chat-composer-input w-full bg-transparent px-1 text-[16px] font-medium leading-7 text-slate-950 placeholder:font-semibold placeholder:text-slate-600/50 placeholder:transition-opacity placeholder:duration-200 focus:placeholder:text-slate-400/50 resize-none outline-none min-h-[40px] max-h-[220px]`}
+            className={`chat-composer-input w-full bg-transparent px-1.5 text-[15px] sm:text-[15px] font-normal leading-relaxed text-slate-900 placeholder:font-normal placeholder:text-slate-400/80 placeholder:transition-opacity placeholder:duration-200 focus:placeholder:text-slate-300 resize-none outline-none min-h-[42px] max-h-[220px] tracking-[-0.01em]`}
           />
 
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
-          <div className="flex min-h-10 items-center justify-between select-none">
+          <div className="flex min-h-9 items-center justify-between select-none">
             {/* Left: Add context / file plus icon with popover menu */}
             {chapterContextLabel ? (
               <div
@@ -691,13 +691,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   aria-label="Add context"
                   aria-expanded={isPlusMenuOpen}
                   disabled={isReadingFiles}
-                  className={`h-10 w-10 rounded-xl transition-[background-color,color,transform] duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 focus-visible:ring-offset-1 ${
+                  className={`h-7 w-7 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/30 focus-visible:ring-offset-1 ${
                     isPlusMenuOpen
-                      ? "bg-slate-200/80 text-slate-900"
-                      : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
+                      ? "bg-slate-150 text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)]"
+                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-100/80"
                   }`}
                 >
-                  <Plus size={18} strokeWidth={2} />
+                  <Plus size={16} strokeWidth={2} />
                 </button>
 
                 {/* Plus popover menu with boundary flipping and overflow prevention */}
@@ -849,15 +849,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   aria-haspopup="menu"
                   aria-expanded={isModelDropdownOpen}
                   title={currentModelName}
-                  className={`flex items-center gap-1.5 rounded-md px-2 py-1 font-bold text-slate-900 transition-colors duration-150 cursor-pointer hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:gap-2 sm:text-[14px] ${chapterContextLabel ? "max-w-[min(56vw,360px)] text-[13px]" : "max-w-[min(44vw,360px)] text-[14px]"}`}
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[12.5px] font-medium text-slate-500 transition-all duration-150 cursor-pointer hover:text-slate-800 hover:bg-slate-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/25 border border-transparent hover:border-slate-200/60 sm:gap-2 ${chapterContextLabel ? "max-w-[min(56vw,360px)]" : "max-w-[min(44vw,360px)]"}`}
                 >
-                  <span className="truncate">{currentModelName}</span>
+                  <span className="truncate text-[12.5px]">{currentModelName}</span>
                   {supportsEffort && (
-                    <span className="text-[12px] text-slate-600 font-medium">{selectedEffort}</span>
+                    <span className="text-[11px] text-slate-400 font-normal">{selectedEffort}</span>
                   )}
                   <ChevronDown
-                    size={13}
-                    className={`text-slate-500 transition-transform duration-150 ${
+                    size={11}
+                    strokeWidth={2}
+                    className={`text-slate-400 transition-transform duration-150 ${
                       isModelDropdownOpen ? "rotate-180" : ""
                     }`}
                   />
@@ -1131,18 +1132,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 aria-label={isDictating ? "Stop dictation" : "Dictate (Speech to text)"}
                 aria-pressed={isDictating}
                 onClick={toggleDictation}
-                className={`relative h-10 w-10 flex items-center justify-center rounded-full transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 ${
+                className={`relative h-7 w-7 flex items-center justify-center rounded-full transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/25 ${
                   isDictating
-                    ? "text-rose-600 bg-rose-50 border border-rose-200/80 shadow-xs"
-                    : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
+                    ? "text-rose-500 bg-rose-50 border border-rose-200/70 shadow-[0_1px_3px_rgba(225,29,72,0.1)]"
+                    : "text-slate-400 hover:text-slate-700 hover:bg-slate-100/80"
                 }`}
               >
                 {isDictating && (
                   <span className="absolute inset-0 rounded-full bg-rose-400 opacity-25 animate-ping pointer-events-none" />
                 )}
                 <Mic
-                  size={18}
-                  strokeWidth={isDictating ? 2.2 : 1.8}
+                  size={15}
+                  strokeWidth={isDictating ? 2.2 : 1.75}
                   className={isDictating ? "animate-pulse" : ""}
                 />
               </button>
@@ -1154,9 +1155,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   onClick={() => onStopThinking?.()}
                   title="Stop generation"
                   aria-label="Stop generation"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all hover:bg-slate-800 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 cursor-pointer"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-white shadow-[0_1px_4px_rgba(15,23,42,0.2)] transition-all hover:bg-slate-800 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/30 cursor-pointer"
                 >
-                  <Square size={13} fill="currentColor" strokeWidth={0} />
+                  <Square size={12} fill="currentColor" strokeWidth={0} />
                 </button>
               ) : (
                 <button
@@ -1180,17 +1181,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                           : "Send message"
                   }
                   aria-label={isReadingFiles ? "Reading files…" : "Send message"}
-                  className={`group h-10 w-10 rounded-full flex items-center justify-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40 focus-visible:ring-offset-2 ${
+                  className={`group h-7 w-7 rounded-full flex items-center justify-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/40 focus-visible:ring-offset-1 ${
                     (Boolean(text.trim()) || attachments.length > 0) && !isImageCapabilityBlocked
-                      ? "bg-slate-950 text-white shadow-xs hover:bg-slate-800 hover:scale-[1.05] active:scale-95 cursor-pointer"
-                      : "bg-slate-200/60 text-slate-400 cursor-not-allowed scale-100 shadow-none"
+                      ? "bg-[#0047FF] text-white shadow-[0_2px_8px_-1px_rgba(0,71,255,0.35)] hover:bg-[#0038cc] hover:shadow-[0_3px_12px_-1px_rgba(0,71,255,0.4)] hover:scale-[1.05] active:scale-95 cursor-pointer"
+                      : "bg-slate-100/80 text-slate-300/80 cursor-not-allowed scale-100 shadow-none"
                   }`}
                 >
                   {isReadingFiles ? (
-                    <LoaderCircle size={16} className="animate-spin text-slate-500" />
+                    <LoaderCircle size={15} className="animate-spin text-slate-500" />
                   ) : (
                     <ArrowUp
-                      size={17}
+                      size={14}
                       strokeWidth={2.5}
                       className={`transition-transform duration-150 ${
                         Boolean(text.trim()) || attachments.length > 0

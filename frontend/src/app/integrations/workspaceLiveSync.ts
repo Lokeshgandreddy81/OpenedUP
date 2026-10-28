@@ -1,13 +1,10 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import {
-  getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  type User,
-} from "firebase/auth";
-import firebaseConfig from "../../../firebase-applet-config.json";
 import type { WorkspaceSourceMeta } from "@charan-interiors/contracts";
+import {
+  clearSavedWorkspaceSession,
+  getSavedWorkspaceSession,
+  saveWorkspaceSession,
+} from "./workspaceSession";
+import { getSupabaseAccessToken } from "./supabaseAuth";
 
 export interface DriveFolderItem {
   id: string;
@@ -59,16 +56,6 @@ export interface WorkspaceScanOptions {
 export interface IngestedWorkspaceFile {
   file: File;
   sourceMeta: WorkspaceSourceMeta;
-}
-
-export interface SavedWorkspaceSession {
-  accessToken: string;
-  accountEmail: string;
-  grantedScopes: {
-    drive: boolean;
-    gmail: boolean;
-  };
-  expiresAt: number;
 }
 
 export class WorkspaceAuthExpiredError extends Error {
@@ -123,128 +110,6 @@ const WEB_GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
 ];
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-const provider = new GoogleAuthProvider();
-WEB_DRIVE_SCOPES.forEach((s) => provider.addScope(s));
-WEB_GMAIL_SCOPES.forEach((s) => provider.addScope(s));
-
-// Flag to indicate if we are in the middle of a sign-in flow.
-let isSigningIn = false;
-// Cache the access token and session strictly in memory (never in localStorage or sessionStorage).
-let cachedAccessToken: string | null = null;
-let cachedWorkspaceSession: SavedWorkspaceSession | null = null;
-let cachedGoogleClientId = "";
-
-// Initialize auth state listener. Call this on app load.
-export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
-  onAuthFailure?: () => void
-) => {
-  return onAuthStateChanged(auth, async (user: User | null) => {
-    if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        cachedAccessToken = null;
-        cachedWorkspaceSession = null;
-        if (onAuthFailure) onAuthFailure();
-      }
-    } else {
-      cachedAccessToken = null;
-      cachedWorkspaceSession = null;
-      if (onAuthFailure) onAuthFailure();
-    }
-  });
-};
-
-// Must be called from a button click or user interaction
-export const googleSignIn = async (options?: {
-  includeDrive?: boolean;
-  includeGmail?: boolean;
-}): Promise<{ user: User; accessToken: string } | null> => {
-  try {
-    isSigningIn = true;
-    const includeDrive = options?.includeDrive ?? true;
-    const includeGmail = options?.includeGmail ?? true;
-
-    const activeProvider = new GoogleAuthProvider();
-    if (includeDrive) {
-      WEB_DRIVE_SCOPES.forEach((s) => activeProvider.addScope(s));
-    }
-    if (includeGmail) {
-      WEB_GMAIL_SCOPES.forEach((s) => activeProvider.addScope(s));
-    }
-    activeProvider.setCustomParameters({
-      prompt: "consent",
-      include_granted_scopes: "true",
-    });
-
-    const result = await signInWithPopup(auth, activeProvider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error("Failed to get access token from Firebase Auth");
-    }
-
-    cachedAccessToken = credential.accessToken;
-    const email = result.user.email || "Google Workspace User";
-    cachedWorkspaceSession = {
-      accessToken: cachedAccessToken,
-      accountEmail: email,
-      grantedScopes: {
-        drive: includeDrive || Boolean(cachedWorkspaceSession?.grantedScopes.drive),
-        gmail: includeGmail || Boolean(cachedWorkspaceSession?.grantedScopes.gmail),
-      },
-      expiresAt: Date.now() + 3600 * 1000,
-    };
-
-    return { user: result.user, accessToken: cachedAccessToken };
-  } catch (error: unknown) {
-    console.error("Sign in error:", error);
-    throw error;
-  } finally {
-    isSigningIn = false;
-  }
-};
-
-export const getAccessToken = async (): Promise<string | null> => {
-  return cachedAccessToken;
-};
-
-/** Sign in for app chat sync without requesting Drive or Gmail scopes. */
-export async function signInForChat(): Promise<User> {
-  const profileProvider = new GoogleAuthProvider();
-  profileProvider.addScope("email");
-  profileProvider.addScope("profile");
-  const result = await signInWithPopup(auth, profileProvider);
-  return result.user;
-}
-
-export async function getFirebaseIdToken(): Promise<string | null> {
-  return auth.currentUser ? auth.currentUser.getIdToken() : null;
-}
-
-export function waitForChatAuth(): Promise<User | null> {
-  return new Promise((resolve) => {
-    let unsubscribe: () => void = () => {};
-    unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe();
-      resolve(user);
-    });
-  });
-}
-
-export function subscribeToChatAuth(callback: (user: User | null) => void): () => void {
-  return onAuthStateChanged(auth, callback);
-}
-
-export const logout = async () => {
-  await auth.signOut();
-  cachedAccessToken = null;
-  cachedWorkspaceSession = null;
-};
-
 interface GisTokenResponse {
   access_token?: string;
   expires_in?: number;
@@ -271,52 +136,16 @@ interface GisWindow {
   };
 }
 
-export function getSavedGoogleClientId(): string {
-  return cachedGoogleClientId;
-}
-
-export function saveGoogleClientId(clientId: string): void {
-  cachedGoogleClientId = clientId.trim();
-}
-
-export function getSavedWorkspaceSession(): SavedWorkspaceSession | null {
-  if (!cachedWorkspaceSession || !cachedAccessToken) {
-    return null;
-  }
-  if (Date.now() + 15_000 >= cachedWorkspaceSession.expiresAt) {
-    cachedAccessToken = null;
-    cachedWorkspaceSession = null;
-    return null;
-  }
-  return cachedWorkspaceSession;
-}
-
-export function saveWorkspaceSession(session: SavedWorkspaceSession): void {
-  cachedAccessToken = session.accessToken;
-  cachedWorkspaceSession = session;
-}
-
-export function clearSavedWorkspaceSession(): void {
-  cachedAccessToken = null;
-  cachedWorkspaceSession = null;
-}
-
 export interface ServerWorkspaceConfig {
-  firebaseConfig?: {
-    apiKey?: string;
-    authDomain?: string;
-    projectId?: string;
-    appId?: string;
-    oAuthClientId?: string;
-    oauthClientId?: string;
-    [key: string]: unknown;
-  } | null;
   googleClientId?: string | null;
 }
 
 export async function fetchServerWorkspaceConfig(): Promise<ServerWorkspaceConfig> {
   try {
-    const res = await fetch("/api/workspace-config");
+    const accessToken = await getSupabaseAccessToken();
+    const res = await fetch("/api/workspace-config", {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    });
     if (!res.ok) return {};
     return (await res.json()) as ServerWorkspaceConfig;
   } catch {
@@ -463,48 +292,12 @@ export async function requestWorkspaceAccessToken(params: {
   includeDrive: boolean;
   includeGmail: boolean;
 }): Promise<{ accessToken: string; email?: string; expiresIn: number }> {
-  // 1. Native Firebase Auth popup flow using provisioned firebase-applet-config.json
-  if (firebaseConfig.apiKey && firebaseConfig.authDomain && !params.clientId?.trim()) {
-    try {
-      const signInResult = await googleSignIn({
-        includeDrive: params.includeDrive,
-        includeGmail: params.includeGmail,
-      });
-      if (signInResult) {
-        return {
-          accessToken: signInResult.accessToken,
-          email: signInResult.user.email || undefined,
-          expiresIn: 3600,
-        };
-      }
-    } catch (fbErr: unknown) {
-      const msg = fbErr instanceof Error ? fbErr.message : String(fbErr);
-      const isUserCancelled =
-        msg.includes("popup-closed-by-user") || msg.includes("cancelled-popup-request");
-      if (isUserCancelled) {
-        throw new Error("Google sign-in popup was closed before completing authorization.");
-      }
-      if (msg.includes("popup-blocked")) {
-        throw new Error(
-          "Google sign-in popup was blocked by your browser. Please allow popups for this site and try again."
-        );
-      }
-      throw fbErr;
-    }
-  }
-
   const serverCfg = await fetchServerWorkspaceConfig();
-  const cleanClientId = (
-    params.clientId ||
-    serverCfg.googleClientId ||
-    firebaseConfig.oAuthClientId ||
-    getSavedGoogleClientId() ||
-    ""
-  ).trim();
+  const cleanClientId = (params.clientId || serverCfg.googleClientId || "").trim();
 
   if (!cleanClientId) {
     throw new Error(
-      "Google OAuth is not enabled on this applet yet. Ask the AI Studio chat: 'Enable Google OAuth for Google Drive and Gmail'."
+      "Google Workspace access is not configured yet. Set GOOGLE_CLIENT_ID and enable the Drive/Gmail scopes in Google Cloud."
     );
   }
 
@@ -570,16 +363,16 @@ export async function requestWorkspaceAccessToken(params: {
     // ignore optional userinfo lookup failure
   }
 
-  cachedAccessToken = accessToken;
-  cachedWorkspaceSession = {
+  const existingSession = getSavedWorkspaceSession();
+  saveWorkspaceSession({
     accessToken,
     accountEmail: email || "Google Workspace User",
     grantedScopes: {
-      drive: params.includeDrive || Boolean(cachedWorkspaceSession?.grantedScopes.drive),
-      gmail: params.includeGmail || Boolean(cachedWorkspaceSession?.grantedScopes.gmail),
+      drive: params.includeDrive || Boolean(existingSession?.grantedScopes.drive),
+      gmail: params.includeGmail || Boolean(existingSession?.grantedScopes.gmail),
     },
     expiresAt: Date.now() + expiresIn * 1000,
-  };
+  });
 
   return { accessToken, email, expiresIn };
 }

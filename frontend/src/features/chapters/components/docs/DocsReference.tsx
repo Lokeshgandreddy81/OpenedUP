@@ -1,9 +1,6 @@
 import React from "react";
 import { docApiEndpoints, docEnvVars } from "../../data/docsContent";
 
-const coreEndpoints = [docApiEndpoints[0], docApiEndpoints[3], docApiEndpoints[4]];
-const coreEnvVars = [docEnvVars[0], docEnvVars[3], docEnvVars[4]];
-
 export const DocsReference: React.FC = () => {
   return (
     <section id="reference" className="scroll-mt-28 border-t border-neutral-200/80 py-9">
@@ -16,7 +13,7 @@ export const DocsReference: React.FC = () => {
         <div className="mt-2 overflow-x-auto">
           <table className="w-full text-left text-[13px]">
             <tbody className="divide-y divide-neutral-200/70">
-              {coreEndpoints.map((endpoint) => (
+              {docApiEndpoints.map((endpoint) => (
                 <tr key={`${endpoint.method}-${endpoint.path}`}>
                   <td className="whitespace-nowrap py-2.5 pr-5 font-mono text-[12px] font-medium text-neutral-950">
                     {endpoint.method} {endpoint.path}
@@ -34,7 +31,7 @@ export const DocsReference: React.FC = () => {
         <div className="mt-2 overflow-x-auto">
           <table className="w-full text-left text-[13px]">
             <tbody className="divide-y divide-neutral-200/70">
-              {coreEnvVars.map((env) => (
+              {docEnvVars.map((env) => (
                 <tr key={env.name}>
                   <td className="whitespace-nowrap py-2.5 pr-5 font-mono text-[12px] font-medium text-neutral-950">
                     {env.name}

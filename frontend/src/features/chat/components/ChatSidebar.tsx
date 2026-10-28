@@ -15,6 +15,7 @@ import {
   Pin,
   Pencil,
   Archive,
+  LogOut,
 } from "lucide-react";
 import type { ChatConversation } from "./chatTypes";
 import { useChatAuth } from "../../../app/auth/useChatAuth";
@@ -99,7 +100,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [editingTitle, setEditingTitle] = useState<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
-  const { user } = useChatAuth();
+  const { user, signOut } = useChatAuth();
   const accountLabel = user?.displayName || user?.email?.split("@")[0] || "Guest";
   const accountInitial = accountLabel.slice(0, 1).toUpperCase();
 
@@ -574,6 +575,17 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <span className="text-slate-500 font-medium">·</span>
           <span className="text-slate-800 font-semibold">Free</span>
         </div>
+        {user && (
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            title="Sign out"
+            aria-label="Sign out"
+            className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <LogOut size={15} />
+          </button>
+        )}
       </div>
 
       {/* Floating Options Menu on the Right Side of the Sidebar */}

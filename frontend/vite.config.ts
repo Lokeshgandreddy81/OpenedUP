@@ -24,10 +24,6 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
             if (id.includes("node_modules/pdf-lib")) return "pdf-lib";
-            if (id.includes("node_modules/firebase") || id.includes("node_modules/@firebase"))
-              return "firebase";
-            if (id.includes("node_modules/motion") || id.includes("node_modules/framer-motion"))
-              return "motion";
             if (
               id.includes("node_modules/lucide-react") ||
               id.includes("node_modules/simple-icons")

@@ -51,7 +51,7 @@ import {
   stripChapterNumberPrefix,
   toMinorUnits,
 } from "../services/engine";
-import type { ReadingPhase } from "./LandingView";
+import type { ReadingPhase } from "../state/types";
 import {
   CustomScrollList,
   RisingWord,

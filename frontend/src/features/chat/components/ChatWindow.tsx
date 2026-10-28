@@ -610,6 +610,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
         const imageAttachments = chatImageAttachments(attachments);
         const body = JSON.stringify({
+          ...(targetId ? { conversationId: targetId } : {}),
           messages: [...priorMessages, userMessage].map((message) => ({
             role: message.role,
             content: message.content,

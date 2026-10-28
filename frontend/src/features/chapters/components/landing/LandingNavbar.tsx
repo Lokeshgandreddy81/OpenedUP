@@ -164,6 +164,13 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({
         <div className="hidden items-center gap-2.5 sm:flex z-10">
           <button
             type="button"
+            onClick={() => navigate("/sign-in")}
+            className="inline-flex h-[38px] items-center justify-center rounded-full px-4 text-[13.5px] font-medium text-neutral-800 transition-colors hover:bg-black/5 cursor-pointer whitespace-nowrap"
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
             onClick={handleStart}
             className="inline-flex h-[38px] items-center justify-center rounded-full bg-black hover:bg-neutral-850 px-5 text-[13.5px] font-medium text-white transition-colors cursor-pointer whitespace-nowrap shadow-sm"
           >
@@ -199,6 +206,16 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({
             ))}
           </nav>
           <div className="mt-5 flex flex-col gap-2 pt-5 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate("/sign-in");
+              }}
+              className="flex h-10 w-full items-center justify-center rounded-full border border-slate-200 text-[13px] font-medium text-slate-800"
+            >
+              Sign in
+            </button>
             <button
               type="button"
               onClick={() => {

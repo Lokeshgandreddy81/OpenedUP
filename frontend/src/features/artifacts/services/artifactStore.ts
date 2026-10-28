@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { authenticatedChatFetch } from "../../../app/api/chatApi";
-import { getFirebaseIdToken } from "../../../app/integrations/workspaceLiveSync";
+import { getSupabaseAccessToken } from "../../../app/integrations/supabaseAuth";
 
 export interface ArtifactItem {
   id: string;
@@ -152,7 +152,7 @@ export function updateStoredArtifactOrganization(
 export async function persistArtifactItem(
   item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
 ): Promise<ArtifactItem> {
-  if (!(await getFirebaseIdToken())) return saveArtifactItem(item);
+  if (!(await getSupabaseAccessToken())) return saveArtifactItem(item);
   const response = await authenticatedChatFetch("/api/artifacts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useAppContext, WorkspaceSyncModal } from "./features/chapters/publicApi";
 import { ChatAuthProvider } from "./app/auth/ChatAuthContext";
+import { RequireAuth } from "./app/auth/RequireAuth";
 import { PageRoute } from "./app/components/PageRoute";
 import { lazyWithRetry } from "./app/components/lazyWithRetry";
 
@@ -20,17 +21,17 @@ const LandingPage = lazyWithRetry(() =>
   }))
 );
 const FeaturesPage = lazyWithRetry(() =>
-  import("./features/chapters/pages/FeaturesPage").then(({ FeaturesPage }) => ({
+  import("./features/chapters/pages/publicApi").then(({ FeaturesPage }) => ({
     default: FeaturesPage,
   }))
 );
 const InsightsPage = lazyWithRetry(() =>
-  import("./features/chapters/pages/InsightsPage").then(({ InsightsPage }) => ({
+  import("./features/chapters/pages/publicApi").then(({ InsightsPage }) => ({
     default: InsightsPage,
   }))
 );
 const DocsPage = lazyWithRetry(() =>
-  import("./features/chapters/pages/DocsPage").then(({ DocsPage }) => ({
+  import("./features/chapters/pages/publicApi").then(({ DocsPage }) => ({
     default: DocsPage,
   }))
 );
@@ -67,6 +68,24 @@ const CodingAgentsPage = lazyWithRetry(() =>
     default: CodingAgentsPage,
   }))
 );
+const AuthPage = lazyWithRetry(() =>
+  import("./features/auth/pages/AuthPage").then(({ AuthPage }) => ({ default: AuthPage }))
+);
+const VerifyEmailPage = lazyWithRetry(() =>
+  import("./features/auth/pages/VerifyEmailPage").then(({ VerifyEmailPage }) => ({
+    default: VerifyEmailPage,
+  }))
+);
+const AuthCallbackPage = lazyWithRetry(() =>
+  import("./features/auth/pages/AuthCallbackPage").then(({ AuthCallbackPage }) => ({
+    default: AuthCallbackPage,
+  }))
+);
+const ResetPasswordPage = lazyWithRetry(() =>
+  import("./features/auth/pages/ResetPasswordPage").then(({ ResetPasswordPage }) => ({
+    default: ResetPasswordPage,
+  }))
+);
 
 export const AppShell: React.FC = () => {
   const {
@@ -82,6 +101,57 @@ export const AppShell: React.FC = () => {
     <>
       <Routes>
         <Route
+          path="/sign-in"
+          element={
+            <PageRoute name="Sign in" fallback={<div className="min-h-screen bg-[#fbfcfe]" />}>
+              <AuthPage mode="sign-in" />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="/create-account"
+          element={
+            <PageRoute
+              name="Create account"
+              fallback={<div className="min-h-screen bg-[#fbfcfe]" />}
+            >
+              <AuthPage mode="create-account" />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={
+            <PageRoute name="Verify email" fallback={<div className="min-h-screen bg-[#fbfcfe]" />}>
+              <VerifyEmailPage />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="/auth/callback"
+          element={
+            <PageRoute
+              name="Finishing sign in"
+              fallback={<div className="min-h-screen bg-[#fbfcfe]" />}
+            >
+              <AuthCallbackPage />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PageRoute
+              name="Reset password"
+              fallback={<div className="min-h-screen bg-[#fbfcfe]" />}
+            >
+              <ResetPasswordPage />
+            </PageRoute>
+          }
+        />
+        <Route path="/login" element={<Navigate to="/sign-in" replace />} />
+        <Route path="/signup" element={<Navigate to="/create-account" replace />} />
+        <Route
           path="/"
           element={
             <PageRoute name="Home" fallback={<LandingPageSkeleton />}>
@@ -89,87 +159,89 @@ export const AppShell: React.FC = () => {
             </PageRoute>
           }
         />
-        <Route
-          path="/features"
-          element={
-            <PageRoute name="Features" fallback={<LandingPageSkeleton />}>
-              <FeaturesPage />
-            </PageRoute>
-          }
-        />
-        <Route
-          path="/insights"
-          element={
-            <PageRoute name="Insights" fallback={<LandingPageSkeleton />}>
-              <InsightsPage />
-            </PageRoute>
-          }
-        />
-        <Route
-          path="/docs"
-          element={
-            <PageRoute name="Docs" fallback={<LandingPageSkeleton />}>
-              <DocsPage />
-            </PageRoute>
-          }
-        />
-        <Route
-          path="/results"
-          element={
-            <PageRoute name="Results" fallback={<ResultsPageSkeleton />}>
-              <ResultsPage />
-            </PageRoute>
-          }
-        />
-        <Route
-          path="/roadmap"
-          element={
-            <PageRoute name="Roadmap" fallback={<RoadmapPageSkeleton />}>
-              <RoadmapPage />
-            </PageRoute>
-          }
-        />
-        <Route
-          path="/benchmarks"
-          element={
-            <PageRoute name="Benchmarks" fallback={<BenchmarksPageSkeleton />}>
-              <BenchmarksPage />
-            </PageRoute>
-          }
-        />
-        <Route
-          path="/chat"
-          element={
-            <PageRoute name="Chat" fallback={<ChatPageSkeleton />}>
-              <ChatPage chapters={engineOutput.computedRows} />
-            </PageRoute>
-          }
-        />
-        <Route
-          path="/projects"
-          element={
-            <PageRoute name="Projects" fallback={<ProjectsPageSkeleton />}>
-              <ProjectsPage />
-            </PageRoute>
-          }
-        />
-        <Route
-          path="/scheduled"
-          element={
-            <PageRoute name="Scheduled tasks" fallback={<ScheduledPageSkeleton />}>
-              <ScheduledPage />
-            </PageRoute>
-          }
-        />
-        <Route path="/image-arena" element={<Navigate to="/benchmarks" replace />} />
-        <Route
-          path="/coding-agents"
-          element={
-            <PageRoute name="Coding agents" fallback={<CodingAgentsPageSkeleton />}>
-              <CodingAgentsPage />
-            </PageRoute>
-          }
-        />
+        <Route element={<RequireAuth />}>
+          <Route
+            path="/features"
+            element={
+              <PageRoute name="Features" fallback={<LandingPageSkeleton />}>
+                <FeaturesPage />
+              </PageRoute>
+            }
+          />
+          <Route
+            path="/insights"
+            element={
+              <PageRoute name="Insights" fallback={<LandingPageSkeleton />}>
+                <InsightsPage />
+              </PageRoute>
+            }
+          />
+          <Route
+            path="/docs"
+            element={
+              <PageRoute name="Docs" fallback={<LandingPageSkeleton />}>
+                <DocsPage />
+              </PageRoute>
+            }
+          />
+          <Route
+            path="/results"
+            element={
+              <PageRoute name="Results" fallback={<ResultsPageSkeleton />}>
+                <ResultsPage />
+              </PageRoute>
+            }
+          />
+          <Route
+            path="/roadmap"
+            element={
+              <PageRoute name="Roadmap" fallback={<RoadmapPageSkeleton />}>
+                <RoadmapPage />
+              </PageRoute>
+            }
+          />
+          <Route
+            path="/benchmarks"
+            element={
+              <PageRoute name="Benchmarks" fallback={<BenchmarksPageSkeleton />}>
+                <BenchmarksPage />
+              </PageRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <PageRoute name="Chat" fallback={<ChatPageSkeleton />}>
+                <ChatPage chapters={engineOutput.computedRows} />
+              </PageRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <PageRoute name="Projects" fallback={<ProjectsPageSkeleton />}>
+                <ProjectsPage />
+              </PageRoute>
+            }
+          />
+          <Route
+            path="/scheduled"
+            element={
+              <PageRoute name="Scheduled tasks" fallback={<ScheduledPageSkeleton />}>
+                <ScheduledPage />
+              </PageRoute>
+            }
+          />
+          <Route path="/image-arena" element={<Navigate to="/benchmarks" replace />} />
+          <Route
+            path="/coding-agents"
+            element={
+              <PageRoute name="Coding agents" fallback={<CodingAgentsPageSkeleton />}>
+                <CodingAgentsPage />
+              </PageRoute>
+            }
+          />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

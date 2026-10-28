@@ -1,5 +1,5 @@
 import React, { createContext } from "react";
-import type { ReadingPhase } from "../components/LandingView";
+import type { ReadingPhase } from "./types";
 import type {
   FailedBatchInfo,
   ReceiptRow,

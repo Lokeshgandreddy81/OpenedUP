@@ -5,17 +5,19 @@ import {
   type DriveFolderItem,
   type IngestedWorkspaceFile,
   WorkspaceAuthExpiredError,
-  clearSavedWorkspaceSession,
   downloadWorkspaceItemsAsFiles,
   getDriveFolderMetadata,
-  getSavedWorkspaceSession,
   listDriveFolders,
-  logout,
   parseDriveFolderId,
   requestWorkspaceAccessToken,
-  saveWorkspaceSession,
   scanWorkspaceSources,
 } from "../../../app/integrations/workspaceLiveSync";
+import { logout } from "../../../app/integrations/supabaseAuth";
+import {
+  clearSavedWorkspaceSession,
+  getSavedWorkspaceSession,
+  saveWorkspaceSession,
+} from "../../../app/integrations/workspaceSession";
 import { RollingNumber } from "../../../app/components/MotionPrimitives";
 import { usePrefersReducedMotion } from "../../../app/hooks/usePrefersReducedMotion";
 

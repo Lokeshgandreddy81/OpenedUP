@@ -1,7 +1,7 @@
-import { getFirebaseIdToken } from "../integrations/workspaceLiveSync";
+import { getSupabaseAccessToken } from "../integrations/supabaseAuth";
 
 export async function authenticatedChatFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const token = await getFirebaseIdToken();
+  const token = await getSupabaseAccessToken();
   if (!token) throw new Error("Sign in to access your saved chats and artifacts.");
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);

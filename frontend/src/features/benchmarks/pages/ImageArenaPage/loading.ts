@@ -1,1 +1,0 @@
-export { ImageArenaPageSkeleton } from "./LoadingSkeleton";

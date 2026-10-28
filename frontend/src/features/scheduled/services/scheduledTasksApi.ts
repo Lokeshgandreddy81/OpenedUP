@@ -6,7 +6,7 @@ import {
   type ScheduledTaskRunRecord,
 } from "@charan-interiors/contracts";
 import type { ScheduledTask, TaskFrequency } from "../components/scheduledTypes";
-import { getFirebaseIdToken } from "../../../app/integrations/workspaceLiveSync";
+import { getSupabaseAccessToken } from "../../../app/integrations/supabaseAuth";
 
 const LEGACY_TASKS_KEY = "shoebox_scheduled_tasks";
 const IMPORT_MARKER_KEY = "shoebox_scheduled_tasks_imported_v1";
@@ -221,7 +221,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 async function scheduledFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
-  const token = await getFirebaseIdToken().catch(() => null);
+  const token = await getSupabaseAccessToken().catch(() => null);
   if (token) {
     const headers = new Headers(init.headers);
     if (!headers.has("Authorization")) {

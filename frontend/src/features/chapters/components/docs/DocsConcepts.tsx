@@ -1,8 +1,6 @@
 import React from "react";
 import { docConcepts } from "../../data/docsContent";
 
-const coreConcepts = docConcepts.slice(0, 4);
-
 export const DocsConcepts: React.FC = () => {
   return (
     <section id="concepts" className="scroll-mt-28 border-t border-neutral-200/80 py-9">
@@ -14,7 +12,7 @@ export const DocsConcepts: React.FC = () => {
       </h2>
 
       <div className="mt-4 divide-y divide-neutral-200/70">
-        {coreConcepts.map((concept) => (
+        {docConcepts.map((concept) => (
           <article
             key={concept.id}
             id={concept.id}

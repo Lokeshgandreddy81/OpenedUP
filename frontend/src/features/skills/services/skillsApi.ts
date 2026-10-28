@@ -1,4 +1,4 @@
-import { getFirebaseIdToken } from "../../../app/integrations/workspaceLiveSync";
+import { getSupabaseAccessToken } from "../../../app/integrations/supabaseAuth";
 
 export type SkillScope = "builtin" | "org" | "user" | "directory";
 
@@ -70,13 +70,13 @@ export interface SkillAnalytics {
 const LOCAL_SKILLS_PREFIX = "openedup_skills_";
 
 /**
- * Independent safe fetch: attaches Firebase token if available,
+ * Independent safe fetch: attaches a Supabase access token if available,
  * but never throws or requires authentication so features can be tested freely.
  */
 async function safeFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   try {
-    const token = await getFirebaseIdToken();
+    const token = await getSupabaseAccessToken();
     if (token) headers.set("Authorization", `Bearer ${token}`);
   } catch {
     // Auth optional for independent feature testing

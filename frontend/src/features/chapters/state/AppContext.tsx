@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { authenticatedChatFetch } from "../../../app/api/chatApi";
-import type { ReadingPhase } from "../components/LandingView";
+import type { ReadingPhase } from "./types";
 import { usePrefersReducedMotion } from "../../../app/hooks/usePrefersReducedMotion";
 import { clearDocumentCache } from "../services/documentCache";
 import { clearPdfDocumentCache } from "../../../app/files/pdfDocumentCache";
@@ -26,12 +26,15 @@ import {
   processPhotoInBrowser,
   stripFileExtension,
 } from "../services/imageProcessor";
+import { type IngestedWorkspaceFile } from "../../../app/integrations/workspaceLiveSync";
 import {
-  type IngestedWorkspaceFile,
-  getFirebaseIdToken,
+  getSupabaseAccessToken,
+  subscribeToChatAuth,
+} from "../../../app/integrations/supabaseAuth";
+import {
+  clearSavedWorkspaceSession,
   getSavedWorkspaceSession,
-  initAuth,
-} from "../../../app/integrations/workspaceLiveSync";
+} from "../../../app/integrations/workspaceSession";
 import { sanitizeRawReceipt } from "../services/sanitizeRawReceipt";
 import { getProviderChatRequestConfig } from "../../customize/publicApi";
 import { AppContext } from "./appContextState";
@@ -65,16 +68,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [connectedEmail, setConnectedEmail] = useState<string | null>(
     () => getSavedWorkspaceSession()?.accountEmail ?? null
   );
+  const authenticatedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = initAuth(
-      (user) => {
-        setConnectedEmail(user.email || "Google Workspace User");
-      },
-      () => {
+    const unsubscribe = subscribeToChatAuth((user) => {
+      if (!user || (authenticatedUserIdRef.current && authenticatedUserIdRef.current !== user.id)) {
+        clearSavedWorkspaceSession();
         setConnectedEmail(null);
       }
-    );
+      authenticatedUserIdRef.current = user?.id ?? null;
+    });
     return () => unsubscribe();
   }, []);
 
@@ -112,7 +115,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       headers: providerConfig.headers,
       body: JSON.stringify(payload),
     };
-    const idToken = await getFirebaseIdToken();
+    const idToken = await getSupabaseAccessToken();
     const res = idToken
       ? await authenticatedChatFetch("/api/read-receipts", requestInit)
       : await fetch("/api/read-receipts", requestInit);
@@ -138,7 +141,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       headers: providerConfig.headers,
       body: JSON.stringify(payload),
     };
-    const idToken = await getFirebaseIdToken();
+    const idToken = await getSupabaseAccessToken();
     const response = idToken
       ? await authenticatedChatFetch("/api/parse-pdf-chapters", requestInit)
       : await fetch("/api/parse-pdf-chapters", requestInit);
@@ -271,7 +274,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             }),
           };
           // Signed-in users can resolve saved vault credentials; anonymous users send BYOK headers.
-          const idToken = await getFirebaseIdToken();
+          const idToken = await getSupabaseAccessToken();
           const dupRes = idToken
             ? await authenticatedChatFetch("/api/check-duplicates", requestInit)
             : await fetch("/api/check-duplicates", requestInit);
