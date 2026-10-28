@@ -11,7 +11,7 @@
     "backend": {
       "root": ".",
       "framework": "express",
-      "entrypoint": "backend/dist/server.js",
+      "entrypoint": "backend/src/index.ts",
       "installCommand": "npm ci",
       "buildCommand": "npm run --workspace=@charan-interiors/contracts build && npm run --workspace=@charan-interiors/backend build"
     }
