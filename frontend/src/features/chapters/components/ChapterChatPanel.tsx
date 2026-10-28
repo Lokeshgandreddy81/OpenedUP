@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
 import { authenticatedChatFetch } from "../../../app/api/chatApi";
+import { base64ToBlob, uploadBlobForProcessing } from "../../../app/files/storageUploads";
 import { useChatAuth } from "../../../app/auth/useChatAuth";
 import {
   ChatInput,
@@ -284,6 +285,14 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
       }
       const preparedEvidence = prepareChapterEvidence(retrieved, imagePages);
       imagePages = preparedEvidence.images;
+      if (
+        !user &&
+        imagePages.reduce((total, image) => total + image.base64Data.length, 0) > 3_000_000
+      ) {
+        throw new Error(
+          "Sign in to analyze this many scanned pages. Signed-in sessions upload page images directly to secure storage."
+        );
+      }
       const evidence = preparedEvidence.evidence;
       if (evidence.length === 0) {
         onHistoryChange([
@@ -323,7 +332,25 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
           ...provider.customModelFields,
           history: recentHistory,
           evidence,
-          ...(imagePages.length ? { imagePages } : {}),
+          ...(imagePages.length
+            ? {
+                imagePages: await Promise.all(
+                  imagePages.map(async (image) => {
+                    if (!user) return image;
+                    const storagePath = await uploadBlobForProcessing(
+                      base64ToBlob(image.base64Data, image.mimeType),
+                      `chapter-page-${image.pageNumber}.jpg`,
+                      "image"
+                    );
+                    return {
+                      pageNumber: image.pageNumber,
+                      mimeType: image.mimeType,
+                      storagePath,
+                    };
+                  })
+                ),
+              }
+            : {}),
         }),
       };
       requestStage = "connecting";

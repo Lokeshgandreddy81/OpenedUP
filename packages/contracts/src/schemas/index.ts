@@ -10,7 +10,10 @@ export const PhotoInputSchema = z.object({
     .max(100)
     .regex(/^image\/[a-zA-Z0-9.+-]+$/i, "Invalid image MIME type")
     .default("image/jpeg"),
-  base64Data: z.string().min(1, "base64Data cannot be empty").max(20_000_000),
+  base64Data: z.string().max(20_000_000).default(""),
+  storagePath: z.string().trim().min(1).max(500).optional(),
+}).refine((photo) => Boolean(photo.base64Data || photo.storagePath), {
+  message: "Either base64Data or storagePath is required.",
 });
 
 export const ReadReceiptsRequestSchema = z
@@ -21,7 +24,7 @@ export const ReadReceiptsRequestSchema = z
     customProvider: z.enum(PROVIDER_IDS).optional(),
   })
   .superRefine(({ photos }, context) => {
-    const encodedPhotoBytes = photos.reduce((total, photo) => total + photo.base64Data.length, 0);
+    const encodedPhotoBytes = photos.reduce((total, photo) => total + (photo.base64Data?.length || 0), 0);
     if (encodedPhotoBytes > 50_000_000) {
       context.addIssue({
         code: "custom",
@@ -54,11 +57,14 @@ export const CheckDuplicatesRequestSchema = z.object({
 
 export const ParsePdfChaptersRequestSchema = z.object({
   mimeType: z.string().trim().max(100).optional().default("application/pdf"),
-  base64Data: z.string().min(1, "base64Data is required").max(50_000_000),
+  base64Data: z.string().max(50_000_000).default(""),
+  storagePath: z.string().trim().min(1).max(500).optional(),
   fileName: z.string().max(300).optional(),
   model: z.string().trim().min(1).max(200),
   customModel: z.string().trim().max(200).optional(),
   customProvider: z.enum(PROVIDER_IDS).optional(),
+}).refine((request) => Boolean(request.base64Data) !== Boolean(request.storagePath), {
+  message: "Provide either base64Data or storagePath.",
 });
 
 export const ChatMessageSchema = z.object({
@@ -67,6 +73,7 @@ export const ChatMessageSchema = z.object({
 });
 
 export const ChatRequestSchema = z.object({
+  conversationId: z.string().trim().min(1).max(200).optional(),
   messages: z.array(ChatMessageSchema).min(1, "At least one message is required").max(100),
   context: z
     .object({
@@ -119,12 +126,15 @@ export const ChatRequestSchema = z.object({
           .trim()
           .max(100)
           .regex(/^image\/[a-zA-Z0-9.+-]+$/i, "Invalid image MIME type"),
-        base64Data: z.string().min(1).max(20_000_000),
+        base64Data: z.string().max(20_000_000).default(""),
+        storagePath: z.string().trim().min(1).max(500).optional(),
+      }).refine((image) => Boolean(image.base64Data || image.storagePath), {
+        message: "Either base64Data or storagePath is required.",
       })
     )
     .max(10)
     .refine(
-      (imgs) => imgs.reduce((sum, img) => sum + img.base64Data.length, 0) <= 60_000_000,
+      (imgs) => imgs.reduce((sum, img) => sum + (img.base64Data?.length || 0), 0) <= 60_000_000,
       "Total image data exceeds the 60 MB request limit."
     )
     .optional(),
@@ -159,7 +169,10 @@ export const ChapterChatRequestSchema = z
         z.object({
           pageNumber: z.number().int().positive(),
           mimeType: z.enum(["image/jpeg", "image/png"]),
-          base64Data: z.string().min(1).max(1_500_000),
+          base64Data: z.string().max(1_500_000).default(""),
+          storagePath: z.string().trim().min(1).max(500).optional(),
+        }).refine((image) => Boolean(image.base64Data) !== Boolean(image.storagePath), {
+          message: "Provide either base64Data or storagePath.",
         })
       )
       .max(8)

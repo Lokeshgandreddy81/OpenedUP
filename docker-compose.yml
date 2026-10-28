@@ -11,8 +11,16 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY:-}
+      - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY:-}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - CHAT_DB_PATH=/var/lib/openedup/chat.sqlite
+      - SKILLS_STORAGE_DIR=/var/lib/openedup/skills
+      - SANDBOX_BASE_DIR=/var/lib/openedup/sandboxes
+      - LOG_FILE=/var/lib/openedup/shoebox.log
       - BYOK_ENCRYPTION_KEY=${BYOK_ENCRYPTION_KEY:-}
     volumes:
       - openedup-data:/var/lib/openedup
@@ -29,6 +37,9 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${SUPABASE_URL:-}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
     container_name: charan-frontend
     restart: unless-stopped
     ports:

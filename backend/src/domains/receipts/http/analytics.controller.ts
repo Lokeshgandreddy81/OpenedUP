@@ -22,11 +22,16 @@ import {
   providerForModelRequest,
   resolveRequestProviderCredential,
 } from "../../credentials/application/requestCredential.js";
+import { deleteUserUploads, downloadUserImage } from "../../../platform/storage/supabaseStorage.js";
 
 export async function handleReadReceipts(req: Request, res: Response): Promise<void> {
   const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
   try {
-    const payload = req.body as ReadReceiptsRequest;
+    let payload = req.body as ReadReceiptsRequest;
+    const uploadedPaths = payload.photos.flatMap((photo) => (photo.storagePath ? [photo.storagePath] : []));
+    if (uploadedPaths.length && req.principal?.uid) {
+      res.once("finish", () => void deleteUserUploads(req.principal!.uid, uploadedPaths));
+    }
     const provider = providerForModelRequest(payload);
     const selectableImageModel = getChatModels().some(
       (model) =>
@@ -48,6 +53,19 @@ export async function handleReadReceipts(req: Request, res: Response): Promise<v
         requestId: req.id,
       });
       return;
+    }
+    if (uploadedPaths.length) {
+      if (!req.principal?.uid) throw new AppError("Sign in to process these uploads.", 401);
+      payload = {
+        ...payload,
+        photos: await Promise.all(
+          payload.photos.map(async (photo) => {
+            if (!photo.storagePath) return photo;
+            const bytes = await downloadUserImage(req.principal!.uid, photo.storagePath, photo.mimeType);
+            return { ...photo, base64Data: bytes.toString("base64") };
+          })
+        ),
+      };
     }
     const result = await readReceipts(payload.photos, {
       modelId: payload.model,
@@ -75,11 +93,12 @@ export async function handleReadReceipts(req: Request, res: Response): Promise<v
       errorType: err instanceof Error ? err.name : "UnknownError",
       failureCategory,
     });
-    const safeMessage = timeoutSignal.aborted
-      ? "This model took too long to respond. Try again or choose another model."
-      : status >= 500
-        ? actionableProviderError(message)
-        : redactSecretsString(message);
+    const safeMessage =
+      failureCategory === "timeout"
+        ? "This model took too long to respond. Try again or choose another model."
+        : status >= 500
+          ? actionableProviderError(message)
+          : redactSecretsString(message);
     if (status === 401 && !req.principal) res.setHeader("WWW-Authenticate", "Bearer");
     if (err instanceof AppError) {
       res
@@ -138,7 +157,7 @@ export async function handleCheckDuplicates(req: Request, res: Response): Promis
     });
     const safeMessage = isMalformedModelReview
       ? redactSecretsString(message)
-      : timeoutSignal.aborted
+      : failureCategory === "timeout"
         ? "This model took too long to respond. Try again or choose another model."
         : status >= 500
           ? actionableProviderError(message)
@@ -154,7 +173,13 @@ export async function handleCheckDuplicates(req: Request, res: Response): Promis
   }
 }
 
-export function handleGetLogs(_req: Request, res: Response): void {
+export function handleGetLogs(req: Request, res: Response): void {
+  const address = req.socket.remoteAddress?.replace(/^::ffff:/, "");
+  const isLoopback = address === "127.0.0.1" || address === "::1";
+  if (process.env["NODE_ENV"] === "production" && !isLoopback) {
+    res.status(403).json({ error: "Server logs are available only to local requests." });
+    return;
+  }
   try {
     const content = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, "utf8") : "No logs yet.";
     res.type("text/plain").send(content);

@@ -11,7 +11,7 @@ import { analyticsRouter } from "./domains/receipts/http/analytics.routes.js";
 import { pdfRouter } from "./domains/documents/http/pdf.routes.js";
 import { chatRouter } from "./domains/chat/http/chat.routes.js";
 import { benchmarksRouter } from "./domains/benchmarks/http/benchmarks.routes.js";
-import { attachOptionalFirebaseUser, requireFirebaseUser } from "./platform/auth/firebaseAuth.js";
+import { attachOptionalSupabaseUser, requireSupabaseUser } from "./platform/auth/supabaseAuth.js";
 import { conversationRouter } from "./domains/conversations/http/conversation.routes.js";
 import { artifactRouter } from "./domains/artifacts/http/artifact.routes.js";
 import { credentialRouter } from "./domains/credentials/http/credential.routes.js";
@@ -19,6 +19,7 @@ import { projectRouter } from "./domains/projects/http/project.routes.js";
 import { scheduledTaskRouter } from "./domains/scheduled/http/scheduledTask.routes.js";
 import { skillRouter } from "./domains/skills/http/skill.routes.js";
 import { seedBuiltinSkills } from "./domains/skills/application/seedBuiltinSkills.js";
+import { uploadRouter } from "./platform/storage/upload.routes.js";
 
 export function createApp(): Express {
   // Seed builtin skills if not already present
@@ -29,10 +30,19 @@ export function createApp(): Express {
   }
 
   const app = express();
+  app.disable("x-powered-by");
 
-  // Support batches and large PDFs up to 100MB payload
-  app.use(express.json({ limit: "100mb" }));
-  app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    next();
+  });
+
+  // File bytes go directly to Supabase Storage. Keep API payloads below Vercel's
+  // function request limit and send only metadata/storage paths through Express.
+  app.use(express.json({ limit: "4mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "4mb" }));
 
   // Observability & logging middleware
   app.use(requestIdMiddleware);
@@ -42,26 +52,23 @@ export function createApp(): Express {
   app.use(healthRouter);
 
   // API domain routes
-  app.use("/api", attachOptionalFirebaseUser);
+  if (process.env["NODE_ENV"] === "production") {
+    app.use("/api", requireSupabaseUser);
+  } else {
+    app.use("/api", attachOptionalSupabaseUser);
+  }
   app.use("/api", authRouter);
+  app.use("/api", uploadRouter);
   app.use("/api", analyticsRouter);
   app.use("/api", pdfRouter);
   app.use("/api", chatRouter);
   app.use("/api", benchmarksRouter);
-  if (process.env["NODE_ENV"] === "production") {
-    app.use("/api", requireFirebaseUser, skillRouter);
-  } else {
-    app.use("/api", skillRouter);
-  }
-  if (process.env["NODE_ENV"] === "production") {
-    app.use("/api/scheduled-tasks", requireFirebaseUser, scheduledTaskRouter);
-  } else {
-    app.use("/api/scheduled-tasks", scheduledTaskRouter);
-  }
-  app.use("/api/conversations", requireFirebaseUser, conversationRouter);
-  app.use("/api/artifacts", requireFirebaseUser, artifactRouter);
-  app.use("/api/credentials", requireFirebaseUser, credentialRouter);
-  app.use("/api/projects", requireFirebaseUser, projectRouter);
+  app.use("/api", skillRouter);
+  app.use("/api/scheduled-tasks", scheduledTaskRouter);
+  app.use("/api/conversations", requireSupabaseUser, conversationRouter);
+  app.use("/api/artifacts", requireSupabaseUser, artifactRouter);
+  app.use("/api/credentials", requireSupabaseUser, credentialRouter);
+  app.use("/api/projects", requireSupabaseUser, projectRouter);
 
   // Serve built frontend (if present) for production/E2E
   const __dirname = path.dirname(fileURLToPath(import.meta.url));

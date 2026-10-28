@@ -1026,6 +1026,7 @@ test("streaming provider adapters apply the selected native effort", async (t) =
         messages: [{ role: "user", content: "hello" }],
         systemInstruction: "Be concise.",
         injectedApiKey: "provider-fixture-token",
+        injectedBaseUrl: "https://1.1.1.1/v1",
         effort: entry.effort,
       },
       () => undefined
@@ -1109,6 +1110,7 @@ test("Anthropic non-streaming requests forward all advertised effort levels for 
         messages: [{ role: "user", content: "hello" }],
         systemInstruction: "Be concise.",
         injectedApiKey: "anthropic-fixture-token",
+        injectedBaseUrl: "https://1.1.1.1/v1",
         effort,
       });
     }
@@ -1197,6 +1199,7 @@ test("Google generation forwards Low, Medium, and High effort to the selected mo
         messages: [{ role: "user", content: "hello" }],
         systemInstruction: "Be concise.",
         injectedApiKey: "google-enterprise-token",
+        injectedBaseUrl: "https://1.1.1.1/v1beta",
         effort,
       });
     }
@@ -1245,6 +1248,7 @@ test("OpenAI generation forwards all advertised effort levels for every catalog 
         messages: [{ role: "user", content: "hello" }],
         systemInstruction: "Be concise.",
         injectedApiKey: "openai-fixture-token",
+        injectedBaseUrl: "https://1.1.1.1/v1",
         effort,
       });
     }
@@ -1259,7 +1263,7 @@ test("OpenAI generation forwards all advertised effort levels for every catalog 
     })),
     models.flatMap((model) =>
       efforts.map((effort) => ({
-        url: "https://api.openai.com/v1/chat/completions",
+        url: "https://1.1.1.1/v1/chat/completions",
         model: model.upstreamModelId,
         reasoningEffort: effort === "Extra" ? "xhigh" : effort.toLowerCase(),
         maxCompletionTokens: 128000,
@@ -1290,6 +1294,7 @@ test("streaming OpenAI adapter forwards all advertised effort levels for every c
           messages: [{ role: "user", content: "hello" }],
           systemInstruction: "Be concise.",
           injectedApiKey: "openai-fixture-token",
+          injectedBaseUrl: "https://1.1.1.1/v1",
           effort,
         },
         () => undefined
@@ -1332,6 +1337,7 @@ test("streaming Gemini adapter sends every advertised thinking level for every c
           messages: [{ role: "user", content: "hello" }],
           systemInstruction: "Be concise.",
           injectedApiKey: "google-fixture-token",
+          injectedBaseUrl: "https://1.1.1.1/v1beta",
           effort,
         },
         () => undefined
@@ -1391,6 +1397,7 @@ test("effort settings map to each provider's documented request format", async (
       messages: [{ role: "user", content: "hello" }],
       systemInstruction: "Be concise.",
       injectedApiKey: "provider-fixture-token",
+      injectedBaseUrl: "https://1.1.1.1/v1",
       effort: entry.effort,
     });
   }
@@ -1409,6 +1416,7 @@ test("effort settings map to each provider's documented request format", async (
     messages: [{ role: "user", content: "hello" }],
     systemInstruction: "Be concise.",
     injectedApiKey: "openrouter-fixture-token",
+    injectedBaseUrl: "https://1.1.1.1/v1",
     effort: "High",
   });
   const unsupportedBody = requests.at(-1)!;
@@ -1580,6 +1588,7 @@ test("Anthropic streaming requests forward all advertised effort levels for ever
           messages: [{ role: "user", content: "hello" }],
           systemInstruction: "Be concise.",
           injectedApiKey: "anthropic-fixture-token",
+          injectedBaseUrl: "https://1.1.1.1/v1",
           effort,
         },
         () => undefined

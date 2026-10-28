@@ -3,7 +3,7 @@ import test from "node:test";
 import type { Request } from "express";
 import { getRequestIdentity } from "./identity.js";
 
-test("production request identity comes only from the verified Firebase principal", () => {
+test("production request identity comes only from the verified Supabase principal", () => {
   const previousNodeEnv = process.env["NODE_ENV"];
   process.env["NODE_ENV"] = "production";
   try {
@@ -13,11 +13,11 @@ test("production request identity comes only from the verified Firebase principa
         "x-org-id": "attacker-org",
         "x-role": "admin",
       },
-      principal: { uid: "firebase-user", orgId: "trusted-org", role: "user" as const },
+      principal: { uid: "supabase-user", orgId: "trusted-org", role: "user" as const },
     } as unknown as Request;
 
     assert.deepEqual(getRequestIdentity(request), {
-      userId: "firebase-user",
+      userId: "supabase-user",
       orgId: "trusted-org",
       role: "user",
     });
@@ -27,13 +27,13 @@ test("production request identity comes only from the verified Firebase principa
   }
 });
 
-test("production request identity refuses missing Firebase authentication", () => {
+test("production request identity refuses missing Supabase authentication", () => {
   const previousNodeEnv = process.env["NODE_ENV"];
   process.env["NODE_ENV"] = "production";
   try {
     assert.throws(
       () => getRequestIdentity({ headers: { "x-user-id": "attacker" } } as unknown as Request),
-      /authenticated firebase identity is required/i
+      /authenticated supabase identity is required/i
     );
   } finally {
     if (previousNodeEnv === undefined) delete process.env["NODE_ENV"];

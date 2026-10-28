@@ -1,4 +1,4 @@
-# Openedup — Spend Audit & Document Intelligence Platform
+# Openedup
 
 [![CI](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/ci.yml/badge.svg)](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/ci.yml)
 [![Security & Audit](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/security.yml/badge.svg)](https://github.com/Lokeshgandreddy81/OpenedUP/actions/workflows/security.yml)
@@ -6,329 +6,90 @@
 [![Node.js](https://img.shields.io/badge/Node.js-24.12%2B-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Document intelligence, spend reconciliation, and AI chat platform for receipt auditing, PDF analysis, and conversational workflows.
+Openedup brings document analysis, spend review, model-backed chat, and coding tools into one workspace.
 
----
+## Supabase Auth setup
 
-## Architecture Overview
+Openedup uses Supabase Auth for email/password accounts, Google sign-in, email confirmation, password recovery, and protected API sessions. The backend verifies each bearer token with the configured Supabase Auth service and only accepts users whose email is confirmed. The browser uses the Supabase publishable key; never put a Supabase secret or `service_role` key in the frontend.
 
-The current HTTP API contract is maintained in [OpenAPI](packages/docs/api/openapi.yaml). Chat sessions use client-selected BYOK keys encrypted with AES-256-GCM at rest, with zero fallback to server environment secrets.
+Set these values before enabling sign-in:
 
-Provider model provenance, capability limits, and adapter support status live in the [BYOK catalog and adapter guide](specs/byok-catalog-adapters/README.md).
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `frontend/.env`.
+- `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `backend/.env`.
+- For Docker Compose, set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in the root `.env`; Compose passes them to the backend and frontend build.
+- `GOOGLE_CLIENT_ID` in `backend/.env` is used by the separate Drive/Gmail authorization flow.
 
-```mermaid
-graph TD
-    subgraph Client ["Frontend Client (React 19 + Vite 8 + Tailwind 4)"]
-        UI["Landing & Workspace Views"]
-        AuditView["Spend Audit & Treemap Ledger"]
-        RoadmapCanvas["Interactive 2D Topology Canvas"]
-        ChatInterface["Unify AI Document Assistant"]
-    end
+In the Supabase dashboard, set the project Site URL and add each app origin's `/auth/callback` URL (local and production) to the Auth redirect URL allowlist. Enable email/password and Google providers, and keep email confirmation enabled. The Google provider needs its OAuth client ID and client secret in Supabase; in Google Cloud, authorize the Supabase project's Auth callback URL shown in its dashboard. The app's Google client ID is also used by the separate Drive/Gmail flow, which needs its consent screen and requested scopes configured in Google Cloud. Configure custom SMTP in Supabase before production email delivery; the built-in sender is intended for testing.
 
-    subgraph API ["Modular Server (Node.js 24 + Express)"]
-        Router["Express Gateway (JSON up to 100MB)"]
-        Logger["Pino Structured Logger & Metrics"]
-        Validator["Zod Schema Validation Middleware"]
-        HealthRoute["GET /healthz"]
-        ReceiptRoute["POST /api/read-receipts"]
-        DuplicateRoute["POST /api/check-duplicates"]
-        PdfRoute["POST /api/parse-pdf-chapters"]
-        ChatRoute["POST /api/chat"]
-        ChapterChatRoute["POST /api/chat/chapter/stream"]
-    end
+## Architecture
 
-    subgraph Engines ["Processing & Intelligence Engines"]
-        PythonExtractor["Local Python Extractor (PyMuPDF / pypdf)"]
-        PdfLibService["Pure JS pdf-lib Engine (Zero-Dependency Fallback)"]
-        ProviderDispatcher["Shared BYOK Provider Dispatcher"]
-    end
+The frontend owns product interactions and feature state. The Express backend owns authenticated requests, provider dispatch, persistence, and isolated tool execution. Shared request and response shapes live in `packages/contracts`; Python utilities handle document-processing tasks that need them.
 
-    subgraph Integrations ["External Services & Data"]
-        GoogleDrive["Google Drive API"]
-        Gmail["Gmail API"]
-        FirebaseAuth["Firebase Auth (OAuth Client)"]
-    end
+Keep cross-workspace contracts in the shared package and product behavior with the feature that owns it. The [architecture boundaries](packages/docs/ARCHITECTURE.md) describe these rules.
 
-    UI --> Router
-    AuditView --> Router
-    RoadmapCanvas --> Router
-    ChatInterface --> Router
+## Development
 
-    Router --> Logger
-    Router --> Validator
-    Validator --> HealthRoute
-    Validator --> ReceiptRoute
-    Validator --> DuplicateRoute
-    Validator --> PdfRoute
-    Validator --> ChatRoute
-    Validator --> ChapterChatRoute
-
-    ReceiptRoute --> ProviderDispatcher
-    DuplicateRoute --> ProviderDispatcher
-    ChatRoute --> ProviderDispatcher
-    ChapterChatRoute --> ProviderDispatcher
-
-    PdfRoute --> PythonExtractor
-    PdfRoute -. scanned-page OCR .-> ProviderDispatcher
-    PythonExtractor -. extraction fallback .-> PdfLibService
-
-    ReceiptRoute --> Integrations
-```
-
----
-
-## Monorepo Layout
-
-The repository is structured into four focused top-level directories:
-
-```text
-.
-├── frontend/                       # React 19 + Vite browser application
-│   ├── src/app/                    # Shell, routing, auth and shared integrations
-│   ├── src/features/               # Feature-owned pages, UI, state, services and data
-│   │   ├── artifacts/              # Artifact screen and persistence client
-│   │   ├── benchmarks/             # Benchmarks, image arena and coding-agent screens
-│   │   ├── chapters/               # Intake, document and results screens
-│   │   ├── chat/                   # Chat screen, session UI and chat orchestration
-│   │   ├── customize/              # Provider/model settings and key client
-│   │   ├── plugins/                # Plugin catalog and install state
-│   │   ├── projects/               # Projects, sessions and file context
-│   │   ├── roadmaps/               # Roadmap screens, renderer and catalog data
-│   │   └── scheduled/              # Scheduled task screens and UI
-│   ├── src/                        # Feature code and colocated unit tests
-│   └── infra/docker/               # Frontend Nginx configuration
-├── backend/                        # Single-process modular Express application
-│   ├── src/app.ts                  # Middleware and domain composition root
-│   ├── src/domains/                # HTTP, application, provider and repository modules
-│   ├── src/platform/               # Auth, config, database, HTTP and observability
-│   └── src/                        # Backend domains and colocated unit tests
-├── python/                         # Scalable Python document processing and chunking
-│   ├── src/                        # PDF chapter extractor & roadmap generator
-│   ├── pyproject.toml              # Ruff configuration
-│   └── requirements.txt            # Python dependencies
-├── packages/                       # Shared packages, configurations and documentation
-│   ├── contracts/                  # Runtime-neutral schemas, types and helpers
-│   └── docs/                       # Architecture decisions and OpenAPI contract
-├── .github/                        # CI and repository configuration
-├── docker-compose.yml              # Local multi-container orchestration
-└── package.json                    # npm workspace orchestration
-```
-
-Each route/screen belongs to one feature and has its own `.tsx` page entry. Shared API schemas and models are defined in `@charan-interiors/contracts` (`packages/contracts/`) so that the frontend remains decoupled from backend runtime code.
----
-
-## Quickstart
-
-### Prerequisites
-
-- **Node.js**: `v24.12.0+` (see `.nvmrc`)
-- **npm**: `v10.9.0+`
-- **Python**: `3.9+` (for local standalone PDF chapter extraction)
-
-### Installation
-
-Use Node.js `24.12.0` or newer and npm `10` or newer. The repository pins the tested Node version in `.nvmrc`; npm rejects versions outside the declared engine range. Then clone and install:
+Use the Node version in `.nvmrc`, npm 10 or newer, and Python 3.9 or newer for local PDF processing.
 
 ```bash
-git clone git@github.com:Lokeshgandreddy81/OpenedUP.git
-cd OpenedUP
 npm ci
-```
-
-### Local Development
-
-No environment file is required to start the app locally. Run both services from the repository root:
-
-```bash
 npm run dev
 ```
 
-Open <http://localhost:5173>. Vite proxies `/api` requests to the backend at `http://localhost:3000`. Chat and scanned-PDF OCR use the selected provider model and its configured BYOK credential. Searchable PDFs are extracted locally first; scanned PDFs need a verified image-capable model and are limited to eight rendered pages per OCR request. `frontend/.env.example` is only needed if you want to override the Vite API proxy target.
+Open <http://localhost:5173>. Vite proxies API requests to the backend on port 3000. Chat and scanned-document OCR use a provider key configured by the user; searchable PDF text is extracted locally when possible.
 
-### Docker Compose
+For Docker Compose, the root `.env` supplies the Supabase settings to both the backend and frontend build. Copy `.env.example` to `.env` on a fresh checkout, then fill `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from the Supabase project's Connect dialog or Settings → API Keys. Set `GOOGLE_CLIENT_ID` when using Google Workspace access.
 
-Compose uses the root `.env` file (separate from `backend/.env`):
+Generate the BYOK encryption key with:
 
 ```bash
-cp .env.example .env
+openssl rand -base64 32
+```
+
+Put the output in `BYOK_ENCRYPTION_KEY` in the root `.env`. For a local backend run outside Docker, set the same value in `backend/.env`. Keep this key stable and backed up; losing or rotating it can make saved provider credentials unreadable.
+
+Then run:
+
+```bash
 docker compose up --build
 ```
 
-Open <http://localhost:8080>. Before using signed-in credential storage, set `FIREBASE_PROJECT_ID` to match `frontend/firebase-applet-config.json` and set a stable, randomly generated, base64-encoded 32-byte `BYOK_ENCRYPTION_KEY` in `.env`. Scanned-PDF OCR uses the selected provider model and its BYOK credential. Keep the `openedup-data` volume to preserve stored account data. Do not commit populated `.env` files.
+The Compose stack serves the app on port 8080. Retain the `openedup-data` volume to preserve account data. Never commit populated environment files.
 
-| Variable              | Required                  | Description                                                                      |
-| :-------------------- | :------------------------ | :------------------------------------------------------------------------------- |
-| `PORT`                | Optional                  | Backend HTTP port; defaults to `3000`.                                           |
-| `FIREBASE_PROJECT_ID` | Optional                  | Firebase project used to verify signed-in users and protect saved provider keys. |
-| `BYOK_ENCRYPTION_KEY` | For saved keys in Compose | Base64-encoded 32-byte key used to encrypt saved provider credentials.           |
+## Vercel deployment
 
----
+The root `vercel.json` defines Vercel Services routing for the Vite frontend and Express API, with `/api/*` sent to the backend. Services are currently in beta; choose **Services** as the Vercel project's framework and confirm the feature is enabled for your account.
 
----
+Uploads for PDF analysis, receipt images, chat images, and ZIP skill packages now use short-lived Supabase Storage signed uploads. Apply `supabase/migrations/20261028000000_openedup_app_schema.sql` in the Supabase SQL editor to create private buckets with PDF, image, and skill-package size limits before using these upload routes. The server checks account ownership before reading uploaded objects and removes them after processing. Cleanup is best effort; a scheduled job to delete abandoned uploads is still required before production.
 
-## Skills Feature Architecture & Execution Model
+**Do not deploy this backend to production yet.** Application records and skill/workspace data still use synchronous SQLite and local filesystem paths; `DATABASE_URL` is not connected to the repositories, and the SQL migration does not migrate existing SQLite data. The Docker sandbox, 2-second scheduled-task worker, and abandoned-upload cleanup also still require Vercel-compatible implementations. Vercel instances have ephemeral storage and the current function request limit makes the direct Storage upload path necessary; these remaining runtime changes must land before production data is safe.
 
-The Skills system equips Claude and conversational models with modular domain expertise, automated tool harnesses, and isolated computational sandboxes without expanding baseline context windows.
+The current local environment has Supabase Auth settings, but no `SUPABASE_SECRET_KEY` or Postgres connection string. Create a Supabase secret key in **Settings → API Keys** and add it as a server-only Vercel production variable; the upload route accepts the legacy `SUPABASE_SERVICE_ROLE_KEY` name as a fallback. Use `DATABASE_URL` only after the PostgreSQL repository migration is implemented. Never use a `VITE_` prefix for server secrets, and never commit populated environment files.
 
-### Architecture Diagram (Text)
+For the frontend build, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. For the backend, add `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `BYOK_ENCRYPTION_KEY`; provider keys such as `GEMINI_API_KEY` are optional unless server-side PDF OCR uses them. Keep `DATABASE_URL` unset until the repository migration is ready.
 
-```text
-+---------------------------------------------------------------------------------------------------+
-|                                        BROWSER / CLIENT                                           |
-|                                                                                                   |
-|   +--------------------------+   +----------------------------+   +---------------------------+   |
-|   |   Chat Composer "+" Menu |   | Customize > Skills Market  |   |    Skill Creator Studio   |   |
-|   |  - Explicit skill toggle |   |  - Claude-style Directory  |   |  - Live validation & test |   |
-|   |  - Project-inherited tag |   |  - Contents / Agent viewer |   |  - Markdown & extra files |   |
-|   +------------+-------------+   +--------------+-------------+   +-------------+-------------+   |
-+----------------|--------------------------------|-------------------------------|-----------------+
-                 |                                |                               |
-                 v                                v                               v
-+---------------------------------------------------------------------------------------------------+
-|                                    BACKEND REST & TOOL LOOP                                       |
-|                                                                                                   |
-|  [getRequestIdentity]  <--- Identity Seam (auth decoupled: DEV_USER_ID, DEV_ORG_ID, DEV_ROLE)   |
-|                                                                                                   |
-|  [Skill Registry API]   -->  Validation (Zod, path traversal, zip bombs, binary checks)          |
-|                         -->  Immutable Storage (SHA-256 manifest verification per file)           |
-|                         -->  Approval Workflow (draft -> pending_review -> approved | rejected)   |
-|                                                                                                   |
-|  [Anthropic Tool Loop]                                                                            |
-|     |                                                                                             |
-|     +--> Turn 0: Synthetic Preload (for explicitly selected skills, loaded once)                 |
-|     +--> Turn 1: System Prompt (<available_skills> progressive metadata)                          |
-|     +--> Model decides: Invokes `Skill` tool (loads full SKILL.md body on demand)                 |
-|     +--> Model executes: `Bash`, `Read`, `Write`, `SendUserFile` inside Sandbox                   |
-+---------------------------------------------------------------------------------------------------+
-                                                  |
-                                                  v
-+---------------------------------------------------------------------------------------------------+
-|                                      SANDBOX ISOLATION LAYER                                      |
-|                                                                                                   |
-|  Interface: SandboxExecutor                                                                       |
-|                                                                                                   |
-|  +-------------------------------------------------+  +----------------------------------------+  |
-|  | DockerSandboxExecutor (Production)              |  | UnsafeLocalSandboxExecutor (Dev Only)  |  |
-|  | - Non-root execution (UID 1000:1000)            |  | - STRICT GUARD: SANDBOX_MODE=          |  |
-|  | - Read-only root filesystem                     |  |   unsafe-local AND NODE_ENV=dev/test   |  |
-|  | - Read-only skills mount (/mnt/skills/)         |  | - Strips all server env vars & tokens  |  |
-|  | - Dedicated writable workspace (/work)          |  | - Blocks host file traversals & .env   |  |
-|  | - Network isolated (--network none)             |  | - Process group termination on timeout |  |
-|  | - Per-command timeout & CPU/RAM/PID limits      |  | - Symlink escape protection (lstat)    |  |
-|  +-------------------------------------------------+  +----------------------------------------+  |
-+---------------------------------------------------------------------------------------------------+
-```
+## Common checks
 
-### The Three Progressive Loading Levels
-
-Skills use a 3-tier progressive context-loading model to minimize token consumption and avoid context bloat:
-
-1. **Level 1: System Prompt Registration (`<available_skills>`)**
-   - At session start, enabled skills contribute only lightweight XML metadata (`name` and `description`) into the system prompt.
-   - Cost: ~30-50 tokens per skill.
-   - For auto-matched skills, the model evaluates whether the user's task warrants calling the skill.
-
-2. **Level 2: On-Demand Instruction Retrieval (`Skill` Tool Call or Explicit Pre-load)**
-   - When the task matches an auto-matched skill, the model invokes the `Skill` tool with `{ "skill": "<name>" }`.
-   - For skills **explicitly enabled via the composer "+" menu**, the system automatically synthesizes a `Skill` tool_use/tool_result pair on the next turn, force-loading `SKILL.md` exactly once without requiring the model to decide.
-   - Cost: full `SKILL.md` body loaded only when needed.
-
-3. **Level 3: Isolated Execution (`Bash`, `Read`, `Write`)**
-   - The loaded instructions guide the model to run scripts or template generators located under `/mnt/skills/{scope}/{name}/scripts/`.
-   - Tool execution is isolated inside the per-conversation sandbox workspace, and user attachments are returned via `SendUserFile`.
-
----
-
-### Sandbox Isolation Model
-
-- **Docker Implementation (`DockerSandboxExecutor`)**:
-  - Container-per-conversation or isolated transient container.
-  - Read-only root filesystem (`--read-only`).
-  - Read-only skill mounts at `/mnt/skills/{scope}/{name}/:ro`.
-  - Dedicated writable scratch directory at `/work`.
-  - Zero network access by default (`--network none`).
-  - Strict resource constraints (`--memory=512m`, `--cpus=1.0`, `--pids-limit=64`).
-  - Hard execution timeout (default 60s) with process group termination.
-- **Local Fallback (`UnsafeLocalSandboxExecutor`)**:
-  - Strictly blocked in production. Requires both `SANDBOX_MODE=unsafe-local` and `NODE_ENV !== 'production'`.
-  - Host environment variable stripping (zero inheritance of host secrets, tokens, or database URLs).
-  - Strict path traversal barriers and symlink resolution guards (`fs.lstatSync`).
-  - Ephemeral sandbox directory cleanup with TTL janitor.
-
----
-
-### Configuration & Environment Variables
-
-| Variable                            | Default                   | Description                                                     |
-| :---------------------------------- | :------------------------ | :-------------------------------------------------------------- |
-| `SANDBOX_MODE`                      | `docker`                  | Sandbox runner: `docker` or `unsafe-local` (dev/test only).     |
-| `SANDBOX_IMAGE`                     | `openedup-sandbox:latest` | Docker base image for sandboxed tool execution.                 |
-| `DEV_USER_ID`                       | `dev-user`                | Identity seam: mock user ID when auth is decoupled in dev.      |
-| `DEV_ORG_ID`                        | `dev-org`                 | Identity seam: mock org ID when auth is decoupled in dev.       |
-| `DEV_ROLE`                          | `user`                    | Identity seam: mock role (`user` or `admin`) in dev.            |
-| `SKILL_UPLOADS_PER_HOUR`            | `30`                      | Max skill package uploads per hour per user/IP.                 |
-| `SKILL_TOOL_CALLS_PER_CONV_PER_MIN` | `20`                      | Max `Skill` tool instruction loads per minute per conversation. |
-| `BASH_CALLS_PER_CONV_PER_MIN`       | `30`                      | Max `Bash` tool calls per minute per conversation.              |
-| `USER_DAILY_SANDBOX_CPU_SECONDS`    | `300`                     | Max cumulative daily sandbox CPU-seconds per user.              |
-| `ANTHROPIC_API_KEY`                 | _(None)_                  | Optional Anthropic key for live end-to-end tool loop tests.     |
-
----
-
-### BEFORE PRODUCTION Checklist
-
-Before promoting the application to production:
-
-- [ ] **1. Restore Real Auth via `getRequestIdentity`**:
-  - Replace the development identity bypass in `backend/src/platform/auth/identity.ts` with real JWT verification / session decoding.
-  - In production (`NODE_ENV === 'production'`), `getRequestIdentity` will automatically throw if dev fallback is attempted.
-- [ ] **2. Disable `unsafe-local` Sandbox**:
-  - Remove `SANDBOX_MODE=unsafe-local` from all production environment files.
-  - Ensure the Docker daemon is available and build `openedup-sandbox:latest` using the hardened Dockerfile.
-- [ ] **3. Verify Rate Limits & Quotas**:
-  - Tune `SKILL_UPLOADS_PER_HOUR`, `SKILL_TOOL_CALLS_PER_CONV_PER_MIN`, `BASH_CALLS_PER_CONV_PER_MIN`, and `USER_DAILY_SANDBOX_CPU_SECONDS` based on server infrastructure capacity.
-- [ ] **4. Enable Admin Approval Review**:
-  - Ensure administrative users have `role: 'admin'` assigned so that organization and directory skills pass through the review queue before public visibility.
-
----
-
-## Available Scripts
-
-Run all scripts from the repository root:
-
-| Command                | Action                                                                      |
-| :--------------------- | :-------------------------------------------------------------------------- |
-| `npm run dev`          | Boots application in development mode with live Vite HMR.                   |
-| `npm run build`        | Compiles frontend assets with Vite and compiles server bundle with esbuild. |
-| `npm test`             | Runs unit tests in workspaces that define a test script.                    |
-| `npm start`            | Builds the workspaces and starts the production API server.                 |
-| `npm run typecheck`    | Validates strict TypeScript types with 0 emit across all workspaces.        |
-| `npm run lint`         | Runs ESLint flat configuration check with zero allowable errors.            |
-| `npm run format:check` | Verifies code adherence to Prettier formatting standards.                   |
-| `npm run format`       | Auto-formats all code, markdown, YAML, and configuration files.             |
-| `npm audit`            | Scans dependency tree for vulnerabilities (0 high/critical allowed).        |
-
----
-
-## Verification
-
-CI runs formatting, typechecking, workspace tests, Python tests and lint, feature-boundary checks, lint, and builds on the supported Node version. The security workflow scans for secrets and dependency vulnerabilities. Run the Node checks locally before opening a pull request:
+Run these from the repository root:
 
 ```bash
-npm ci
-npm run format:check
 npm run typecheck
 npm test
-npm run check:feature-boundaries
 npm run lint
 npm run build
-npm audit --audit-level=high
 ```
 
----
+The root [`package.json`](package.json) owns the current workspace commands; CI is the source of truth for the required checks.
+
+## Documentation
+
+- [OpenAPI contract](packages/docs/api/openapi.yaml)
+- [BYOK provider catalog](specs/byok-catalog-adapters/README.md)
+- [Feature implementation notes](specs/)
 
 ## Security
 
-Please report vulnerabilities directly via GitHub Private Vulnerability Reporting on the repository page.
+Production must use authenticated identity and the Docker sandbox. Keep `SANDBOX_MODE=unsafe-local` limited to development and tests. Report vulnerabilities through GitHub Private Vulnerability Reporting.
 
 ## License
 

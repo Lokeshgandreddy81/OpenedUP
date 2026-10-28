@@ -1,4 +1,4 @@
-import type { Principal } from "../../auth/firebaseAuth.js";
+import type { Principal } from "../../auth/supabaseAuth.js";
 
 declare global {
   namespace Express {

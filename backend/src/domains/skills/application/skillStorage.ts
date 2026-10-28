@@ -14,6 +14,10 @@ export class SkillIntegrityError extends Error {
 export function getSkillsStorageDir(): string {
   const custom = process.env["SKILLS_STORAGE_DIR"]?.trim();
   if (custom) return custom;
+  const dbPath = process.env["CHAT_DB_PATH"]?.trim();
+  if (dbPath && dbPath !== ":memory:") {
+    return path.join(path.dirname(dbPath), "skills");
+  }
   return path.join(os.homedir(), ".local", "share", "openedup", "skills");
 }
 

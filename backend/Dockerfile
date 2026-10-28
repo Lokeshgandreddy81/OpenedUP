@@ -35,16 +35,19 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Install curl for healthchecks
-RUN apk --no-cache add curl libstdc++
-RUN mkdir -p /var/lib/openedup && chown -R node:node /var/lib/openedup
+# Install curl, python3, PDF libraries, and docker-cli for healthchecks, PDF extraction/OCR, and sandbox execution
+RUN apk --no-cache add curl libstdc++ python3 py3-pip docker-cli \
+  && pip3 install --no-cache-dir --break-system-packages pymupdf pypdf \
+  && mkdir -p /var/lib/openedup/skills /var/lib/openedup/sandboxes \
+  && chown -R node:node /var/lib/openedup
 
-# Copy built artifacts and runtime packages
+# Copy built artifacts, Python scripts, and runtime packages
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/contracts ./packages/contracts
 COPY --from=builder /app/backend/dist ./dist
 COPY --from=builder /app/backend/package.json ./package.json
+COPY python/ ./python/
 
 # Run as unprivileged node user
 USER node

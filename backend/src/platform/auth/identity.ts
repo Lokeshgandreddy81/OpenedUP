@@ -9,7 +9,7 @@ export interface RequestIdentity {
 export function getRequestIdentity(req: Request): RequestIdentity {
   if (process.env["NODE_ENV"] === "production") {
     const principal = req.principal;
-    if (!principal?.uid) throw new Error("An authenticated Firebase identity is required.");
+    if (!principal?.uid) throw new Error("An authenticated Supabase identity is required.");
     return {
       userId: principal.uid,
       orgId: principal.orgId || null,

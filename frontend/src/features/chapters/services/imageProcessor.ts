@@ -157,15 +157,13 @@ export async function processPhotoInBrowser(photo: UploadedPhoto): Promise<Uploa
         throw new Error(`File "${photo.name}" is not a valid PDF document (missing %PDF- header).`);
       }
 
-      const base64Data = await readBlobAsBase64(photo.file);
-      const byteSize = photo.file.size || Math.ceil((base64Data.length * 3) / 4);
       return {
         ...photo,
-        base64Data,
+        base64Data: undefined,
         mimeType: "application/pdf",
         width: 1000,
         height: 1300,
-        byteSize,
+        byteSize: photo.file.size,
       };
     }
 

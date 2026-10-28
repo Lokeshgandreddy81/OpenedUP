@@ -1,4 +1,5 @@
 import { getSupabaseAccessToken } from "../../../app/integrations/supabaseAuth";
+import { uploadBlobForProcessing } from "../../../app/files/storageUploads";
 
 export type SkillScope = "builtin" | "org" | "user" | "directory";
 
@@ -151,13 +152,12 @@ export async function getSkill(id: string): Promise<SkillDetail> {
 }
 
 export async function uploadSkill(file: File, scope: SkillScope = "user"): Promise<SkillItem> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("scope", scope);
+  const storagePath = await uploadBlobForProcessing(file, file.name, "skill-package");
 
   const res = await safeFetch("/api/skills", {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ storagePath, fileName: file.name, scope }),
   });
 
   if (!res.ok) {

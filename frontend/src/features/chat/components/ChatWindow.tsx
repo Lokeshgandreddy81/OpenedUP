@@ -17,6 +17,7 @@ import {
   chatImageAttachments,
   type ChatAttachmentFile,
 } from "../../../app/files/chatAttachments";
+import { base64ToBlob, uploadBlobForProcessing } from "../../../app/files/storageUploads";
 import type { ChatConversation, ChatMessage, AiModelId, EffortLevel } from "./chatTypes";
 import { getModelMeta, type ComputedRow } from "@charan-interiors/contracts";
 import {
@@ -608,7 +609,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const providerConfig = getProviderChatRequestConfig(model);
         const { providerName, modelName } = providerConfig;
 
-        const imageAttachments = chatImageAttachments(attachments);
+        const imageAttachments = await Promise.all(
+          chatImageAttachments(attachments).map(async (image) => {
+            const blob = base64ToBlob(image.base64Data, image.mimeType);
+            return {
+              name: image.name,
+              mimeType: image.mimeType,
+              storagePath: await uploadBlobForProcessing(blob, image.name || "chat-image", "image"),
+            };
+          })
+        );
         const body = JSON.stringify({
           ...(targetId ? { conversationId: targetId } : {}),
           messages: [...priorMessages, userMessage].map((message) => ({

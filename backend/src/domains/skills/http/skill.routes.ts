@@ -1,7 +1,3 @@
-import crypto from "node:crypto";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { Router } from "express";
 import multer from "multer";
 import { createRateLimiter } from "../../../platform/http/middleware/rateLimiter.js";
@@ -31,21 +27,8 @@ import {
   testScratchSkill,
 } from "./skill.controller.js";
 
-const uploadDir = path.join(os.tmpdir(), "openedup-skill-uploads");
-fs.mkdirSync(uploadDir, { recursive: true });
-
-const diskStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (_req, file, cb) => {
-    const unique = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}-${path.basename(file.originalname)}`;
-    cb(null, unique);
-  },
-});
-
 const upload = multer({
-  storage: diskStorage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 20 * 1024 * 1024, // 20 MB max package size
   },

@@ -155,52 +155,55 @@ export class ConversationRepository {
     conversationId: string,
     message: Omit<StoredMessage, "id" | "createdAt"> & { id?: string }
   ): StoredMessage | null {
-    const conversation = this.db
-      .prepare("SELECT id, title FROM conversations WHERE user_id = ? AND id = ?")
-      .get(userId, conversationId) as { id: string; title: string } | undefined;
-    if (!conversation) return null;
-    const nextSequence = Number(
-      (
-        this.db
-          .prepare(
-            "SELECT COALESCE(MAX(sequence), -1) + 1 AS next_sequence FROM chat_messages WHERE user_id = ? AND conversation_id = ?"
-          )
-          .get(userId, conversationId) as { next_sequence: number }
-      ).next_sequence
-    );
-    const now = Date.now();
-    const id = message.id || randomUUID();
-    this.db
-      .prepare(
-        `INSERT INTO chat_messages(id, conversation_id, user_id, role, content, status, metadata_json, sequence, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        id,
-        conversationId,
-        userId,
-        message.role,
-        message.content,
-        message.status,
-        JSON.stringify(message.metadata),
-        nextSequence,
-        now
+    const appendTx = this.db.transaction((): StoredMessage | null => {
+      const conversation = this.db
+        .prepare("SELECT id, title FROM conversations WHERE user_id = ? AND id = ?")
+        .get(userId, conversationId) as { id: string; title: string } | undefined;
+      if (!conversation) return null;
+      const nextSequence = Number(
+        (
+          this.db
+            .prepare(
+              "SELECT COALESCE(MAX(sequence), -1) + 1 AS next_sequence FROM chat_messages WHERE user_id = ? AND conversation_id = ?"
+            )
+            .get(userId, conversationId) as { next_sequence: number }
+        ).next_sequence
       );
-    const title =
-      message.role === "user" && nextSequence === 0
-        ? message.content.slice(0, 24) + (message.content.length > 24 ? "..." : "")
-        : conversation.title;
-    this.db
-      .prepare("UPDATE conversations SET title = ?, updated_at = ? WHERE user_id = ? AND id = ?")
-      .run(title, now, userId, conversationId);
-    return {
-      id,
-      role: message.role,
-      content: message.content,
-      status: message.status,
-      metadata: message.metadata,
-      createdAt: now,
-    };
+      const now = Date.now();
+      const id = message.id || randomUUID();
+      this.db
+        .prepare(
+          `INSERT INTO chat_messages(id, conversation_id, user_id, role, content, status, metadata_json, sequence, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          id,
+          conversationId,
+          userId,
+          message.role,
+          message.content,
+          message.status,
+          JSON.stringify(message.metadata),
+          nextSequence,
+          now
+        );
+      const title =
+        message.role === "user" && nextSequence === 0
+          ? message.content.slice(0, 24) + (message.content.length > 24 ? "..." : "")
+          : conversation.title;
+      this.db
+        .prepare("UPDATE conversations SET title = ?, updated_at = ? WHERE user_id = ? AND id = ?")
+        .run(title, now, userId, conversationId);
+      return {
+        id,
+        role: message.role,
+        content: message.content,
+        status: message.status,
+        metadata: message.metadata,
+        createdAt: now,
+      };
+    });
+    return appendTx.immediate();
   }
 
   private mapConversation(row: Record<string, unknown>): StoredConversation {

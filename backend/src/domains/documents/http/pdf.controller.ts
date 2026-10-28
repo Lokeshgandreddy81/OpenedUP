@@ -14,12 +14,25 @@ import {
   providerForModelRequest,
   resolveRequestProviderCredential,
 } from "../../credentials/application/requestCredential.js";
+import { deleteUserUploads, downloadUserUpload } from "../../../platform/storage/supabaseStorage.js";
 
 export async function handleParsePdfChapters(req: Request, res: Response): Promise<void> {
   const startTime = Date.now();
-  const payload = req.body as ParsePdfChaptersRequest;
+  let payload = req.body as ParsePdfChaptersRequest;
+  const uploadedPath = payload.storagePath;
+  if (uploadedPath && req.principal?.uid) {
+    res.once("finish", () => void deleteUserUploads(req.principal!.uid, [uploadedPath]));
+  }
   const provider = providerForModelRequest(payload);
   try {
+    if (uploadedPath) {
+      if (!req.principal?.uid) {
+        res.status(401).json({ error: "Sign in to process this upload.", requestId: req.id });
+        return;
+      }
+      const pdfBytes = await downloadUserUpload(req.principal.uid, uploadedPath, "pdf");
+      payload = { ...payload, base64Data: pdfBytes.toString("base64") };
+    }
     const selectableImageModel = getChatModels().some(
       (model) =>
         model.id === payload.model &&

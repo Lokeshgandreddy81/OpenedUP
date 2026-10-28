@@ -23,6 +23,7 @@ import {
 } from "../application/skillStorage.js";
 import { getRequestIdentity } from "../../../platform/auth/identity.js";
 import { checkUploadRateLimit } from "../application/rateLimits.js";
+import { deleteUserUploads, downloadUserUpload } from "../../../platform/storage/supabaseStorage.js";
 
 let activeRepository: SkillRepository | null = null;
 
@@ -223,6 +224,10 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
   const orgId = identity.orgId;
   const isAdmin = identity.role === "admin";
   let tempUploadPath: string | null = null;
+  const storagePath = typeof req.body?.storagePath === "string" ? req.body.storagePath : null;
+  if (storagePath && userId) {
+    res.once("finish", () => void deleteUserUploads(userId, [storagePath]));
+  }
 
   try {
     const requestedScope = (req.body?.scope as SkillScope) || "user";
@@ -259,7 +264,10 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
     } else {
       let zipBuffer: Buffer | null = null;
 
-      if (req.file?.path) {
+      if (storagePath) {
+        if (!userId) throw new SkillValidationError("Sign in to upload a skill package.");
+        zipBuffer = await downloadUserUpload(userId, storagePath, "skill-package");
+      } else if (req.file?.path) {
         tempUploadPath = req.file.path;
         zipBuffer = fs.readFileSync(req.file.path);
       } else if (req.file?.buffer) {
@@ -277,7 +285,7 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      const originalName = (req.file?.originalname || "").toLowerCase();
+      const originalName = (req.file?.originalname || req.body?.fileName || "").toLowerCase();
       if (
         originalName.endsWith(".md") ||
         originalName.endsWith(".markdown") ||
@@ -472,6 +480,10 @@ export async function updateSkill(req: Request, res: Response): Promise<void> {
   }
 
   let tempUploadPath: string | null = null;
+  const storagePath = typeof req.body?.storagePath === "string" ? req.body.storagePath : null;
+  if (storagePath && userId) {
+    res.once("finish", () => void deleteUserUploads(userId, [storagePath]));
+  }
   try {
     let parsed: ParsedSkillPackage;
 
@@ -483,7 +495,10 @@ export async function updateSkill(req: Request, res: Response): Promise<void> {
       parsed = parseSkillPackage(rawFiles);
     } else {
       let zipBuffer: Buffer | null = null;
-      if (req.file?.path) {
+      if (storagePath) {
+        if (!userId) throw new SkillValidationError("Sign in to upload a skill package.");
+        zipBuffer = await downloadUserUpload(userId, storagePath, "skill-package");
+      } else if (req.file?.path) {
         tempUploadPath = req.file.path;
         zipBuffer = fs.readFileSync(req.file.path);
       } else if (req.file?.buffer) {

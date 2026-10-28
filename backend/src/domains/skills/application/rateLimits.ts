@@ -165,3 +165,26 @@ export function resetRateLimitsForTesting(): void {
   bashToolBuckets.clear();
   userDailyCpuUsage.clear();
 }
+
+const rateLimitCleanupInterval = setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, bucket] of uploadBuckets.entries()) {
+      cleanWindow(bucket, 60 * 60 * 1000, now);
+      if (bucket.timestamps.length === 0) uploadBuckets.delete(key);
+    }
+    for (const [key, bucket] of skillToolBuckets.entries()) {
+      cleanWindow(bucket, 60 * 1000, now);
+      if (bucket.timestamps.length === 0) skillToolBuckets.delete(key);
+    }
+    for (const [key, bucket] of bashToolBuckets.entries()) {
+      cleanWindow(bucket, 60 * 1000, now);
+      if (bucket.timestamps.length === 0) bashToolBuckets.delete(key);
+    }
+    for (const [userId, usage] of userDailyCpuUsage.entries()) {
+      if (now >= usage.resetAt) userDailyCpuUsage.delete(userId);
+    }
+  },
+  5 * 60 * 1000
+);
+rateLimitCleanupInterval.unref();

@@ -1,16 +1,15 @@
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export const PLACEHOLDER_API_KEYS: ReadonlySet<string> = new Set([
   "",
   "MY_GEMINI_API_KEY",
   "PLACEHOLDER_API_KEY",
   "YOUR_GEMINI_API_KEY",
+  "YOUR_SUPABASE_PUBLISHABLE_KEY",
+  "SUPABASE_PUBLISHABLE_KEY",
+  "YOUR_GOOGLE_CLIENT_ID",
   "YOUR_API_KEY",
   "TODO",
   "undefined",
@@ -91,79 +90,51 @@ export function resolveApiKey(): string | undefined {
   return undefined;
 }
 
-export function resolveFirebaseConfig(): {
-  firebaseConfig: Record<string, unknown> | null;
-  googleClientId: string | null;
+export function resolveSupabaseConfig(): {
+  url: string | null;
+  publishableKey: string | null;
 } {
   const devEnv = readDevEnvJson();
-  let firebaseConfig: Record<string, unknown> | null = null;
-
-  const configCandidates = [
-    path.join(process.cwd(), "firebase-applet-config.json"),
-    path.join(__dirname, "..", "..", "firebase-applet-config.json"),
-    path.join(__dirname, "..", "firebase-applet-config.json"),
-    path.join(process.cwd(), "..", "firebase-applet-config.json"),
-  ];
-
-  for (const candidatePath of configCandidates) {
+  const configuredUrl = process.env["SUPABASE_URL"] || devEnv["SUPABASE_URL"];
+  const configuredPublishableKey =
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+    process.env["SUPABASE_ANON_KEY"] ||
+    devEnv["SUPABASE_PUBLISHABLE_KEY"] ||
+    devEnv["SUPABASE_ANON_KEY"];
+  const url = typeof configuredUrl === "string" ? configuredUrl.trim() : "";
+  const publishableKey =
+    typeof configuredPublishableKey === "string" ? configuredPublishableKey.trim() : "";
+  const validUrl = (() => {
     try {
-      if (fs.existsSync(candidatePath)) {
-        const parsed = JSON.parse(fs.readFileSync(candidatePath, "utf8"));
-        if (parsed && typeof parsed === "object") {
-          const apiKey = typeof parsed.apiKey === "string" ? parsed.apiKey.trim() : "";
-          const authDomain = typeof parsed.authDomain === "string" ? parsed.authDomain.trim() : "";
-          const projectId = typeof parsed.projectId === "string" ? parsed.projectId.trim() : "";
-          const isValidFb =
-            apiKey.length > 0 &&
-            !PLACEHOLDER_API_KEYS.has(apiKey) &&
-            !apiKey.includes("remixed-") &&
-            authDomain.length > 0 &&
-            !authDomain.includes("remixed-") &&
-            !projectId.includes("remixed-");
-          if (isValidFb) {
-            firebaseConfig = parsed as Record<string, unknown>;
-            break;
-          }
-        }
-      }
+      const parsed = new URL(url);
+      const loopbackHost = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+      return (
+        (parsed.protocol === "https:" || (parsed.protocol === "http:" && loopbackHost)) &&
+        url.length <= 2048
+      );
     } catch {
-      // ignore
+      return false;
     }
-  }
+  })();
 
-  const rawFbClientId =
-    (typeof firebaseConfig?.["oAuthClientId"] === "string"
-      ? (firebaseConfig["oAuthClientId"] as string).trim()
-      : null) ||
-    (typeof firebaseConfig?.["oauthClientId"] === "string"
-      ? (firebaseConfig["oauthClientId"] as string).trim()
-      : null);
+  return {
+    url: validUrl ? url.replace(/\/+$/, "") : null,
+    publishableKey: isValidApiKey(publishableKey) ? publishableKey : null,
+  };
+}
 
-  const fbClientId =
-    rawFbClientId && !PLACEHOLDER_API_KEYS.has(rawFbClientId) && !rawFbClientId.includes("remixed-")
-      ? rawFbClientId
-      : null;
-
+export function resolveGoogleClientId(): string | null {
+  const devEnv = readDevEnvJson();
   const rawId =
     process.env["GOOGLE_CLIENT_ID"] ||
     process.env["VITE_GOOGLE_CLIENT_ID"] ||
-    (typeof devEnv["GOOGLE_CLIENT_ID"] === "string"
-      ? (devEnv["GOOGLE_CLIENT_ID"] as string)
-      : null) ||
-    (typeof devEnv["VITE_GOOGLE_CLIENT_ID"] === "string"
-      ? (devEnv["VITE_GOOGLE_CLIENT_ID"] as string)
-      : null) ||
-    fbClientId;
-
-  const cleanId =
-    rawId && !PLACEHOLDER_API_KEYS.has(rawId.trim()) && !rawId.trim().includes("remixed-")
-      ? rawId.trim()
-      : null;
-
-  return {
-    firebaseConfig,
-    googleClientId: cleanId,
-  };
+    devEnv["GOOGLE_CLIENT_ID"] ||
+    devEnv["VITE_GOOGLE_CLIENT_ID"];
+  if (typeof rawId !== "string") return null;
+  const cleanId = rawId.trim();
+  return cleanId && !PLACEHOLDER_API_KEYS.has(cleanId) && /^[\x21-\x7E]+$/.test(cleanId)
+    ? cleanId
+    : null;
 }
 
 export const envConfig = {
@@ -171,25 +142,3 @@ export const envConfig = {
   NODE_ENV: process.env["NODE_ENV"] || "development",
   LOG_LEVEL: process.env["LOG_LEVEL"] || "info",
 };
-
-export function resolveFirebaseProjectId(): string | null {
-  const configured = process.env["FIREBASE_PROJECT_ID"]?.trim();
-  if (configured) return configured;
-  const candidates = [
-    path.join(process.cwd(), "frontend", "firebase-applet-config.json"),
-    path.resolve(__dirname, "../../../frontend/firebase-applet-config.json"),
-    path.resolve(__dirname, "../../frontend/firebase-applet-config.json"),
-  ];
-  for (const candidate of candidates) {
-    try {
-      const parsed: unknown = JSON.parse(fs.readFileSync(candidate, "utf8"));
-      if (parsed && typeof parsed === "object" && "projectId" in parsed) {
-        const projectId = (parsed as { projectId?: unknown }).projectId;
-        if (typeof projectId === "string" && projectId.trim()) return projectId.trim();
-      }
-    } catch {
-      // Keep checking the configured locations.
-    }
-  }
-  return null;
-}

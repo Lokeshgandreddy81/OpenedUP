@@ -5,6 +5,7 @@ import type { ReadingPhase } from "./types";
 import { usePrefersReducedMotion } from "../../../app/hooks/usePrefersReducedMotion";
 import { clearDocumentCache } from "../services/documentCache";
 import { clearPdfDocumentCache } from "../../../app/files/pdfDocumentCache";
+import { base64ToBlob, uploadBlobForProcessing } from "../../../app/files/storageUploads";
 import type {
   FailedBatchInfo,
   ParsedPdfResult,
@@ -99,15 +100,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     totalPhotosCount: number
   ): Promise<RawReceiptFromModel[]> => {
     const providerConfig = getProviderChatRequestConfig(receiptModel);
+    const photosForRequest = await Promise.all(
+      batch.map(async (photo) => {
+        const mimeType = photo.mimeType || "image/jpeg";
+        const fileBlob = photo.base64Data
+          ? base64ToBlob(photo.base64Data, mimeType)
+          : photo.file;
+        if (!fileBlob) throw new Error(`Could not load ${photo.name} for upload.`);
+        const storagePath = await uploadBlobForProcessing(fileBlob, photo.name, "image");
+        return {
+          globalIndex: photo.globalIndex,
+          totalPhotos: totalPhotosCount,
+          mimeType,
+          storagePath,
+        };
+      })
+    );
     const payload = {
       model: receiptModel,
       ...providerConfig.customModelFields,
-      photos: batch.map((p) => ({
-        globalIndex: p.globalIndex,
-        totalPhotos: totalPhotosCount,
-        mimeType: p.mimeType || "image/jpeg",
-        base64Data: p.base64Data || "",
-      })),
+      photos: photosForRequest,
     };
 
     const requestInit: RequestInit = {
@@ -129,9 +141,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const requestParsePdf = async (photo: UploadedPhoto): Promise<ParsedPdfResult> => {
     const providerConfig = getProviderChatRequestConfig(receiptModel);
+    const pdfBlob = photo.file || (photo.base64Data ? base64ToBlob(photo.base64Data, "application/pdf") : null);
+    if (!pdfBlob) throw new Error(`Could not load ${photo.name} for upload.`);
+    const storagePath = await uploadBlobForProcessing(pdfBlob, photo.name, "pdf");
     const payload = {
       mimeType: "application/pdf",
-      base64Data: photo.base64Data || "",
+      storagePath,
       fileName: photo.name,
       model: receiptModel,
       ...providerConfig.customModelFields,

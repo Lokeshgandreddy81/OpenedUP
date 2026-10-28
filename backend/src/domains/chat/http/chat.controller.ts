@@ -28,6 +28,8 @@ import {
 } from "../../credentials/application/requestCredential.js";
 import { SKILLS } from "../application/skillRegistry.js";
 import { actionableProviderError, classifyProviderFailure } from "../providers/providerErrors.js";
+import { deleteUserUploads, downloadUserImage } from "../../../platform/storage/supabaseStorage.js";
+import { AppError } from "../../../platform/errors/errors.js";
 
 function isLoopbackRequest(req: Request): boolean {
   const address = req.socket.remoteAddress?.replace(/^::ffff:/, "");
@@ -55,11 +57,56 @@ function publicProviderError(message: string): string {
   return actionableProviderError(message);
 }
 
+async function resolveStoredChatImages(req: Request, res: Response, payload: ChatRequest): Promise<ChatRequest> {
+  const images = payload.images || [];
+  const storagePaths = images.flatMap((image) => (image.storagePath ? [image.storagePath] : []));
+  if (!storagePaths.length) return payload;
+  if (!req.principal?.uid) throw new AppError("Sign in to process these image uploads.", 401);
+  const userId = req.principal.uid;
+  res.once("finish", () => void deleteUserUploads(userId, storagePaths));
+  return {
+    ...payload,
+    images: await Promise.all(
+      images.map(async (image) => {
+        if (!image.storagePath) return image;
+        const bytes = await downloadUserImage(userId, image.storagePath, image.mimeType);
+        const { storagePath: _storagePath, ...inlineImage } = image;
+        return { ...inlineImage, base64Data: bytes.toString("base64") };
+      })
+    ),
+  };
+}
+
+async function resolveStoredChapterImages(
+  req: Request,
+  res: Response,
+  request: ChapterChatRequest
+): Promise<ChapterChatRequest> {
+  const imagePages = request.imagePages || [];
+  const storagePaths = imagePages.flatMap((image) => (image.storagePath ? [image.storagePath] : []));
+  if (!storagePaths.length) return request;
+  if (!req.principal?.uid) throw new AppError("Sign in to process these chapter images.", 401);
+  const userId = req.principal.uid;
+  res.once("finish", () => void deleteUserUploads(userId, storagePaths));
+  return {
+    ...request,
+    imagePages: await Promise.all(
+      imagePages.map(async (image) => {
+        if (!image.storagePath) return image;
+        const bytes = await downloadUserImage(userId, image.storagePath, image.mimeType);
+        const { storagePath: _storagePath, ...inlineImage } = image;
+        return { ...inlineImage, base64Data: bytes.toString("base64") };
+      })
+    ),
+  };
+}
+
 export async function handleChat(req: Request, res: Response, _next: NextFunction): Promise<void> {
   const startTime = Date.now();
   const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
-  const payload = req.body as ChatRequest;
+  let payload = req.body as ChatRequest;
   try {
+    payload = await resolveStoredChatImages(req, res, payload);
     const credential = resolveRequestProviderCredential(req, payload);
     if (!requireUserCredential(req, res, payload, credential.apiKey)) return;
 
@@ -67,6 +114,7 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
       injectedApiKey: credential.apiKey,
       injectedBaseUrl: credential.baseUrl,
       signal: timeoutSignal,
+      userId: req.principal?.uid ?? null,
     });
     res.json(result);
   } catch (error: unknown) {
@@ -84,7 +132,14 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
       message.startsWith("UNKNOWN_MODEL:") ||
       message.startsWith("MISSING_CUSTOM_MODEL:") ||
       message.includes("does not support image analysis");
-    const status = message.startsWith("MISSING_API_KEY:") ? 401 : isBadRequest ? 400 : 500;
+    const status =
+      error instanceof AppError
+        ? error.statusCode
+        : message.startsWith("MISSING_API_KEY:")
+          ? 401
+          : isBadRequest
+            ? 400
+            : 500;
     const errorText = timeoutSignal.aborted
       ? "This model took too long to respond. Try again or choose another model."
       : status === 500
@@ -100,9 +155,10 @@ export async function handleChatStream(
   _next: NextFunction
 ): Promise<void> {
   const startTime = Date.now();
-  const payload = req.body as ChatRequest;
+  let payload = req.body as ChatRequest;
   let credential: ReturnType<typeof resolveRequestProviderCredential>;
   try {
+    payload = await resolveStoredChatImages(req, res, payload);
     credential = resolveRequestProviderCredential(req, payload);
   } catch (error: unknown) {
     logEvent("ERROR /api/chat/stream credential lookup", {
@@ -159,6 +215,7 @@ export async function handleChatStream(
         injectedBaseUrl: credential.baseUrl,
         toolTraces,
         signal: requestSignal,
+        userId: req.principal?.uid ?? null,
       },
       (delta) => {
         emittedAnyDelta = true;
@@ -204,12 +261,17 @@ export async function handleChapterChat(
   res: Response,
   _next: NextFunction
 ): Promise<void> {
-  const request = req.body as ChapterChatRequest;
+  let request = req.body as ChapterChatRequest;
   let credential: ReturnType<typeof resolveRequestProviderCredential>;
   try {
+    request = await resolveStoredChapterImages(req, res, request);
     credential = resolveRequestProviderCredential(req, request);
-  } catch {
-    res.status(400).json({ error: "The selected model is unavailable." });
+  } catch (error: unknown) {
+    const status = error instanceof AppError ? error.statusCode : 400;
+    res.status(status).json({
+      error: error instanceof Error ? error.message : "The selected model is unavailable.",
+      requestId: req.id,
+    });
     return;
   }
   if (!requireUserCredential(req, res, request, credential.apiKey)) return;
@@ -250,12 +312,17 @@ export async function handleChapterChatStream(
   res: Response,
   _next: NextFunction
 ): Promise<void> {
-  const request = req.body as ChapterChatRequest;
+  let request = req.body as ChapterChatRequest;
   let credential: ReturnType<typeof resolveRequestProviderCredential>;
   try {
+    request = await resolveStoredChapterImages(req, res, request);
     credential = resolveRequestProviderCredential(req, request);
-  } catch {
-    res.status(400).json({ error: "The selected model is unavailable." });
+  } catch (error: unknown) {
+    const status = error instanceof AppError ? error.statusCode : 400;
+    res.status(status).json({
+      error: error instanceof Error ? error.message : "The selected model is unavailable.",
+      requestId: req.id,
+    });
     return;
   }
   if (!requireUserCredential(req, res, request, credential.apiKey)) return;

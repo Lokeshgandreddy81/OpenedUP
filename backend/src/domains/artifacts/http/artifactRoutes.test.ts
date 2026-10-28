@@ -1,25 +1,21 @@
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
-import { generateKeyPairSync, sign } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import test, { after } from "node:test";
+import test, { after, type TestContext } from "node:test";
 
 const testDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "openedup-artifact-routes-"));
 process.env["CHAT_DB_PATH"] = path.join(testDirectory, "artifacts.sqlite");
-process.env["FIREBASE_PROJECT_ID"] = "openedup-artifact-routes-test";
+process.env["SUPABASE_URL"] = "https://openedup-artifact-routes-test.supabase.co";
+process.env["SUPABASE_PUBLISHABLE_KEY"] = "test-supabase-publishable-key";
 
 const [{ createApp }, { closeChatDatabase }] = await Promise.all([
   import("../../../app.js"),
   import("../../../platform/database/chatDatabase.js"),
 ]);
 
-const firebaseProjectId = "openedup-artifact-routes-test";
-const certificateUrl =
-  "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
-const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-const certificate = publicKey.export({ type: "spki", format: "pem" }).toString();
+const supabaseUserUrl = `${process.env["SUPABASE_URL"]}/auth/v1/user`;
 const nativeFetch = globalThis.fetch.bind(globalThis);
 
 after(() => {
@@ -27,37 +23,32 @@ after(() => {
   fs.rmSync(testDirectory, { recursive: true, force: true });
 });
 
-function encodeJson(value: unknown): string {
-  return Buffer.from(JSON.stringify(value)).toString("base64url");
+function tokenFor(uid: string): string {
+  return `test-access-token:${uid}`;
 }
 
-function tokenFor(uid: string): string {
-  const now = Math.floor(Date.now() / 1000);
-  const header = encodeJson({ alg: "RS256", kid: "artifact-routes-test-key" });
-  const payload = encodeJson({
-    aud: firebaseProjectId,
-    auth_time: now,
-    exp: now + 3600,
-    iat: now,
-    iss: `https://securetoken.google.com/${firebaseProjectId}`,
-    sub: uid,
+function mockSupabaseUserLookup(t: TestContext): void {
+  t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url !== supabaseUserUrl) return nativeFetch(input, init);
+    const authorization = new Headers(init?.headers).get("Authorization") ?? "";
+    const uid = authorization.match(/^Bearer test-access-token:(.+)$/)?.[1];
+    if (!uid) return new Response(JSON.stringify({ message: "Invalid token" }), { status: 401 });
+    return new Response(
+      JSON.stringify({
+        id: uid,
+        email: `${uid}@example.test`,
+        email_confirmed_at: "2026-01-01T00:00:00Z",
+        app_metadata: {},
+      }),
+      { headers: { "Content-Type": "application/json" } }
+    );
   });
-  const signingInput = `${header}.${payload}`;
-  const signature = sign("RSA-SHA256", Buffer.from(signingInput), privateKey).toString("base64url");
-  return `${signingInput}.${signature}`;
 }
 
 test("Artifacts API enforces ownership and supports versioned, shared, organized persistence", async (t) => {
   const server: Server = createServer(createApp());
-  t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = input instanceof Request ? input.url : String(input);
-    if (url === certificateUrl) {
-      return new Response(JSON.stringify({ "artifact-routes-test-key": certificate }), {
-        headers: { "Cache-Control": "public, max-age=3600", "Content-Type": "application/json" },
-      });
-    }
-    return nativeFetch(input, init);
-  });
+  mockSupabaseUserLookup(t);
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);

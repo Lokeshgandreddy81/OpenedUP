@@ -13,9 +13,13 @@ servers:
   - url: https://api.charaninteriors.com
     description: Production gateway
 
+security:
+  - SupabaseBearer: []
+
 paths:
   /healthz:
     get:
+      security: []
       summary: Liveness Probe
       description: Returns HTTP 200 with process uptime when the server process is alive.
       responses:
@@ -38,6 +42,7 @@ paths:
 
   /readyz:
     get:
+      security: []
       summary: Readiness Probe
       description: Returns HTTP 200 when all critical internal dependencies and configurations are resolved.
       responses:
@@ -57,14 +62,14 @@ paths:
                       geminiApiKeyConfigured:
                         type: boolean
                         example: true
-                      firebaseConfigured:
+                      supabaseAuthConfigured:
                         type: boolean
                         example: true
 
   /api/workspace-config:
     get:
       summary: Get Workspace Configuration
-      description: Returns client configuration for Firebase applet and API key status without leaking secrets.
+      description: Returns client configuration for Google Workspace client ID and API key status without leaking secrets.
       responses:
         "200":
           description: Workspace configuration details.
@@ -373,20 +378,20 @@ paths:
   /api/conversations:
     get:
       summary: List the authenticated user's conversations
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       responses:
         "200": { description: Owner-scoped conversation summaries. }
-        "401": { description: Firebase ID token is missing or invalid. }
+        "401": { description: Supabase access token is missing or invalid. }
     post:
       summary: Create a conversation for the authenticated user
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       responses:
         "201": { description: Created conversation. }
 
   /api/conversations/{id}:
     get:
       summary: Read an owned conversation and its ordered messages
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       parameters:
         - in: path
           name: id
@@ -397,7 +402,7 @@ paths:
         "404": { description: Conversation is not owned by the caller. }
     patch:
       summary: Rename, pin, or archive an owned conversation
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       parameters:
         - in: path
           name: id
@@ -407,7 +412,7 @@ paths:
         "200": { description: Updated conversation. }
     delete:
       summary: Delete an owned conversation
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       parameters:
         - in: path
           name: id
@@ -419,19 +424,19 @@ paths:
   /api/artifacts:
     get:
       summary: List owned and authenticated-shared artifacts
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       responses:
         "200": { description: Owner artifacts and artifacts shared with signed-in users. }
     post:
       summary: Create an owned artifact
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       responses:
         "201": { description: Created artifact. }
 
   /api/artifacts/{id}:
     put:
       summary: Update an owned artifact's title, category, content, and sharing state
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       parameters:
         - in: path
           name: id
@@ -442,7 +447,7 @@ paths:
         "404": { description: Artifact is not owned by the caller. }
     delete:
       summary: Delete an owned artifact
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       parameters:
         - in: path
           name: id
@@ -454,7 +459,7 @@ paths:
   /api/artifacts/{id}/organization:
     patch:
       summary: Update account-synced organization metadata without creating a content version
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       parameters:
         - in: path
           name: id
@@ -481,7 +486,7 @@ paths:
   /api/artifacts/{id}/versions:
     get:
       summary: List the 50 most recent versions of an owned artifact
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       parameters:
         - in: path
           name: id
@@ -494,14 +499,14 @@ paths:
   /api/artifacts/import:
     post:
       summary: Idempotently import browser artifacts
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       responses:
         "200": { description: Imported and skipped counts. }
 
   /api/artifacts/{id}/share:
     put:
       summary: Change authenticated sharing on an owned artifact
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       parameters:
         - in: path
           name: id
@@ -514,17 +519,17 @@ paths:
   /api/credentials:
     get:
       summary: List saved provider IDs without returning key material
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       responses:
         "200": { description: Configured providers for the authenticated account. }
     put:
       summary: Encrypt and save a provider credential
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       responses:
         "204": { description: Credential saved. }
     patch:
       summary: Update the endpoint for an existing provider credential without returning its key
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       requestBody:
         required: true
         content:
@@ -548,13 +553,13 @@ paths:
   /api/projects:
     get:
       summary: List the caller's projects with nested sessions and files
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       responses:
         "200": { description: Account-owned project snapshots. }
     put:
       summary: Replace the caller's project snapshot collection
       description: Replaces only the authenticated user's projects. Project and session history is validated and bounded by the shared project schemas.
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       requestBody:
         required: true
         content:
@@ -572,7 +577,7 @@ paths:
   /api/projects/import:
     post:
       summary: Idempotently import legacy browser projects
-      security: [{ FirebaseBearer: [] }]
+      security: [{ SupabaseBearer: [] }]
       requestBody:
         required: true
         content:
@@ -591,14 +596,12 @@ paths:
   /api/scheduled-tasks:
     get:
       summary: List scheduled tasks
-      description: Returns schedules with server-calculated next run times. Unauthenticated callers default to user "default".
-      security: []
+      description: Returns schedules with server-calculated next run times for the authenticated account.
       responses:
         "200": { description: Scheduled tasks with server-calculated next run times. }
     post:
       summary: Create a scheduled task
       description: Persists a scheduled task. Executes autonomously on the background worker using saved credentials, custom task key, or fallback env keys.
-      security: []
       requestBody:
         required: true
         content:
@@ -610,7 +613,6 @@ paths:
   /api/scheduled-tasks/import:
     post:
       summary: Idempotently import browser schedules
-      security: []
       requestBody:
         required: true
         content:
@@ -629,7 +631,6 @@ paths:
   /api/scheduled-tasks/{id}:
     put:
       summary: Replace a scheduled task
-      security: []
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -642,7 +643,6 @@ paths:
         "404": { description: Task not found. }
     delete:
       summary: Delete a scheduled task and its run history
-      security: []
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
       responses:
@@ -651,7 +651,6 @@ paths:
   /api/scheduled-tasks/{id}/run:
     post:
       summary: Queue an immediate task run
-      security: []
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
       responses:
@@ -660,7 +659,6 @@ paths:
   /api/scheduled-tasks/{id}/runs:
     get:
       summary: List recent runs for one task
-      security: []
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
       responses:
@@ -669,7 +667,6 @@ paths:
   /api/scheduled-tasks/runs/{runId}:
     get:
       summary: Read a task run
-      security: []
       parameters:
         - { in: path, name: runId, required: true, schema: { type: string, format: uuid } }
       responses:
@@ -907,7 +904,7 @@ components:
         status: { type: string, enum: [generation-error] }
         error: { type: string }
   securitySchemes:
-    FirebaseBearer:
+    SupabaseBearer:
       type: http
       scheme: bearer
-      bearerFormat: Firebase ID token
+      bearerFormat: Supabase access token

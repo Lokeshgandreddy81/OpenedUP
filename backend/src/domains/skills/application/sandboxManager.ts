@@ -38,7 +38,12 @@ export class SandboxSecurityError extends Error {
  */
 export function getSandboxBaseDir(conversationId: string): string {
   const custom = process.env["SANDBOX_BASE_DIR"]?.trim();
-  const root = custom || path.join(os.homedir(), ".local", "share", "openedup", "sandboxes");
+  const dbPath = process.env["CHAT_DB_PATH"]?.trim();
+  const root =
+    custom ||
+    (dbPath && dbPath !== ":memory:"
+      ? path.join(path.dirname(dbPath), "sandboxes")
+      : path.join(os.homedir(), ".local", "share", "openedup", "sandboxes"));
   return path.join(root, conversationId);
 }
 
@@ -348,7 +353,12 @@ export function cleanupSandbox(conversationId: string): void {
  */
 export function cleanupOldSandboxes(ttlMs = 24 * 60 * 60 * 1000): number {
   const custom = process.env["SANDBOX_BASE_DIR"]?.trim();
-  const root = custom || path.join(os.homedir(), ".local", "share", "openedup", "sandboxes");
+  const dbPath = process.env["CHAT_DB_PATH"]?.trim();
+  const root =
+    custom ||
+    (dbPath && dbPath !== ":memory:"
+      ? path.join(path.dirname(dbPath), "sandboxes")
+      : path.join(os.homedir(), ".local", "share", "openedup", "sandboxes"));
   if (!fs.existsSync(root)) return 0;
 
   const now = Date.now();
