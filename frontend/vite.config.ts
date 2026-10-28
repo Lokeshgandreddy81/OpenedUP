@@ -23,15 +23,30 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
+            if (id.includes("node_modules/pdf-lib")) return "pdf-lib";
+            if (id.includes("node_modules/firebase") || id.includes("node_modules/@firebase"))
+              return "firebase";
+            if (id.includes("node_modules/motion") || id.includes("node_modules/framer-motion"))
+              return "motion";
+            if (
+              id.includes("node_modules/lucide-react") ||
+              id.includes("node_modules/simple-icons")
+            )
+              return "icons";
             if (id.includes("node_modules/heic2any")) return "heic2any";
-            if (id.includes("node_modules/@xyflow")) return "xyflow";
+            if (id.includes("node_modules/@xyflow") || id.includes("node_modules/@dagrejs"))
+              return "xyflow";
             if (id.includes("src/features/benchmarks/components/data")) return "benchmark-data";
-            if (id.includes("node_modules/react") || id.includes("node_modules/react-dom"))
+            if (
+              id.includes("node_modules/react") ||
+              id.includes("node_modules/react-dom") ||
+              id.includes("node_modules/react-router")
+            )
               return "react-vendor";
           },
         },
       },
-      chunkSizeWarningLimit: 600,
+      chunkSizeWarningLimit: 1400,
     },
     server: {
       port: 5173,

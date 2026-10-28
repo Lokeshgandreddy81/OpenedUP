@@ -19,6 +19,21 @@ const LandingPage = lazyWithRetry(() =>
     default: LandingPage,
   }))
 );
+const FeaturesPage = lazyWithRetry(() =>
+  import("./features/chapters/pages/FeaturesPage").then(({ FeaturesPage }) => ({
+    default: FeaturesPage,
+  }))
+);
+const InsightsPage = lazyWithRetry(() =>
+  import("./features/chapters/pages/InsightsPage").then(({ InsightsPage }) => ({
+    default: InsightsPage,
+  }))
+);
+const DocsPage = lazyWithRetry(() =>
+  import("./features/chapters/pages/DocsPage").then(({ DocsPage }) => ({
+    default: DocsPage,
+  }))
+);
 const ResultsPage = lazyWithRetry(() =>
   import("./features/chapters/pages/ResultsPage").then(({ ResultsPage }) => ({
     default: ResultsPage,
@@ -71,6 +86,30 @@ export const AppShell: React.FC = () => {
           element={
             <PageRoute name="Home" fallback={<LandingPageSkeleton />}>
               <LandingPage />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="/features"
+          element={
+            <PageRoute name="Features" fallback={<LandingPageSkeleton />}>
+              <FeaturesPage />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="/insights"
+          element={
+            <PageRoute name="Insights" fallback={<LandingPageSkeleton />}>
+              <InsightsPage />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="/docs"
+          element={
+            <PageRoute name="Docs" fallback={<LandingPageSkeleton />}>
+              <DocsPage />
             </PageRoute>
           }
         />

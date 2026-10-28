@@ -37,19 +37,19 @@ export class LandingPageErrorBoundary extends Component<Props, State> {
       return (
         <div
           role="alert"
-          className="min-h-screen bg-[#FDFCFB] flex flex-col items-center justify-center p-6 text-center"
+          className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center text-white"
         >
-          <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
+          <div className="w-14 h-14 rounded-2xl bg-rose-950/60 border border-rose-800/40 text-rose-400 flex items-center justify-center mb-4">
             <AlertCircle size={28} />
           </div>
-          <h2 className="text-xl font-semibold text-slate-800 mb-2">Failed to load Landing view</h2>
-          <p className="text-sm text-slate-500 max-w-md mb-6">
+          <h2 className="text-xl font-semibold text-white mb-2">Failed to load Landing view</h2>
+          <p className="text-sm text-slate-400 max-w-md mb-6">
             {this.state.error?.message || "An unexpected error occurred while loading this screen."}
           </p>
           <button
             type="button"
             onClick={this.handleReset}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-slate-950 text-sm font-semibold hover:bg-slate-200 transition-colors cursor-pointer"
           >
             <RotateCcw size={16} />
             Try again

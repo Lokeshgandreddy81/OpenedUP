@@ -1,5 +1,54 @@
 @import "tailwindcss";
 
+@keyframes feature-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feature-rise {
+  animation: feature-rise 420ms var(--ease-out) both;
+}
+
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.5deg);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(7px) rotate(-1.5deg);
+  }
+}
+
+.animate-float-gentle {
+  animation: float-gentle 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-rise,
+  .animate-float-gentle,
+  .animate-float-slow {
+    animation: none;
+  }
+}
+
 @media (min-width: 640px) {
   .provider-row-header {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
@@ -75,16 +124,40 @@
     "Newsreader", "Tiempos Headline", "Copernicus", "Georgia", "Cambria", serif !important;
 }
 
-.explore-screen .font-medium {
+.explore-screen .font-medium,
+.openedup-home .font-medium {
   font-weight: 500;
 }
 
-.explore-screen .font-semibold {
+.explore-screen .font-semibold,
+.openedup-home .font-semibold,
+.openedup-home strong,
+.openedup-home b,
+.openedup-home th {
   font-weight: 600;
 }
 
-.explore-screen .font-bold {
+.explore-screen .font-bold,
+.openedup-home .font-bold {
   font-weight: 700;
+}
+
+.openedup-home .font-normal {
+  font-weight: 400;
+}
+
+.openedup-home .font-mono,
+.openedup-home code,
+.openedup-home pre,
+.openedup-home kbd {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.openedup-home .font-mono *,
+.openedup-home code *,
+.openedup-home pre *,
+.openedup-home kbd * {
+  font-family: inherit;
 }
 
 html,
@@ -917,7 +990,6 @@ select:focus-visible,
 .chat-thinking-status > svg {
   display: block;
   flex: none;
-  transform: translateY(-1px);
 }
 .chat-composer-input {
   max-height: min(200px, 30dvh);
@@ -1106,6 +1178,84 @@ select:focus-visible,
   background-color: #0f172a;
   animation: assistantCaretBlink 800ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Tosara Signature Thinking Spin Animation */
+@keyframes tosaraCoreSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes tosaraOrbitSwirl {
+  0% {
+    transform: rotate(0deg) scale(0.96);
+    opacity: 0.82;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg) scale(0.96);
+    opacity: 0.82;
+  }
+}
+
+@keyframes tosaraAmbientPulse {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.85;
+  }
+}
+
+/* Saturn-style: the RING GROUP has a fixed tilt baked in via CSS transform,
+   then a fast spin is composited on top via animation.
+   We use CSS custom props + style so both tilt + spin compose properly. */
+@keyframes tosaraRingOrbit {
+  to { transform: rotate(360deg); }
+}
+@keyframes tosaraCoreBlast {
+  to { transform: rotate(360deg); }
+}
+
+.tosara-ring-plane {
+  transform-origin: 50px 50px;
+  /* Fixed -28deg celestial tilt + Y-compression for 3D perspective */
+  transform: rotate(-28deg) scaleY(0.62);
+}
+
+.tosara-ring-spin {
+  transform-origin: 0px 0px;
+  animation: tosaraRingOrbit 0.55s linear infinite;
+}
+
+.tosara-core-spin {
+  transform-origin: 50px 50px;
+  animation: tosaraCoreBlast 0.38s linear infinite;
+}
+
+.tosara-spin-core {
+  transform-origin: 50px 50px;
+  animation: tosaraCoreSpin 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.tosara-spin-linear {
+  transform-origin: 50px 50px;
+  animation: tosaraCoreSpin 1.8s linear infinite;
+}
+
+.tosara-orbit-swirl {
+  transform-origin: 50px 50px;
+  animation: tosaraOrbitSwirl 2.4s ease-in-out infinite;
+}
+
 .assistant-code-caret {
   display: inline-block;
   width: 2px;

@@ -6,7 +6,7 @@ import { LandingPageErrorBoundary } from "./ErrorBoundary";
 
 export const LandingPageContent: React.FC = () => {
   const navigate = useNavigate();
-  const { isDemo, receiptModel, setReceiptModel } = useAppContext();
+  const { isDemo } = useAppContext();
 
   useEffect(() => {
     if (isDemo && typeof window !== "undefined" && window.location.pathname === "/") {
@@ -18,13 +18,7 @@ export const LandingPageContent: React.FC = () => {
     navigate("/chat");
   };
 
-  return (
-    <LandingView
-      onGetStarted={handleGetStarted}
-      receiptModel={receiptModel}
-      onReceiptModelChange={setReceiptModel}
-    />
-  );
+  return <LandingView onGetStarted={handleGetStarted} />;
 };
 
 export const LandingPage: React.FC = () => {
