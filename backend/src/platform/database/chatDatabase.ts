@@ -492,10 +492,15 @@ function migrateChatDatabase(database: ChatDatabase): void {
 }
 
 function defaultDatabasePath(): string {
-  return (
-    process.env["CHAT_DB_PATH"]?.trim() ||
-    path.join(os.homedir(), ".local", "share", "openedup", "chat.sqlite")
-  );
+  const configuredPath = process.env["CHAT_DB_PATH"]?.trim();
+  if (configuredPath) return configuredPath;
+
+  // Vercel only provides writable temporary storage; durable data needs a database service.
+  if (process.env["VERCEL"] === "1") {
+    return path.join(os.tmpdir(), "openedup", "chat.sqlite");
+  }
+
+  return path.join(os.homedir(), ".local", "share", "openedup", "chat.sqlite");
 }
 
 export function openChatDatabase(databasePath = defaultDatabasePath()): ChatDatabase {
