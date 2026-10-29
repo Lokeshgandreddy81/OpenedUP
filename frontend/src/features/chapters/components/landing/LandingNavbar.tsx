@@ -128,18 +128,19 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({
         <a
           href="#top"
           onClick={handleLogoClick}
-          className="group flex items-center gap-2.5 text-black no-underline transition z-10"
+          className="group z-10 flex items-center gap-3 text-black no-underline transition sm:gap-4"
           aria-label="SARA Home"
         >
           <img
-            src="/logos/brand-logo.png"
-            alt="Logo"
-            className="h-10 w-10 shrink-0 object-contain transition-transform group-hover:scale-105"
+            src="/favicon.png"
+            alt=""
+            aria-hidden="true"
+            className="h-8 w-8 shrink-0 object-contain transition-transform group-hover:scale-105 sm:h-10 sm:w-10"
           />
           <img
             src="/logos/sara.png"
             alt="SARA"
-            className="h-[22px] sm:h-6 w-auto object-contain brightness-0 transition-opacity"
+            className="h-10 w-auto object-contain brightness-0 transition-opacity sm:h-[42px]"
           />
         </a>
 
