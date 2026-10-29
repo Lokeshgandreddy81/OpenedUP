@@ -29,8 +29,7 @@ export const ArchivedChatsScreen: React.FC<ArchivedChatsScreenProps> = ({
       conversations
         .filter((conversation) => conversation.isArchived)
         .sort(
-          (a, b) =>
-            new Date(b.lastUpdated || 0).getTime() - new Date(a.lastUpdated || 0).getTime()
+          (a, b) => new Date(b.lastUpdated || 0).getTime() - new Date(a.lastUpdated || 0).getTime()
         ),
     [conversations]
   );

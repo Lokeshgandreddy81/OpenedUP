@@ -1,13 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  Clock,
-  SquarePen,
-  Shapes,
-  Briefcase,
-  BarChart3,
-  BookOpen,
-  GitFork,
-} from "lucide-react";
+import { Clock, SquarePen, Shapes, Briefcase, BarChart3, BookOpen, GitFork } from "lucide-react";
 
 interface Message {
   id: string;
@@ -189,7 +181,14 @@ export const HeroInteractiveMockup: React.FC = () => {
               title="Reset conversation"
               className="flex items-center gap-[8px] bg-transparent p-0 text-[12px] text-[#33435e] hover:text-black cursor-pointer"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
               {!sidebarCollapsed && <span>Back</span>}
@@ -201,7 +200,14 @@ export const HeroInteractiveMockup: React.FC = () => {
               aria-label="Toggle sidebar"
               className="flex items-center p-0 text-[#7b8ca7] hover:text-[#33435e] cursor-pointer"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              >
                 <rect x="3" y="4" width="18" height="16" rx="2" />
                 <path d="M8 4v16" />
               </svg>
@@ -297,7 +303,14 @@ export const HeroInteractiveMockup: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-[6px] text-[10px] text-[#71829e]">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              >
                 <path d="M12 3 5 7v6c0 4 3 7 7 8 4-1 7-4 7-8V7z" />
                 <path d="M9 12h6" />
               </svg>
@@ -315,7 +328,12 @@ export const HeroInteractiveMockup: React.FC = () => {
               aria-label="Sara logo"
             >
               <div className="flex flex-col items-center gap-[12px]">
-                <svg viewBox="0 0 100 100" role="img" aria-label="Sara logo" className="h-[48px] w-[48px] block">
+                <svg
+                  viewBox="0 0 100 100"
+                  role="img"
+                  aria-label="Sara logo"
+                  className="h-[48px] w-[48px] block"
+                >
                   <g fill="#050505">
                     <path d="M50 47 C34 32 35 15 58 3 C61 23 62 37 50 47Z" />
                     <path d="M53 50 C68 34 85 35 97 58 C77 61 63 62 53 50Z" />
@@ -379,12 +397,20 @@ export const HeroInteractiveMockup: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setPromptText((prev) => (prev ? `${prev} [Attached file]` : "[Attached file]"));
+                      setPromptText((prev) =>
+                        prev ? `${prev} [Attached file]` : "[Attached file]"
+                      );
                     }}
                     title="Attach file"
                     className="grid h-[27px] w-[27px] shrink-0 place-items-center rounded-full text-[#7189ad] hover:bg-[#f0f4fa] transition-colors cursor-pointer"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      className="h-4 w-4"
+                    >
                       <path d="M12 5v14M5 12h14" />
                     </svg>
                   </button>
@@ -399,7 +425,13 @@ export const HeroInteractiveMockup: React.FC = () => {
                     className="flex items-center gap-[6px] text-[11.5px] font-semibold text-[#334155] hover:text-[#0f172a] transition-colors cursor-pointer whitespace-nowrap"
                   >
                     <span>{availableModels[modelIndex]}</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-3 w-3">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      className="h-3 w-3"
+                    >
                       <path d="m7 10 5 5 5-5" />
                     </svg>
                   </button>
@@ -410,7 +442,13 @@ export const HeroInteractiveMockup: React.FC = () => {
                     title="Voice input"
                     className="grid h-[27px] w-[27px] shrink-0 place-items-center rounded-full text-[#7189ad] hover:bg-[#f0f4fa] transition-colors cursor-pointer"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      className="h-4 w-4"
+                    >
                       <rect x="9" y="3" width="6" height="12" rx="3" />
                       <path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8" />
                     </svg>
@@ -427,7 +465,13 @@ export const HeroInteractiveMockup: React.FC = () => {
                         : "bg-[#edf3fa] text-[#7d9cc3]"
                     }`}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      className="h-4 w-4"
+                    >
                       <path d="M12 19V5m-6 6 6-6 6 6" />
                     </svg>
                   </button>
@@ -442,7 +486,13 @@ export const HeroInteractiveMockup: React.FC = () => {
                   className="inline-flex items-center gap-[5px] hover:text-[#000000] transition-colors cursor-pointer"
                 >
                   Explain a concept
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-2.5 w-2.5">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="h-2.5 w-2.5"
+                  >
                     <path d="M7 17 17 7M8 7h9v9" />
                   </svg>
                 </button>
@@ -453,7 +503,13 @@ export const HeroInteractiveMockup: React.FC = () => {
                   className="inline-flex items-center gap-[5px] hover:text-[#000000] transition-colors cursor-pointer"
                 >
                   Help me write
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-2.5 w-2.5">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="h-2.5 w-2.5"
+                  >
                     <path d="M7 17 7 17M8 7h9v9" />
                   </svg>
                 </button>
@@ -464,7 +520,13 @@ export const HeroInteractiveMockup: React.FC = () => {
                   className="inline-flex items-center gap-[5px] hover:text-[#000000] transition-colors cursor-pointer"
                 >
                   Summarize a document
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-2.5 w-2.5">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="h-2.5 w-2.5"
+                  >
                     <path d="M7 17 17 7M8 7h9v9" />
                   </svg>
                 </button>
