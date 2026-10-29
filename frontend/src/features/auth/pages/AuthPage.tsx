@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowRight,
   Check,
   Eye,
   EyeOff,
@@ -54,16 +53,16 @@ function isEmailNotConfirmed(error: unknown): boolean {
   return (error as { code?: string } | null)?.code === "email_not_confirmed";
 }
 
-const Brand: React.FC<{ inverse?: boolean }> = ({ inverse = false }) => (
+const Brand: React.FC = () => (
   <Link
     to="/"
-    className={`inline-flex items-center gap-2.5 no-underline ${inverse ? "text-white" : "text-slate-900"}`}
+    className="inline-flex items-center gap-2.5 no-underline text-slate-900"
     aria-label="Sara home"
   >
     <img
       src="/logos/brand-logo.png"
       alt=""
-      className={`h-10 w-10 shrink-0 object-contain ${inverse ? "brightness-0 invert" : ""}`}
+      className="h-10 w-10 shrink-0 object-contain"
     />
     <span className="text-[20px] font-semibold tracking-[-0.04em]">Sara</span>
   </Link>
@@ -91,75 +90,6 @@ const GoogleMark = () => (
       transform="translate(0 -4)"
     />
   </svg>
-);
-
-const HeroPanel: React.FC = () => (
-  <section className="relative isolate flex min-h-[300px] flex-col overflow-hidden bg-[#0d1b3d] px-6 py-6 text-white sm:px-10 sm:py-7 lg:min-h-screen lg:px-12 lg:py-10 xl:px-16 2xl:px-24">
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 -z-10 opacity-[0.12]"
-      style={{
-        backgroundImage:
-          "linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px)",
-        backgroundSize: "54px 54px",
-        maskImage: "linear-gradient(135deg, black, transparent 78%)",
-      }}
-    />
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute -right-32 top-[14%] -z-10 h-[27rem] w-[27rem] rounded-full bg-blue-500/20 blur-[95px]"
-    />
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute -bottom-48 -left-28 -z-10 h-[28rem] w-[28rem] rounded-full bg-indigo-500/20 blur-[110px]"
-    />
-
-    <Brand inverse />
-
-    <div className="mx-auto flex w-full max-w-[570px] flex-1 flex-col justify-center py-8 lg:py-16">
-      <h1 className="max-w-[580px] font-serif text-[clamp(2.25rem,7vw,4.6rem)] leading-[1.02] tracking-[-0.055em] text-white lg:text-[clamp(2.6rem,5vw,4.6rem)] lg:leading-[0.99]">
-        Make room for the work that matters.
-      </h1>
-      <p className="mt-4 max-w-[445px] text-[14px] leading-6 text-blue-100/75 sm:text-[15px] lg:mt-6 lg:text-[16px] lg:leading-7">
-        Bring your documents, ideas, and next steps together. Sara helps you move from a pile of
-        information to clear progress.
-      </p>
-
-      <div className="mt-10 hidden max-w-[430px] pt-1 lg:block">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-blue-200/65">
-              A more thoughtful workflow
-            </p>
-            <p className="mt-1.5 text-[17px] font-medium tracking-[-0.02em] text-white">
-              From information to action
-            </p>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center text-sky-200">
-            <ArrowRight size={19} />
-          </div>
-        </div>
-        <div className="mt-5 grid grid-cols-3 gap-5">
-          {[
-            ["01", "Gather"],
-            ["02", "Understand"],
-            ["03", "Follow through"],
-          ].map(([step, label], index) => (
-            <div
-              key={step}
-              className="min-w-0 py-2"
-            >
-              <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.08em] text-sky-200/70">
-                <span>{step}</span>
-                {index < 2 && <span className="h-px flex-1 bg-white/20" />}
-              </div>
-              <p className="mt-2 text-[12px] font-medium leading-4 text-white/90">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </section>
 );
 
 export const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
@@ -264,202 +194,148 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
   };
 
   return (
-    <main className="min-h-screen w-full overflow-y-auto bg-[#fbfcfe] text-slate-900 lg:grid lg:h-dvh lg:overflow-hidden lg:grid-cols-2">
-      <HeroPanel />
-
-      <section className="relative flex min-h-[620px] flex-col px-6 py-7 sm:px-10 lg:h-dvh lg:min-h-0 lg:overflow-y-auto lg:px-12 lg:py-8 xl:px-16">
-        <div className="flex items-center justify-between lg:justify-end">
-          <div className="lg:hidden">
-            <Brand />
-          </div>
-          <p className="text-[13px] text-slate-500">
-            {isCreateAccount ? "Already have an account?" : "New to Sara?"}{" "}
-            <Link
-              className="font-semibold text-[#1746bf] underline decoration-transparent underline-offset-4 transition hover:decoration-current"
-              to={isCreateAccount ? "/sign-in" : "/create-account"}
-              state={location.state}
-            >
-              {isCreateAccount ? "Sign in" : "Create account"}
-            </Link>
-          </p>
+    <main className="flex min-h-screen w-full items-center justify-center bg-[#fbfcfe] px-4 py-8 text-slate-900 sm:px-6">
+      <div className="w-full max-w-[380px] border border-transparent">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <Brand />
+          <h1 className="mt-4 font-serif text-[28px] tracking-tight text-slate-900">
+            {isCreateAccount ? "Create account" : "Sign in"}
+          </h1>
         </div>
 
-        <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-12 lg:py-4">
-          <div className="mb-6">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2858cb]">
-              {isCreateAccount ? "Start here" : "Welcome back"}
-            </p>
-            <h2 className="font-serif text-[36px] leading-[1.08] tracking-[-0.045em] text-slate-950 sm:text-[40px]">
-              {isCreateAccount ? "Create your account" : "Sign in to your workspace"}
-            </h2>
-            <p className="mt-3 text-[14px] leading-6 text-slate-500">
-              {isCreateAccount
-                ? "Set up your account and bring your work together."
-                : "Pick up right where you left off."}
-            </p>
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={googleSubmitting || submitting}
+          className="flex h-[48px] w-full items-center justify-center gap-2.5 rounded-xl border border-transparent bg-slate-100/80 text-[14px] font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60"
+        >
+          {googleSubmitting ? (
+            <LoaderCircle size={18} className="animate-spin" />
+          ) : (
+            <GoogleMark />
+          )}
+          Continue with Google
+        </button>
+
+        <div className="my-5 flex items-center gap-3" aria-hidden="true">
+          <span className="h-px flex-1 bg-slate-200/60" />
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            or
+          </span>
+          <span className="h-px flex-1 bg-slate-200/60" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {isCreateAccount && (
+            <div>
+              <input
+                autoComplete="name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+                maxLength={80}
+                placeholder="Full name"
+                className="h-[46px] w-full rounded-xl border border-transparent bg-slate-100/80 px-4 text-[14px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-slate-100 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          )}
+
+          <div>
+            <div className="relative">
+              <Mail
+                size={16}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                placeholder="Email address"
+                className="h-[46px] w-full rounded-xl border border-transparent bg-slate-100/80 pl-10 pr-4 text-[14px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-slate-100 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={googleSubmitting || submitting}
-            className="flex h-[49px] w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-[14px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,.04)] transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
-          >
-            {googleSubmitting ? (
-              <LoaderCircle size={18} className="animate-spin" />
-            ) : (
-              <GoogleMark />
-            )}
-            Continue with Google
-          </button>
-
-          <div className="my-5 flex items-center gap-4" aria-hidden="true">
-            <span className="h-px flex-1 bg-slate-200" />
-            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">
-              or with email
-            </span>
-            <span className="h-px flex-1 bg-slate-200" />
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isCreateAccount && (
-              <label className="block">
-                <span className="mb-2 block text-[12px] font-semibold text-slate-700">
-                  Your name
-                </span>
-                <input
-                  autoComplete="name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  required
-                  maxLength={80}
-                  placeholder="Alex Morgan"
-                  className="h-[48px] w-full rounded-xl border border-slate-200 bg-white px-4 text-[14px] text-slate-900 outline-none transition placeholder:text-slate-500 hover:border-slate-300 focus:border-[#3567df] focus:ring-4 focus:ring-blue-100/70"
-                />
-              </label>
-            )}
-
-            <label className="block">
-              <span className="mb-2 block text-[12px] font-semibold text-slate-700">
-                Email address
-              </span>
-              <span className="relative block">
-                <Mail
-                  size={17}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                  placeholder="you@example.com"
-                  className="h-[48px] w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-[14px] text-slate-900 outline-none transition placeholder:text-slate-500 hover:border-slate-300 focus:border-[#3567df] focus:ring-4 focus:ring-blue-100/70"
-                />
-              </span>
-            </label>
-
-            <label className="block">
-              <span className="mb-2 flex items-center justify-between text-[12px] font-semibold text-slate-700">
-                <span>Password</span>
-                {!isCreateAccount && (
-                  <button
-                    type="button"
-                    onClick={handleResetPassword}
-                    disabled={submitting}
-                    className="font-semibold text-[#2858cb] transition hover:text-[#183e9c] disabled:opacity-50"
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </span>
-              <span className="relative block">
-                <LockKeyhole
-                  size={17}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  autoComplete={isCreateAccount ? "new-password" : "current-password"}
-                  aria-describedby={isCreateAccount ? "password-help" : undefined}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  minLength={isCreateAccount ? 8 : undefined}
-                  placeholder={isCreateAccount ? "At least 8 characters" : "Enter your password"}
-                  className="h-[48px] w-full rounded-xl border border-slate-200 bg-white pl-11 pr-12 text-[14px] text-slate-900 outline-none transition placeholder:text-slate-500 hover:border-slate-300 focus:border-[#3567df] focus:ring-4 focus:ring-blue-100/70"
-                />
+          <div>
+            <div className="relative">
+              <LockKeyhole
+                size={16}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete={isCreateAccount ? "new-password" : "current-password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={isCreateAccount ? 8 : undefined}
+                placeholder={isCreateAccount ? "Password (min 8 characters)" : "Password"}
+                className="h-[46px] w-full rounded-xl border border-transparent bg-slate-100/80 pl-10 pr-11 text-[14px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-slate-100 focus:ring-2 focus:ring-blue-500/20"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:text-slate-600"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            {!isCreateAccount && (
+              <div className="mt-1.5 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowPassword((visible) => !visible)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  onClick={handleResetPassword}
+                  disabled={submitting}
+                  className="text-[12px] text-slate-500 transition hover:text-slate-800 disabled:opacity-50"
                 >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  Forgot password?
                 </button>
-              </span>
-            </label>
-
-            {isCreateAccount && (
-              <p
-                id="password-help"
-                className={`-mt-2 flex items-center gap-1.5 px-1 text-[12px] ${password.length >= 8 ? "text-emerald-700" : "text-slate-500"}`}
-              >
-                {password.length >= 8 && <Check aria-hidden="true" size={13} />}
-                Use at least 8 characters.
-              </p>
-            )}
-
-            {error && (
-              <div
-                role="alert"
-                className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[12px] leading-5 text-rose-700"
-              >
-                {error}
               </div>
             )}
-            {notice && (
-              <div
-                role="status"
-                className="flex gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-[12px] leading-5 text-emerald-800"
-              >
-                <Check size={16} className="mt-0.5 shrink-0" />
-                <span>{notice}</span>
-              </div>
-            )}
+          </div>
 
-            <button
-              type="submit"
-              disabled={submitting || googleSubmitting || loading}
-              className="group mt-1 flex h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-[#1746bf] px-5 text-[14px] font-semibold text-white shadow-[0_8px_18px_rgba(23,70,191,.18)] transition hover:bg-[#123b9f] hover:shadow-[0_10px_24px_rgba(23,70,191,.22)] disabled:cursor-wait disabled:opacity-60"
+          {error && (
+            <div
+              role="alert"
+              className="rounded-xl border border-transparent bg-rose-50 px-3.5 py-2.5 text-[12px] leading-5 text-rose-700"
             >
-              {submitting ? <LoaderCircle size={18} className="animate-spin" /> : null}
-              {isCreateAccount ? "Create account" : "Sign in"}
-              {!submitting && (
-                <ArrowRight
-                  size={16}
-                  className="transition-transform group-hover:translate-x-0.5"
-                />
-              )}
-            </button>
-          </form>
+              {error}
+            </div>
+          )}
+          {notice && (
+            <div
+              role="status"
+              className="flex items-center gap-2 rounded-xl border border-transparent bg-emerald-50 px-3.5 py-2.5 text-[12px] leading-5 text-emerald-800"
+            >
+              <Check size={14} className="shrink-0" />
+              <span>{notice}</span>
+            </div>
+          )}
 
-          <p className="mt-6 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-            <LockKeyhole size={13} /> Your account and information stay protected.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between text-[11px] text-slate-400">
-          <span>© {new Date().getFullYear()} Sara</span>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 text-slate-500 no-underline transition hover:text-slate-800"
+          <button
+            type="submit"
+            disabled={submitting || googleSubmitting || loading}
+            className="mt-2 flex h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-transparent bg-[#1746bf] px-5 text-[14px] font-medium text-white transition hover:bg-[#123b9f] disabled:cursor-wait disabled:opacity-60"
           >
-            Back to home <ArrowRight size={13} />
+            {submitting && <LoaderCircle size={16} className="animate-spin" />}
+            {isCreateAccount ? "Create account" : "Sign in"}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-[13px] text-slate-500">
+          {isCreateAccount ? "Already have an account?" : "Don't have an account?"}{" "}
+          <Link
+            className="font-medium text-[#1746bf] transition hover:underline"
+            to={isCreateAccount ? "/sign-in" : "/create-account"}
+            state={location.state}
+          >
+            {isCreateAccount ? "Sign in" : "Sign up"}
           </Link>
-        </div>
-      </section>
+        </p>
+      </div>
     </main>
   );
 };
