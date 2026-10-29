@@ -1,10 +1,12 @@
 # Multi-stage Dockerfile for @charan-interiors/backend
 # Stage 1: Build
-FROM node:24-alpine AS builder
+FROM node:24-trixie-slim AS builder
 
 WORKDIR /app
 
-RUN apk --no-cache add python3 make g++
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copy root workspace manifests
 COPY package.json package-lock.json ./
@@ -34,6 +36,7 @@ WORKDIR /app/backend
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV OPENEDUP_CONTAINER_RUNTIME=1
 ENV PATH="/opt/pdf-venv/bin:${PATH}"
 
 # PyMuPDF publishes Linux wheels for glibc-based images, not Alpine's musl libc.

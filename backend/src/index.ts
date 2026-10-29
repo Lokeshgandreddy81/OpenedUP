@@ -10,12 +10,19 @@ import {
 const app = createApp();
 export default app;
 
-// Vercel imports the Express app as a request handler. Keep long-lived
-// scheduler and janitor startup out of request-handler initialization.
-if (process.env["VERCEL"] !== "1") {
-  const scheduledTaskWorker = new ScheduledTaskWorker();
+const isVercel = process.env["VERCEL"] === "1";
+const isVercelContainer = process.env["OPENEDUP_CONTAINER_RUNTIME"] === "1";
+const scheduledTaskWorker = isVercel ? undefined : new ScheduledTaskWorker();
+
+// Keep long-lived local workers out of Vercel's request-handler initialization.
+if (scheduledTaskWorker) {
   scheduledTaskWorker.start();
   startSandboxJanitor();
+}
+
+// Vercel's function runtime imports the app as a handler, but its container
+// runtime executes this file and needs a listening HTTP server.
+if (!isVercel || isVercelContainer) {
   const PORT = envConfig.PORT;
 
   const server = app.listen(PORT, "0.0.0.0", () => {
@@ -29,8 +36,10 @@ if (process.env["VERCEL"] !== "1") {
       process.exit(1);
     }, 10000);
     forceExit.unref();
-    stopSandboxJanitor();
-    void scheduledTaskWorker.stop().finally(() => {
+    if (scheduledTaskWorker) {
+      stopSandboxJanitor();
+    }
+    void (scheduledTaskWorker?.stop() ?? Promise.resolve()).finally(() => {
       server.close(() => {
         clearTimeout(forceExit);
         logger.info("HTTP server closed. Exiting process.");
