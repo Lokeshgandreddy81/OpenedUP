@@ -43,7 +43,7 @@ The existing `supabase/migrations/20261028000000_openedup_app_schema.sql` is a s
 
 - Apply `20261028000000_openedup_app_schema.sql` and `20261029000000_skill_storage_bucket.sql` in Supabase.
 - Add `DATABASE_URL` and the required server-only secrets in the Vercel backend environment; enable Vercel Sandbox.
-- Deploy a Northflank scheduled job from `backend/Dockerfile`, running `node dist/scheduled-worker.js` once per minute with the same backend environment.
+- Deploy a Northflank scheduled job from the repository-root `Dockerfile`, running `node dist/scheduled-worker.js` once per minute with the same backend environment.
 - Deploy a second daily cleanup job running `node dist/upload-cleanup-worker.js` with the same Supabase server environment.
 - No production smoke test has proven persistence across separate serverless invocations.
 

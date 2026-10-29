@@ -30,7 +30,7 @@ RUN npm run build
 # Stage 2: Production Runtime
 FROM node:24-trixie-slim AS runner
 
-WORKDIR /app
+WORKDIR /app/backend
 
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -46,13 +46,13 @@ RUN apt-get update \
   && mkdir -p /var/lib/openedup/skills /var/lib/openedup/sandboxes \
   && chown -R node:node /var/lib/openedup
 
-# Copy built artifacts, Python scripts, and runtime packages
-COPY --from=builder /app/package.json /app/package-lock.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/contracts ./packages/contracts
+# Copy built artifacts, both workspace dependency locations, and the contracts package.
+COPY --from=builder /app/node_modules /app/node_modules
+COPY --from=builder /app/packages/contracts /app/packages/contracts
 COPY --from=builder /app/backend/dist ./dist
 COPY --from=builder /app/backend/package.json ./package.json
-COPY python/ ./python/
+COPY --from=builder /app/backend/node_modules ./node_modules
+COPY python/ /app/python/
 
 # Run as unprivileged node user
 USER node
