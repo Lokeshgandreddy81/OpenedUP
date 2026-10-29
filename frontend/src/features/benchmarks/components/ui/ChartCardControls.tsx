@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { Check, ChevronsUpDown, Search, SlidersHorizontal } from "lucide-react";
 
 export type ColorBy = "model" | "agent";
@@ -56,6 +56,27 @@ export const ModelsFilterControl = <M extends FilterableModel>({
 }: ModelsFilterControlProps<M>) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
 
   const filteredModels = useMemo(() => {
     if (!query.trim()) return models;
@@ -75,12 +96,14 @@ export const ModelsFilterControl = <M extends FilterableModel>({
   };
 
   return (
-    <div className="flex items-center gap-2.5">
+    <div ref={dropdownRef} className="flex items-center gap-2.5 relative">
       <div className="relative">
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-700 bg-[#F1F3F5] hover:bg-neutral-200/70 transition-colors cursor-pointer border-0 shadow-2xs"
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border-0 shadow-2xs ${
+            isOpen ? "bg-neutral-300 text-neutral-900" : "text-neutral-700 bg-[#F1F3F5] hover:bg-neutral-200/70"
+          }`}
         >
           <span>
             {shownCount} of {models.length} models
@@ -128,29 +151,35 @@ export const ModelsFilterControl = <M extends FilterableModel>({
             </div>
 
             <div className="overflow-y-auto max-h-[220px] flex flex-col gap-0.5 divide-y divide-neutral-50 no-scrollbar">
-              {filteredModels.map((m) => {
-                const isSelected = selectedIds.includes(m.id);
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => toggleModel(m.id)}
-                    className="flex items-center justify-between px-2 py-1.5 hover:bg-neutral-50 rounded text-xs text-left cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: swatchColorFor(m) }}
-                      />
-                      <span className="font-medium text-neutral-900 truncate text-[11.5px]">
-                        {m.agentName}
-                      </span>
-                      <span className="text-neutral-400 truncate text-[10.5px]">{m.name}</span>
-                    </div>
-                    {isSelected && <Check size={13} className="text-neutral-800 shrink-0" />}
-                  </button>
-                );
-              })}
+              {filteredModels.length === 0 ? (
+                <div className="text-center py-4 text-xs text-neutral-400">
+                  No models match your search
+                </div>
+              ) : (
+                filteredModels.map((m) => {
+                  const isSelected = selectedIds.includes(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => toggleModel(m.id)}
+                      className="flex items-center justify-between px-2 py-1.5 hover:bg-neutral-50 rounded text-xs text-left cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: swatchColorFor(m) }}
+                        />
+                        <span className="font-medium text-neutral-900 truncate text-[11.5px]">
+                          {m.agentName}
+                        </span>
+                        <span className="text-neutral-400 truncate text-[10.5px]">{m.name}</span>
+                      </div>
+                      {isSelected && <Check size={13} className="text-neutral-800 shrink-0" />}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         )}
@@ -161,7 +190,9 @@ export const ModelsFilterControl = <M extends FilterableModel>({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         title="Filter models"
-        className="p-1.5 rounded-lg text-neutral-600 bg-[#F1F3F5] hover:bg-neutral-200/70 transition-colors cursor-pointer border-0 shadow-2xs"
+        className={`p-1.5 rounded-lg transition-colors cursor-pointer border-0 shadow-2xs ${
+          isOpen ? "bg-neutral-300 text-neutral-900" : "text-neutral-600 bg-[#F1F3F5] hover:bg-neutral-200/70"
+        }`}
       >
         <SlidersHorizontal size={14} />
       </button>

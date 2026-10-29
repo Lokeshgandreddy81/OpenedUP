@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { ChevronsUpDown, Filter, Minus, Plus, SlidersHorizontal } from "lucide-react";
 import { CreatorLogo } from "../ui/CreatorLogo";
 import { getCreatorColor } from "../ui/creatorBranding";
@@ -6,6 +6,7 @@ import { BENCHMARK_MODELS } from "../data/benchmarkModels";
 import { FrontierIntelligenceOverTimeChart } from "./FrontierIntelligenceOverTimeChart";
 import { CodingAgentIndexesFullChart } from "./CodingAgentIndexesFullChart";
 import { CapabilityIndexesSection } from "./CapabilityIndexesSection";
+import { BenchmarkModelsFilterDropdown, BenchmarkFilterModelItem } from "../ui/BenchmarkModelsFilterDropdown";
 
 // ─── Data Types ──────────────────────────────────────────────────────────────
 
@@ -1521,6 +1522,30 @@ export const IntelligenceTaskMetricsFullChart: React.FC = () => {
 export const TokenUseFullSection: React.FC = () => {
   const CHART_HEIGHT = 290;
 
+  const [selectedIds, setSelectedIds] = useState<string[]>(() =>
+    TASK_TOKENS_MODELS.map((m) => m.name)
+  );
+
+  const activeModels = useMemo(
+    () => TASK_TOKENS_MODELS.filter((m) => selectedIds.includes(m.name)),
+    [selectedIds]
+  );
+
+  const filterItems: BenchmarkFilterModelItem[] = useMemo(
+    () =>
+      TASK_TOKENS_MODELS.map((m) => ({
+        id: m.name,
+        name: m.name,
+        creator: m.creator,
+        color: m.color,
+        badge: `${m.totalLabel}`,
+        pattern: m.noPublicApi,
+      })),
+    []
+  );
+
+  const defaultIds = useMemo(() => TASK_TOKENS_MODELS.map((m) => m.name), []);
+
   const viewTabs: { label: string; available: boolean }[] = [
     { label: "Output Tokens per Task", available: true },
     { label: "Intelligence Index vs. Output Tokens per Task", available: false },
@@ -1573,35 +1598,14 @@ export const TokenUseFullSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-2.5 shrink-0">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="h-9 min-w-[290px] flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3 text-[13px] text-neutral-800 hover:bg-neutral-50 transition-colors cursor-pointer"
-                >
-                  <span>
-                    {TASK_TOKENS_MODELS.length} of {BENCHMARK_MODELS.length} models
-                  </span>
-                  <ChevronsUpDown size={14} className="text-neutral-500" />
-                </button>
-                <button
-                  type="button"
-                  title="Filter models"
-                  aria-label="Filter models"
-                  className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <Filter size={15} />
-                </button>
-                <button
-                  type="button"
-                  title="Chart settings"
-                  aria-label="Chart settings"
-                  className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <SlidersHorizontal size={15} />
-                </button>
-              </div>
-            </div>
+            {/* Functional Filter Controls */}
+            <BenchmarkModelsFilterDropdown
+              items={filterItems}
+              selectedIds={selectedIds}
+              onChangeSelection={setSelectedIds}
+              totalCount={BENCHMARK_MODELS.length}
+              defaultIds={defaultIds}
+            />
           </div>
 
           {/* Legend & Watermark */}
@@ -1630,114 +1634,123 @@ export const TokenUseFullSection: React.FC = () => {
 
           {/* Bar Chart */}
           <div className="relative mt-5 overflow-x-auto no-scrollbar">
-            <div className="min-w-[1480px] pl-24 pr-8">
+            {activeModels.length === 0 ? (
+              <div className="py-20 text-center text-sm text-neutral-400">
+                No models selected. Use the filter dropdown above to select models.
+              </div>
+            ) : (
               <div
-                className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
-                style={{ height: `${CHART_HEIGHT}px` }}
+                className="pl-24 pr-8"
+                style={{ minWidth: `${Math.max(900, activeModels.length * 75)}px` }}
               >
-                {TASK_TOKENS_MODELS.map((item, idx) => {
-                  const maxTokens = 210.0;
-                  const ratio = Math.min(1.0, item.totalK / maxTokens);
-                  const barHeightPx = Math.max(16, Math.round(ratio * (CHART_HEIGHT - 38)));
-                  const reasoningHeight = Math.max(
-                    4,
-                    Math.round((item.reasoningK / item.totalK) * barHeightPx)
-                  );
-                  const answerHeight = Math.max(4, barHeightPx - reasoningHeight);
-                  const isHatched = Boolean(item.noPublicApi);
+                <div
+                  className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
+                  style={{ height: `${CHART_HEIGHT}px` }}
+                >
+                  {activeModels.map((item, idx) => {
+                    const maxTokens = 210.0;
+                    const ratio = Math.min(1.0, item.totalK / maxTokens);
+                    const barHeightPx = Math.max(16, Math.round(ratio * (CHART_HEIGHT - 38)));
+                    const reasoningHeight = Math.max(
+                      4,
+                      Math.round((item.reasoningK / item.totalK) * barHeightPx)
+                    );
+                    const answerHeight = Math.max(4, barHeightPx - reasoningHeight);
+                    const isHatched = Boolean(item.noPublicApi);
 
-                  return (
-                    <div
-                      key={idx}
-                      className="flex-1 flex flex-col items-center justify-end relative h-full"
-                    >
-                      <span className="text-[10.5px] font-mono leading-none mb-1.5 select-none text-neutral-600 font-bold">
-                        {item.totalLabel}
-                      </span>
-
+                    return (
                       <div
-                        className="w-full rounded-t-[4px] flex flex-col origin-bottom relative overflow-hidden"
-                        style={{ height: `${barHeightPx}px` }}
+                        key={idx}
+                        className="flex-1 flex flex-col items-center justify-end relative h-full"
                       >
-                        {/* Reasoning top segment */}
-                        <div
-                          className="w-full flex items-center justify-center relative overflow-hidden"
-                          style={{
-                            height: `${reasoningHeight}px`,
-                            backgroundColor: item.color,
-                            opacity: 0.82,
-                            ...(isHatched
-                              ? {
-                                  backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
-                                }
-                              : {}),
-                          }}
-                        >
-                          {reasoningHeight > 14 && (
-                            <span className="text-[9px] font-mono font-bold text-white select-none">
-                              {item.reasoningK}k
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-[10.5px] font-mono leading-none mb-1.5 select-none text-neutral-600 font-bold">
+                          {item.totalLabel}
+                        </span>
 
-                        {/* Answer bottom segment */}
                         <div
-                          className="w-full flex items-center justify-center relative overflow-hidden border-t border-white/20"
-                          style={{
-                            height: `${answerHeight}px`,
-                            backgroundColor: item.color,
-                            ...(isHatched
-                              ? {
-                                  backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
-                                }
-                              : {}),
-                          }}
+                          className="w-full rounded-t-[4px] flex flex-col origin-bottom relative overflow-hidden"
+                          style={{ height: `${barHeightPx}px` }}
                         >
-                          {answerHeight > 14 && (
-                            <span className="text-[9px] font-mono font-bold text-white select-none">
-                              {item.answerK}k
-                            </span>
-                          )}
+                          {/* Reasoning top segment */}
+                          <div
+                            className="w-full flex items-center justify-center relative overflow-hidden"
+                            style={{
+                              height: `${reasoningHeight}px`,
+                              backgroundColor: item.color,
+                              opacity: 0.82,
+                              ...(isHatched
+                                ? {
+                                    backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
+                                  }
+                                : {}),
+                            }}
+                          >
+                            {reasoningHeight > 14 && (
+                              <span className="text-[9px] font-mono font-bold text-white select-none">
+                                {item.reasoningK}k
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Answer bottom segment */}
+                          <div
+                            className="w-full flex items-center justify-center relative overflow-hidden border-t border-white/20"
+                            style={{
+                              height: `${answerHeight}px`,
+                              backgroundColor: item.color,
+                              ...(isHatched
+                                ? {
+                                    backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
+                                  }
+                                : {}),
+                            }}
+                          >
+                            {answerHeight > 14 && (
+                              <span className="text-[9px] font-mono font-bold text-white select-none">
+                                {item.answerK}k
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {/* Bottom baseline */}
-              <div className="w-full border-b border-neutral-200/60" />
+                {/* Bottom baseline */}
+                <div className="w-full border-b border-neutral-200/60" />
 
-              {/* Creator Brand Logo Row */}
-              <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
-                {TASK_TOKENS_MODELS.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-1 flex justify-center items-center py-0.5"
-                    title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
-                  >
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <CreatorLogo creator={item.creator} size={19} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Angled Model Labels */}
-              <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
-                {TASK_TOKENS_MODELS.map((item, idx) => (
-                  <div key={idx} className="flex-1 flex justify-center items-start relative">
+                {/* Creator Brand Logo Row */}
+                <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
+                  {activeModels.map((item, idx) => (
                     <div
-                      className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
-                      style={{ width: "160px" }}
-                      title={item.name.replace(/\n/g, " ")}
+                      key={idx}
+                      className="flex-1 flex justify-center items-center py-0.5"
+                      title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
                     >
-                      {item.name.replace(/\n/g, " ")}
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <CreatorLogo creator={item.creator} size={19} />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                {/* Angled Model Labels */}
+                <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
+                  {activeModels.map((item, idx) => (
+                    <div key={idx} className="flex-1 flex justify-center items-start relative">
+                      <div
+                        className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
+                        style={{ width: "160px" }}
+                        title={item.name.replace(/\n/g, " ")}
+                      >
+                        {item.name.replace(/\n/g, " ")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -1749,6 +1762,29 @@ export const TokenUseFullSection: React.FC = () => {
 
 export const CostFullSection: React.FC = () => {
   const CHART_HEIGHT = 290;
+
+  const [selectedIds, setSelectedIds] = useState<string[]>(() =>
+    TASK_COST_MODELS.map((m) => m.name)
+  );
+
+  const activeModels = useMemo(
+    () => TASK_COST_MODELS.filter((m) => selectedIds.includes(m.name)),
+    [selectedIds]
+  );
+
+  const filterItems: BenchmarkFilterModelItem[] = useMemo(
+    () =>
+      TASK_COST_MODELS.map((m) => ({
+        id: m.name,
+        name: m.name,
+        creator: m.creator,
+        color: m.color,
+        badge: `${m.totalLabel}`,
+      })),
+    []
+  );
+
+  const defaultIds = useMemo(() => TASK_COST_MODELS.map((m) => m.name), []);
 
   const viewTabs: { label: string; available: boolean }[] = [
     { label: "Cost per Task", available: true },
@@ -1799,35 +1835,14 @@ export const CostFullSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-2.5 shrink-0">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="h-9 min-w-[290px] flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3 text-[13px] text-neutral-800 hover:bg-neutral-50 transition-colors cursor-pointer"
-                >
-                  <span>
-                    {TASK_COST_MODELS.length} of {BENCHMARK_MODELS.length} models
-                  </span>
-                  <ChevronsUpDown size={14} className="text-neutral-500" />
-                </button>
-                <button
-                  type="button"
-                  title="Filter models"
-                  aria-label="Filter models"
-                  className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <Filter size={15} />
-                </button>
-                <button
-                  type="button"
-                  title="Chart settings"
-                  aria-label="Chart settings"
-                  className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <SlidersHorizontal size={15} />
-                </button>
-              </div>
-            </div>
+            {/* Functional Filter Controls */}
+            <BenchmarkModelsFilterDropdown
+              items={filterItems}
+              selectedIds={selectedIds}
+              onChangeSelection={setSelectedIds}
+              totalCount={BENCHMARK_MODELS.length}
+              defaultIds={defaultIds}
+            />
           </div>
 
           {/* Legend & Watermark */}
@@ -1858,97 +1873,106 @@ export const CostFullSection: React.FC = () => {
 
           {/* Bar Chart */}
           <div className="relative mt-5 overflow-x-auto no-scrollbar">
-            <div className="min-w-[1480px] pl-24 pr-8">
+            {activeModels.length === 0 ? (
+              <div className="py-20 text-center text-sm text-neutral-400">
+                No models selected. Use the filter dropdown above to select models.
+              </div>
+            ) : (
               <div
-                className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
-                style={{ height: `${CHART_HEIGHT}px` }}
+                className="pl-24 pr-8"
+                style={{ minWidth: `${Math.max(900, activeModels.length * 75)}px` }}
               >
-                {TASK_COST_MODELS.map((item, idx) => {
-                  const maxCost = 8.0;
-                  const ratio = Math.min(1.0, item.totalCost / maxCost);
-                  const barHeightPx =
-                    item.totalCost === 0
-                      ? 2
-                      : Math.max(10, Math.round(ratio * (CHART_HEIGHT - 38)));
+                <div
+                  className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
+                  style={{ height: `${CHART_HEIGHT}px` }}
+                >
+                  {activeModels.map((item, idx) => {
+                    const maxCost = 8.0;
+                    const ratio = Math.min(1.0, item.totalCost / maxCost);
+                    const barHeightPx =
+                      item.totalCost === 0
+                        ? 2
+                        : Math.max(10, Math.round(ratio * (CHART_HEIGHT - 38)));
 
-                  return (
+                    return (
+                      <div
+                        key={idx}
+                        className="flex-1 flex flex-col items-center justify-end relative h-full"
+                      >
+                        <span className="text-[10.5px] font-mono leading-none mb-1.5 select-none text-neutral-600 font-bold">
+                          {item.totalLabel}
+                        </span>
+
+                        <div
+                          className="w-full rounded-t-[4px] flex flex-col-reverse justify-start origin-bottom relative overflow-hidden"
+                          style={{
+                            height: `${barHeightPx}px`,
+                            backgroundColor: item.color,
+                          }}
+                        >
+                          {item.segments.map((seg, sIdx) => {
+                            const segHeight = Math.max(
+                              1,
+                              Math.round((seg.value / (item.totalCost || 1)) * barHeightPx)
+                            );
+                            return (
+                              <div
+                                key={sIdx}
+                                className="w-full flex items-center justify-center border-t border-white/20 first:border-t-0"
+                                style={{
+                                  height: `${segHeight}px`,
+                                  backgroundColor: item.color,
+                                  filter: `brightness(${0.8 + sIdx * 0.12})`,
+                                }}
+                              >
+                                {segHeight > 16 && seg.label && (
+                                  <span className="text-[9px] font-mono font-bold text-white/95 select-none">
+                                    {seg.label}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Bottom baseline */}
+                <div className="w-full border-b border-neutral-200/60" />
+
+                {/* Creator Brand Logo Row */}
+                <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
+                  {activeModels.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex-1 flex flex-col items-center justify-end relative h-full"
+                      className="flex-1 flex justify-center items-center py-0.5"
+                      title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
                     >
-                      <span className="text-[10.5px] font-mono leading-none mb-1.5 select-none text-neutral-600 font-bold">
-                        {item.totalLabel}
-                      </span>
-
-                      <div
-                        className="w-full rounded-t-[4px] flex flex-col-reverse justify-start origin-bottom relative overflow-hidden"
-                        style={{
-                          height: `${barHeightPx}px`,
-                          backgroundColor: item.color,
-                        }}
-                      >
-                        {item.segments.map((seg, sIdx) => {
-                          const segHeight = Math.max(
-                            1,
-                            Math.round((seg.value / (item.totalCost || 1)) * barHeightPx)
-                          );
-                          return (
-                            <div
-                              key={sIdx}
-                              className="w-full flex items-center justify-center border-t border-white/20 first:border-t-0"
-                              style={{
-                                height: `${segHeight}px`,
-                                backgroundColor: item.color,
-                                filter: `brightness(${0.8 + sIdx * 0.12})`,
-                              }}
-                            >
-                              {segHeight > 16 && seg.label && (
-                                <span className="text-[9px] font-mono font-bold text-white/95 select-none">
-                                  {seg.label}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <CreatorLogo creator={item.creator} size={19} />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
 
-              {/* Bottom baseline */}
-              <div className="w-full border-b border-neutral-200/60" />
-
-              {/* Creator Brand Logo Row */}
-              <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
-                {TASK_COST_MODELS.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-1 flex justify-center items-center py-0.5"
-                    title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
-                  >
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <CreatorLogo creator={item.creator} size={19} />
+                {/* Angled Model Labels */}
+                <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
+                  {activeModels.map((item, idx) => (
+                    <div key={idx} className="flex-1 flex justify-center items-start relative">
+                      <div
+                        className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
+                        style={{ width: "160px" }}
+                        title={item.name.replace(/\n/g, " ")}
+                      >
+                        {item.name.replace(/\n/g, " ")}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-
-              {/* Angled Model Labels */}
-              <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
-                {TASK_COST_MODELS.map((item, idx) => (
-                  <div key={idx} className="flex-1 flex justify-center items-start relative">
-                    <div
-                      className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
-                      style={{ width: "160px" }}
-                      title={item.name.replace(/\n/g, " ")}
-                    >
-                      {item.name.replace(/\n/g, " ")}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -2028,6 +2052,30 @@ export const ContextWindowFullSection: React.FC = () => {
   const CHART_HEIGHT = 290;
   const maxContext = 1000000;
 
+  const [selectedIds, setSelectedIds] = useState<string[]>(() =>
+    TASK_CONTEXT_MODELS.map((m) => m.name)
+  );
+
+  const activeModels = useMemo(
+    () => TASK_CONTEXT_MODELS.filter((m) => selectedIds.includes(m.name)),
+    [selectedIds]
+  );
+
+  const filterItems: BenchmarkFilterModelItem[] = useMemo(
+    () =>
+      TASK_CONTEXT_MODELS.map((m) => ({
+        id: m.name,
+        name: m.name,
+        creator: m.creator,
+        color: m.color,
+        badge: m.tokens >= 1000000 ? `${m.tokens / 1000000}M` : `${m.tokens / 1000}k`,
+        pattern: m.noPublicApi,
+      })),
+    []
+  );
+
+  const defaultIds = useMemo(() => TASK_CONTEXT_MODELS.map((m) => m.name), []);
+
   const viewTabs: { label: string; available: boolean }[] = [
     { label: "Context Window", available: true },
   ];
@@ -2079,35 +2127,14 @@ export const ContextWindowFullSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-2.5 shrink-0">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="h-9 min-w-[290px] flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3 text-[13px] text-neutral-800 hover:bg-neutral-50 transition-colors cursor-pointer"
-                >
-                  <span>
-                    {TASK_CONTEXT_MODELS.length} of {BENCHMARK_MODELS.length} models
-                  </span>
-                  <ChevronsUpDown size={14} className="text-neutral-500" />
-                </button>
-                <button
-                  type="button"
-                  title="Filter models"
-                  aria-label="Filter models"
-                  className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <Filter size={15} />
-                </button>
-                <button
-                  type="button"
-                  title="Chart settings"
-                  aria-label="Chart settings"
-                  className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <SlidersHorizontal size={15} />
-                </button>
-              </div>
-            </div>
+            {/* Functional Filter Controls */}
+            <BenchmarkModelsFilterDropdown
+              items={filterItems}
+              selectedIds={selectedIds}
+              onChangeSelection={setSelectedIds}
+              totalCount={BENCHMARK_MODELS.length}
+              defaultIds={defaultIds}
+            />
           </div>
 
           {/* Legend & Watermark */}
@@ -2128,75 +2155,84 @@ export const ContextWindowFullSection: React.FC = () => {
 
           {/* Bar Chart */}
           <div className="relative mt-5 overflow-x-auto no-scrollbar">
-            <div className="min-w-[1480px] pl-24 pr-8">
+            {activeModels.length === 0 ? (
+              <div className="py-20 text-center text-sm text-neutral-400">
+                No models selected. Use the filter dropdown above to select models.
+              </div>
+            ) : (
               <div
-                className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
-                style={{ height: `${CHART_HEIGHT}px` }}
+                className="pl-24 pr-8"
+                style={{ minWidth: `${Math.max(900, activeModels.length * 75)}px` }}
               >
-                {TASK_CONTEXT_MODELS.map((item, idx) => {
-                  const ratio = Math.min(1.0, item.tokens / maxContext);
-                  const barHeightPx = Math.max(16, Math.round(ratio * (CHART_HEIGHT - 38)));
-                  const isHatched = Boolean(item.noPublicApi);
+                <div
+                  className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
+                  style={{ height: `${CHART_HEIGHT}px` }}
+                >
+                  {activeModels.map((item, idx) => {
+                    const ratio = Math.min(1.0, item.tokens / maxContext);
+                    const barHeightPx = Math.max(16, Math.round(ratio * (CHART_HEIGHT - 38)));
+                    const isHatched = Boolean(item.noPublicApi);
 
-                  return (
+                    return (
+                      <div
+                        key={idx}
+                        className="flex-1 flex flex-col items-center justify-end relative h-full"
+                      >
+                        <span className="text-[10.5px] font-mono leading-none mb-1.5 select-none text-neutral-600 font-bold">
+                          {formatTokens(item.tokens)}
+                        </span>
+
+                        <div
+                          className="w-full rounded-t-[4px] origin-bottom relative overflow-hidden"
+                          style={{
+                            height: `${barHeightPx}px`,
+                            backgroundColor: item.color,
+                            ...(isHatched
+                              ? {
+                                  backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
+                                }
+                              : {}),
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Bottom baseline */}
+                <div className="w-full border-b border-neutral-200/60" />
+
+                {/* Creator Brand Logo Row */}
+                <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
+                  {activeModels.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex-1 flex flex-col items-center justify-end relative h-full"
+                      className="flex-1 flex justify-center items-center py-0.5"
+                      title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
                     >
-                      <span className="text-[10.5px] font-mono leading-none mb-1.5 select-none text-neutral-600 font-bold">
-                        {formatTokens(item.tokens)}
-                      </span>
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <CreatorLogo creator={item.creator} size={19} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
+                {/* Angled Model Labels */}
+                <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
+                  {activeModels.map((item, idx) => (
+                    <div key={idx} className="flex-1 flex justify-center items-start relative">
                       <div
-                        className="w-full rounded-t-[4px] origin-bottom relative overflow-hidden"
-                        style={{
-                          height: `${barHeightPx}px`,
-                          backgroundColor: item.color,
-                          ...(isHatched
-                            ? {
-                                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
-                              }
-                            : {}),
-                        }}
-                      />
+                        className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
+                        style={{ width: "160px" }}
+                        title={item.name.replace(/\n/g, " ")}
+                      >
+                        {item.name.replace(/\n/g, " ")}
+                      </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-
-              {/* Bottom baseline */}
-              <div className="w-full border-b border-neutral-200/60" />
-
-              {/* Creator Brand Logo Row */}
-              <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
-                {TASK_CONTEXT_MODELS.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-1 flex justify-center items-center py-0.5"
-                    title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
-                  >
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <CreatorLogo creator={item.creator} size={19} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Angled Model Labels */}
-              <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
-                {TASK_CONTEXT_MODELS.map((item, idx) => (
-                  <div key={idx} className="flex-1 flex justify-center items-start relative">
-                    <div
-                      className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
-                      style={{ width: "160px" }}
-                      title={item.name.replace(/\n/g, " ")}
-                    >
-                      {item.name.replace(/\n/g, " ")}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -2457,8 +2493,48 @@ const smoothLinePath = (pts: { x: number; y: number }[]) => {
 
 export const ResponseTimeFullSection: React.FC = () => {
   const CHART_HEIGHT = 290;
-  const maxTotal = Math.max(...TASK_RESPONSE_MODELS.map((m) => m.total));
-  const maxPromptTotal = Math.max(...TASK_PROMPT_MODELS.map((m) => m.total));
+
+  const [selectedIds, setSelectedIds] = useState<string[]>(() =>
+    TASK_RESPONSE_MODELS.map((m) => m.name)
+  );
+
+  const activeResponseModels = useMemo(
+    () => TASK_RESPONSE_MODELS.filter((m) => selectedIds.includes(m.name)),
+    [selectedIds]
+  );
+
+  const activePromptModels = useMemo(
+    () => TASK_PROMPT_MODELS.filter((m) => selectedIds.includes(m.name)),
+    [selectedIds]
+  );
+
+  const activeOverTimeModels = useMemo(
+    () => RESPONSE_TIME_OVER_TIME.filter((m) => selectedIds.includes(m.name)),
+    [selectedIds]
+  );
+
+  const filterItems: BenchmarkFilterModelItem[] = useMemo(
+    () =>
+      TASK_RESPONSE_MODELS.map((m) => ({
+        id: m.name,
+        name: m.name,
+        creator: m.creator,
+        color: m.color,
+        badge: `${m.total.toFixed(1)}s`,
+      })),
+    []
+  );
+
+  const defaultIds = useMemo(() => TASK_RESPONSE_MODELS.map((m) => m.name), []);
+
+  const maxTotal =
+    activeResponseModels.length > 0
+      ? Math.max(...activeResponseModels.map((m) => m.total))
+      : 10;
+  const maxPromptTotal =
+    activePromptModels.length > 0
+      ? Math.max(...activePromptModels.map((m) => m.total))
+      : 10;
 
   const [view, setView] = useState<"response" | "prompt" | "time">("response");
 
@@ -2533,35 +2609,14 @@ export const ResponseTimeFullSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-2.5 shrink-0">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="h-9 min-w-[290px] flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3 text-[13px] text-neutral-800 hover:bg-neutral-50 transition-colors cursor-pointer"
-                >
-                  <span>
-                    {TASK_RESPONSE_MODELS.length} of {BENCHMARK_MODELS.length} models
-                  </span>
-                  <ChevronsUpDown size={14} className="text-neutral-500" />
-                </button>
-                <button
-                  type="button"
-                  title="Filter models"
-                  aria-label="Filter models"
-                  className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <Filter size={15} />
-                </button>
-                <button
-                  type="button"
-                  title="Chart settings"
-                  aria-label="Chart settings"
-                  className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <SlidersHorizontal size={15} />
-                </button>
-              </div>
-            </div>
+            {/* Functional Filter Controls */}
+            <BenchmarkModelsFilterDropdown
+              items={filterItems}
+              selectedIds={selectedIds}
+              onChangeSelection={setSelectedIds}
+              totalCount={BENCHMARK_MODELS.length}
+              defaultIds={defaultIds}
+            />
           </div>
 
           {view === "response" && (
@@ -2583,97 +2638,106 @@ export const ResponseTimeFullSection: React.FC = () => {
 
               {/* Bar Chart */}
               <div className="relative mt-5 overflow-x-auto no-scrollbar">
-                <div className="min-w-[1480px] pl-24 pr-8">
+                {activeResponseModels.length === 0 ? (
+                  <div className="py-20 text-center text-sm text-neutral-400">
+                    No models selected. Use the filter dropdown above to select models.
+                  </div>
+                ) : (
                   <div
-                    className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
-                    style={{ height: `${CHART_HEIGHT}px` }}
+                    className="pl-24 pr-8"
+                    style={{ minWidth: `${Math.max(900, activeResponseModels.length * 75)}px` }}
                   >
-                    {TASK_RESPONSE_MODELS.map((item, idx) => {
-                      const barHeightPx = Math.max(
-                        4,
-                        Math.round((item.total / maxTotal) * (CHART_HEIGHT - 38))
-                      );
-                      const outputH = Math.max(
-                        1,
-                        Math.round(((item.total - item.ttft) / item.total) * barHeightPx)
-                      );
-                      const thinkingH = Math.max(
-                        0,
-                        Math.round(((item.ttft - item.input) / item.total) * barHeightPx)
-                      );
-                      const inputH = Math.max(0, barHeightPx - outputH - thinkingH);
-                      const showInnerLabel = thinkingH >= 11;
+                    <div
+                      className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
+                      style={{ height: `${CHART_HEIGHT}px` }}
+                    >
+                      {activeResponseModels.map((item, idx) => {
+                        const barHeightPx = Math.max(
+                          4,
+                          Math.round((item.total / maxTotal) * (CHART_HEIGHT - 38))
+                        );
+                        const outputH = Math.max(
+                          1,
+                          Math.round(((item.total - item.ttft) / item.total) * barHeightPx)
+                        );
+                        const thinkingH = Math.max(
+                          0,
+                          Math.round(((item.ttft - item.input) / item.total) * barHeightPx)
+                        );
+                        const inputH = Math.max(0, barHeightPx - outputH - thinkingH);
+                        const showInnerLabel = thinkingH >= 11;
 
-                      return (
+                        return (
+                          <div
+                            key={idx}
+                            className="flex-1 flex flex-col items-center justify-end relative h-full"
+                          >
+                            <span className="text-[10.5px] font-mono leading-none mb-1.5 select-none text-neutral-600 font-bold">
+                              {item.total.toFixed(1)}
+                            </span>
+
+                            <div
+                              className="w-full rounded-t-[4px] origin-bottom relative overflow-hidden"
+                              style={{ height: `${barHeightPx}px` }}
+                            >
+                              {showInnerLabel && (
+                                <span
+                                  className="absolute left-1/2 -translate-x-1/2 text-[8px] font-mono font-bold text-white leading-none whitespace-nowrap select-none"
+                                  style={{ top: `${outputH + 3}px` }}
+                                >
+                                  {item.ttft.toFixed(1)}
+                                </span>
+                              )}
+                              <div style={{ height: `${outputH}px`, backgroundColor: item.color }} />
+                              <div
+                                style={{
+                                  height: `${thinkingH}px`,
+                                  backgroundColor: `${item.color}B3`,
+                                }}
+                              />
+                              <div
+                                style={{ height: `${inputH}px`, backgroundColor: `${item.color}55` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Bottom baseline */}
+                    <div className="w-full border-b border-neutral-200/60" />
+
+                    {/* Creator Brand Logo Row */}
+                    <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
+                      {activeResponseModels.map((item, idx) => (
                         <div
                           key={idx}
-                          className="flex-1 flex flex-col items-center justify-end relative h-full"
+                          className="flex-1 flex justify-center items-center py-0.5"
+                          title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
                         >
-                          <span className="text-[10.5px] font-mono leading-none mb-1.5 select-none text-neutral-600 font-bold">
-                            {item.total.toFixed(1)}
-                          </span>
-
-                          <div
-                            className="w-full rounded-t-[4px] origin-bottom relative overflow-hidden"
-                            style={{ height: `${barHeightPx}px` }}
-                          >
-                            {showInnerLabel && (
-                              <span
-                                className="absolute left-1/2 -translate-x-1/2 text-[8px] font-mono font-bold text-white leading-none whitespace-nowrap select-none"
-                                style={{ top: `${outputH + 3}px` }}
-                              >
-                                {item.ttft.toFixed(1)}
-                              </span>
-                            )}
-                            <div style={{ height: `${outputH}px`, backgroundColor: item.color }} />
-                            <div
-                              style={{
-                                height: `${thinkingH}px`,
-                                backgroundColor: `${item.color}B3`,
-                              }}
-                            />
-                            <div
-                              style={{ height: `${inputH}px`, backgroundColor: `${item.color}55` }}
-                            />
+                          <div className="w-6 h-6 flex items-center justify-center">
+                            <CreatorLogo creator={item.creator} size={19} />
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
 
-                  {/* Bottom baseline */}
-                  <div className="w-full border-b border-neutral-200/60" />
-
-                  {/* Creator Brand Logo Row */}
-                  <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
-                    {TASK_RESPONSE_MODELS.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex-1 flex justify-center items-center py-0.5"
-                        title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
-                      >
-                        <div className="w-6 h-6 flex items-center justify-center">
-                          <CreatorLogo creator={item.creator} size={19} />
+                    {/* Angled Model Labels */}
+                    <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
+                      {activeResponseModels.map((item, idx) => (
+                        <div key={idx} className="flex-1 flex justify-center items-start relative">
+                          <div
+                            className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
+                            style={{ width: "160px" }}
+                            title={item.name.replace(/\n/g, " ")}
+                          >
+                            {item.name.replace(/\n/g, " ")}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-
-                  {/* Angled Model Labels */}
-                  <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
-                    {TASK_RESPONSE_MODELS.map((item, idx) => (
-                      <div key={idx} className="flex-1 flex justify-center items-start relative">
-                        <div
-                          className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
-                          style={{ width: "160px" }}
-                          title={item.name.replace(/\n/g, " ")}
-                        >
-                          {item.name.replace(/\n/g, " ")}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
             </>
           )}
@@ -2697,83 +2761,92 @@ export const ResponseTimeFullSection: React.FC = () => {
 
               {/* Bar Chart */}
               <div className="relative mt-5 overflow-x-auto no-scrollbar">
-                <div className="min-w-[1480px] pl-24 pr-8">
+                {activePromptModels.length === 0 ? (
+                  <div className="py-20 text-center text-sm text-neutral-400">
+                    No models selected. Use the filter dropdown above to select models.
+                  </div>
+                ) : (
                   <div
-                    className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
-                    style={{ height: `${CHART_HEIGHT}px` }}
+                    className="pl-24 pr-8"
+                    style={{ minWidth: `${Math.max(900, activePromptModels.length * 75)}px` }}
                   >
-                    {TASK_PROMPT_MODELS.map((item, idx) => {
-                      const barHeightPx = Math.max(
-                        5,
-                        Math.round((item.total / maxPromptTotal) * (CHART_HEIGHT - 38))
-                      );
-                      const heights = item.segments.map((s) =>
-                        Math.max(1, Math.round((s / item.total) * barHeightPx))
-                      );
-                      heights[heights.length - 1] +=
-                        barHeightPx - heights.reduce((a, b) => a + b, 0);
+                    <div
+                      className="flex items-end justify-between gap-2.5 pt-4 pb-0 relative"
+                      style={{ height: `${CHART_HEIGHT}px` }}
+                    >
+                      {activePromptModels.map((item, idx) => {
+                        const barHeightPx = Math.max(
+                          5,
+                          Math.round((item.total / maxPromptTotal) * (CHART_HEIGHT - 38))
+                        );
+                        const heights = item.segments.map((s) =>
+                          Math.max(1, Math.round((s / item.total) * barHeightPx))
+                        );
+                        heights[heights.length - 1] +=
+                          barHeightPx - heights.reduce((a, b) => a + b, 0);
 
-                      return (
+                        return (
+                          <div
+                            key={idx}
+                            className="flex-1 flex flex-col items-center justify-end relative h-full"
+                          >
+                            <span className="text-[9px] font-mono leading-none mb-1 select-none text-neutral-600 font-bold">
+                              {item.total.toFixed(1)}
+                            </span>
+
+                            <div
+                              className="w-full rounded-t-[4px] origin-bottom relative overflow-hidden"
+                              style={{ height: `${barHeightPx}px` }}
+                            >
+                              {item.segments.map((_, si) => (
+                                <div
+                                  key={si}
+                                  style={{
+                                    height: `${heights[si]}px`,
+                                    backgroundColor: promptLegend[si].color,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Bottom baseline */}
+                    <div className="w-full border-b border-neutral-200/60" />
+
+                    {/* Creator Brand Logo Row */}
+                    <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
+                      {activePromptModels.map((item, idx) => (
                         <div
                           key={idx}
-                          className="flex-1 flex flex-col items-center justify-end relative h-full"
+                          className="flex-1 flex justify-center items-center py-0.5"
+                          title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
                         >
-                          <span className="text-[9px] font-mono leading-none mb-1 select-none text-neutral-600 font-bold">
-                            {item.total.toFixed(1)}
-                          </span>
-
-                          <div
-                            className="w-full rounded-t-[4px] origin-bottom relative overflow-hidden"
-                            style={{ height: `${barHeightPx}px` }}
-                          >
-                            {item.segments.map((_, si) => (
-                              <div
-                                key={si}
-                                style={{
-                                  height: `${heights[si]}px`,
-                                  backgroundColor: promptLegend[si].color,
-                                }}
-                              />
-                            ))}
+                          <div className="w-6 h-6 flex items-center justify-center">
+                            <CreatorLogo creator={item.creator} size={19} />
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
 
-                  {/* Bottom baseline */}
-                  <div className="w-full border-b border-neutral-200/60" />
-
-                  {/* Creator Brand Logo Row */}
-                  <div className="flex items-center justify-between gap-2.5 pt-3.5 pb-1">
-                    {TASK_PROMPT_MODELS.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex-1 flex justify-center items-center py-0.5"
-                        title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
-                      >
-                        <div className="w-6 h-6 flex items-center justify-center">
-                          <CreatorLogo creator={item.creator} size={19} />
+                    {/* Angled Model Labels */}
+                    <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
+                      {activePromptModels.map((item, idx) => (
+                        <div key={idx} className="flex-1 flex justify-center items-start relative">
+                          <div
+                            className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
+                            style={{ width: "160px" }}
+                            title={item.name.replace(/\n/g, " ")}
+                          >
+                            {item.name.replace(/\n/g, " ")}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-
-                  {/* Angled Model Labels */}
-                  <div className="flex justify-between gap-2.5 pt-1 pb-16 h-44">
-                    {TASK_PROMPT_MODELS.map((item, idx) => (
-                      <div key={idx} className="flex-1 flex justify-center items-start relative">
-                        <div
-                          className="text-[10px] text-neutral-600 font-medium whitespace-nowrap origin-top-right -rotate-55 text-right select-none absolute right-1/2 top-1.5"
-                          style={{ width: "160px" }}
-                          title={item.name.replace(/\n/g, " ")}
-                        >
-                          {item.name.replace(/\n/g, " ")}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
             </>
           )}
@@ -2794,7 +2867,7 @@ export const ResponseTimeFullSection: React.FC = () => {
 
               {/* Series Legend */}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-5 text-[11.5px] text-neutral-600">
-                {RESPONSE_TIME_OVER_TIME.map((s) => (
+                {activeOverTimeModels.map((s) => (
                   <div key={s.name} className="flex items-center gap-1.5">
                     <span
                       className="w-2 h-2 rounded-full inline-block shrink-0"
@@ -2826,7 +2899,7 @@ export const ResponseTimeFullSection: React.FC = () => {
                       );
                     })}
 
-                    {RESPONSE_TIME_OVER_TIME.map((s) => {
+                    {activeOverTimeModels.map((s) => {
                       const pts = s.points.map((v, d) => ({
                         x: 56 + (d / 6) * 1408,
                         y: 16 + (1 - v / 800) * 334,

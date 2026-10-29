@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { ChevronsUpDown, SlidersHorizontal, Check, Search } from "lucide-react";
 
 const SVG_WIDTH = 1100;
@@ -1436,6 +1436,30 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const creatorDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isCreatorDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        creatorDropdownRef.current &&
+        !creatorDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsCreatorDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsCreatorDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCreatorDropdownOpen]);
 
   // Group models by creator and construct chronological step lines
   const creatorLines = useMemo(() => {
@@ -1541,13 +1565,17 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
         </div>
 
         {/* Right: Controls (Creator Dropdown, Filter) */}
-        <div className="flex items-center gap-2 self-start md:self-auto shrink-0 relative">
+        <div ref={creatorDropdownRef} className="flex items-center gap-2 self-start md:self-auto shrink-0 relative">
           {/* Creators Count Dropdown Trigger */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsCreatorDropdownOpen((prev) => !prev)}
-              className="border border-neutral-200/90 rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium text-neutral-700 bg-white hover:bg-neutral-50 flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+              className={`border rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs ${
+                isCreatorDropdownOpen
+                  ? "border-neutral-400 bg-neutral-100 text-neutral-900"
+                  : "border-neutral-200/90 text-neutral-700 bg-white hover:bg-neutral-50"
+              }`}
             >
               <span>{selectedCreators.length} of 60 model creators</span>
               <ChevronsUpDown size={12} className="text-neutral-400" />
@@ -1555,7 +1583,7 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
 
             {/* Creators Dropdown Menu */}
             {isCreatorDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-neutral-200 p-2.5 z-30 animate-in fade-in duration-150">
+              <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-neutral-200 p-2.5 z-50 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between pb-2 border-b border-neutral-100 mb-2">
                   <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
                     Model Creators
@@ -1593,26 +1621,32 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
 
                 {/* Creator List */}
                 <div className="max-h-56 overflow-y-auto no-scrollbar flex flex-col gap-0.5">
-                  {filteredDropdownCreators.map((c) => {
-                    const isChecked = selectedCreators.includes(c.id);
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => toggleCreator(c.id)}
-                        className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs hover:bg-neutral-50 text-neutral-800 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: c.color }}
-                          />
-                          <span>{c.name}</span>
-                        </div>
-                        {isChecked && <Check size={13} className="text-blue-600" />}
-                      </button>
-                    );
-                  })}
+                  {filteredDropdownCreators.length === 0 ? (
+                    <div className="py-4 text-center text-xs text-neutral-400">
+                      No creators found
+                    </div>
+                  ) : (
+                    filteredDropdownCreators.map((c) => {
+                      const isChecked = selectedCreators.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => toggleCreator(c.id)}
+                          className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs hover:bg-neutral-50 text-neutral-800 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: c.color }}
+                            />
+                            <span>{c.name}</span>
+                          </div>
+                          {isChecked && <Check size={13} className="text-blue-600" />}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
@@ -1623,7 +1657,11 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
             type="button"
             onClick={() => setIsCreatorDropdownOpen((prev) => !prev)}
             title="Filter model creators"
-            className="p-1.5 border border-neutral-200/90 rounded-lg bg-white hover:bg-neutral-50 text-neutral-700 transition-colors cursor-pointer shadow-2xs"
+            className={`p-1.5 border rounded-lg transition-colors cursor-pointer shadow-2xs ${
+              isCreatorDropdownOpen
+                ? "border-neutral-400 bg-neutral-100 text-neutral-900"
+                : "border-neutral-200/90 bg-white hover:bg-neutral-50 text-neutral-700"
+            }`}
           >
             <SlidersHorizontal size={14} />
           </button>

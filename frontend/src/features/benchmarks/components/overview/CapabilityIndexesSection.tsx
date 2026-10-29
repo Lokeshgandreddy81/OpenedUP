@@ -1,34 +1,47 @@
-import React, { useState } from "react";
-import { ArrowUpRight, ChevronsUpDown, Filter, Plus, SlidersHorizontal } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { ArrowUpRight } from "lucide-react";
 import { CreatorLogo } from "../ui/CreatorLogo";
 import { CAPABILITY_INDEXES } from "../data/capabilityIndexes";
+import { BenchmarkModelsFilterDropdown, BenchmarkFilterModelItem } from "../ui/BenchmarkModelsFilterDropdown";
 
 const CHART_HEIGHT = 330;
 
 const HATCH_PATTERN =
   "repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255,255,255,0.32) 3.5px, rgba(255,255,255,0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0,0,0,0.3) 3.5px, rgba(0,0,0,0.3) 7px)";
 
-const IconChip: React.FC<{
-  title: string;
-  children: React.ReactNode;
-}> = ({ title, children }) => (
-  <button
-    type="button"
-    title={title}
-    aria-label={title}
-    className="h-8 px-2.5 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 flex items-center justify-center transition-colors cursor-pointer"
-  >
-    {children}
-  </button>
-);
-
 export const CapabilityIndexesSection: React.FC = () => {
   const [activeId, setActiveId] = useState(CAPABILITY_INDEXES[0].id);
+  const [selectedModelMap, setSelectedModelMap] = useState<Record<string, string[]>>({});
 
   const index = CAPABILITY_INDEXES.find((i) => i.id === activeId) ?? CAPABILITY_INDEXES[0];
-  const maxValue = Math.max(...index.models.map((m) => m.value));
+  const allModelIds = useMemo(() => index.models.map((m) => m.name), [index]);
+  const selectedIds = selectedModelMap[activeId] ?? allModelIds;
+
+  const handleSelectIds = (ids: string[]) => {
+    setSelectedModelMap((prev) => ({ ...prev, [activeId]: ids }));
+  };
+
+  const activeModels = useMemo(
+    () => index.models.filter((m) => selectedIds.includes(m.name)),
+    [index.models, selectedIds]
+  );
+
+  const filterItems: BenchmarkFilterModelItem[] = useMemo(
+    () =>
+      index.models.map((m) => ({
+        id: m.name,
+        name: m.name,
+        creator: m.creator,
+        color: m.color,
+        badge: `${m.value}`,
+        pattern: m.pattern,
+      })),
+    [index.models]
+  );
+
+  const maxValue = activeModels.length > 0 ? Math.max(...activeModels.map((m) => m.value)) : 60;
   const scaleMax = maxValue * 1.08;
-  const hasNoPublicApi = index.models.some((m) => m.pattern);
+  const hasNoPublicApi = activeModels.some((m) => m.pattern);
 
   return (
     <section className="w-full flex flex-col gap-6">
@@ -84,35 +97,15 @@ export const CapabilityIndexesSection: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-2.5 shrink-0">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="h-9 min-w-[290px] flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3 text-[13px] text-neutral-800 hover:bg-neutral-50 transition-colors cursor-pointer"
-                >
-                  <span>
-                    {index.models.length} of {index.totalModels} models
-                  </span>
-                  <ChevronsUpDown size={14} className="text-neutral-500" />
-                </button>
-                <IconChip title="Filter models">
-                  <Filter size={15} />
-                </IconChip>
-                <IconChip title="Chart options">
-                  <SlidersHorizontal size={15} />
-                </IconChip>
-              </div>
-
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 bg-white text-[12.5px] font-medium text-neutral-800 hover:bg-neutral-50 transition-colors cursor-pointer"
-              >
-                <span className="w-4 h-4 rounded-full border border-neutral-300 flex items-center justify-center shrink-0">
-                  <Plus size={10} />
-                </span>
-                Add model from specific provider
-              </button>
-            </div>
+            {/* Functional Filter & Provider Controls */}
+            <BenchmarkModelsFilterDropdown
+              items={filterItems}
+              selectedIds={selectedIds}
+              onChangeSelection={handleSelectIds}
+              totalCount={index.totalModels}
+              defaultIds={allModelIds}
+              showProviderAction={true}
+            />
           </div>
 
           {/* Legend Row */}
@@ -135,74 +128,83 @@ export const CapabilityIndexesSection: React.FC = () => {
 
           {/* Bar Chart */}
           <div className="relative mt-5 overflow-x-auto no-scrollbar">
-            <div className="min-w-[1600px] pl-24 pr-8">
+            {activeModels.length === 0 ? (
+              <div className="py-20 text-center text-sm text-neutral-400">
+                No models selected. Use the filter dropdown above to select models.
+              </div>
+            ) : (
               <div
-                className="relative flex items-end justify-between gap-3"
-                style={{ height: `${CHART_HEIGHT}px` }}
+                className="pl-24 pr-8"
+                style={{ minWidth: `${Math.max(900, activeModels.length * 80)}px` }}
               >
-                {index.models.map((model, idx) => {
-                  const barHeightPx = Math.max(
-                    30,
-                    Math.round((model.value / scaleMax) * (CHART_HEIGHT - 8))
-                  );
-                  return (
-                    <div
-                      key={`${model.creator}-${idx}`}
-                      className="flex-1 h-full flex flex-col items-center justify-end"
-                    >
+                <div
+                  className="relative flex items-end justify-between gap-3"
+                  style={{ height: `${CHART_HEIGHT}px` }}
+                >
+                  {activeModels.map((model, idx) => {
+                    const barHeightPx = Math.max(
+                      30,
+                      Math.round((model.value / scaleMax) * (CHART_HEIGHT - 8))
+                    );
+                    return (
                       <div
-                        className="w-full max-w-[42px] rounded-t-[3px] flex justify-center pt-2.5 overflow-hidden select-none"
-                        style={{
-                          height: `${barHeightPx}px`,
-                          backgroundColor: model.color,
-                          ...(model.pattern ? { backgroundImage: HATCH_PATTERN } : {}),
-                        }}
+                        key={`${model.creator}-${idx}`}
+                        className="flex-1 h-full flex flex-col items-center justify-end"
                       >
-                        <span className="text-[12px] font-medium text-white/95 leading-none">
-                          {model.value}
-                        </span>
+                        <div
+                          className="w-full max-w-[42px] rounded-t-[3px] flex justify-center pt-2.5 overflow-hidden select-none"
+                          style={{
+                            height: `${barHeightPx}px`,
+                            backgroundColor: model.color,
+                            ...(model.pattern ? { backgroundImage: HATCH_PATTERN } : {}),
+                          }}
+                        >
+                          <span className="text-[12px] font-medium text-white/95 leading-none">
+                            {model.value}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Bottom baseline */}
+                <div className="w-full border-b border-neutral-200/60" />
+
+                {/* Creator Brand Logo Row */}
+                <div className="flex items-center justify-between gap-3 pt-3.5">
+                  {activeModels.map((model, idx) => (
+                    <div
+                      key={`${model.creator}-logo-${idx}`}
+                      className="flex-1 flex justify-center items-center"
+                      title={`${model.name} (${model.creator})`}
+                    >
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <CreatorLogo creator={model.creator} size={19} />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
 
-              {/* Bottom baseline */}
-              <div className="w-full border-b border-neutral-200/60" />
-
-              {/* Creator Brand Logo Row */}
-              <div className="flex items-center justify-between gap-3 pt-3.5">
-                {index.models.map((model, idx) => (
-                  <div
-                    key={`${model.creator}-logo-${idx}`}
-                    className="flex-1 flex justify-center items-center"
-                    title={`${model.name} (${model.creator})`}
-                  >
-                    <div className="w-6 h-6 flex items-center justify-center">
-                      <CreatorLogo creator={model.creator} size={19} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Angled Model Labels */}
-              <div className="flex justify-between gap-3 pt-1.5 h-[150px]">
-                {index.models.map((model, idx) => (
-                  <div
-                    key={`${model.creator}-label-${idx}`}
-                    className="flex-1 relative flex justify-center items-start"
-                  >
+                {/* Angled Model Labels */}
+                <div className="flex justify-between gap-3 pt-1.5 h-[150px]">
+                  {activeModels.map((model, idx) => (
                     <div
-                      className="absolute right-1/2 top-1 origin-top-right -rotate-45 text-right text-[11px] text-neutral-700 font-medium leading-[1.35] select-none"
-                      style={{ width: "84px" }}
-                      title={model.name}
+                      key={`${model.creator}-label-${idx}`}
+                      className="flex-1 relative flex justify-center items-start"
                     >
-                      {model.name}
+                      <div
+                        className="absolute right-1/2 top-1 origin-top-right -rotate-45 text-right text-[11px] text-neutral-700 font-medium leading-[1.35] select-none"
+                        style={{ width: "84px" }}
+                        title={model.name}
+                      >
+                        {model.name}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
