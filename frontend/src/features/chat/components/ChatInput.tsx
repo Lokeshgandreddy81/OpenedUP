@@ -192,7 +192,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";
-    const nextHeight = Math.min(220, Math.max(40, textareaRef.current.scrollHeight));
+    const nextHeight = Math.min(200, Math.max(24, textareaRef.current.scrollHeight));
     textareaRef.current.style.height = `${nextHeight}px`;
   }, [text]);
 
@@ -425,7 +425,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <>
       <div
-        className="w-full max-w-[900px] mx-auto px-4 sm:px-5 select-none"
+        className="w-full max-w-[780px] mx-auto px-4 select-none"
         data-testid={chapterContextLabel ? "chapter-composer" : undefined}
       >
         <div
@@ -454,15 +454,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-2 rounded-[20px] p-3 sm:p-4 ${
+          className={`relative flex flex-col gap-1.5 rounded-2xl px-3.5 pt-3 pb-2 sm:px-4 sm:pt-3.5 sm:pb-2.5 ${
             landingMode
-              ? "border border-slate-200/70 bg-white shadow-[0_1px_8px_-1px_rgba(15,23,42,0.05),0_0_0_1px_rgba(15,23,42,0.02)] transition-[border-color,box-shadow] duration-200 hover:border-slate-300/80 focus-within:border-[#0047FF]/20 focus-within:shadow-[0_2px_16px_-2px_rgba(0,71,255,0.06),0_0_0_1px_rgba(0,71,255,0.04)]"
+              ? "border border-neutral-200/90 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 focus-within:border-neutral-400 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.07)]"
               : stableFrame
-                ? "border border-slate-200/60 bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)]"
+                ? "border border-neutral-200/60 bg-neutral-50/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
                 : chapterContextLabel
-                  ? "border border-slate-200/60 bg-slate-50/30 shadow-[inset_0_1px_2px_rgba(15,23,42,0.02)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-slate-300 focus-within:bg-white/90"
-                  : "border border-slate-200/70 bg-white shadow-[0_1px_8px_-1px_rgba(15,23,42,0.05),0_0_0_1px_rgba(15,23,42,0.02)] transition-[border-color,box-shadow] duration-200 hover:border-slate-300/80 focus-within:border-[#0047FF]/20 focus-within:shadow-[0_2px_16px_-2px_rgba(0,71,255,0.06),0_0_0_1px_rgba(0,71,255,0.04)]"
-          } ${isFileDragActive ? "border-[#0047FF]/30 bg-blue-50/20 ring-2 ring-[#0047FF]/8" : ""}`}
+                  ? "border border-neutral-200/60 bg-neutral-50/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-neutral-300 focus-within:bg-white"
+                  : "border border-neutral-200/90 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 focus-within:border-neutral-400 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.07)]"
+          } ${isFileDragActive ? "border-neutral-400 bg-neutral-50 ring-2 ring-neutral-300/50" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
           <input
@@ -652,11 +652,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Listening… speak now…" : placeholder}
             rows={1}
-            className={`chat-composer-input w-full bg-transparent px-1.5 text-[15px] sm:text-[15px] font-normal leading-relaxed text-slate-900 placeholder:font-normal placeholder:text-slate-400/80 placeholder:transition-opacity placeholder:duration-200 focus:placeholder:text-slate-300 resize-none outline-none min-h-[42px] max-h-[220px] tracking-[-0.01em]`}
+            className={`chat-composer-input w-full bg-transparent px-1 text-[14.5px] font-normal leading-relaxed text-neutral-900 placeholder:font-normal placeholder:text-neutral-400 focus:placeholder:text-neutral-300 resize-none outline-none min-h-[26px] max-h-[200px] tracking-[-0.01em]`}
           />
 
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
-          <div className="flex min-h-9 items-center justify-between select-none">
+          <div className="flex min-h-8 items-center justify-between select-none pt-0.5">
             {/* Left: Add context / file plus icon with popover menu */}
             {chapterContextLabel ? (
               <div
@@ -691,10 +691,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   aria-label="Add context"
                   aria-expanded={isPlusMenuOpen}
                   disabled={isReadingFiles}
-                  className={`h-7 w-7 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/30 focus-visible:ring-offset-1 ${
+                  className={`h-7 w-7 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ${
                     isPlusMenuOpen
-                      ? "bg-slate-150 text-slate-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.08)]"
-                      : "text-slate-400 hover:text-slate-700 hover:bg-slate-100/80"
+                      ? "bg-neutral-100 text-neutral-900"
+                      : "text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100"
                   }`}
                 >
                   <Plus size={16} strokeWidth={2} />
@@ -849,9 +849,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   aria-haspopup="menu"
                   aria-expanded={isModelDropdownOpen}
                   title={currentModelName}
-                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[12.5px] font-medium text-slate-500 transition-all duration-150 cursor-pointer hover:text-slate-800 hover:bg-slate-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/25 border border-transparent hover:border-slate-200/60 sm:gap-2 ${chapterContextLabel ? "max-w-[min(56vw,360px)]" : "max-w-[min(44vw,360px)]"}`}
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium text-neutral-600 transition-all duration-150 cursor-pointer hover:text-neutral-900 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 border border-transparent hover:border-neutral-200/60 sm:gap-2 ${chapterContextLabel ? "max-w-[min(56vw,360px)]" : "max-w-[min(44vw,360px)]"}`}
                 >
-                  <span className="truncate text-[12.5px]">{currentModelName}</span>
+                  <span className="truncate text-[12px]">{currentModelName}</span>
                   {supportsEffort && (
                     <span className="text-[11px] text-slate-400 font-normal">{selectedEffort}</span>
                   )}
@@ -1132,10 +1132,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 aria-label={isDictating ? "Stop dictation" : "Dictate (Speech to text)"}
                 aria-pressed={isDictating}
                 onClick={toggleDictation}
-                className={`relative h-7 w-7 flex items-center justify-center rounded-full transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/25 ${
+                className={`relative h-7 w-7 flex items-center justify-center rounded-full transition-all duration-150 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ${
                   isDictating
                     ? "text-rose-500 bg-rose-50 border border-rose-200/70 shadow-[0_1px_3px_rgba(225,29,72,0.1)]"
-                    : "text-slate-400 hover:text-slate-700 hover:bg-slate-100/80"
+                    : "text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100"
                 }`}
               >
                 {isDictating && (
@@ -1181,10 +1181,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                           : "Send message"
                   }
                   aria-label={isReadingFiles ? "Reading files…" : "Send message"}
-                  className={`group h-7 w-7 rounded-full flex items-center justify-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/25 focus-visible:ring-offset-1 ${
+                  className={`group h-7 w-7 rounded-full flex items-center justify-center transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ${
                     (Boolean(text.trim()) || attachments.length > 0) && !isImageCapabilityBlocked
-                      ? "bg-slate-900 text-white shadow-[0_2px_8px_-1px_rgba(15,23,42,0.25)] hover:bg-slate-800 hover:shadow-[0_3px_12px_-1px_rgba(15,23,42,0.3)] hover:scale-[1.05] active:scale-95 cursor-pointer"
-                      : "bg-slate-100/80 text-slate-300/80 cursor-not-allowed scale-100 shadow-none"
+                      ? "bg-neutral-900 text-white shadow-sm hover:bg-black hover:scale-105 active:scale-95 cursor-pointer"
+                      : "bg-neutral-100 text-neutral-300 cursor-not-allowed scale-100 shadow-none"
                   }`}
                 >
                   {isReadingFiles ? (
