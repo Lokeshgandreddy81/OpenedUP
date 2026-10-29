@@ -1,7 +1,15 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigationType,
+} from "react-router-dom";
 import { AppProvider, useAppContext, WorkspaceSyncModal } from "./features/chapters/publicApi";
 import { ChatAuthProvider } from "./app/auth/ChatAuthContext";
+import { useChatAuth } from "./app/auth/useChatAuth";
 import { RequireAuth } from "./app/auth/RequireAuth";
 import { PageRoute } from "./app/components/PageRoute";
 import { lazyWithRetry } from "./app/components/lazyWithRetry";
@@ -87,6 +95,26 @@ const ResetPasswordPage = lazyWithRetry(() =>
   }))
 );
 
+const HomeRoute: React.FC<{ allowChatClose?: boolean }> = ({ allowChatClose = false }) => {
+  const { user, loading } = useChatAuth();
+  const location = useLocation();
+  const navigationType = useNavigationType();
+  // Keep the landing page after an in-app close; direct visits and reloads resume at chat.
+  const isChatCloseLanding =
+    allowChatClose && navigationType === "REPLACE" && location.state?.source === "chat-close";
+
+  if (loading) return <LandingPageSkeleton />;
+  if (user && !isChatCloseLanding) {
+    return <Navigate to={user.emailVerified ? "/chat" : "/verify-email"} replace />;
+  }
+
+  return (
+    <PageRoute name="Home" fallback={<LandingPageSkeleton />}>
+      <LandingPage />
+    </PageRoute>
+  );
+};
+
 export const AppShell: React.FC = () => {
   const {
     engineOutput,
@@ -151,14 +179,8 @@ export const AppShell: React.FC = () => {
         />
         <Route path="/login" element={<Navigate to="/sign-in" replace />} />
         <Route path="/signup" element={<Navigate to="/create-account" replace />} />
-        <Route
-          path="/"
-          element={
-            <PageRoute name="Home" fallback={<LandingPageSkeleton />}>
-              <LandingPage />
-            </PageRoute>
-          }
-        />
+        <Route path="/" element={<HomeRoute />} />
+        <Route path="/welcome" element={<HomeRoute allowChatClose />} />
         <Route element={<RequireAuth />}>
           <Route
             path="/features"

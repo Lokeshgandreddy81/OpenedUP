@@ -33,7 +33,7 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
     params.get("category") === "Providers" ? "Providers" : "Connectors";
 
   const handleClose = () => {
-    navigate("/", { replace: true });
+    navigate("/welcome", { replace: true, state: { source: "chat-close" } });
   };
 
   const handleViewChange = (

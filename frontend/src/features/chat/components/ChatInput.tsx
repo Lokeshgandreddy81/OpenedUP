@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
   Sparkles,
   Puzzle,
+  PenLine,
 } from "lucide-react";
 import {
   getChatModels,
@@ -192,9 +193,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";
-    const nextHeight = Math.min(200, Math.max(22, textareaRef.current.scrollHeight));
+    const minHeight = landingMode ? 52 : 22;
+    const nextHeight = Math.min(200, Math.max(minHeight, textareaRef.current.scrollHeight));
     textareaRef.current.style.height = `${nextHeight}px`;
-  }, [text]);
+  }, [text, landingMode]);
 
   useEffect(() => {
     if (initialText) {
@@ -454,14 +456,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-0.5 rounded-2xl px-3.5 pt-2.5 pb-2 sm:px-4 sm:pt-3 sm:pb-2 ${
+          className={`relative flex flex-col gap-0.5 ${
             landingMode
-              ? "border border-neutral-200/90 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 focus-within:border-neutral-400 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.07)]"
+              ? "rounded-3xl px-4 pt-3.5 pb-3 sm:px-5 sm:pt-4 sm:pb-3.5 border border-slate-200/90 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:border-slate-300 hover:shadow-[0_12px_36px_rgb(0,0,0,0.07),0_2px_6px_rgba(0,0,0,0.04)] focus-within:border-slate-400/90 focus-within:shadow-[0_16px_44px_-8px_rgba(0,0,0,0.09),0_4px_12px_rgba(0,0,0,0.03)] transition-all duration-200"
               : stableFrame
-                ? "border border-neutral-200/60 bg-neutral-50/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
+                ? "rounded-2xl px-3.5 pt-2.5 pb-2 sm:px-4 sm:pt-3 sm:pb-2 border border-neutral-200/60 bg-neutral-50/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
                 : chapterContextLabel
-                  ? "border border-neutral-200/60 bg-neutral-50/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-neutral-300 focus-within:bg-white"
-                  : "border border-neutral-200/90 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 focus-within:border-neutral-400 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.07)]"
+                  ? "rounded-2xl px-3.5 pt-2.5 pb-2 sm:px-4 sm:pt-3 sm:pb-2 border border-neutral-200/60 bg-neutral-50/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-neutral-300 focus-within:bg-white"
+                  : "rounded-2xl px-3.5 pt-2.5 pb-2 sm:px-4 sm:pt-3 sm:pb-2 border border-neutral-200/90 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 focus-within:border-neutral-400 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.07)]"
           } ${isFileDragActive ? "border-neutral-400 bg-neutral-50 ring-2 ring-neutral-300/50" : ""}`}
         >
           {/* Hidden file input for plus/attachment */}
@@ -652,11 +654,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Listening… speak now…" : placeholder}
             rows={1}
-            className={`chat-composer-input w-full bg-transparent px-1 text-[14px] font-normal leading-snug text-neutral-900 placeholder:font-normal placeholder:text-neutral-400 focus:placeholder:text-neutral-300 resize-none outline-none min-h-[22px] max-h-[200px] tracking-[-0.01em]`}
+            className={
+              landingMode
+                ? "chat-composer-input w-full bg-transparent px-1 text-[15.5px] sm:text-[16px] font-normal leading-relaxed text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:placeholder:text-slate-300 resize-none outline-none min-h-[52px] max-h-[200px] tracking-[-0.01em]"
+                : "chat-composer-input w-full bg-transparent px-1 text-[14px] font-normal leading-snug text-neutral-900 placeholder:font-normal placeholder:text-neutral-400 focus:placeholder:text-neutral-300 resize-none outline-none min-h-[22px] max-h-[200px] tracking-[-0.01em]"
+            }
           />
 
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
-          <div className="flex min-h-7 items-center justify-between select-none pt-0">
+          <div
+            className={`flex items-center justify-between select-none ${
+              landingMode ? "min-h-8 pt-2 sm:pt-2.5" : "min-h-7 pt-0"
+            }`}
+          >
             {/* Left: Add context / file plus icon with popover menu */}
             {chapterContextLabel ? (
               <div

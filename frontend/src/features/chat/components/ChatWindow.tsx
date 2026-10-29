@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { PanelLeft } from "lucide-react";
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
@@ -1149,20 +1148,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         >
           {/* Top Header Bar: Responsive Navigation, Brand, Temporary Chat Indicator & Profile */}
           <header className="w-full flex items-center justify-between gap-3 px-4 sm:px-6 py-2.5 sm:py-3 z-30 shrink-0 relative bg-white/95 backdrop-blur-xs">
-            {/* Left: Responsive Sidebar Collapse Button + Brand Title + Conversation Breadcrumb */}
+            {/* Left: Brand Title + Conversation Breadcrumb */}
             <div className="flex items-center gap-2.5 min-w-0">
-              <button
-                type="button"
-                onClick={() => setIsSidebarOpen((v) => !v)}
-                title={isSidebarOpen ? "Collapse sidebar" : "Open sidebar"}
-                aria-label={isSidebarOpen ? "Collapse sidebar" : "Open sidebar"}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0 ${
-                  isSidebarOpen ? "sm:hidden" : ""
-                }`}
-              >
-                <PanelLeft size={17} strokeWidth={1.8} />
-              </button>
-
               <div className="flex items-center gap-2 min-w-0">
                 <span className="font-semibold text-[14px] tracking-tight text-slate-900 shrink-0">
                   Sara
