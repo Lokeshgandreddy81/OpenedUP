@@ -2,7 +2,7 @@
 
 ## Next Agent Prompt
 
-The code migration is implemented, but the Vercel deployment and Supabase production project have not been validated from this workspace. The user selected Supabase Postgres. Before declaring launch complete, apply both migrations, configure Vercel backend secrets and `DATABASE_URL`, enable Vercel Sandbox, deploy, and smoke-test `/readyz`, auth, and persistence across separate function invocations. Keep SQLite only as a local development adapter. Update this section after the live checks.
+The Vercel container is deployed from `main`. On 2026-10-29, `/healthz` and `/readyz` both returned 200; readiness reported Python, vault, and persistent storage ready. The Chapters UI also showed a PDF with 31 extracted chapters and rendered its selected page. These checks verify container startup, database connectivity, and the visible PDF reading path; they do not prove schema migration completeness, every authenticated API, or persistence across separate function invocations. Finish those checks before calling the full production cutover complete. Keep SQLite only as a local development adapter.
 
 ## Goal and constraints
 
@@ -37,12 +37,14 @@ The existing `supabase/migrations/20261028000000_openedup_app_schema.sql` is a s
 - [x] Vercel Sandbox integration and bounded scheduled-worker entrypoint.
 - [x] Bounded abandoned-upload cleanup job.
 - [x] Backend and frontend typechecks/builds, backend tests, and npm audit pass. One live Anthropic test is skipped when no provider key is present.
-- [ ] Live Supabase/Vercel/Northflank deployment smoke checks remain external setup steps.
+- [x] Production Vercel container starts and `/healthz` and `/readyz` return 200; readiness confirms database connectivity, Python availability, and vault health.
+- [ ] Verify both SQL migrations and the authenticated APIs that depend on their tables; `/readyz` checks only database connectivity.
+- [ ] Verify persistence across separate Vercel invocations and confirm Vercel Sandbox and scheduled jobs are configured.
 
 ## Active blockers
 
 - Apply `20261028000000_openedup_app_schema.sql` and `20261029000000_skill_storage_bucket.sql` in Supabase.
-- Add `DATABASE_URL` and the required server-only secrets in the Vercel backend environment; enable Vercel Sandbox.
+- Verify required server-only storage and sandbox settings in Vercel; readiness does not check those integrations.
 - Deploy a Northflank scheduled job from the repository-root `Dockerfile`, running `node dist/scheduled-worker.js` once per minute with the same backend environment.
 - Deploy a second daily cleanup job running `node dist/upload-cleanup-worker.js` with the same Supabase server environment.
 - No production smoke test has proven persistence across separate serverless invocations.
@@ -50,5 +52,5 @@ The existing `supabase/migrations/20261028000000_openedup_app_schema.sql` is a s
 ## Global TODO
 
 - [x] Implement repository conversion, storage persistence, async routes, readiness, sandbox adapter, and bounded worker.
-- [ ] Apply migrations and configure Vercel/Northflank production environments.
-- [ ] Verify authenticated app behavior and persistence against the live production stack.
+- [ ] Verify schema migrations and all authenticated APIs against the live production stack.
+- [ ] Verify cross-invocation persistence and complete Vercel Sandbox/Northflank worker configuration.

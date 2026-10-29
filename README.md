@@ -58,7 +58,7 @@ The Compose stack serves the app on port 8080. Retain the `openedup-data` volume
 
 ## Vercel deployment
 
-The root `vercel.json` routes the Vite frontend and Express API through Vercel Services. The API uses the repository-root `Dockerfile` so its build context includes the monorepo lockfile, contracts, backend, and Python PDF extractor; keep the backend on the container runtime when changing deployment configuration. Vercel Services availability depends on the account; enable it for the project before deploying this configuration.
+The root `vercel.json` routes the Vite frontend and Express API through Vercel Services. The API uses the repository-root `Dockerfile` so its build context includes the monorepo lockfile, contracts, backend, and Python PDF extractor; keep the backend on the container runtime when changing deployment configuration. Production health and readiness were verified on 2026-10-29. Readiness checks database connectivity but does not prove that every schema migration, authenticated API, or cross-instance persistence path is correct.
 
 Uploads for PDF analysis, receipt images, chat images, and ZIP skill packages use short-lived Supabase Storage signed uploads. Apply both `supabase/migrations/20261028000000_openedup_app_schema.sql` and `supabase/migrations/20261029000000_skill_storage_bucket.sql` before using the backend. The server checks account ownership before reading uploaded objects and removes processed uploads; abandoned-upload cleanup still needs a scheduled cleanup job.
 
