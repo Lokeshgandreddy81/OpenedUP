@@ -2783,18 +2783,6 @@ export const ResponseTimeFullSection: React.FC = () => {
 
           {view === "time" && (
             <>
-              <div className="flex items-center justify-between gap-4 rounded-lg bg-[#EEF0FF] px-4 py-3 mt-5">
-                <span className="text-[12.5px] text-neutral-700">
-                  Showing the last 7 days. Upgrade to Pro for full history.
-                </span>
-                <button
-                  type="button"
-                  className="h-8 px-3.5 rounded-md bg-violet-600 text-white text-[12px] font-medium hover:bg-violet-700 transition-colors cursor-pointer shrink-0"
-                >
-                  Upgrade
-                </button>
-              </div>
-
               {/* Series Legend */}
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-5 text-[11.5px] text-neutral-600">
                 {activeOverTimeModels.map((s) => (
