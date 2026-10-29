@@ -24,15 +24,15 @@ export interface BenchmarkModelsFilterDropdownProps {
   showProviderAction?: boolean;
 }
 
-const PROVIDERS = [
-  { id: "vertex", name: "Google Cloud Vertex AI", tag: "TPU / GPU" },
-  { id: "azure", name: "Azure OpenAI Service", tag: "Cloud" },
-  { id: "bedrock", name: "AWS Bedrock", tag: "Enterprise" },
-  { id: "groq", name: "Groq Cloud", tag: "LPU Ultra-fast" },
-  { id: "cerebras", name: "Cerebras Inference", tag: "CS-3 Wafer" },
-  { id: "together", name: "Together AI", tag: "Open Source" },
-  { id: "fireworks", name: "Fireworks AI", tag: "Compound AI" },
-  { id: "deepinfra", name: "DeepInfra", tag: "Serverless" },
+const PROVIDERS: { id: string; name: string; tag: string; creators: string[] }[] = [
+  { id: "vertex", name: "Google Cloud Vertex AI", tag: "TPU / GPU", creators: ["google", "anthropic", "meta", "mistral"] },
+  { id: "azure", name: "Azure OpenAI Service", tag: "Cloud", creators: ["openai", "meta", "mistral", "cohere"] },
+  { id: "bedrock", name: "AWS Bedrock", tag: "Enterprise", creators: ["anthropic", "meta", "mistral", "cohere", "nvidia"] },
+  { id: "groq", name: "Groq Cloud", tag: "LPU Ultra-fast", creators: ["meta", "google", "deepseek", "alibaba"] },
+  { id: "cerebras", name: "Cerebras Inference", tag: "CS-3 Wafer", creators: ["meta", "alibaba", "deepseek"] },
+  { id: "together", name: "Together AI", tag: "Open Source", creators: ["meta", "alibaba", "deepseek", "google", "nvidia", "xiaomi"] },
+  { id: "fireworks", name: "Fireworks AI", tag: "Compound AI", creators: ["meta", "alibaba", "deepseek", "google", "nvidia", "mistral"] },
+  { id: "deepinfra", name: "DeepInfra", tag: "Serverless", creators: ["meta", "alibaba", "deepseek", "google", "nvidia", "mistral", "xiaomi"] },
 ];
 
 export const BenchmarkModelsFilterDropdown: React.FC<BenchmarkModelsFilterDropdownProps> = ({
@@ -51,6 +51,8 @@ export const BenchmarkModelsFilterDropdown: React.FC<BenchmarkModelsFilterDropdo
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isProviderOpen, setIsProviderOpen] = useState(false);
   const [query, setQuery] = useState("");
+
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const count = totalCount ?? items.length;
@@ -376,11 +378,21 @@ export const BenchmarkModelsFilterDropdown: React.FC<BenchmarkModelsFilterDropdo
                     key={p.id}
                     type="button"
                     onClick={() => {
-                      // Select all models or notify
-                      handleSelectAll();
+                      // Filter to models whose creator matches this provider
+                      const providerModelIds = items
+                        .filter((m) => m.creator && p.creators.includes(m.creator))
+                        .map((m) => m.id);
+                      if (providerModelIds.length > 0) {
+                        onChangeSelection(providerModelIds);
+                        setSelectedProvider(p.id);
+                      }
                       setIsProviderOpen(false);
                     }}
-                    className="w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 rounded text-neutral-800 flex items-center justify-between cursor-pointer group"
+                    className={`w-full text-left px-2.5 py-1.5 hover:bg-neutral-50 rounded flex items-center justify-between cursor-pointer group transition-colors ${
+                      selectedProvider === p.id
+                        ? "bg-neutral-100 text-neutral-900"
+                        : "text-neutral-800"
+                    }`}
                   >
                     <span className="font-medium group-hover:text-blue-600 transition-colors">
                       {p.name}
