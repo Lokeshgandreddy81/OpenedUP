@@ -35,6 +35,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     url: sanitizeLogUrl(req.originalUrl || req.url),
     method: req.method,
     errorType: err instanceof Error ? err.name : "UnknownError",
+    errorMessage: safeMessage,
     statusCode,
     failureCategory: statusCode < 500 ? "client_error" : "server_error",
   });
