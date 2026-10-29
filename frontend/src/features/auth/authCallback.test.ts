@@ -10,8 +10,8 @@ test("callback redirect accepts only a same-origin path", () => {
   assert.equal(safeInternalPath(null), "/chat");
 });
 
-test("callback explains expired confirmation errors from query or fragment", () => {
-  const message = "This confirmation link has expired or was already used. Request a fresh email and open its link once.";
+test("callback explains canceled or expired Google sign-in from query or fragment", () => {
+  const message = "Google sign-in was canceled or expired. Please try again.";
   assert.equal(callbackError("?error_code=otp_expired", ""), message);
   assert.equal(callbackError("", "#error=access_denied"), message);
 });
@@ -19,7 +19,7 @@ test("callback explains expired confirmation errors from query or fragment", () 
 test("callback does not display provider-controlled error text", () => {
   assert.equal(
     callbackError("?error_description=<script>alert(1)</script>", ""),
-    "We couldn’t complete email confirmation. Request a fresh confirmation email and try again."
+    "We couldn’t complete Google sign-in. Please try again."
   );
   assert.equal(callbackError("", "#access_token=abc&type=email"), null);
 });

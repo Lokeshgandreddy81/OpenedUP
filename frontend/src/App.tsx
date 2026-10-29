@@ -80,19 +80,9 @@ const CodingAgentsPage = lazyWithRetry(() =>
 const AuthPage = lazyWithRetry(() =>
   import("./features/auth/pages/AuthPage").then(({ AuthPage }) => ({ default: AuthPage }))
 );
-const VerifyEmailPage = lazyWithRetry(() =>
-  import("./features/auth/pages/VerifyEmailPage").then(({ VerifyEmailPage }) => ({
-    default: VerifyEmailPage,
-  }))
-);
 const AuthCallbackPage = lazyWithRetry(() =>
   import("./features/auth/pages/AuthCallbackPage").then(({ AuthCallbackPage }) => ({
     default: AuthCallbackPage,
-  }))
-);
-const ResetPasswordPage = lazyWithRetry(() =>
-  import("./features/auth/pages/ResetPasswordPage").then(({ ResetPasswordPage }) => ({
-    default: ResetPasswordPage,
   }))
 );
 
@@ -110,7 +100,7 @@ const HomeRoute: React.FC<{ allowChatClose?: boolean }> = ({ allowChatClose = fa
     // Safari can keep this in-app landing route mounted while its tab is in the background.
     const resumeChat = () => {
       if (document.visibilityState === "visible") {
-        navigate(user.emailVerified ? "/chat" : "/verify-email", { replace: true });
+        navigate("/chat", { replace: true });
       }
     };
 
@@ -124,7 +114,7 @@ const HomeRoute: React.FC<{ allowChatClose?: boolean }> = ({ allowChatClose = fa
 
   if (loading) return <LandingPageSkeleton />;
   if (user && !isChatCloseLanding) {
-    return <Navigate to={user.emailVerified ? "/chat" : "/verify-email"} replace />;
+    return <Navigate to="/chat" replace />;
   }
 
   return (
@@ -151,28 +141,21 @@ export const AppShell: React.FC = () => {
           path="/sign-in"
           element={
             <PageRoute name="Sign in" fallback={<div className="min-h-screen bg-[#fbfcfe]" />}>
-              <AuthPage mode="sign-in" />
+              <AuthPage />
             </PageRoute>
           }
         />
         <Route
           path="/create-account"
-          element={
-            <PageRoute
-              name="Create account"
-              fallback={<div className="min-h-screen bg-[#fbfcfe]" />}
-            >
-              <AuthPage mode="create-account" />
-            </PageRoute>
-          }
+          element={<Navigate to="/sign-in" replace />}
         />
         <Route
           path="/verify-email"
-          element={
-            <PageRoute name="Verify email" fallback={<div className="min-h-screen bg-[#fbfcfe]" />}>
-              <VerifyEmailPage />
-            </PageRoute>
-          }
+          element={<Navigate to="/sign-in" replace />}
+        />
+        <Route
+          path="/auth/confirm"
+          element={<Navigate to="/sign-in" replace />}
         />
         <Route
           path="/auth/callback"
@@ -185,19 +168,9 @@ export const AppShell: React.FC = () => {
             </PageRoute>
           }
         />
-        <Route
-          path="/reset-password"
-          element={
-            <PageRoute
-              name="Reset password"
-              fallback={<div className="min-h-screen bg-[#fbfcfe]" />}
-            >
-              <ResetPasswordPage />
-            </PageRoute>
-          }
-        />
+        <Route path="/reset-password" element={<Navigate to="/sign-in" replace />} />
         <Route path="/login" element={<Navigate to="/sign-in" replace />} />
-        <Route path="/signup" element={<Navigate to="/create-account" replace />} />
+        <Route path="/signup" element={<Navigate to="/sign-in" replace />} />
         <Route path="/" element={<HomeRoute />} />
         <Route path="/welcome" element={<HomeRoute allowChatClose />} />
         <Route element={<RequireAuth />}>

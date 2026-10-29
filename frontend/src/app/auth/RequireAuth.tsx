@@ -19,9 +19,5 @@ export const RequireAuth: React.FC = () => {
     return <Navigate to="/sign-in" state={{ from: location }} replace />;
   }
 
-  if (!user.emailVerified) {
-    return <Navigate to="/verify-email" state={{ from: location }} replace />;
-  }
-
   return <Outlet />;
 };

@@ -16,10 +16,8 @@ export const AuthCallbackPage: React.FC = () => {
     if (loading || providerError) return;
     if (!user) {
       navigate("/sign-in", { replace: true, state: { from: redirectTo } });
-    } else if (user.emailVerified) {
-      navigate(redirectTo, { replace: true });
     } else {
-      navigate("/verify-email", { replace: true, state: { from: redirectTo, email: user.email } });
+      navigate(redirectTo, { replace: true });
     }
   }, [loading, navigate, providerError, redirectTo, user]);
 
