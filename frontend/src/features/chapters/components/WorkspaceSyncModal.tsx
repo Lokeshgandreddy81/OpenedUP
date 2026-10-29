@@ -548,7 +548,7 @@ export const WorkspaceSyncModal: React.FC<WorkspaceSyncModalProps> = ({
             </h2>
             <p className="m-0 mt-1.5 text-[14.5px] text-white/85 leading-[1.35]">
               Pull receipt photos from a shared Drive folder or billing emails from Gmail directly
-              into the Shoebox audit engine.
+              into the Sara audit engine.
             </p>
           </div>
 
@@ -831,7 +831,7 @@ export const WorkspaceSyncModal: React.FC<WorkspaceSyncModalProps> = ({
                       type="text"
                       value={folderSearch}
                       onChange={(e) => setFolderSearch(e.target.value)}
-                      placeholder="Search folders (e.g. Shoebox Test Receipts)…"
+                      placeholder="Search folders (e.g. Sara Test Receipts)…"
                       className="w-56 sm:w-64 bg-white text-[#006EFF] px-2.5 py-1 text-[13px] border border-[#006EFF]/50 focus:border-[#006EFF] outline-none"
                     />
                   </div>

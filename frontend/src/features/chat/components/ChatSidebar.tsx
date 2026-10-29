@@ -63,7 +63,8 @@ interface ChatSidebarProps {
     | "benchmarks"
     | "chapters"
     | "roadmaps"
-    | "scheduled";
+    | "scheduled"
+    | "archived";
   onSelectView?: (
     view:
       | "chat"
@@ -75,6 +76,7 @@ interface ChatSidebarProps {
       | "chapters"
       | "roadmaps"
       | "scheduled"
+      | "archived"
   ) => void;
 }
 
@@ -98,11 +100,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>("");
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const { user, signOut } = useChatAuth();
   const accountLabel = user?.displayName || user?.email?.split("@")[0] || "Guest";
   const accountInitial = accountLabel.slice(0, 1).toUpperCase();
+  const archivedCount = conversations.filter((conversation) => conversation.isArchived).length;
 
   // Close options menu on outside click, window resize/scroll, or Escape key
   useEffect(() => {
@@ -135,6 +140,24 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       };
     }
   }, [menuOpenId]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAccountMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [accountMenuOpen]);
 
   if (!isOpen) {
     return (
@@ -565,26 +588,71 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </div>
 
       {/* Account identity */}
-      <div className="mt-auto flex min-w-0 items-center gap-2 border-t border-slate-200/80 px-3 pt-2.5 pb-1 select-none">
-        {/* Avatar initial circle */}
-        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-800 flex items-center justify-center text-[11px] font-semibold shrink-0">
-          {accountInitial}
-        </div>
-        <div className="flex min-w-0 items-center gap-1.5 text-[14px]">
-          <span className="truncate font-extrabold text-slate-950">{accountLabel}</span>
-          <span className="text-slate-500 font-medium">·</span>
-          <span className="text-slate-800 font-semibold">Free</span>
-        </div>
-        {user && (
+      <div
+        ref={accountMenuRef}
+        className="relative mt-auto min-w-0 border-t border-slate-200/80 px-2 pt-2 pb-1 select-none"
+      >
+        <div className="flex min-w-0 items-center gap-1">
           <button
             type="button"
-            onClick={() => void signOut()}
-            title="Sign out"
-            aria-label="Sign out"
-            className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            onClick={() => setAccountMenuOpen((open) => !open)}
+            aria-haspopup="menu"
+            aria-expanded={accountMenuOpen}
+            aria-label={`Account menu for ${accountLabel}`}
+            className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+              activeView === "archived" ? "bg-slate-100/80" : "hover:bg-slate-100/80"
+            }`}
           >
-            <LogOut size={15} />
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-slate-800">
+              {accountInitial}
+            </span>
+            <span className="flex min-w-0 items-center gap-1.5 text-[14px]">
+              <span className="truncate font-extrabold text-slate-950">{accountLabel}</span>
+              <span className="text-slate-500 font-medium">·</span>
+              <span className="shrink-0 text-slate-800 font-semibold">Free</span>
+            </span>
           </button>
+          {user && (
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              title="Sign out"
+              aria-label="Sign out"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            >
+              <LogOut size={15} />
+            </button>
+          )}
+        </div>
+        {accountMenuOpen && (
+          <div
+            role="menu"
+            aria-label="Account menu"
+            className="absolute bottom-full left-2 right-2 z-50 mb-2 overflow-hidden rounded-xl border border-slate-200/90 bg-white p-1.5 text-[13px] text-slate-700 shadow-xl animate-in fade-in zoom-in-95 duration-100"
+          >
+            <div className="px-2.5 py-2">
+              <p className="truncate text-[13px] font-semibold text-slate-900">{accountLabel}</p>
+              <p className="mt-0.5 text-[11px] text-slate-500">Your account</p>
+            </div>
+            <div className="my-1 border-t border-slate-100" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setAccountMenuOpen(false);
+                onSelectView?.("archived");
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            >
+              <Archive size={15} strokeWidth={1.8} className="shrink-0 text-slate-500" />
+              <span className="flex-1">Archive</span>
+              {archivedCount > 0 && (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] tabular-nums text-slate-500">
+                  {archivedCount}
+                </span>
+              )}
+            </button>
+          </div>
         )}
       </div>
 

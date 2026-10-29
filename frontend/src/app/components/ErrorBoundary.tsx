@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error("[Shoebox ErrorBoundary] Uncaught runtime error:", error, errorInfo);
+    console.error("[Sara ErrorBoundary] Uncaught runtime error:", error, errorInfo);
   }
 
   private handleReset = () => {

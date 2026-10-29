@@ -69,7 +69,8 @@ export interface ChatWindowProps {
     | "benchmarks"
     | "chapters"
     | "roadmaps"
-    | "scheduled";
+    | "scheduled"
+    | "archived";
   onViewChange?: (
     view:
       | "chat"
@@ -81,6 +82,7 @@ export interface ChatWindowProps {
       | "chapters"
       | "roadmaps"
       | "scheduled"
+      | "archived"
   ) => void;
   onOpenScheduledTasks?: () => void;
 }
@@ -106,6 +108,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     | "chapters"
     | "roadmaps"
     | "scheduled"
+    | "archived"
   >(initialView);
   const viewHistoryRef = useRef<ChatWorkspaceView[]>([]);
   const [customizeInitialCategory, setCustomizeInitialCategory] =
@@ -288,6 +291,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             model: string;
             isPinned: boolean;
             isArchived: boolean;
+            updatedAt: number;
           }>;
         };
         const loaded = await Promise.all(
@@ -295,7 +299,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             const detailResponse = await authenticatedChatFetch(
               `/api/conversations/${encodeURIComponent(summary.id)}`
             );
-            if (!detailResponse.ok) return { ...summary, messages: [] as ChatMessage[] };
+            if (!detailResponse.ok) {
+              return {
+                ...summary,
+                lastUpdated: new Date(summary.updatedAt).toISOString(),
+                messages: [] as ChatMessage[],
+              };
+            }
             const detail = (await detailResponse.json()) as {
               conversation: {
                 messages: Array<{
@@ -309,6 +319,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             };
             return {
               ...summary,
+              lastUpdated: new Date(summary.updatedAt).toISOString(),
               messages: detail.conversation.messages.map(
                 (message) =>
                   ({
@@ -437,6 +448,47 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, isArchived: true } : c)));
     },
     [user]
+  );
+
+  const handleRestoreConversation = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        if (user && !id.startsWith("chat-")) {
+          const response = await authenticatedChatFetch(
+            `/api/conversations/${encodeURIComponent(id)}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ isArchived: false }),
+            }
+          );
+          if (!response.ok) return false;
+        }
+        setConversations((previous) =>
+          previous.map((conversation) =>
+            conversation.id === id ? { ...conversation, isArchived: false } : conversation
+          )
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [user]
+  );
+
+  const handleOpenArchivedConversation = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!(await handleRestoreConversation(id))) return false;
+      setIsTemporaryChat(false);
+      setTemporaryMessages([]);
+      setActiveConversationId(id);
+      const conversation = conversations.find((item) => item.id === id);
+      if (conversation?.model) setSelectedModel(getSelectableChatModel(conversation.model));
+      handleSelectView("chat");
+      return true;
+    },
+    [conversations, handleRestoreConversation, handleSelectView]
   );
 
   const stopGeneration = useCallback(() => {
@@ -1064,7 +1116,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         projectsNavKey={projectsNavKey}
         benchmarksNavKey={benchmarksNavKey}
         isScheduledTasksOpen={isScheduledTasksInternalOpen}
+        conversations={conversations}
         onSelectView={handleSelectView}
+        onRestoreConversation={handleRestoreConversation}
+        onOpenArchivedConversation={handleOpenArchivedConversation}
         onNavigateToChat={(prompt) => {
           setArtifactDraftPrompt(prompt || "");
           handleSelectView("chat");
@@ -1110,7 +1165,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
               <div className="flex items-center gap-2 min-w-0">
                 <span className="font-semibold text-[14px] tracking-tight text-slate-900 shrink-0">
-                  Shoebox
+                  Sara
                 </span>
                 <span className="text-slate-300 text-[13px] select-none">/</span>
                 <p

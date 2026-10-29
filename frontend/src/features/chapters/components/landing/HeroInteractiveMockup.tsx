@@ -307,12 +307,12 @@ export const HeroInteractiveMockup: React.FC = () => {
 
           {/* Central Workspace Canvas */}
           <section className="relative flex-1 min-h-0 overflow-hidden">
-            {/* Centered Shoebox Pinwheel Logo & Brand Label */}
+            {/* Centered Sara Pinwheel Logo & Brand Label */}
             <div
               className={`pointer-events-none absolute left-1/2 top-[39%] -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
                 messages.length > 0 ? "opacity-15 scale-75 top-[18%]" : "opacity-100 scale-100"
               }`}
-              aria-label="Shoebox logo"
+              aria-label="Sara logo"
             >
               <div className="flex flex-col items-center gap-[12px]">
                 <svg viewBox="0 0 100 100" role="img" aria-label="Sara logo" className="h-[48px] w-[48px] block">

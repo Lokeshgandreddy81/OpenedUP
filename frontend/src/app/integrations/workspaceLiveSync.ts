@@ -1044,7 +1044,7 @@ export async function saveAuditCsvToDrive(
   const metadata: Record<string, unknown> = {
     name: filename,
     mimeType: "text/csv",
-    description: "Shoebox Workspace Spend Audit & Receipt Reconciliation Ledger",
+    description: "Sara Workspace Spend Audit & Receipt Reconciliation Ledger",
   };
   if (folderId && folderId !== "all" && folderId !== "root") {
     metadata.parents = [folderId];

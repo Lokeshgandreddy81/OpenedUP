@@ -3,6 +3,8 @@ import { PageRoute } from "../../../../app/components/PageRoute";
 import { lazyWithRetry } from "../../../../app/components/lazyWithRetry";
 import { ChatScreenLoading } from "./screens/ChatScreenLoading";
 import type { CustomizeCategory } from "../../../customize";
+import type { ChatConversation } from "../../components/chatTypes";
+import { ArchivedChatsScreen } from "../../components/ArchivedChatsScreen";
 
 const ProjectsScreen = lazyWithRetry(() =>
   import("../../../projects").then((feature) => ({ default: feature.ProjectsScreen }))
@@ -34,7 +36,8 @@ export type ChatWorkspaceView =
   | "benchmarks"
   | "chapters"
   | "roadmaps"
-  | "scheduled";
+  | "scheduled"
+  | "archived";
 
 export interface ChatWorkspaceScreensProps {
   activeView: ChatWorkspaceView;
@@ -42,7 +45,10 @@ export interface ChatWorkspaceScreensProps {
   projectsNavKey: number;
   benchmarksNavKey: number;
   isScheduledTasksOpen: boolean;
+  conversations: ChatConversation[];
   onSelectView: (view: "chat") => void;
+  onRestoreConversation: (id: string) => Promise<boolean>;
+  onOpenArchivedConversation: (id: string) => Promise<boolean>;
   onNavigateToChat: (prompt?: string) => void;
   onCloseScheduledTasks: () => void;
   onOpenProviders: () => void;
@@ -59,7 +65,10 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
   projectsNavKey,
   benchmarksNavKey,
   isScheduledTasksOpen,
+  conversations,
   onSelectView,
+  onRestoreConversation,
+  onOpenArchivedConversation,
   onNavigateToChat,
   onCloseScheduledTasks,
   onOpenProviders,
@@ -99,6 +108,22 @@ export const ChatWorkspaceScreens: React.FC<ChatWorkspaceScreensProps> = ({
           fallback={<ChatScreenLoading name="Artifacts" />}
         >
           <ArtifactsScreen onNavigateToChat={onNavigateToChat} />
+        </PageRoute>
+      );
+      break;
+    case "archived":
+      screen = (
+        <PageRoute
+          key={activeView}
+          name="Archived chats"
+          fallback={<ChatScreenLoading name="Archived chats" />}
+        >
+          <ArchivedChatsScreen
+            conversations={conversations}
+            onBack={() => onSelectView("chat")}
+            onRestore={onRestoreConversation}
+            onOpenConversation={onOpenArchivedConversation}
+          />
         </PageRoute>
       );
       break;

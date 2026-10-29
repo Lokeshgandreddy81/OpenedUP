@@ -24,6 +24,7 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
     "chapters",
     "roadmaps",
     "scheduled",
+    "archived",
   ];
   const initialView = validViews.includes(viewParam || "")
     ? (viewParam as ChatWorkspaceView)
@@ -46,6 +47,7 @@ export const ChatPageContent: React.FC<ChatPageProps> = ({ chapters = [] }) => {
       | "chapters"
       | "roadmaps"
       | "scheduled"
+      | "archived"
   ) => {
     // Keep views inside ChatWindow
   };

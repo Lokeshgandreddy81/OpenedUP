@@ -277,6 +277,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     | "chapters"
     | "roadmaps"
     | "scheduled"
+    | "archived"
   >(() => {
     if (typeof window !== "undefined") {
       if (window.location.search.includes("tab=plugins")) return "plugins";
@@ -1017,11 +1018,11 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
       ).length;
     const prefix = isPdfDocument
       ? docCount > 1
-        ? "shoebox-multi-doc-ledger"
-        : "shoebox-doc-ledger"
+        ? "sara-multi-doc-ledger"
+        : "sara-doc-ledger"
       : docCount > 1
-        ? "shoebox-consolidated-receipts"
-        : "shoebox-receipts";
+        ? "sara-consolidated-receipts"
+        : "sara-receipts";
 
     const csv = generateReceiptsCsv(computedRows);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

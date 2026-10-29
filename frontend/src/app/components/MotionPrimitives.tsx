@@ -131,7 +131,7 @@ interface RisingWordProps {
 
 /**
  * Masked title rise that supports native CSS ellipsis truncation (`truncate`).
- * When `letterByLetter` is true (e.g. "Shoebox" wordmark), animates each letter with a 22ms stagger.
+ * When `letterByLetter` is true (e.g. "Sara" wordmark), animates each letter with a 22ms stagger.
  * For dynamic merchant names in tiles, animates the masked line rise so native `text-overflow: ellipsis` works cleanly.
  */
 export const RisingWord: React.FC<RisingWordProps> = ({

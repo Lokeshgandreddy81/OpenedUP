@@ -1181,9 +1181,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                           : "Send message"
                   }
                   aria-label={isReadingFiles ? "Reading files…" : "Send message"}
-                  className={`group h-7 w-7 rounded-full flex items-center justify-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0047FF]/40 focus-visible:ring-offset-1 ${
+                  className={`group h-7 w-7 rounded-full flex items-center justify-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/25 focus-visible:ring-offset-1 ${
                     (Boolean(text.trim()) || attachments.length > 0) && !isImageCapabilityBlocked
-                      ? "bg-[#0047FF] text-white shadow-[0_2px_8px_-1px_rgba(0,71,255,0.35)] hover:bg-[#0038cc] hover:shadow-[0_3px_12px_-1px_rgba(0,71,255,0.4)] hover:scale-[1.05] active:scale-95 cursor-pointer"
+                      ? "bg-slate-900 text-white shadow-[0_2px_8px_-1px_rgba(15,23,42,0.25)] hover:bg-slate-800 hover:shadow-[0_3px_12px_-1px_rgba(15,23,42,0.3)] hover:scale-[1.05] active:scale-95 cursor-pointer"
                       : "bg-slate-100/80 text-slate-300/80 cursor-not-allowed scale-100 shadow-none"
                   }`}
                 >

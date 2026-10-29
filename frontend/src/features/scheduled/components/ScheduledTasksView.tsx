@@ -658,11 +658,14 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     setExecutionRunRecord(null);
 
     try {
-      const providerConfig = getProviderChatRequestConfig(task.model || "gpt-6-astra");
+      const modelId = task.model || "gpt-6-astra";
+      const providerConfig = getProviderChatRequestConfig(modelId);
       const effectiveKey = task.apiKey || providerConfig.headers["x-provider-key"];
       const effectiveBaseUrl = providerConfig.headers["x-provider-base-url"];
-      if (!effectiveKey) {
-        const meta = getModelMeta(task.model || "gpt-6-astra");
+      // Account-backed keys are intentionally never returned to the browser. Let the API
+      // resolve those from the credential vault instead of treating an empty header as missing.
+      if (!effectiveKey && !hasKey(getKeyForModel(modelId).provider)) {
+        const meta = getModelMeta(modelId);
         const providerName = PROVIDER_CATALOG[meta.provider]?.name || "Provider";
         throw new Error(
           `Connect your ${providerName} key in Customize → Providers to run this task.`
