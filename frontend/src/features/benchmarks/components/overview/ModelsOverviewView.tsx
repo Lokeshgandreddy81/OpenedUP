@@ -7,6 +7,7 @@ import { FrontierIntelligenceOverTimeChart } from "./FrontierIntelligenceOverTim
 import { CodingAgentIndexesFullChart } from "./CodingAgentIndexesFullChart";
 import { CapabilityIndexesSection } from "./CapabilityIndexesSection";
 import { BenchmarkModelsFilterDropdown, BenchmarkFilterModelItem } from "../ui/BenchmarkModelsFilterDropdown";
+import { SaraLogoMark } from "../ui/SaraLogoMark";
 
 // ─── Data Types ──────────────────────────────────────────────────────────────
 
@@ -1534,7 +1535,7 @@ export const TokenUseFullSection: React.FC = () => {
       {/* Section Heading */}
       <div>
         <div className="flex items-center gap-3">
-          <span className="w-3.5 h-3.5 bg-black inline-block shrink-0" aria-hidden="true" />
+          <SaraLogoMark size={16} color="#000000" className="shrink-0" />
           <h2 className="font-serif text-[30px] sm:text-[32px] leading-none text-neutral-900 tracking-tight">
             Token Use
           </h2>
@@ -1750,7 +1751,7 @@ export const CostFullSection: React.FC = () => {
       {/* Section Heading */}
       <div>
         <div className="flex items-center gap-3">
-          <span className="w-3.5 h-3.5 bg-black inline-block shrink-0" aria-hidden="true" />
+          <SaraLogoMark size={16} color="#000000" className="shrink-0" />
           <h2 className="font-serif text-[30px] sm:text-[32px] leading-none text-neutral-900 tracking-tight">
             Cost
           </h2>
@@ -2040,7 +2041,7 @@ export const ContextWindowFullSection: React.FC = () => {
       {/* Section Heading */}
       <div>
         <div className="flex items-center gap-3">
-          <span className="w-3.5 h-3.5 bg-black inline-block shrink-0" aria-hidden="true" />
+          <SaraLogoMark size={16} color="#000000" className="shrink-0" />
           <h2 className="font-serif text-[30px] sm:text-[32px] leading-none text-neutral-900 tracking-tight">
             Context Window
           </h2>
@@ -2499,7 +2500,7 @@ export const ResponseTimeFullSection: React.FC = () => {
       {/* Section Heading */}
       <div>
         <div className="flex items-center gap-3">
-          <span className="w-3.5 h-3.5 bg-black inline-block shrink-0" aria-hidden="true" />
+          <SaraLogoMark size={16} color="#000000" className="shrink-0" />
           <h2 className="font-serif text-[30px] sm:text-[32px] leading-none text-neutral-900 tracking-tight">
             End-to-End Response Time
           </h2>
@@ -2902,10 +2903,7 @@ export const BenchmarkBarCard: React.FC<{
           <h2 className="font-serif text-[26px] sm:text-[28px] font-normal text-neutral-900 tracking-tight leading-tight">
             {title}
           </h2>
-          <span
-            className="w-4 h-4 rounded-xs shrink-0 inline-block"
-            style={{ backgroundColor: accentColor }}
-          />
+          <SaraLogoMark size={18} color={accentColor} className="shrink-0" />
         </div>
         <div
           className={`flex items-center text-[12.5px] text-neutral-400 mt-0.5 ${align === "right" ? "justify-end" : "justify-between"}`}

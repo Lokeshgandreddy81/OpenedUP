@@ -6,6 +6,7 @@ import {
   type CodingAgentModelItem,
 } from "../data/codingAgentBenchmarks";
 import { ColorByControl, ModelsFilterControl } from "../ui/ChartCardControls";
+import { SaraLogoMark } from "../ui/SaraLogoMark";
 
 export interface CodingAgentIndexesFullChartProps {
   variant?: "overview" | "performance";
@@ -221,7 +222,7 @@ export const CodingAgentIndexesFullChart: React.FC<CodingAgentIndexesFullChartPr
       {!isPerformance && (
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2.5">
-            <span className="w-3.5 h-3.5 bg-neutral-900 rounded-[2px] inline-block" />
+            <SaraLogoMark size={16} color="#171717" className="shrink-0" />
             <h2 className="text-2xl font-bold font-sans text-neutral-900 tracking-tight">
               Indexes
             </h2>

@@ -11,6 +11,7 @@ import { CostChartCard } from "./CostChartCard";
 import { ExecutionTimeChartCard } from "./ExecutionTimeChartCard";
 import { SafetyRefusalChartCard } from "./SafetyRefusalChartCard";
 import { ALL_CODING_AGENT_MODELS, type CodingAgentModelItem } from "../data/codingAgentBenchmarks";
+import { SaraLogoMark } from "../ui/SaraLogoMark";
 
 export interface CodingAgentsViewProps {
   onSelectModel?: (modelId: string) => void;
@@ -103,7 +104,7 @@ const CodingAgentSectionHeading: React.FC<CodingAgentSectionHeadingProps> = ({
 }) => (
   <div>
     <div className="flex items-center gap-2.5">
-      <span className="w-3.5 h-3.5 bg-neutral-900 rounded-[2px] inline-block" />
+      <SaraLogoMark size={16} color="#171717" className="shrink-0" />
       <h2 className="font-serif text-[28px] font-normal text-neutral-900 tracking-tight leading-none">
         {title}
       </h2>

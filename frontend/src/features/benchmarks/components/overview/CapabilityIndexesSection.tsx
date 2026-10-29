@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { CreatorLogo } from "../ui/CreatorLogo";
 import { CAPABILITY_INDEXES } from "../data/capabilityIndexes";
 import { BenchmarkModelsFilterDropdown, BenchmarkFilterModelItem } from "../ui/BenchmarkModelsFilterDropdown";
+import { SaraLogoMark } from "../ui/SaraLogoMark";
 
 const CHART_HEIGHT = 330;
 
@@ -43,7 +44,7 @@ export const CapabilityIndexesSection: React.FC = () => {
       {/* Section Heading */}
       <div>
         <div className="flex items-center gap-3">
-          <span className="w-3.5 h-3.5 bg-black inline-block shrink-0" aria-hidden="true" />
+          <SaraLogoMark size={16} color="#000000" className="shrink-0" />
           <h2 className="font-serif text-[30px] sm:text-[32px] leading-none text-neutral-900 tracking-tight">
             Capability Indexes
           </h2>

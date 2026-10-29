@@ -4,6 +4,7 @@ import type { AIModelBenchmark } from "../types";
 import { BENCHMARK_MODELS } from "../data/benchmarkModels";
 import { BENCHMARK_EVALUATIONS, type BenchmarkEvaluation } from "../data/benchmarkEvaluations";
 import { EvaluationChartCard } from "./EvaluationChartCard";
+import { SaraLogoMark } from "../ui/SaraLogoMark";
 
 export interface BenchmarkCatalogViewProps {
   models?: AIModelBenchmark[];
@@ -73,7 +74,7 @@ export const BenchmarkCatalogView: React.FC<BenchmarkCatalogViewProps> = ({
           ======================================================== */}
       <header>
         <h2 className="flex items-center gap-3 font-serif text-3xl font-normal tracking-tight text-neutral-900">
-          <span className="h-5 w-5 shrink-0 bg-black" aria-hidden="true" />
+          <SaraLogoMark size={20} color="#000000" className="shrink-0" aria-hidden="true" />
           Benchmarks
         </h2>
       </header>
