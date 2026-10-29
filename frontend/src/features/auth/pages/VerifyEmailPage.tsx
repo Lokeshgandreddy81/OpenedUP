@@ -6,7 +6,18 @@ import { useChatAuth } from "../../../app/auth/useChatAuth";
 interface VerifyEmailRouteState {
   from?: string | { pathname?: string; search?: string; hash?: string };
   email?: string;
-  emailSent?: boolean;
+  confirmationRequestAccepted?: boolean;
+}
+
+function resendErrorMessage(error: unknown): string {
+  const code = (error as { code?: string } | null)?.code;
+  if (code === "over_request_rate_limit" || code === "over_email_send_rate_limit") {
+    return "Too many confirmation emails were requested. Wait a few minutes before trying again.";
+  }
+  if (error instanceof Error && error.message.toLowerCase().includes("failed to fetch")) {
+    return "We couldn’t reach Supabase. Check your connection, then try again.";
+  }
+  return "We couldn’t request another confirmation email. Please try again in a moment.";
 }
 
 export const VerifyEmailPage: React.FC = () => {
@@ -24,7 +35,9 @@ export const VerifyEmailPage: React.FC = () => {
         : "/chat";
   const [resending, setResending] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [emailSent, setEmailSent] = useState(routeState?.emailSent ?? null);
+  const [confirmationRequestAccepted, setConfirmationRequestAccepted] = useState(
+    routeState?.confirmationRequestAccepted ?? null
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,10 +54,10 @@ export const VerifyEmailPage: React.FC = () => {
     setResending(true);
     try {
       await resendVerificationEmail(email);
-      setEmailSent(true);
-    } catch {
-      setEmailSent(false);
-      setError("We couldn’t send the verification link. Check your connection and try again.");
+      setConfirmationRequestAccepted(true);
+    } catch (requestError) {
+      setConfirmationRequestAccepted(false);
+      setError(resendErrorMessage(requestError));
     } finally {
       setResending(false);
     }
@@ -87,26 +100,34 @@ export const VerifyEmailPage: React.FC = () => {
           Verify your email
         </h1>
         <p className="mt-3 text-[14px] leading-6 text-slate-600">
-          {emailSent === true ? "We sent a confirmation link to" : "Confirm this email address:"}{" "}
+          {confirmationRequestAccepted === true
+            ? "Confirmation requested for"
+            : "Confirm this email address:"}{" "}
           <span className="font-semibold text-slate-800">{email || "your email address"}</span>.
-          Open the link, then come back here to continue to your workspace.
+          Open the confirmation email and follow its link to finish setting up your account. The link
+          returns you here and signs you in. If you opened it on another device, come back here and
+          sign in with this address.
         </p>
 
-        {emailSent === false && (
+        {confirmationRequestAccepted === false && (
           <p
             role="status"
             className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] leading-5 text-amber-800"
           >
-            The verification email wasn’t sent. You can request a new link below.
+            We couldn’t confirm that a new email was sent. The address may already be confirmed or
+            a request may be rate limited. Check your inbox first; if needed, wait briefly and
+            request another link below.
           </p>
         )}
-        {emailSent === true && (
+        {confirmationRequestAccepted === true && (
           <p
             role="status"
             className="mt-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[12px] leading-5 text-emerald-800"
           >
             <Check size={15} className="mt-0.5 shrink-0" />
-            Verification link sent. If it doesn’t arrive soon, check your spam folder or resend it.
+            Supabase accepted the confirmation request. Delivery can take a few minutes, and this
+            page can’t confirm that it reached your inbox. Check spam or promotions too. If it
+            doesn’t arrive, request another link below.
           </p>
         )}
         {error && (

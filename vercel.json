@@ -6,7 +6,8 @@
       "framework": "vite",
       "installCommand": "npm ci",
       "buildCommand": "npm run --workspace=@charan-interiors/contracts build && npm run --workspace=@charan-interiors/frontend build",
-      "outputDirectory": "frontend/dist"
+      "outputDirectory": "frontend/dist",
+      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
     },
     "backend": {
       "root": ".",

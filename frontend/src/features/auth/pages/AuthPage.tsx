@@ -218,10 +218,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
     setAccountCreationPending(isCreateAccount);
     try {
       if (isCreateAccount) {
-        const emailSent = await createAccount(name, email, password);
+        const confirmationRequestAccepted = await createAccount(name, email, password);
         navigate("/verify-email", {
           replace: true,
-          state: { from: redirectTo, emailSent, email: email.trim() },
+          state: { from: redirectTo, confirmationRequestAccepted, email: email.trim() },
         });
         return;
       }
@@ -231,7 +231,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
         if (isEmailNotConfirmed(requestError)) {
           navigate("/verify-email", {
             replace: true,
-            state: { from: redirectTo, email, emailSent: false },
+            state: { from: redirectTo, email, confirmationRequestAccepted: false },
           });
           return;
         }

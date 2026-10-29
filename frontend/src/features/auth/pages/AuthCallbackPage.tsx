@@ -2,12 +2,7 @@ import React, { useEffect } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useChatAuth } from "../../../app/auth/useChatAuth";
-
-function safeInternalPath(value: string | null): string {
-  return value?.startsWith("/") && !value.startsWith("//") && !value.includes("\\")
-    ? value
-    : "/chat";
-}
+import { callbackError, safeInternalPath } from "../authCallback";
 
 export const AuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,7 +10,7 @@ export const AuthCallbackPage: React.FC = () => {
   const { user, loading } = useChatAuth();
   const params = new URLSearchParams(location.search);
   const redirectTo = safeInternalPath(params.get("next"));
-  const providerError = params.get("error_description") || params.get("error");
+  const providerError = callbackError(location.search, location.hash);
 
   useEffect(() => {
     if (loading || providerError) return;
