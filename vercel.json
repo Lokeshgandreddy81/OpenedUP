@@ -12,7 +12,7 @@
     "backend": {
       "root": ".",
       "runtime": "container",
-      "entrypoint": "backend/Dockerfile"
+      "entrypoint": "Dockerfile"
     }
   },
   "rewrites": [
