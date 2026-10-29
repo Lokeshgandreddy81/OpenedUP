@@ -69,7 +69,7 @@ function mockResponse() {
   return res;
 }
 
-test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => {
+test("Credential HTTP Controller: list, put, patch endpoint, and remove", async () => {
   const { cleanup } = setupIsolatedEnv();
   try {
     const userId = "test-http-user";
@@ -79,7 +79,7 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => 
 
     // 1. Initial list should be empty
     const listRes1 = mockResponse();
-    listCredentials(reqBase, listRes1);
+    await listCredentials(reqBase, listRes1);
     assert.equal(listRes1.statusCode, 200);
     assert.deepEqual(listRes1.body, { providers: [] });
 
@@ -92,17 +92,17 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => 
       },
     } as unknown as Request;
     const putRes = mockResponse();
-    putCredential(putReq, putRes);
+    await putCredential(putReq, putRes);
     assert.equal(putRes.statusCode, 204);
     assert.equal(putRes.ended, true);
 
     // Verify it is in database
-    const saved = getProviderCredential(userId, "anthropic");
+    const saved = await getProviderCredential(userId, "anthropic");
     assert.equal(saved?.apiKey, "sk-ant-test-controller-123");
 
     // 3. List should now contain anthropic
     const listRes2 = mockResponse();
-    listCredentials(reqBase, listRes2);
+    await listCredentials(reqBase, listRes2);
     assert.equal(listRes2.statusCode, 200);
     assert.deepEqual(listRes2.body, { providers: ["anthropic"] });
 
@@ -115,10 +115,10 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => 
       },
     } as unknown as Request;
     const patchRes = mockResponse();
-    updateCredentialEndpoint(patchReq, patchRes);
+    await updateCredentialEndpoint(patchReq, patchRes);
     assert.equal(patchRes.statusCode, 204);
 
-    const updated = getProviderCredential(userId, "anthropic");
+    const updated = await getProviderCredential(userId, "anthropic");
     assert.equal(updated?.apiKey, "sk-ant-test-controller-123");
     assert.equal(updated?.baseUrl, "https://custom.anthropic.endpoint/v1");
 
@@ -131,7 +131,7 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => 
       },
     } as unknown as Request;
     const patchRes404 = mockResponse();
-    updateCredentialEndpoint(patchReq404, patchRes404);
+    await updateCredentialEndpoint(patchReq404, patchRes404);
     assert.equal(patchRes404.statusCode, 404);
     assert.deepEqual(patchRes404.body, { error: "No saved provider credential exists." });
 
@@ -149,7 +149,7 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => 
       },
     } as unknown as Request;
     const patchRes422 = mockResponse();
-    updateCredentialEndpoint(patchReq422, patchRes422);
+    await updateCredentialEndpoint(patchReq422, patchRes422);
     assert.equal(patchRes422.statusCode, 422);
     const errorBody = patchRes422.body as { error?: string };
     assert.ok(errorBody?.error?.includes("cannot be decrypted"));
@@ -160,12 +160,12 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", () => 
       params: { provider: "anthropic" },
     } as unknown as Request;
     const removeRes = mockResponse();
-    removeCredential(removeReq, removeRes);
+    await removeCredential(removeReq, removeRes);
     assert.equal(removeRes.statusCode, 204);
 
     // Verify it is gone
     const listRes3 = mockResponse();
-    listCredentials(reqBase, listRes3);
+    await listCredentials(reqBase, listRes3);
     assert.deepEqual(listRes3.body, { providers: [] });
 
     // 8. Attestation and vault health query

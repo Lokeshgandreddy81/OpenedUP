@@ -45,7 +45,7 @@ export async function handleReadReceipts(req: Request, res: Response): Promise<v
         .json({ error: getUnsupportedInputMessage(payload.model, "image"), requestId: req.id });
       return;
     }
-    const { apiKey, baseUrl } = resolveRequestProviderCredential(req, payload);
+    const { apiKey, baseUrl } = await resolveRequestProviderCredential(req, payload);
     if (!isValidApiKey(apiKey)) {
       const providerName = PROVIDER_CATALOG[provider].name;
       res.status(401).json({
@@ -119,7 +119,7 @@ export async function handleCheckDuplicates(req: Request, res: Response): Promis
       return;
     }
     const provider = providerForModelRequest(payload);
-    const { apiKey, baseUrl } = resolveRequestProviderCredential(req, payload);
+    const { apiKey, baseUrl } = await resolveRequestProviderCredential(req, payload);
     if (!isValidApiKey(apiKey)) {
       const providerName = PROVIDER_CATALOG[provider].name;
       res.status(401).json({

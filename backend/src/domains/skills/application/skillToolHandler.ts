@@ -1,8 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
 import { SkillRepository } from "../repositories/skillRepository.js";
 import { parseSkillMd } from "./skillParser.js";
-import { readSkillFileFromDisk } from "./skillStorage.js";
+import { readSkillFile } from "./skillStorage.js";
 import { checkSkillToolRateLimit } from "./rateLimits.js";
 
 export const SKILL_TOOL_DEFINITION = {
@@ -31,12 +29,12 @@ export interface SkillToolResult {
  * Verifies that the requested skill is enabled for the specific conversation.
  * Returns the SKILL.md body and logs usage.
  */
-export function handleSkillToolCall(
+export async function handleSkillToolCall(
   skillName: string,
   conversationId: string,
   userId?: string | null,
   repo: SkillRepository = new SkillRepository()
-): SkillToolResult {
+): Promise<SkillToolResult> {
   const rateLimitStatus = checkSkillToolRateLimit(conversationId);
   if (!rateLimitStatus.allowed) {
     return {
@@ -54,7 +52,7 @@ export function handleSkillToolCall(
   const cleanName = skillName.trim();
 
   // Fresh load from DB of this conversation's enabled skills
-  const enabledSkills = repo.getConversationSkills(conversationId);
+  const enabledSkills = await repo.getConversationSkills(conversationId);
   const matched = enabledSkills.find((s) => s.name === cleanName && s.isActive);
 
   if (!matched) {
@@ -64,22 +62,11 @@ export function handleSkillToolCall(
   // Read SKILL.md body
   let rawContent: Buffer | null = null;
 
-  // Try reading from disk storage path
-  if (matched.storagePath) {
-    rawContent = readSkillFileFromDisk(matched.storagePath, "SKILL.md");
-  }
-
-  if (!rawContent) {
-    // Check if relative path was stored directly
-    const directPath = path.join(matched.storagePath, "SKILL.md");
-    if (fs.existsSync(directPath)) {
-      rawContent = fs.readFileSync(directPath);
-    }
-  }
+  rawContent = await readSkillFile(matched.storagePath, "SKILL.md");
 
   if (!rawContent) {
     return {
-      content: `Error: SKILL.md file for skill '${cleanName}' could not be located on disk.`,
+      content: `Error: SKILL.md file for skill '${cleanName}' could not be loaded.`,
       isError: true,
     };
   }
@@ -93,7 +80,7 @@ export function handleSkillToolCall(
   }
 
   // Log usage to skill_usage table
-  repo.logUsage(conversationId, cleanName, userId ?? null);
+  await repo.logUsage(conversationId, cleanName, userId ?? null);
 
   return {
     content: instructionsBody,

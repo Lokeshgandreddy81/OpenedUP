@@ -35,29 +35,29 @@ export function getAttestation(req: Request, res: Response): void {
   res.json({ attestation, health });
 }
 
-export function listCredentials(req: Request, res: Response): void {
+export async function listCredentials(req: Request, res: Response): Promise<void> {
   const uid = getAuthenticatedUid(req, res);
   if (!uid) return;
-  res.json({ providers: listProviderCredentials(uid) });
+  res.json({ providers: await listProviderCredentials(uid) });
 }
 
-export function putCredential(req: Request, res: Response): void {
+export async function putCredential(req: Request, res: Response): Promise<void> {
   const uid = getAuthenticatedUid(req, res);
   if (!uid) return;
   const body = req.body as ProviderCredentialRequest;
-  saveProviderCredential(uid, body.provider, {
+  await saveProviderCredential(uid, body.provider, {
     apiKey: body.apiKey,
     ...(body.baseUrl ? { baseUrl: body.baseUrl } : {}),
   });
   res.status(204).end();
 }
 
-export function updateCredentialEndpoint(req: Request, res: Response): void {
+export async function updateCredentialEndpoint(req: Request, res: Response): Promise<void> {
   const uid = getAuthenticatedUid(req, res);
   if (!uid) return;
   const body = req.body as ProviderEndpointRequest;
   try {
-    const updated = updateProviderEndpoint(uid, body.provider, body.baseUrl);
+    const updated = await updateProviderEndpoint(uid, body.provider, body.baseUrl);
     if (!updated) {
       res.status(404).json({ error: "No saved provider credential exists." });
       return;
@@ -75,7 +75,7 @@ export function updateCredentialEndpoint(req: Request, res: Response): void {
   }
 }
 
-export function removeCredential(req: Request, res: Response): void {
+export async function removeCredential(req: Request, res: Response): Promise<void> {
   const uid = getAuthenticatedUid(req, res);
   if (!uid) return;
   const provider = req.params["provider"] as ProviderId;
@@ -83,7 +83,7 @@ export function removeCredential(req: Request, res: Response): void {
     res.status(400).json({ error: "Invalid provider specified.", requestId: req.id });
     return;
   }
-  deleteProviderCredential(uid, provider);
+  await deleteProviderCredential(uid, provider);
   res.status(204).end();
 }
 

@@ -1,6 +1,7 @@
 import { SkillRepository, type SkillScope } from "../repositories/skillRepository.js";
 import { parseSkillPackage, type RawFileInput } from "./skillParser.js";
-import { resolveSkillVersionDir, writeSkillFilesToDisk } from "./skillStorage.js";
+import { createSkillStoragePath, persistSkillFiles } from "./skillStorage.js";
+import { randomUUID } from "node:crypto";
 
 const HELLO_FORMAT_MD = `---
 name: hello-format
@@ -114,7 +115,7 @@ Scaffold microservices using the layered domain architecture:
 - models/ for SQLAlchemy ORM
 `;
 
-export function seedBuiltinSkills(repo = new SkillRepository()): void {
+export async function seedBuiltinSkills(repo = new SkillRepository()): Promise<void> {
   const seedItems: Array<{
     name: string;
     scope: SkillScope;
@@ -159,14 +160,16 @@ export function seedBuiltinSkills(repo = new SkillRepository()): void {
   ];
 
   for (const item of seedItems) {
-    const existing = repo.getByNameAndScope(item.name, item.scope);
+    const existing = await repo.getByNameAndScope(item.name, item.scope);
     if (existing) continue;
 
     const parsed = parseSkillPackage(item.files);
-    const versionDir = resolveSkillVersionDir(item.scope, parsed.name, 1);
-    writeSkillFilesToDisk(versionDir, parsed.files);
+    const id = randomUUID();
+    const versionDir = createSkillStoragePath(id, 1);
+    await persistSkillFiles(versionDir, parsed.files);
 
-    const created = repo.create({
+    const created = await repo.create({
+      id,
       name: parsed.name,
       description: parsed.description,
       scope: item.scope,
@@ -183,7 +186,7 @@ export function seedBuiltinSkills(repo = new SkillRepository()): void {
       approvalStatus: "approved",
     });
 
-    const fileRecords = repo.addFiles(
+    const fileRecords = await repo.addFiles(
       created.id,
       parsed.files.map((f) => ({
         relativePath: f.relativePath,
@@ -193,18 +196,18 @@ export function seedBuiltinSkills(repo = new SkillRepository()): void {
     );
 
     // Save skill version
-    repo.recordSkillVersion(created.id, 1, "Initial release", fileRecords);
+    await repo.recordSkillVersion(created.id, 1, "Initial release", fileRecords);
 
     // Save agents if parsed
     if (parsed.agents && parsed.agents.length > 0) {
-      repo.saveSkillAgents(created.id, parsed.agents);
+      await repo.saveSkillAgents(created.id, parsed.agents);
     }
 
     // Link categories
     if (parsed.categories) {
       for (const catName of parsed.categories) {
-        const catId = repo.ensureCategory(catName);
-        repo.linkSkillCategory(created.id, catId);
+        const catId = await repo.ensureCategory(catName);
+        await repo.linkSkillCategory(created.id, catId);
       }
     }
   }

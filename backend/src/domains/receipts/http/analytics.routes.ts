@@ -9,15 +9,16 @@ import {
   handleGetLogs,
 } from "./analytics.controller.js";
 import { validateBody } from "../../../platform/http/middleware/validate.js";
+import { asyncHandler } from "../../../platform/http/middleware/asyncHandler.js";
 
 export const analyticsRouter = Router();
 
-analyticsRouter.post("/read-receipts", validateBody(ReadReceiptsRequestSchema), handleReadReceipts);
+analyticsRouter.post("/read-receipts", validateBody(ReadReceiptsRequestSchema), asyncHandler(handleReadReceipts));
 
 analyticsRouter.post(
   "/check-duplicates",
   validateBody(CheckDuplicatesRequestSchema),
-  handleCheckDuplicates
+  asyncHandler(handleCheckDuplicates)
 );
 
 analyticsRouter.get("/logs", handleGetLogs);

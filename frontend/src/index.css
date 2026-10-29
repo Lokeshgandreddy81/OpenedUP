@@ -169,7 +169,7 @@ body,
   max-width: 100vw;
   height: 100%;
   overflow-x: hidden;
-  background-color: var(--blue-900);
+  background-color: #fbfcfe;
   color: var(--white);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

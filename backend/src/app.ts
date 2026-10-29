@@ -20,15 +20,9 @@ import { scheduledTaskRouter } from "./domains/scheduled/http/scheduledTask.rout
 import { skillRouter } from "./domains/skills/http/skill.routes.js";
 import { seedBuiltinSkills } from "./domains/skills/application/seedBuiltinSkills.js";
 import { uploadRouter } from "./platform/storage/upload.routes.js";
+import { asyncHandler } from "./platform/http/middleware/asyncHandler.js";
 
 export function createApp(): Express {
-  // Seed builtin skills if not already present
-  try {
-    seedBuiltinSkills();
-  } catch {
-    // Non-fatal if seeding runs in restricted test sandbox
-  }
-
   const app = express();
   app.disable("x-powered-by");
 
@@ -57,6 +51,15 @@ export function createApp(): Express {
   } else {
     app.use("/api", attachOptionalSupabaseUser);
   }
+  let seedPromise: Promise<void> | undefined;
+  app.use(
+    "/api",
+    asyncHandler(async (_req, _res, next) => {
+      seedPromise ??= seedBuiltinSkills();
+      await seedPromise;
+      next();
+    })
+  );
   app.use("/api", authRouter);
   app.use("/api", uploadRouter);
   app.use("/api", analyticsRouter);

@@ -8,7 +8,6 @@ import {
   LoaderCircle,
   LockKeyhole,
   Mail,
-  Sparkles,
 } from "lucide-react";
 import { useChatAuth } from "../../../app/auth/useChatAuth";
 
@@ -59,14 +58,14 @@ const Brand: React.FC<{ inverse?: boolean }> = ({ inverse = false }) => (
   <Link
     to="/"
     className={`inline-flex items-center gap-2.5 no-underline ${inverse ? "text-white" : "text-slate-900"}`}
-    aria-label="Openedup home"
+    aria-label="Sara home"
   >
     <img
       src="/logos/brand-logo.png"
       alt=""
-      className={`h-8 w-8 object-contain ${inverse ? "brightness-0 invert" : ""}`}
+      className={`h-10 w-10 shrink-0 object-contain ${inverse ? "brightness-0 invert" : ""}`}
     />
-    <span className="text-[18px] font-semibold tracking-[-0.04em]">Openedup</span>
+    <span className="text-[20px] font-semibold tracking-[-0.04em]">Sara</span>
   </Link>
 );
 
@@ -117,34 +116,30 @@ const HeroPanel: React.FC = () => (
 
     <Brand inverse />
 
-    <div className="mx-auto flex w-full max-w-[570px] flex-1 flex-col justify-center py-6 lg:py-16">
-      <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-2 text-[12px] font-medium text-blue-100 shadow-sm backdrop-blur-sm lg:mb-7">
-        <Sparkles size={14} className="text-sky-300" />
-        Documents, AI, and follow-through
-      </div>
+    <div className="mx-auto flex w-full max-w-[570px] flex-1 flex-col justify-center py-8 lg:py-16">
       <h1 className="max-w-[580px] font-serif text-[clamp(2.25rem,7vw,4.6rem)] leading-[1.02] tracking-[-0.055em] text-white lg:text-[clamp(2.6rem,5vw,4.6rem)] lg:leading-[0.99]">
         Make room for the work that matters.
       </h1>
       <p className="mt-4 max-w-[445px] text-[14px] leading-6 text-blue-100/75 sm:text-[15px] lg:mt-6 lg:text-[16px] lg:leading-7">
-        Bring your documents, ideas, and next steps together. Openedup helps you move from a pile of
+        Bring your documents, ideas, and next steps together. Sara helps you move from a pile of
         information to clear progress.
       </p>
 
-      <div className="mt-10 hidden max-w-[430px] rounded-2xl border border-white/10 bg-white/[0.07] p-5 shadow-[0_24px_70px_rgba(0,0,0,.18)] backdrop-blur-md lg:block sm:p-6">
+      <div className="mt-10 hidden max-w-[430px] pt-1 lg:block">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-blue-200/65">
-              Your workspace
+              A more thoughtful workflow
             </p>
             <p className="mt-1.5 text-[17px] font-medium tracking-[-0.02em] text-white">
-              A clearer way forward
+              From information to action
             </p>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-200/20 bg-sky-300/10 text-sky-200">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center text-sky-200">
             <ArrowRight size={19} />
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-3 gap-2.5">
+        <div className="mt-5 grid grid-cols-3 gap-5">
           {[
             ["01", "Gather"],
             ["02", "Understand"],
@@ -152,21 +147,17 @@ const HeroPanel: React.FC = () => (
           ].map(([step, label], index) => (
             <div
               key={step}
-              className="rounded-xl border border-white/[0.08] bg-black/10 px-3 py-3.5"
+              className="min-w-0 py-2"
             >
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.08em] text-sky-200/70">
+              <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.08em] text-sky-200/70">
                 <span>{step}</span>
-                {index < 2 && <span className="h-px flex-1 bg-white/15" />}
+                {index < 2 && <span className="h-px flex-1 bg-white/20" />}
               </div>
               <p className="mt-2 text-[12px] font-medium leading-4 text-white/90">{label}</p>
             </div>
           ))}
         </div>
       </div>
-    </div>
-
-    <div className="hidden items-center gap-2 text-[12px] text-blue-100/55 lg:flex">
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />A thoughtful home for your work
     </div>
   </section>
 );
@@ -282,7 +273,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
             <Brand />
           </div>
           <p className="text-[13px] text-slate-500">
-            {isCreateAccount ? "Already have an account?" : "New to Openedup?"}{" "}
+            {isCreateAccount ? "Already have an account?" : "New to Sara?"}{" "}
             <Link
               className="font-semibold text-[#1746bf] underline decoration-transparent underline-offset-4 transition hover:decoration-current"
               to={isCreateAccount ? "/sign-in" : "/create-account"}
@@ -460,7 +451,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
         </div>
 
         <div className="flex items-center justify-between text-[11px] text-slate-400">
-          <span>© {new Date().getFullYear()} Openedup</span>
+          <span>© {new Date().getFullYear()} Sara</span>
           <Link
             to="/"
             className="inline-flex items-center gap-1.5 text-slate-500 no-underline transition hover:text-slate-800"

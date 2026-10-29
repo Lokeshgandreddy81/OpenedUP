@@ -8,8 +8,10 @@ test("production scheduled task routes require a verified signed-in user", async
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "scheduled-task-auth-"));
   const originalDatabasePath = process.env["CHAT_DB_PATH"];
   const originalNodeEnv = process.env["NODE_ENV"];
+  const originalDatabaseUrl = process.env["DATABASE_URL"];
   process.env["CHAT_DB_PATH"] = path.join(directory, "chat.sqlite");
   process.env["NODE_ENV"] = "production";
+  process.env["DATABASE_URL"] = "postgres://test:test@127.0.0.1:5432/test";
 
   let server: ReturnType<(typeof import("node:http"))["createServer"]> | undefined;
   try {
@@ -38,7 +40,7 @@ test("production scheduled task routes require a verified signed-in user", async
     assert.equal(invalidTokenResponse.status, 401);
     assert.equal(
       (await invalidTokenResponse.json()).error,
-      "Your sign-in has expired. Please sign in again."
+      "Your sign-in has expired or your email is not verified. Please sign in again."
     );
     closeChatDatabase();
   } finally {
@@ -51,6 +53,8 @@ test("production scheduled task routes require a verified signed-in user", async
     else process.env["CHAT_DB_PATH"] = originalDatabasePath;
     if (originalNodeEnv === undefined) delete process.env["NODE_ENV"];
     else process.env["NODE_ENV"] = originalNodeEnv;
+    if (originalDatabaseUrl === undefined) delete process.env["DATABASE_URL"];
+    else process.env["DATABASE_URL"] = originalDatabaseUrl;
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });

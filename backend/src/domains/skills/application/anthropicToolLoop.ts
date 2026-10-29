@@ -6,7 +6,7 @@ import {
   type SkillToolResult,
 } from "./skillToolHandler.js";
 import { SkillRepository } from "../repositories/skillRepository.js";
-import { readSkillFileFromDisk } from "./skillStorage.js";
+import { readSkillFile } from "./skillStorage.js";
 import { parseSkillMd } from "./skillParser.js";
 
 export const MAX_TOOL_ITERATIONS = 20;
@@ -67,11 +67,11 @@ export async function runAnthropicToolLoop(
   let lastStopReason = "end_turn";
 
   // Force-load explicitly selected skills once into context as synthetic tool_use/tool_result pair
-  const unpreloadedExplicitSkills = repo.getUnpreloadedExplicitSkills(options.conversationId);
+  const unpreloadedExplicitSkills = await repo.getUnpreloadedExplicitSkills(options.conversationId);
   for (const skill of unpreloadedExplicitSkills) {
     let body = "";
     if (skill.storagePath) {
-      const fileData = readSkillFileFromDisk(skill.storagePath, "SKILL.md");
+      const fileData = await readSkillFile(skill.storagePath, "SKILL.md");
       if (fileData) {
         body = parseSkillMd(fileData).body;
       }
@@ -109,8 +109,8 @@ export async function runAnthropicToolLoop(
       output: body,
       isError: false,
     });
-    repo.logUsage(options.conversationId, skill.name, options.userId ?? null);
-    repo.markSkillPreloaded(options.conversationId, skill.id);
+    await repo.logUsage(options.conversationId, skill.name, options.userId ?? null);
+    await repo.markSkillPreloaded(options.conversationId, skill.id);
   }
 
   const fetchImpl = options.fetchFn ?? fetchProvider;
@@ -202,7 +202,7 @@ export async function runAnthropicToolLoop(
           : String(toolInput["skill"] || toolName);
 
       if (toolName === "Skill") {
-        result = handleSkillToolCall(skillName, options.conversationId, options.userId, repo);
+        result = await handleSkillToolCall(skillName, options.conversationId, options.userId, repo);
       } else if (options.executeCustomTool) {
         result = await options.executeCustomTool(toolName, toolInput);
       } else {

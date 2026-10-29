@@ -134,12 +134,12 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({
           <img
             src="/logos/brand-logo.png"
             alt="Logo"
-            className="h-[23px] w-[23px] object-contain transition-transform group-hover:scale-105"
+            className="h-10 w-10 shrink-0 object-contain transition-transform group-hover:scale-105"
           />
           <img
             src="/logos/sara.png"
             alt="SARA"
-            className="h-[18px] sm:h-[19.5px] w-auto object-contain brightness-0 transition-opacity"
+            className="h-[22px] sm:h-6 w-auto object-contain brightness-0 transition-opacity"
           />
         </a>
 

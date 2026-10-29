@@ -14,16 +14,17 @@ import {
   handleSaveRules,
 } from "./chat.controller.js";
 import { validateBody } from "../../../platform/http/middleware/validate.js";
+import { asyncHandler } from "../../../platform/http/middleware/asyncHandler.js";
 
 export const chatRouter = Router();
 
-chatRouter.post("/chat", validateBody(ChatRequestSchema), handleChat);
-chatRouter.post("/chat/stream", validateBody(ChatRequestSchema), handleChatStream);
-chatRouter.post("/chat/chapter", validateBody(ChapterChatRequestSchema), handleChapterChat);
+chatRouter.post("/chat", validateBody(ChatRequestSchema), asyncHandler(handleChat));
+chatRouter.post("/chat/stream", validateBody(ChatRequestSchema), asyncHandler(handleChatStream));
+chatRouter.post("/chat/chapter", validateBody(ChapterChatRequestSchema), asyncHandler(handleChapterChat));
 chatRouter.post(
   "/chat/chapter/stream",
   validateBody(ChapterChatRequestSchema),
-  handleChapterChatStream
+  asyncHandler(handleChapterChatStream)
 );
 chatRouter.get("/chat/skills", handleGetSkills);
 chatRouter.get("/chat/rules", handleGetRules);

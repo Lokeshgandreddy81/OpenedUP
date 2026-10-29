@@ -26,7 +26,7 @@ test("scheduled task persists, runs when due, advances recurrence, and delivers 
       notifications: "Important updates",
       startInNewChat: false,
     };
-    const task = tasks.create("schedule-e2e-user", taskInput);
+    const task = await tasks.create("schedule-e2e-user", taskInput);
     const dueAt = Date.now() - 1_000;
     db.prepare("UPDATE scheduled_tasks SET next_run_at = ? WHERE id = ?").run(dueAt, task.id);
 
@@ -42,13 +42,13 @@ test("scheduled task persists, runs when due, advances recurrence, and delivers 
         modelUsed: "gpt-6-astra",
         providerUsed: "openai",
       }),
-      () => ({ apiKey: "test-provider-key" })
+      async () => ({ apiKey: "test-provider-key" })
     );
 
     assert.equal(await service.executeNext(Date.now()), true);
     assert.equal(await service.executeNext(Date.now()), false);
 
-    const runs = tasks.listRuns("schedule-e2e-user", task.id);
+    const runs = await tasks.listRuns("schedule-e2e-user", task.id);
     assert.equal(runs.length, 1);
     assert.equal(runs[0]?.trigger, "scheduled");
     assert.equal(runs[0]?.status, "succeeded");
@@ -56,11 +56,11 @@ test("scheduled task persists, runs when due, advances recurrence, and delivers 
     assert.equal(runs[0]?.output, "Three updates need attention.");
     assert.ok(runs[0]?.startedAt);
     assert.ok(runs[0]?.finishedAt);
-    assert.ok((tasks.get("schedule-e2e-user", task.id)?.nextRunAt ?? 0) > Date.now());
+    assert.ok(((await tasks.get("schedule-e2e-user", task.id))?.nextRunAt ?? 0) > Date.now());
 
     const conversationId = runs[0]?.conversationId;
     assert.ok(conversationId);
-    const conversation = conversations.get("schedule-e2e-user", conversationId);
+    const conversation = await conversations.get("schedule-e2e-user", conversationId);
     assert.deepEqual(
       conversation?.messages.map(({ role, content, status, metadata }) => ({
         role,
@@ -90,9 +90,9 @@ test("scheduled task persists, runs when due, advances recurrence, and delivers 
 
 test("background worker claims a due task once and records its completed run", async () => {
   const db = openChatDatabase(":memory:");
-  const worker = (() => {
+  const worker = await (async () => {
     const tasks = new ScheduledTaskRepository(db);
-    const task = tasks.create("schedule-worker-user", {
+    const task = await tasks.create("schedule-worker-user", {
       title: "Worker check",
       prompt: "Return worker status.",
       icon: "🧪",
@@ -121,7 +121,7 @@ test("background worker claims a due task once and records its completed run", a
         modelUsed: "gpt-6-astra",
         providerUsed: "openai",
       }),
-      () => ({ apiKey: "test-provider-key" })
+      async () => ({ apiKey: "test-provider-key" })
     );
     return { tasks, task, instance: new ScheduledTaskWorker(service, 10) };
   })();
@@ -131,13 +131,13 @@ test("background worker claims a due task once and records its completed run", a
     const deadline = Date.now() + 2_000;
     while (
       Date.now() < deadline &&
-      worker.tasks.listRuns("schedule-worker-user", worker.task.id).length === 0
+      (await worker.tasks.listRuns("schedule-worker-user", worker.task.id)).length === 0
     ) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     await new Promise((resolve) => setTimeout(resolve, 30));
 
-    const runs = worker.tasks.listRuns("schedule-worker-user", worker.task.id);
+    const runs = await worker.tasks.listRuns("schedule-worker-user", worker.task.id);
     assert.equal(runs.length, 1);
     assert.equal(runs[0]?.status, "succeeded");
     assert.equal(runs[0]?.output, "Worker completed the task.");

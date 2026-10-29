@@ -35,7 +35,11 @@
   },
   "overrides": {
     "@grpc/grpc-js": "1.14.6",
-    "braces": "^3.0.3"
+    "braces": "^3.0.3",
+    "@vercel/oidc": "4.0.4",
+    "@vercel/cli-config": {
+      "zod": "^4.6.7"
+    }
   },
   "engines": {
     "node": ">=24.12.0",

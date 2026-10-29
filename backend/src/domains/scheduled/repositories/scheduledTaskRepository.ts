@@ -6,7 +6,11 @@ import type {
   ScheduledTaskRunRecord,
   UpdateScheduledTaskRequest,
 } from "@charan-interiors/contracts";
-import { getChatDatabase, type ChatDatabase } from "../../../platform/database/chatDatabase.js";
+import type { Database as BetterSqliteDatabase } from "better-sqlite3";
+import {
+  asDatabaseClient,
+  type DatabaseClient,
+} from "../../../platform/database/databaseClient.js";
 import {
   nextScheduledOccurrence,
   type ScheduledFrequency,
@@ -121,11 +125,15 @@ export interface ClaimedScheduledRun extends ScheduledTaskRunRecord {
 }
 
 export class ScheduledTaskRepository {
-  constructor(private readonly db: ChatDatabase = getChatDatabase()) {}
+  private readonly db: DatabaseClient;
 
-  list(userId: string): ScheduledTaskRecord[] {
+  constructor(db?: DatabaseClient | BetterSqliteDatabase) {
+    this.db = asDatabaseClient(db);
+  }
+
+  async list(userId: string): Promise<ScheduledTaskRecord[]> {
     return (
-      this.db
+      await this.db
         .prepare(
           `SELECT ${TASK_COLUMNS} FROM scheduled_tasks WHERE user_id = ? ORDER BY is_active DESC, next_run_at ASC, created_at DESC`
         )
@@ -133,15 +141,15 @@ export class ScheduledTaskRepository {
     ).map(toTask);
   }
 
-  get(userId: string, taskId: string): ScheduledTaskRecord | null {
-    const row = this.db
+  async get(userId: string, taskId: string): Promise<ScheduledTaskRecord | null> {
+    const row = await this.db
       .prepare(`SELECT ${TASK_COLUMNS} FROM scheduled_tasks WHERE user_id = ? AND id = ?`)
       .get(userId, taskId) as TaskRow | undefined;
     return row ? toTask(row) : null;
   }
 
-  getForExecution(taskId: string): ScheduledTaskForExecution | null {
-    const row = this.db
+  async getForExecution(taskId: string): Promise<ScheduledTaskForExecution | null> {
+    const row = await this.db
       .prepare(`SELECT ${TASK_COLUMNS} FROM scheduled_tasks WHERE id = ?`)
       .get(taskId) as TaskRow | undefined;
     return row
@@ -149,20 +157,22 @@ export class ScheduledTaskRepository {
       : null;
   }
 
-  create(
+  async create(
     userId: string,
     input: ScheduledTaskInput,
     options: { legacyId?: string; createdAt?: number } = {}
-  ): ScheduledTaskRecord {
+  ): Promise<ScheduledTaskRecord> {
     const now = Date.now();
     const createdAt = options.createdAt ?? now;
     const id = randomUUID();
     const nextRunAt = input.isActive ? nextScheduledOccurrence(now, recurrence(input)) : null;
-    this.insertTask(userId, id, input, createdAt, now, nextRunAt, options.legacyId ?? null);
-    return this.get(userId, id)!;
+    await this.insertTask(userId, id, input, createdAt, now, nextRunAt, options.legacyId ?? null);
+    const created = await this.get(userId, id);
+    if (!created) throw new Error("Scheduled task insert could not be read back.");
+    return created;
   }
 
-  private insertTask(
+  private async insertTask(
     userId: string,
     id: string,
     input: ScheduledTaskInput,
@@ -170,8 +180,8 @@ export class ScheduledTaskRepository {
     updatedAt: number,
     nextRunAt: number | null,
     legacyId: string | null
-  ): void {
-    this.db
+  ): Promise<void> {
+    await this.db
       .prepare(
         `INSERT INTO scheduled_tasks (
       id, user_id, legacy_id, title, prompt, icon, frequency, time, timezone, day_of_week,
@@ -202,19 +212,19 @@ export class ScheduledTaskRepository {
       );
   }
 
-  update(
+  async update(
     userId: string,
     taskId: string,
     patch: UpdateScheduledTaskRequest
-  ): ScheduledTaskRecord | null {
-    const current = this.db
+  ): Promise<ScheduledTaskRecord | null> {
+    const current = await this.db
       .prepare(`SELECT ${TASK_COLUMNS} FROM scheduled_tasks WHERE user_id = ? AND id = ?`)
       .get(userId, taskId) as TaskRow | undefined;
     if (!current) return null;
     const merged: ScheduledTaskInput = patch;
     const now = Date.now();
     const nextRunAt = merged.isActive ? nextScheduledOccurrence(now, recurrence(merged)) : null;
-    this.db
+    await this.db
       .prepare(
         `UPDATE scheduled_tasks SET title = ?, prompt = ?, icon = ?, frequency = ?, time = ?,
       timezone = ?, day_of_week = ?, day_of_month = ?, is_active = ?, model_id = ?, effort = ?,
@@ -240,26 +250,25 @@ export class ScheduledTaskRepository {
         userId,
         taskId
       );
-    return this.get(userId, taskId);
+    return await this.get(userId, taskId);
   }
 
-  delete(userId: string, taskId: string): boolean {
-    return (
-      this.db
-        .prepare("DELETE FROM scheduled_tasks WHERE user_id = ? AND id = ?")
-        .run(userId, taskId).changes > 0
-    );
+  async delete(userId: string, taskId: string): Promise<boolean> {
+    const result = await this.db
+      .prepare("DELETE FROM scheduled_tasks WHERE user_id = ? AND id = ?")
+      .run(userId, taskId);
+    return result.changes > 0;
   }
 
-  import(
+  async import(
     userId: string,
     request: ImportScheduledTasksRequest
-  ): { imported: number; skipped: number } {
+  ): Promise<{ imported: number; skipped: number }> {
     let imported = 0;
-    const importTasks = this.db.transaction(() => {
+    const importTasks = this.db.transaction(async () => {
       for (const task of request.tasks) {
         if (
-          this.db
+          await this.db
             .prepare("SELECT 1 FROM scheduled_tasks WHERE user_id = ? AND legacy_id = ?")
             .get(userId, task.legacyId)
         )
@@ -271,18 +280,18 @@ export class ScheduledTaskRepository {
         const nextRunAt = normalized.isActive
           ? nextScheduledOccurrence(now, recurrence(normalized))
           : null;
-        this.insertTask(userId, id, normalized, createdAt, now, nextRunAt, legacyId);
+        await this.insertTask(userId, id, normalized, createdAt, now, nextRunAt, legacyId);
         imported += 1;
       }
     });
-    importTasks();
+    await importTasks();
     return { imported, skipped: request.tasks.length - imported };
   }
 
-  enqueueDueRuns(now: number): number {
+  async enqueueDueRuns(now: number): Promise<number> {
     let queued = 0;
-    const enqueue = this.db.transaction(() => {
-      const due = this.db
+    const enqueue = this.db.transaction(async () => {
+      const due = await this.db
         .prepare(
           `SELECT id, frequency, time, timezone, day_of_week, day_of_month, next_run_at
         FROM scheduled_tasks WHERE is_active = 1 AND next_run_at <= ? ORDER BY next_run_at LIMIT 100`
@@ -311,34 +320,34 @@ export class ScheduledTaskRepository {
           ...(task.day_of_week === null ? {} : { dayOfWeek: task.day_of_week }),
           ...(task.day_of_month === null ? {} : { dayOfMonth: task.day_of_month }),
         });
-        const result = insertRun.run(randomUUID(), task.next_run_at, now, task.id);
+        const result = await insertRun.run(randomUUID(), task.next_run_at, now, task.id);
         queued += result.changes;
-        advance.run(next, now, task.id, task.next_run_at);
+        await advance.run(next, now, task.id, task.next_run_at);
       }
     });
-    enqueue();
+    await enqueue();
     return queued;
   }
 
-  createManualRun(userId: string, taskId: string): ScheduledTaskRunRecord | null {
-    const task = this.get(userId, taskId);
+  async createManualRun(userId: string, taskId: string): Promise<ScheduledTaskRunRecord | null> {
+    const task = await this.get(userId, taskId);
     if (!task) return null;
     const id = randomUUID();
     const now = Date.now();
-    this.db
+    await this.db
       .prepare(
         `INSERT INTO scheduled_task_runs(id, task_id, user_id, trigger, status, created_at)
       VALUES (?, ?, ?, 'manual', 'queued', ?)`
       )
       .run(id, taskId, userId, now);
-    const run = this.getRun(userId, id);
+    const run = await this.getRun(userId, id);
     return run;
   }
 
-  claimNextRun(now: number, leaseMs: number): ClaimedScheduledRun | null {
+  async claimNextRun(now: number, leaseMs: number): Promise<ClaimedScheduledRun | null> {
     let claimed: ClaimedScheduledRun | null = null;
-    const claim = this.db.transaction(() => {
-      const row = this.db
+    const claim = this.db.transaction(async () => {
+      const row = await this.db
         .prepare(
           `SELECT r.*, t.user_id, t.conversation_id AS task_conversation_id FROM scheduled_task_runs r
         JOIN scheduled_tasks t ON t.id = r.task_id
@@ -348,7 +357,7 @@ export class ScheduledTaskRepository {
         .get(now) as
         (RunRow & { user_id: string; task_conversation_id: string | null }) | undefined;
       if (!row) return;
-      const update = this.db
+      const update = await this.db
         .prepare(
           `UPDATE scheduled_task_runs SET status = 'running',
         started_at = COALESCE(started_at, ?), lease_until = ? WHERE id = ? AND
@@ -364,11 +373,11 @@ export class ScheduledTaskRepository {
         conversationId: row.task_conversation_id,
       };
     });
-    claim.immediate();
+    await claim.immediate();
     return claimed;
   }
 
-  finishRun(params: {
+  async finishRun(params: {
     runId: string;
     taskId: string;
     status: "succeeded" | "failed";
@@ -378,9 +387,9 @@ export class ScheduledTaskRepository {
     modelUsed?: string;
     providerUsed?: string;
     conversationId?: string;
-  }): void {
-    const task = this.getForExecution(params.taskId);
-    this.db
+  }): Promise<void> {
+    const task = await this.getForExecution(params.taskId);
+    await this.db
       .prepare(
         `UPDATE scheduled_task_runs SET status = ?, finished_at = ?, lease_until = NULL,
       output = ?, error = ?, model_used = ?, provider_used = ?, conversation_id = ? WHERE id = ?`
@@ -396,33 +405,33 @@ export class ScheduledTaskRepository {
         params.runId
       );
     if (task)
-      this.db
+      await this.db
         .prepare("UPDATE scheduled_tasks SET last_run_at = ?, updated_at = ? WHERE id = ?")
         .run(params.finishedAt, params.finishedAt, params.taskId);
   }
 
-  setConversationId(taskId: string, conversationId: string): void {
-    this.db
+  async setConversationId(taskId: string, conversationId: string): Promise<void> {
+    await this.db
       .prepare("UPDATE scheduled_tasks SET conversation_id = ? WHERE id = ?")
       .run(conversationId, taskId);
   }
 
-  recoverLeases(): void {
-    this.db
+  async recoverLeases(): Promise<void> {
+    await this.db
       .prepare("UPDATE scheduled_task_runs SET lease_until = 0 WHERE status = 'running'")
       .run();
   }
 
-  getRun(userId: string, runId: string): ScheduledTaskRunRecord | null {
-    const row = this.db
+  async getRun(userId: string, runId: string): Promise<ScheduledTaskRunRecord | null> {
+    const row = await this.db
       .prepare("SELECT * FROM scheduled_task_runs WHERE user_id = ? AND id = ?")
       .get(userId, runId) as RunRow | undefined;
     return row ? toRun(row) : null;
   }
 
-  listRuns(userId: string, taskId: string, limit = 30): ScheduledTaskRunRecord[] {
+  async listRuns(userId: string, taskId: string, limit = 30): Promise<ScheduledTaskRunRecord[]> {
     return (
-      this.db
+      await this.db
         .prepare(
           `SELECT * FROM scheduled_task_runs WHERE user_id = ? AND task_id = ?
       ORDER BY created_at DESC LIMIT ?`

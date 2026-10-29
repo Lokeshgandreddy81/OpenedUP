@@ -6,20 +6,20 @@ import { seedBuiltinSkills } from "./seedBuiltinSkills.js";
 import { handleSkillToolCall } from "./skillToolHandler.js";
 import { runAnthropicToolLoop } from "./anthropicToolLoop.js";
 
-test("SkillTool - handleSkillToolCall returns error when skill is not enabled for conversation", () => {
+test("SkillTool - handleSkillToolCall returns error when skill is not enabled for conversation", async () => {
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
-  const result = handleSkillToolCall("csv-summary", "conv-empty", "user-1", repo);
+  const result = await handleSkillToolCall("csv-summary", "conv-empty", "user-1", repo);
   assert.equal(result.isError, true);
   assert.equal(result.content, "Skill not enabled");
 });
 
-test("SkillTool - handleSkillToolCall loads SKILL.md body and logs usage when enabled", () => {
+test("SkillTool - handleSkillToolCall loads SKILL.md body and logs usage when enabled", async () => {
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
   // Insert conversation
   const now = Date.now();
@@ -28,19 +28,19 @@ test("SkillTool - handleSkillToolCall loads SKILL.md body and logs usage when en
      VALUES (?, ?, ?, ?, ?, ?)`
   ).run("conv-101", "user-1", "Test Chat", "gemini-3.8-flash", now, now);
 
-  const builtin = repo.getByNameAndScope("hello-format", "builtin");
+  const builtin = await repo.getByNameAndScope("hello-format", "builtin");
   assert.ok(builtin);
 
   // Enable skill
-  repo.setConversationSkills("conv-101", [builtin.id], "user-1");
+  await repo.setConversationSkills("conv-101", [builtin.id], "user-1");
 
   // Call tool
-  const result = handleSkillToolCall("hello-format", "conv-101", "user-1", repo);
+  const result = await handleSkillToolCall("hello-format", "conv-101", "user-1", repo);
   assert.equal(result.isError, false);
   assert.ok(result.content.includes("Hello Format Instructions"));
 
   // Check usage log
-  const usage = repo.listUsage("conv-101");
+  const usage = await repo.listUsage("conv-101");
   assert.equal(usage.length, 1);
   assert.equal(usage[0]?.skill, "hello-format");
   assert.equal(usage[0]?.userId, "user-1");
@@ -49,7 +49,7 @@ test("SkillTool - handleSkillToolCall loads SKILL.md body and logs usage when en
 test("AnthropicToolLoop - completes tool call turn and finishes loop", async () => {
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
   const now = Date.now();
   db.prepare(
@@ -57,9 +57,9 @@ test("AnthropicToolLoop - completes tool call turn and finishes loop", async () 
      VALUES (?, ?, ?, ?, ?, ?)`
   ).run("conv-loop-1", "user-1", "Loop Test", "claude-3-5-sonnet", now, now);
 
-  const builtin = repo.getByNameAndScope("hello-format", "builtin");
+  const builtin = await repo.getByNameAndScope("hello-format", "builtin");
   assert.ok(builtin);
-  repo.setConversationSkills("conv-loop-1", [builtin.id], "user-1");
+  await repo.setConversationSkills("conv-loop-1", [builtin.id], "user-1");
 
   // Mock fetch calls for Anthropic:
   // Turn 1: model returns tool_use block for Skill("hello-format")
@@ -115,7 +115,7 @@ test("AnthropicToolLoop - completes tool call turn and finishes loop", async () 
     assert.ok(loopResult.toolTraces[0]?.output.includes("Hello Format Instructions"));
 
     // Verify usage logging occurred
-    const usage = repo.listUsage("conv-loop-1");
+    const usage = await repo.listUsage("conv-loop-1");
     assert.equal(usage.length, 1);
     assert.equal(usage[0]?.skill, "hello-format");
   } finally {

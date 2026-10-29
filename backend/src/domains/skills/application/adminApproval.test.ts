@@ -100,7 +100,7 @@ Follow best practices.`;
       },
     } as unknown as Request;
 
-    submitForReview(subReq, subRes);
+    await submitForReview(subReq, subRes);
     assert.equal(getSubStatus(), 200);
     assert.equal(getSubBody().skill.approvalStatus, "pending_review");
 
@@ -114,7 +114,7 @@ Follow best practices.`;
       },
     } as unknown as Request;
 
-    getAdminQueue(queueReq, queueRes);
+    await getAdminQueue(queueReq, queueRes);
     assert.equal(getQueueStatus(), 200);
     assert.ok(getQueueBody().queue.some((skill) => skill.id === skillId));
 
@@ -127,7 +127,7 @@ Follow best practices.`;
         "x-is-admin": "false",
       },
     } as unknown as Request;
-    approveSkill(unauthApproveReq, unauthApproveRes);
+    await approveSkill(unauthApproveReq, unauthApproveRes);
     assert.equal(getUnauthApproveStatus(), 403);
 
     // 5. Admin approves skill
@@ -141,13 +141,13 @@ Follow best practices.`;
       },
     } as unknown as Request;
 
-    approveSkill(approveReq, approveRes);
+    await approveSkill(approveReq, approveRes);
     assert.equal(getApproveStatus(), 200);
     assert.equal(getApproveBody().skill.approvalStatus, "approved");
   });
 
   test("Skill lifecycle: draft -> pending_review -> rejected with reason", async () => {
-    const created = repo.create({
+    const created = await repo.create({
       name: "unsafe-skill",
       description: "Tries suspicious things without justification.",
       scope: "directory",
@@ -159,7 +159,7 @@ Follow best practices.`;
 
     // Author submits
     const { res: subRes, getStatus: getSubStatus } = mockRes();
-    submitForReview(
+    await submitForReview(
       {
         params: { id: created.id },
         body: {},
@@ -171,7 +171,7 @@ Follow best practices.`;
 
     // Admin rejects with reason
     const { res: rejRes, getStatus: getRejStatus, getBody: getRejBody } = mockRes();
-    rejectSkill(
+    await rejectSkill(
       {
         params: { id: created.id },
         body: { reason: "Security violation: missing documentation on scripts." },
@@ -187,12 +187,12 @@ Follow best practices.`;
     );
   });
 
-  test("Visibility rules: author always sees their own skills; others only see approved skills", () => {
+  test("Visibility rules: author always sees their own skills; others only see approved skills", async () => {
     const authorId = "author-dev";
     const otherUserId = "other-reader";
 
     // 1. Author's draft skill
-    const draftSkill = repo.create({
+    const draftSkill = await repo.create({
       name: "private-draft",
       description: "Still in progress",
       scope: "directory",
@@ -203,7 +203,7 @@ Follow best practices.`;
     });
 
     // 2. Author's rejected skill
-    const rejectedSkill = repo.create({
+    const rejectedSkill = await repo.create({
       name: "rejected-one",
       description: "Needs revision",
       scope: "directory",
@@ -215,7 +215,7 @@ Follow best practices.`;
     });
 
     // 3. Approved directory skill
-    const approvedSkill = repo.create({
+    const approvedSkill = await repo.create({
       name: "approved-prod",
       description: "Ready for company use",
       scope: "directory",
@@ -226,14 +226,14 @@ Follow best practices.`;
     });
 
     // Check author's visible skills
-    const authorVisible = repo.listVisible(authorId);
+    const authorVisible = await repo.listVisible(authorId);
     const authorIds = authorVisible.map((s) => s.id);
     assert.ok(authorIds.includes(draftSkill.id), "Author must see their own draft skill");
     assert.ok(authorIds.includes(rejectedSkill.id), "Author must see their own rejected skill");
     assert.ok(authorIds.includes(approvedSkill.id), "Author must see their own approved skill");
 
     // Check other user's visible skills
-    const otherVisible = repo.listVisible(otherUserId);
+    const otherVisible = await repo.listVisible(otherUserId);
     const otherIds = otherVisible.map((s) => s.id);
     assert.ok(!otherIds.includes(draftSkill.id), "Other user must NOT see draft skill");
     assert.ok(!otherIds.includes(rejectedSkill.id), "Other user must NOT see rejected skill");

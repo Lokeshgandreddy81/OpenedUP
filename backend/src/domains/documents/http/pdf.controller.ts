@@ -46,7 +46,7 @@ export async function handleParsePdfChapters(req: Request, res: Response): Promi
       });
       return;
     }
-    const { apiKey, baseUrl } = resolveRequestProviderCredential(req, payload);
+    const { apiKey, baseUrl } = await resolveRequestProviderCredential(req, payload);
     const result = await parsePdfChapters({
       mimeType: payload.mimeType,
       base64Data: payload.base64Data,

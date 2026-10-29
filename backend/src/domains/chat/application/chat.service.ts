@@ -31,21 +31,21 @@ export interface ProcessChatOptions {
   orgId?: string | null;
 }
 
-function resolveChatSkillsContext(
+async function resolveChatSkillsContext(
   payload: ChatRequest,
   options?: ProcessChatOptions
-): {
+): Promise<{
   progressiveSkillsPrompt: string;
   conversationSkills: SkillRecord[];
-} {
+}> {
   try {
     const skillRepo = getSkillRepository();
     const userId = options?.userId ?? "dev-user";
     const orgId = options?.orgId ?? null;
     const conversationSkills = payload.conversationId
-      ? skillRepo.getConversationSkills(payload.conversationId)
+      ? await skillRepo.getConversationSkills(payload.conversationId)
       : [];
-    const visibleSkills = skillRepo.listVisible(userId, orgId);
+    const visibleSkills = await skillRepo.listVisible(userId, orgId);
     const mergedMap = new Map<string, SkillRecord>();
     for (const s of conversationSkills) mergedMap.set(s.id, s);
     for (const s of visibleSkills) {
@@ -90,7 +90,7 @@ export async function processChat(
   // Run agentic workspace inspection tools (rules, chapters, attached files)
   const toolTraces = options?.toolTraces ?? runAgenticWorkspaceTools(payload);
   const skills = executeSkills(payload);
-  const { progressiveSkillsPrompt, conversationSkills } = resolveChatSkillsContext(
+  const { progressiveSkillsPrompt, conversationSkills } = await resolveChatSkillsContext(
     payload,
     options
   );
@@ -113,7 +113,9 @@ export async function processChat(
     options?.injectedApiKey
   ) {
     const skillRepo = getSkillRepository();
-    const sandboxPaths = initSandbox(payload.conversationId, conversationSkills);
+    const sandboxPaths = SANDBOX_TOOLS.length
+      ? initSandbox(payload.conversationId, conversationSkills)
+      : undefined;
     const loopResult = await runAnthropicToolLoop({
       apiKey: options.injectedApiKey,
       baseUrl: options.injectedBaseUrl || PROVIDER_CATALOG.anthropic.defaultBaseUrl,
@@ -126,7 +128,14 @@ export async function processChat(
       repo: skillRepo,
       ...(options.signal ? { signal: options.signal } : {}),
       executeCustomTool: (name, input) =>
-        executeSandboxTool(name, input, payload.conversationId!, sandboxPaths, skillRepo),
+        executeSandboxTool(
+          name,
+          input,
+          payload.conversationId!,
+          sandboxPaths,
+          skillRepo,
+          options?.userId
+        ),
     });
     const elapsedMs = Date.now() - startTime;
     const thinkingSeconds = Math.max(1, Math.round(elapsedMs / 1000));
@@ -201,7 +210,7 @@ export async function processChatStream(
 
   const toolTraces = options?.toolTraces ?? runAgenticWorkspaceTools(payload);
   const skills = executeSkills(payload);
-  const { progressiveSkillsPrompt, conversationSkills } = resolveChatSkillsContext(
+  const { progressiveSkillsPrompt, conversationSkills } = await resolveChatSkillsContext(
     payload,
     options
   );
@@ -224,7 +233,9 @@ export async function processChatStream(
     options?.injectedApiKey
   ) {
     const skillRepo = getSkillRepository();
-    const sandboxPaths = initSandbox(payload.conversationId, conversationSkills);
+    const sandboxPaths = SANDBOX_TOOLS.length
+      ? initSandbox(payload.conversationId, conversationSkills)
+      : undefined;
     const loopResult = await runAnthropicToolLoop({
       apiKey: options.injectedApiKey,
       baseUrl: options.injectedBaseUrl || PROVIDER_CATALOG.anthropic.defaultBaseUrl,
@@ -237,7 +248,14 @@ export async function processChatStream(
       repo: skillRepo,
       ...(options.signal ? { signal: options.signal } : {}),
       executeCustomTool: (name, input) =>
-        executeSandboxTool(name, input, payload.conversationId!, sandboxPaths, skillRepo),
+        executeSandboxTool(
+          name,
+          input,
+          payload.conversationId!,
+          sandboxPaths,
+          skillRepo,
+          options.userId
+        ),
     });
     if (loopResult.finalText) {
       onDelta(loopResult.finalText);

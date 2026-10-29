@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { getChatDatabase, type ChatDatabase } from "../../../platform/database/chatDatabase.js";
+import type { Database as BetterSqliteDatabase } from "better-sqlite3";
+import {
+  asDatabaseClient,
+  type DatabaseClient,
+} from "../../../platform/database/databaseClient.js";
 
 export type SkillScope = "builtin" | "org" | "user" | "directory";
 export type SkillApprovalStatus = "draft" | "pending_review" | "approved" | "rejected";
@@ -85,7 +89,11 @@ export interface ListVisibleSkillsOptions {
 }
 
 export class SkillRepository {
-  constructor(private readonly db: ChatDatabase = getChatDatabase()) {}
+  private readonly db: DatabaseClient;
+
+  constructor(db?: DatabaseClient | BetterSqliteDatabase) {
+    this.db = asDatabaseClient(db);
+  }
 
   private mapSkill(row: Record<string, unknown>): SkillRecord {
     let toolsRequired: string[] | null = null;
@@ -130,7 +138,7 @@ export class SkillRepository {
     };
   }
 
-  create(input: CreateSkillInput): SkillRecord {
+  async create(input: CreateSkillInput): Promise<SkillRecord> {
     const id = input.id || randomUUID();
     const now = Date.now();
     const version = input.version ?? 1;
@@ -138,7 +146,7 @@ export class SkillRepository {
     const toolsRequiredStr = input.toolsRequired ? JSON.stringify(input.toolsRequired) : null;
     const approvalStatus = input.approvalStatus ?? "approved";
 
-    this.db
+    await this.db
       .prepare(
         `INSERT INTO skills (
           id, name, description, scope, owner_id, org_id, storage_path, version, is_active,
@@ -167,37 +175,37 @@ export class SkillRepository {
         now
       );
 
-    return this.get(id)!;
+    return (await this.get(id))!;
   }
 
-  get(id: string): SkillRecord | null {
-    const row = this.db.prepare(`SELECT * FROM skills WHERE id = ?`).get(id) as
+  async get(id: string): Promise<SkillRecord | null> {
+    const row = await this.db.prepare(`SELECT * FROM skills WHERE id = ?`).get(id) as
       Record<string, unknown> | undefined;
 
     return row ? this.mapSkill(row) : null;
   }
 
-  getByNameAndScope(
+  async getByNameAndScope(
     name: string,
     scope: SkillScope,
     ownerId?: string | null,
     orgId?: string | null
-  ): SkillRecord | null {
-    const row = this.db
+  ): Promise<SkillRecord | null> {
+    const row = await this.db
       .prepare(
         `SELECT * FROM skills
-         WHERE name = ? AND scope = ? AND ifnull(owner_id, '') = ? AND ifnull(org_id, '') = ?`
+         WHERE name = ? AND scope = ? AND COALESCE(owner_id, '') = ? AND COALESCE(org_id, '') = ?`
       )
       .get(name, scope, ownerId || "", orgId || "") as Record<string, unknown> | undefined;
 
     return row ? this.mapSkill(row) : null;
   }
 
-  listVisible(
+  async listVisible(
     userId: string,
     orgId?: string | null,
     options?: ListVisibleSkillsOptions
-  ): SkillRecord[] {
+  ): Promise<SkillRecord[]> {
     const conditions: string[] = ["is_active = 1"];
     const params: unknown[] = [];
 
@@ -253,11 +261,11 @@ export class SkillRepository {
       ORDER BY scope = 'builtin' DESC, scope = 'org' DESC, name ASC
     `;
 
-    const rows = this.db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
+    const rows = await this.db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
     return rows.map((row) => this.mapSkill(row));
   }
 
-  update(
+  async update(
     id: string,
     updates: Partial<{
       description: string;
@@ -265,8 +273,8 @@ export class SkillRepository {
       version: number;
       isActive: boolean;
     }>
-  ): SkillRecord | null {
-    const existing = this.get(id);
+  ): Promise<SkillRecord | null> {
+    const existing = await this.get(id);
     if (!existing) return null;
 
     const sets: string[] = ["updated_at = ?"];
@@ -291,19 +299,19 @@ export class SkillRepository {
 
     params.push(id);
 
-    this.db.prepare(`UPDATE skills SET ${sets.join(", ")} WHERE id = ?`).run(...params);
-    return this.get(id);
+    await this.db.prepare(`UPDATE skills SET ${sets.join(", ")} WHERE id = ?`).run(...params);
+    return await this.get(id);
   }
 
-  delete(id: string): boolean {
-    const res = this.db.prepare("DELETE FROM skills WHERE id = ?").run(id);
+  async delete(id: string): Promise<boolean> {
+    const res = await this.db.prepare("DELETE FROM skills WHERE id = ?").run(id);
     return res.changes > 0;
   }
 
-  addFiles(
+  async addFiles(
     skillId: string,
     files: Array<{ relativePath: string; sizeBytes: number; sha256: string }>
-  ): SkillFileRecord[] {
+  ): Promise<SkillFileRecord[]> {
     const now = Date.now();
     const insert = this.db.prepare(
       `INSERT INTO skill_files (id, skill_id, relative_path, size_bytes, sha256, created_at)
@@ -311,10 +319,10 @@ export class SkillRepository {
     );
 
     const inserted: SkillFileRecord[] = [];
-    const transaction = this.db.transaction(() => {
+    const transaction = this.db.transaction(async () => {
       for (const file of files) {
         const id = randomUUID();
-        insert.run(id, skillId, file.relativePath, file.sizeBytes, file.sha256, now);
+        await insert.run(id, skillId, file.relativePath, file.sizeBytes, file.sha256, now);
         inserted.push({
           id,
           skillId,
@@ -326,23 +334,23 @@ export class SkillRepository {
       }
     });
 
-    transaction();
+    await transaction();
     return inserted;
   }
 
-  replaceFiles(
+  async replaceFiles(
     skillId: string,
     files: Array<{ relativePath: string; sizeBytes: number; sha256: string }>
-  ): SkillFileRecord[] {
-    const transaction = this.db.transaction(() => {
-      this.db.prepare("DELETE FROM skill_files WHERE skill_id = ?").run(skillId);
-      return this.addFiles(skillId, files);
+  ): Promise<SkillFileRecord[]> {
+    const transaction = this.db.transaction(async () => {
+      await this.db.prepare("DELETE FROM skill_files WHERE skill_id = ?").run(skillId);
+      return await this.addFiles(skillId, files);
     });
-    return transaction();
+    return await transaction();
   }
 
-  listFiles(skillId: string): SkillFileRecord[] {
-    const rows = this.db
+  async listFiles(skillId: string): Promise<SkillFileRecord[]> {
+    const rows = await this.db
       .prepare(
         `SELECT id, skill_id, relative_path, size_bytes, sha256, created_at
          FROM skill_files WHERE skill_id = ? ORDER BY relative_path ASC`
@@ -352,8 +360,8 @@ export class SkillRepository {
     return rows.map((row) => this.mapFile(row));
   }
 
-  getConversationSkills(conversationId: string): SkillRecord[] {
-    const rows = this.db
+  async getConversationSkills(conversationId: string): Promise<SkillRecord[]> {
+    const rows = await this.db
       .prepare(
         `SELECT s.id, s.name, s.description, s.scope, s.owner_id, s.org_id, s.storage_path, s.version, s.is_active, s.created_at, s.updated_at
          FROM skills s
@@ -366,26 +374,26 @@ export class SkillRepository {
     return rows.map((row) => this.mapSkill(row));
   }
 
-  setConversationSkills(
+  async setConversationSkills(
     conversationId: string,
     skillIds: string[],
     enabledBy: string,
     options?: { explicitlySelected?: boolean; source?: "direct" | "project" }
-  ): SkillRecord[] {
+  ): Promise<SkillRecord[]> {
     const now = Date.now();
     const isExplicit = options?.explicitlySelected ?? false;
     const src = options?.source ?? "direct";
 
-    const transaction = this.db.transaction(() => {
+    const transaction = this.db.transaction(async () => {
       // Ensure conversation exists so foreign key succeeds even for guest/unauthenticated testing
-      this.db
+      await this.db
         .prepare(
-          `INSERT OR IGNORE INTO conversations (id, user_id, title, model, created_at, updated_at)
-           VALUES (?, ?, 'Chat', 'default', ?, ?)`
+          `INSERT INTO conversations (id, user_id, title, model, created_at, updated_at)
+           VALUES (?, ?, 'Chat', 'default', ?, ?) ON CONFLICT(id) DO NOTHING`
         )
         .run(conversationId, enabledBy || "guest", now, now);
 
-      this.db
+      await this.db
         .prepare("DELETE FROM conversation_skills WHERE conversation_id = ?")
         .run(conversationId);
       const insert = this.db.prepare(
@@ -394,18 +402,18 @@ export class SkillRepository {
         ) VALUES (?, ?, ?, ?, ?, NULL, ?)`
       );
       for (const skillId of skillIds) {
-        insert.run(conversationId, skillId, now, enabledBy || "guest", isExplicit ? 1 : 0, src);
+        await insert.run(conversationId, skillId, now, enabledBy || "guest", isExplicit ? 1 : 0, src);
       }
     });
-    transaction();
-    return this.getConversationSkills(conversationId);
+    await transaction();
+    return await this.getConversationSkills(conversationId);
   }
 
-  getConversationSkillMeta(
+  async getConversationSkillMeta(
     conversationId: string,
     skillId: string
-  ): ConversationSkillRecord | null {
-    const row = this.db
+  ): Promise<ConversationSkillRecord | null> {
+    const row = await this.db
       .prepare(
         `SELECT conversation_id, skill_id, enabled_at, enabled_by, explicitly_selected, preloaded_at, source
          FROM conversation_skills WHERE conversation_id = ? AND skill_id = ?`
@@ -424,16 +432,16 @@ export class SkillRepository {
     };
   }
 
-  markSkillPreloaded(conversationId: string, skillId: string): void {
-    this.db
+  async markSkillPreloaded(conversationId: string, skillId: string): Promise<void> {
+    await this.db
       .prepare(
         `UPDATE conversation_skills SET preloaded_at = ? WHERE conversation_id = ? AND skill_id = ?`
       )
       .run(Date.now(), conversationId, skillId);
   }
 
-  getUnpreloadedExplicitSkills(conversationId: string): SkillRecord[] {
-    const rows = this.db
+  async getUnpreloadedExplicitSkills(conversationId: string): Promise<SkillRecord[]> {
+    const rows = await this.db
       .prepare(
         `SELECT s.*
          FROM skills s
@@ -446,41 +454,41 @@ export class SkillRepository {
     return rows.map((r) => this.mapSkill(r));
   }
 
-  inheritProjectSkills(conversationId: string, projectId: string, userId: string): SkillRecord[] {
-    const projectSkills = this.getProjectSkills(projectId);
+  async inheritProjectSkills(conversationId: string, projectId: string, userId: string): Promise<SkillRecord[]> {
+    const projectSkills = await this.getProjectSkills(projectId);
     const now = Date.now();
 
-    const transaction = this.db.transaction(() => {
-      this.db
+    const transaction = this.db.transaction(async () => {
+      await this.db
         .prepare(
-          `INSERT OR IGNORE INTO conversations (id, user_id, title, model, created_at, updated_at)
-           VALUES (?, ?, 'Chat', 'default', ?, ?)`
+          `INSERT INTO conversations (id, user_id, title, model, created_at, updated_at)
+           VALUES (?, ?, 'Chat', 'default', ?, ?) ON CONFLICT(id) DO NOTHING`
         )
         .run(conversationId, userId || "guest", now, now);
 
       const insert = this.db.prepare(
-        `INSERT OR IGNORE INTO conversation_skills (
+        `INSERT INTO conversation_skills (
           conversation_id, skill_id, enabled_at, enabled_by, explicitly_selected, preloaded_at, source
-        ) VALUES (?, ?, ?, ?, 0, NULL, 'project')`
+        ) VALUES (?, ?, ?, ?, 0, NULL, 'project') ON CONFLICT(conversation_id, skill_id) DO NOTHING`
       );
 
       for (const skill of projectSkills) {
-        insert.run(conversationId, skill.id, now, userId || "guest");
+        await insert.run(conversationId, skill.id, now, userId || "guest");
       }
     });
 
-    transaction();
-    return this.getConversationSkills(conversationId);
+    await transaction();
+    return await this.getConversationSkills(conversationId);
   }
 
-  removeProjectSourcedConversationSkills(conversationId: string): void {
-    this.db
+  async removeProjectSourcedConversationSkills(conversationId: string): Promise<void> {
+    await this.db
       .prepare(`DELETE FROM conversation_skills WHERE conversation_id = ? AND source = 'project'`)
       .run(conversationId);
   }
 
-  getProjectSkills(projectId: string): SkillRecord[] {
-    const rows = this.db
+  async getProjectSkills(projectId: string): Promise<SkillRecord[]> {
+    const rows = await this.db
       .prepare(
         `SELECT s.id, s.name, s.description, s.scope, s.owner_id, s.org_id, s.storage_path, s.version, s.is_active, s.created_at, s.updated_at
          FROM skills s
@@ -493,41 +501,41 @@ export class SkillRepository {
     return rows.map((row) => this.mapSkill(row));
   }
 
-  setProjectSkills(projectId: string, skillIds: string[]): SkillRecord[] {
-    const transaction = this.db.transaction(() => {
-      this.db.prepare("DELETE FROM project_skills WHERE project_id = ?").run(projectId);
+  async setProjectSkills(projectId: string, skillIds: string[]): Promise<SkillRecord[]> {
+    const transaction = this.db.transaction(async () => {
+      await this.db.prepare("DELETE FROM project_skills WHERE project_id = ?").run(projectId);
       const insert = this.db.prepare(
         `INSERT INTO project_skills (project_id, skill_id) VALUES (?, ?)`
       );
       for (const skillId of skillIds) {
-        insert.run(projectId, skillId);
+        await insert.run(projectId, skillId);
       }
     });
-    transaction();
-    return this.getProjectSkills(projectId);
+    await transaction();
+    return await this.getProjectSkills(projectId);
   }
 
-  logUsage(
+  async logUsage(
     conversationId: string | null,
     skill: string,
     userId?: string | null,
     toolName: string = "Skill",
     durationMs: number | null = null,
     outcome: "success" | "error" | "timeout" = "success"
-  ): SkillUsageRecord {
+  ): Promise<SkillUsageRecord> {
     const id = randomUUID();
     const timestamp = Date.now();
 
     if (conversationId) {
-      this.db
+      await this.db
         .prepare(
-          `INSERT OR IGNORE INTO conversations (id, user_id, title, model, created_at, updated_at)
-           VALUES (?, ?, 'Chat', 'default', ?, ?)`
+          `INSERT INTO conversations (id, user_id, title, model, created_at, updated_at)
+           VALUES (?, ?, 'Chat', 'default', ?, ?) ON CONFLICT(id) DO NOTHING`
         )
         .run(conversationId, userId || "guest", timestamp, timestamp);
     }
 
-    this.db
+    await this.db
       .prepare(
         `INSERT INTO skill_usage (id, conversation_id, skill, user_id, timestamp, tool_name, duration_ms, outcome)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -546,17 +554,17 @@ export class SkillRepository {
     };
   }
 
-  getAnalytics(days: number = 30): {
+  async getAnalytics(days: number = 30): Promise<{
     topSkills: Array<{ skill: string; callCount: number; failureCount: number }>;
     callsPerDay: Array<{ date: string; calls: number }>;
     failureRate: number;
     totalCalls: number;
     totalToolLoops: number;
     averageIterations: number;
-  } {
+  }> {
     const sinceTimestamp = Date.now() - days * 24 * 60 * 60 * 1000;
 
-    const topSkillsRows = this.db
+    const topSkillsRows = await this.db
       .prepare(
         `SELECT skill,
                 COUNT(*) as call_count,
@@ -575,23 +583,19 @@ export class SkillRepository {
       failureCount: Number(r["failure_count"] || 0),
     }));
 
-    const callsPerDayRows = this.db
-      .prepare(
-        `SELECT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch') as date,
-                COUNT(*) as calls
-         FROM skill_usage
-         WHERE timestamp >= ?
-         GROUP BY date
-         ORDER BY date ASC`
-      )
+    const callsPerDayRows = await this.db
+      .prepare("SELECT timestamp FROM skill_usage WHERE timestamp >= ?")
       .all(sinceTimestamp) as Array<Record<string, unknown>>;
+    const callsByDate = new Map<string, number>();
+    for (const row of callsPerDayRows) {
+      const date = new Date(Number(row["timestamp"])).toISOString().slice(0, 10);
+      callsByDate.set(date, (callsByDate.get(date) ?? 0) + 1);
+    }
+    const callsPerDay = [...callsByDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, calls]) => ({ date, calls }));
 
-    const callsPerDay = callsPerDayRows.map((r) => ({
-      date: String(r["date"]),
-      calls: Number(r["calls"] || 0),
-    }));
-
-    const totalsRow = this.db
+    const totalsRow = await this.db
       .prepare(
         `SELECT COUNT(*) as total_calls,
                 SUM(CASE WHEN outcome != 'success' THEN 1 ELSE 0 END) as failure_calls,
@@ -618,8 +622,8 @@ export class SkillRepository {
     };
   }
 
-  listUsage(conversationId: string): SkillUsageRecord[] {
-    const rows = this.db
+  async listUsage(conversationId: string): Promise<SkillUsageRecord[]> {
+    const rows = await this.db
       .prepare(
         `SELECT id, conversation_id, skill, user_id, timestamp, tool_name, duration_ms, outcome
          FROM skill_usage WHERE conversation_id = ? ORDER BY timestamp DESC`
@@ -639,12 +643,12 @@ export class SkillRepository {
   }
 
   // --- Skill Versions History ---
-  recordSkillVersion(
+  async recordSkillVersion(
     skillId: string,
     version: number,
     changelog: string | null,
     fileManifest: SkillFileRecord[]
-  ): void {
+  ): Promise<void> {
     const id = randomUUID();
     const manifestJson = JSON.stringify(
       fileManifest.map((f) => ({
@@ -653,22 +657,22 @@ export class SkillRepository {
         sha256: f.sha256,
       }))
     );
-    this.db
+    await this.db
       .prepare(
-        `INSERT OR REPLACE INTO skill_versions (id, skill_id, version, changelog, file_manifest, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO skill_versions (id, skill_id, version, changelog, file_manifest, created_at)
+         VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(skill_id, version) DO UPDATE SET id = EXCLUDED.id, changelog = EXCLUDED.changelog, file_manifest = EXCLUDED.file_manifest, created_at = EXCLUDED.created_at`
       )
       .run(id, skillId, version, changelog, manifestJson, Date.now());
   }
 
-  listSkillVersions(skillId: string): Array<{
+  async listSkillVersions(skillId: string): Promise<Array<{
     id: string;
     version: number;
     changelog: string | null;
     fileManifest: unknown[];
     createdAt: number;
-  }> {
-    const rows = this.db
+  }>> {
+    const rows = await this.db
       .prepare(
         `SELECT id, version, changelog, file_manifest, created_at
          FROM skill_versions WHERE skill_id = ? ORDER BY version DESC`
@@ -685,18 +689,18 @@ export class SkillRepository {
   }
 
   // --- Agents Support ---
-  saveSkillAgents(
+  async saveSkillAgents(
     skillId: string,
     agents: Array<{ name: string; description: string; tools: string[]; systemPrompt: string }>
-  ): void {
-    const transaction = this.db.transaction(() => {
-      this.db.prepare("DELETE FROM skill_agents WHERE skill_id = ?").run(skillId);
+  ): Promise<void> {
+    const transaction = this.db.transaction(async () => {
+      await this.db.prepare("DELETE FROM skill_agents WHERE skill_id = ?").run(skillId);
       const insert = this.db.prepare(
         `INSERT INTO skill_agents (id, skill_id, name, description, tools, system_prompt, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       );
       for (const agent of agents) {
-        insert.run(
+        await insert.run(
           randomUUID(),
           skillId,
           agent.name,
@@ -707,17 +711,17 @@ export class SkillRepository {
         );
       }
     });
-    transaction();
+    await transaction();
   }
 
-  listSkillAgents(skillId: string): Array<{
+  async listSkillAgents(skillId: string): Promise<Array<{
     id: string;
     name: string;
     description: string;
     tools: string[];
     systemPrompt: string;
-  }> {
-    const rows = this.db
+  }>> {
+    const rows = await this.db
       .prepare(
         `SELECT id, name, description, tools, system_prompt
          FROM skill_agents WHERE skill_id = ? ORDER BY name ASC`
@@ -734,26 +738,26 @@ export class SkillRepository {
   }
 
   // --- Categories & Directory ---
-  ensureCategory(name: string, description?: string): string {
-    const existing = this.db.prepare("SELECT id FROM categories WHERE name = ?").get(name) as
+  async ensureCategory(name: string, description?: string): Promise<string> {
+    const existing = await this.db.prepare("SELECT id FROM categories WHERE name = ?").get(name) as
       { id: string } | undefined;
     if (existing) return existing.id;
 
     const id = randomUUID();
-    this.db
+    await this.db
       .prepare("INSERT INTO categories (id, name, description) VALUES (?, ?, ?)")
       .run(id, name, description ?? null);
     return id;
   }
 
-  linkSkillCategory(skillId: string, categoryId: string): void {
-    this.db
-      .prepare("INSERT OR IGNORE INTO skill_categories (skill_id, category_id) VALUES (?, ?)")
+  async linkSkillCategory(skillId: string, categoryId: string): Promise<void> {
+    await this.db
+      .prepare("INSERT INTO skill_categories (skill_id, category_id) VALUES (?, ?) ON CONFLICT(skill_id, category_id) DO NOTHING")
       .run(skillId, categoryId);
   }
 
-  getSkillCategories(skillId: string): string[] {
-    const rows = this.db
+  async getSkillCategories(skillId: string): Promise<string[]> {
+    const rows = await this.db
       .prepare(
         `SELECT c.name
          FROM categories c
@@ -764,8 +768,8 @@ export class SkillRepository {
     return rows.map((r) => r.name);
   }
 
-  listCategories(): Array<{ id: string; name: string; description: string }> {
-    const rows = this.db
+  async listCategories(): Promise<Array<{ id: string; name: string; description: string }>> {
+    const rows = await this.db
       .prepare("SELECT id, name, description FROM categories ORDER BY name ASC")
       .all() as Array<Record<string, unknown>>;
     return rows.map((r) => ({
@@ -775,10 +779,10 @@ export class SkillRepository {
     }));
   }
 
-  listDirectorySkills(options?: {
+  async listDirectorySkills(options?: {
     category?: string | undefined;
     query?: string | undefined;
-  }): SkillRecord[] {
+  }): Promise<SkillRecord[]> {
     let sql = `
       SELECT DISTINCT s.*
       FROM skills s
@@ -811,17 +815,17 @@ export class SkillRepository {
 
     sql += " ORDER BY s.name ASC";
 
-    const rows = this.db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
+    const rows = await this.db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
     return rows.map((r) => this.mapSkill(r));
   }
 
-  updateApprovalStatus(
+  async updateApprovalStatus(
     id: string,
     status: SkillApprovalStatus,
     rejectionReason: string | null = null,
     targetScope?: SkillScope
-  ): SkillRecord | null {
-    const existing = this.get(id);
+  ): Promise<SkillRecord | null> {
+    const existing = await this.get(id);
     if (!existing) return null;
 
     const sets: string[] = ["approval_status = ?", "rejection_reason = ?", "updated_at = ?"];
@@ -833,12 +837,12 @@ export class SkillRepository {
     }
 
     params.push(id);
-    this.db.prepare(`UPDATE skills SET ${sets.join(", ")} WHERE id = ?`).run(...params);
-    return this.get(id);
+    await this.db.prepare(`UPDATE skills SET ${sets.join(", ")} WHERE id = ?`).run(...params);
+    return await this.get(id);
   }
 
-  listPendingApproval(): SkillRecord[] {
-    const rows = this.db
+  async listPendingApproval(): Promise<SkillRecord[]> {
+    const rows = await this.db
       .prepare(
         "SELECT * FROM skills WHERE approval_status = 'pending_review' ORDER BY updated_at DESC"
       )
@@ -846,18 +850,21 @@ export class SkillRepository {
     return rows.map((r) => this.mapSkill(r));
   }
 
-  addDirectorySkillToUserLibrary(directorySkillId: string, userId: string): SkillRecord {
-    const dirSkill = this.get(directorySkillId);
+  async addDirectorySkillToUserLibrary(
+    directorySkillId: string,
+    userId: string
+  ): Promise<SkillRecord> {
+    const dirSkill = await this.get(directorySkillId);
     if (!dirSkill) {
       throw new Error("Directory skill not found.");
     }
 
     // Check if user already has a copy in their library
-    const existing = this.getByNameAndScope(dirSkill.name, "user", userId);
+    const existing = await this.getByNameAndScope(dirSkill.name, "user", userId);
     if (existing) return existing;
 
     // Create a copy in user library referencing storagePath and metadata
-    const userCopy = this.create({
+    const userCopy = await this.create({
       name: dirSkill.name,
       description: dirSkill.description,
       scope: "user",
@@ -873,8 +880,8 @@ export class SkillRepository {
     });
 
     // Copy file records
-    const files = this.listFiles(directorySkillId);
-    this.addFiles(
+    const files = await this.listFiles(directorySkillId);
+    await this.addFiles(
       userCopy.id,
       files.map((f) => ({
         relativePath: f.relativePath,
@@ -884,9 +891,9 @@ export class SkillRepository {
     );
 
     // Copy agent records if any
-    const agents = this.listSkillAgents(directorySkillId);
+    const agents = await this.listSkillAgents(directorySkillId);
     if (agents.length > 0) {
-      this.saveSkillAgents(userCopy.id, agents);
+      await this.saveSkillAgents(userCopy.id, agents);
     }
 
     return userCopy;

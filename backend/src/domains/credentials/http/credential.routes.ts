@@ -4,6 +4,7 @@ import {
   ProviderEndpointRequestSchema,
 } from "@charan-interiors/contracts";
 import { validateBody } from "../../../platform/http/middleware/validate.js";
+import { asyncHandler } from "../../../platform/http/middleware/asyncHandler.js";
 import { createRateLimiter } from "../../../platform/http/middleware/rateLimiter.js";
 import {
   listCredentials,
@@ -31,18 +32,18 @@ const mutationRateLimiter = createRateLimiter({
 
 credentialRouter.use(readRateLimiter);
 
-credentialRouter.get("/", listCredentials);
+credentialRouter.get("/", asyncHandler(listCredentials));
 credentialRouter.get("/attestation", getAttestation);
 credentialRouter.put(
   "/",
   mutationRateLimiter,
   validateBody(ProviderCredentialRequestSchema),
-  putCredential
+  asyncHandler(putCredential)
 );
 credentialRouter.patch(
   "/",
   mutationRateLimiter,
   validateBody(ProviderEndpointRequestSchema),
-  updateCredentialEndpoint
+  asyncHandler(updateCredentialEndpoint)
 );
-credentialRouter.delete("/:provider", mutationRateLimiter, removeCredential);
+credentialRouter.delete("/:provider", mutationRateLimiter, asyncHandler(removeCredential));

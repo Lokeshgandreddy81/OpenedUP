@@ -25,17 +25,17 @@ async function main(): Promise<void> {
 
   const db = getChatDatabase();
   const repo = new SkillRepository(db);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
   const conversationId = `manual-e2e-${Date.now()}`;
-  const csvSkill = repo.getByNameAndScope("csv-summary", "builtin");
+  const csvSkill = await repo.getByNameAndScope("csv-summary", "builtin");
   if (!csvSkill) {
     throw new Error("csv-summary builtin skill not found in database.");
   }
 
   // 1. Enable csv-summary skill
-  repo.setConversationSkills(conversationId, [csvSkill.id], "test-user");
-  const enabledSkills = repo.getConversationSkills(conversationId);
+  await repo.setConversationSkills(conversationId, [csvSkill.id], "test-user");
+  const enabledSkills = await repo.getConversationSkills(conversationId);
   console.log(`[Setup] Enabled skill: ${csvSkill.name} (ID: ${csvSkill.id})`);
 
   // 2. Initialize sandbox & prepare workspace

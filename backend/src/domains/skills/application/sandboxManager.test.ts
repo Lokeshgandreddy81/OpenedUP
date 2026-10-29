@@ -16,15 +16,15 @@ import { SkillRepository } from "../repositories/skillRepository.js";
 import { openChatDatabase } from "../../../platform/database/chatDatabase.js";
 import { seedBuiltinSkills } from "./seedBuiltinSkills.js";
 
-function createTestSandbox() {
+async function createTestSandbox() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sandbox-test-"));
   process.env["SANDBOX_BASE_DIR"] = tmpDir;
 
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
-  const skills = repo.listVisible("user-1");
+  const skills = await repo.listVisible("user-1");
   const paths = initSandbox("conv-sandbox-1", skills);
 
   return {
@@ -40,8 +40,8 @@ function createTestSandbox() {
   };
 }
 
-test("Sandbox - initSandbox creates directories and mounts skills read-only", () => {
-  const { paths, cleanup } = createTestSandbox();
+test("Sandbox - initSandbox creates directories and mounts skills read-only", async () => {
+  const { paths, cleanup } = await createTestSandbox();
   try {
     assert.ok(fs.existsSync(paths.workspaceDir));
     assert.ok(fs.existsSync(paths.skillsMountDir));
@@ -55,8 +55,8 @@ test("Sandbox - initSandbox creates directories and mounts skills read-only", ()
   }
 });
 
-test("Sandbox - Write & Read tools in workspace", () => {
-  const { paths, cleanup } = createTestSandbox();
+test("Sandbox - Write & Read tools in workspace", async () => {
+  const { paths, cleanup } = await createTestSandbox();
   try {
     // Write
     const writeRes = executeWrite("notes/todo.txt", "1. Test sandbox\n2. Ship skills", paths);
@@ -77,8 +77,8 @@ test("Sandbox - Write & Read tools in workspace", () => {
   }
 });
 
-test("Sandbox - Write tool rejects modifications to /mnt/skills (read-only mount)", () => {
-  const { paths, cleanup } = createTestSandbox();
+test("Sandbox - Write tool rejects modifications to /mnt/skills (read-only mount)", async () => {
+  const { paths, cleanup } = await createTestSandbox();
   try {
     const writeAttempt = executeWrite(
       "/mnt/skills/builtin/csv-summary/SKILL.md",
@@ -92,8 +92,8 @@ test("Sandbox - Write tool rejects modifications to /mnt/skills (read-only mount
   }
 });
 
-test("Sandbox - Path traversal attempts are blocked", () => {
-  const { paths, cleanup } = createTestSandbox();
+test("Sandbox - Path traversal attempts are blocked", async () => {
+  const { paths, cleanup } = await createTestSandbox();
   try {
     assert.throws(
       () => resolveSandboxPath("../../etc/passwd", paths),
@@ -109,7 +109,7 @@ test("Sandbox - Path traversal attempts are blocked", () => {
 });
 
 test("Sandbox - Bash tool executes commands inside workspace and runs python script", async () => {
-  const { paths, cleanup } = createTestSandbox();
+  const { paths, cleanup } = await createTestSandbox();
   try {
     // 1. Simple bash execution
     const echoRes = await executeBash("echo 'hello from sandbox'", paths);
@@ -136,7 +136,7 @@ test("Sandbox - Bash tool executes commands inside workspace and runs python scr
 });
 
 test("Sandbox - Bash tool enforces timeout limit", async () => {
-  const { paths, cleanup } = createTestSandbox();
+  const { paths, cleanup } = await createTestSandbox();
   try {
     const timeoutRes = await executeBash("sleep 3", paths, { timeoutMs: 150 });
     assert.equal(timeoutRes.isError, true);
@@ -146,8 +146,8 @@ test("Sandbox - Bash tool enforces timeout limit", async () => {
   }
 });
 
-test("Sandbox - SendUserFile creates downloadable attachment", () => {
-  const { paths, cleanup } = createTestSandbox();
+test("Sandbox - SendUserFile creates downloadable attachment", async () => {
+  const { paths, cleanup } = await createTestSandbox();
   try {
     executeWrite("report.pdf", "%PDF-fake-content", paths);
     const sendRes = executeSendUserFile("report.pdf", "conv-sandbox-1", paths);

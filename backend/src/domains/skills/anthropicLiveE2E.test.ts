@@ -22,17 +22,17 @@ describe("Live Anthropic E2E Tool Loop", () => {
 
     const db = getChatDatabase();
     const repo = new SkillRepository(db);
-    seedBuiltinSkills(repo);
+    await seedBuiltinSkills(repo);
 
     const conversationId = `live-e2e-${Date.now()}`;
-    const csvSkill = repo.getByNameAndScope("csv-summary", "builtin");
+    const csvSkill = await repo.getByNameAndScope("csv-summary", "builtin");
     assert.ok(csvSkill, "csv-summary skill must be seeded");
 
     // Enable skill on conversation
-    repo.setConversationSkills(conversationId, [csvSkill.id], "test-user");
+    await repo.setConversationSkills(conversationId, [csvSkill.id], "test-user");
 
     // Init sandbox
-    const enabledSkills = repo.getConversationSkills(conversationId);
+    const enabledSkills = await repo.getConversationSkills(conversationId);
     const sandbox = initSandbox(conversationId, enabledSkills);
 
     // Put a sample CSV in workspace

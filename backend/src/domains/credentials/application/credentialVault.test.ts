@@ -48,7 +48,7 @@ function setupIsolatedEnv() {
   };
 }
 
-test("1. Master key derivation and permission enforcement", () => {
+test("1. Master key derivation and permission enforcement", async () => {
   const { tmpDir, cleanup } = setupIsolatedEnv();
   try {
     // 1.1 Filesystem fallback generates 32-byte key with 0700 dir and 0600 file permissions
@@ -103,14 +103,14 @@ test("1. Master key derivation and permission enforcement", () => {
   }
 });
 
-test("2. AES-256-GCM cipher setup, 12-byte random nonces, auth tags, and CRUD", () => {
+test("2. AES-256-GCM cipher setup, 12-byte random nonces, auth tags, and CRUD", async () => {
   const { cleanup } = setupIsolatedEnv();
   try {
     const userId = `usr_${crypto.randomUUID()}`;
     const provider = "openai";
 
     // 2.1 Save credential
-    saveProviderCredential(userId, provider, {
+    await saveProviderCredential(userId, provider, {
       apiKey: "sk-test-secret-key-12345",
       baseUrl: "https://api.openai.com/v1",
     });
@@ -141,14 +141,14 @@ test("2. AES-256-GCM cipher setup, 12-byte random nonces, auth tags, and CRUD", 
     );
 
     // 2.3 Retrieve credential
-    const retrieved = getProviderCredential(userId, provider);
+    const retrieved = await getProviderCredential(userId, provider);
     assert.ok(retrieved);
     assert.equal(retrieved.apiKey, "sk-test-secret-key-12345");
     assert.equal(retrieved.baseUrl, "https://api.openai.com/v1");
 
     // 2.4 Nonce freshness on conflict update
     const firstNonce = Buffer.from(row.nonce);
-    saveProviderCredential(userId, provider, {
+    await saveProviderCredential(userId, provider, {
       apiKey: "sk-test-updated-key-99999",
     });
 
@@ -168,23 +168,23 @@ test("2. AES-256-GCM cipher setup, 12-byte random nonces, auth tags, and CRUD", 
       "New 12-byte nonce must be generated on every update to prevent nonce reuse"
     );
 
-    const updatedRetrieved = getProviderCredential(userId, provider);
+    const updatedRetrieved = await getProviderCredential(userId, provider);
     assert.equal(updatedRetrieved?.apiKey, "sk-test-updated-key-99999");
     assert.equal(updatedRetrieved?.baseUrl, undefined);
 
     // 2.5 List credentials
-    saveProviderCredential(userId, "anthropic", { apiKey: "sk-ant-111" });
-    saveProviderCredential(userId, "google", { apiKey: "AIza-222" });
+    await saveProviderCredential(userId, "anthropic", { apiKey: "sk-ant-111" });
+    await saveProviderCredential(userId, "google", { apiKey: "AIza-222" });
 
-    const providers = listProviderCredentials(userId);
+    const providers = await listProviderCredentials(userId);
     assert.deepEqual(providers, ["anthropic", "google", "openai"]);
 
     // User isolation in listing
-    const otherUserProviders = listProviderCredentials("other-user-999");
+    const otherUserProviders = await listProviderCredentials("other-user-999");
     assert.deepEqual(otherUserProviders, []);
 
     // 2.6 Atomic endpoint update
-    const endpointUpdated = updateProviderEndpoint(
+    const endpointUpdated = await updateProviderEndpoint(
       userId,
       "anthropic",
       "https://proxy.anthropic.internal"
@@ -193,48 +193,48 @@ test("2. AES-256-GCM cipher setup, 12-byte random nonces, auth tags, and CRUD", 
     assert.equal(endpointUpdated.apiKey, "sk-ant-111");
     assert.equal(endpointUpdated.baseUrl, "https://proxy.anthropic.internal");
 
-    const endpointFetched = getProviderCredential(userId, "anthropic");
+    const endpointFetched = await getProviderCredential(userId, "anthropic");
     assert.equal(endpointFetched?.baseUrl, "https://proxy.anthropic.internal");
 
     // Updating non-existent returns null
-    const nonExistent = updateProviderEndpoint(userId, "deepseek", "https://api.deepseek.com");
+    const nonExistent = await updateProviderEndpoint(userId, "deepseek", "https://api.deepseek.com");
     assert.equal(nonExistent, null);
   } finally {
     cleanup();
   }
 });
 
-test("3. Secure deletion and pre-deletion zero-shredding", () => {
+test("3. Secure deletion and pre-deletion zero-shredding", async () => {
   const { cleanup } = setupIsolatedEnv();
   try {
     const userId = "user-delete-test";
     const provider = "google";
 
-    saveProviderCredential(userId, provider, { apiKey: "AIza-secure-delete" });
-    assert.ok(getProviderCredential(userId, provider));
+    await saveProviderCredential(userId, provider, { apiKey: "AIza-secure-delete" });
+    assert.ok(await getProviderCredential(userId, provider));
 
-    const deleted = deleteProviderCredential(userId, provider);
+    const deleted = await deleteProviderCredential(userId, provider);
     assert.equal(deleted, true);
 
     // Record is removed
-    assert.equal(getProviderCredential(userId, provider), null);
-    assert.deepEqual(listProviderCredentials(userId), []);
+    assert.equal(await getProviderCredential(userId, provider), null);
+    assert.deepEqual(await listProviderCredentials(userId), []);
 
     // Deleting again returns false
-    assert.equal(deleteProviderCredential(userId, provider), false);
+    assert.equal(await deleteProviderCredential(userId, provider), false);
   } finally {
     cleanup();
   }
 });
 
-test("4. Tampering resistance and AAD cross-user/cross-provider swapping protection", () => {
+test("4. Tampering resistance and AAD cross-user/cross-provider swapping protection", async () => {
   const { cleanup } = setupIsolatedEnv();
   try {
     const aliceId = "alice-uid";
     const bobId = "bob-uid";
     const db = getChatDatabase();
 
-    saveProviderCredential(aliceId, "openai", { apiKey: "alice-openai-secret" });
+    await saveProviderCredential(aliceId, "openai", { apiKey: "alice-openai-secret" });
 
     const aliceRow = db
       .prepare(
@@ -250,8 +250,8 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
 
     // Bob attempts to decrypt Alice's ciphertext
     // AAD = `${bobId}:openai` does not match Alice's AAD `${aliceId}:openai`
-    assert.throws(
-      () => getProviderCredential(bobId, "openai"),
+    await assert.rejects(
+      async () => await getProviderCredential(bobId, "openai"),
       (err: unknown) => {
         assert.ok(err instanceof CredentialDecryptionError);
         assert.ok(err.message.includes("authentication failed"));
@@ -267,8 +267,8 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
     ).run(aliceId, "anthropic", aliceRow.nonce, aliceRow.auth_tag, aliceRow.ciphertext, Date.now());
 
     // Decryption attempts with provider 'anthropic' but ciphertext was encrypted under 'openai'
-    assert.throws(
-      () => getProviderCredential(aliceId, "anthropic"),
+    await assert.rejects(
+      async () => await getProviderCredential(aliceId, "anthropic"),
       (err: unknown) => {
         assert.ok(err instanceof CredentialDecryptionError);
         return true;
@@ -283,8 +283,8 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
       "UPDATE provider_credentials SET ciphertext = ? WHERE user_id = ? AND provider_id = ?"
     ).run(tamperedCiphertext, aliceId, "openai");
 
-    assert.throws(
-      () => getProviderCredential(aliceId, "openai"),
+    await assert.rejects(
+      async () => await getProviderCredential(aliceId, "openai"),
       CredentialDecryptionError,
       "Bit-flipped ciphertext must fail authentication"
     );
@@ -296,8 +296,8 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
       "UPDATE provider_credentials SET auth_tag = ?, ciphertext = ? WHERE user_id = ? AND provider_id = ?"
     ).run(tamperedTag, aliceRow.ciphertext, aliceId, "openai");
 
-    assert.throws(
-      () => getProviderCredential(aliceId, "openai"),
+    await assert.rejects(
+      async () => await getProviderCredential(aliceId, "openai"),
       CredentialDecryptionError,
       "Bit-flipped auth tag must fail authentication"
     );
@@ -309,8 +309,8 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
       "UPDATE provider_credentials SET nonce = ?, auth_tag = ?, ciphertext = ? WHERE user_id = ? AND provider_id = ?"
     ).run(tamperedNonce, aliceRow.auth_tag, aliceRow.ciphertext, aliceId, "openai");
 
-    assert.throws(
-      () => getProviderCredential(aliceId, "openai"),
+    await assert.rejects(
+      async () => await getProviderCredential(aliceId, "openai"),
       CredentialDecryptionError,
       "Bit-flipped nonce must fail authentication"
     );
@@ -320,19 +320,19 @@ test("4. Tampering resistance and AAD cross-user/cross-provider swapping protect
       "UPDATE provider_credentials SET nonce = ? WHERE user_id = ? AND provider_id = ?"
     ).run(Buffer.alloc(8, 0), aliceId, "openai");
 
-    assert.throws(() => getProviderCredential(aliceId, "openai"), /Invalid nonce length/);
+    await assert.rejects(async () => await getProviderCredential(aliceId, "openai"), /Invalid nonce length/);
 
     db.prepare(
       "UPDATE provider_credentials SET nonce = ?, auth_tag = ? WHERE user_id = ? AND provider_id = ?"
     ).run(aliceRow.nonce, Buffer.alloc(8, 0), aliceId, "openai");
 
-    assert.throws(() => getProviderCredential(aliceId, "openai"), /Invalid auth tag length/);
+    await assert.rejects(async () => await getProviderCredential(aliceId, "openai"), /Invalid auth tag length/);
   } finally {
     cleanup();
   }
 });
 
-test("5. Wrong master key resistance", () => {
+test("5. Wrong master key resistance", async () => {
   const { cleanup } = setupIsolatedEnv();
   try {
     const userId = "key-rotation-test-user";
@@ -340,26 +340,26 @@ test("5. Wrong master key resistance", () => {
     const keyB = crypto.randomBytes(32);
 
     process.env["BYOK_ENCRYPTION_KEY"] = keyA.toString("base64");
-    saveProviderCredential(userId, "openai", { apiKey: "key-a-secret" });
+    await saveProviderCredential(userId, "openai", { apiKey: "key-a-secret" });
 
     // Switch to key B (e.g. wrong key configured)
     process.env["BYOK_ENCRYPTION_KEY"] = keyB.toString("base64");
-    assert.throws(
-      () => getProviderCredential(userId, "openai"),
+    await assert.rejects(
+      async () => await getProviderCredential(userId, "openai"),
       CredentialDecryptionError,
       "Decryption with wrong master key must throw CredentialDecryptionError"
     );
 
     // Switch back to key A
     process.env["BYOK_ENCRYPTION_KEY"] = keyA.toString("base64");
-    const recovered = getProviderCredential(userId, "openai");
+    const recovered = await getProviderCredential(userId, "openai");
     assert.equal(recovered?.apiKey, "key-a-secret");
   } finally {
     cleanup();
   }
 });
 
-test("6. Agent 1: Secure in-memory buffer wiping and scoped execution", () => {
+test("6. Agent 1: Secure in-memory buffer wiping and scoped execution", async () => {
   const buf = Buffer.from("super-secret-temporary-key");
   assert.equal(buf.toString("utf8"), "super-secret-temporary-key");
   secureWipeBuffer(buf);
@@ -374,21 +374,21 @@ test("6. Agent 1: Secure in-memory buffer wiping and scoped execution", () => {
   try {
     const key = crypto.randomBytes(32);
     process.env["BYOK_ENCRYPTION_KEY"] = key.toString("base64");
-    saveProviderCredential("mem-user", "anthropic", { apiKey: "sk-ant-test-123" });
+    await saveProviderCredential("mem-user", "anthropic", { apiKey: "sk-ant-test-123" });
 
-    const executed = withDecryptedCredential("mem-user", "anthropic", (cred) => {
+    const executed = await withDecryptedCredential("mem-user", "anthropic", (cred) => {
       return cred.apiKey.toUpperCase();
     });
     assert.equal(executed, "SK-ANT-TEST-123");
 
-    const nonExistent = withDecryptedCredential("mem-user", "google", (c) => c.apiKey);
+    const nonExistent = await withDecryptedCredential("mem-user", "google", (c) => c.apiKey);
     assert.equal(nonExistent, null);
   } finally {
     cleanup();
   }
 });
 
-test("7. Agent 2: Zero-downtime key rotation with fallback keys and re-encryption", () => {
+test("7. Agent 2: Zero-downtime key rotation with fallback keys and re-encryption", async () => {
   const { cleanup } = setupIsolatedEnv();
   try {
     const oldKey = crypto.randomBytes(32);
@@ -397,7 +397,7 @@ test("7. Agent 2: Zero-downtime key rotation with fallback keys and re-encryptio
 
     // 1. Initial credential saved under old key
     process.env["BYOK_ENCRYPTION_KEY"] = oldKey.toString("base64");
-    saveProviderCredential(userId, "openai", { apiKey: "original-openai-key" });
+    await saveProviderCredential(userId, "openai", { apiKey: "original-openai-key" });
 
     // 2. Rotate to newKey, keeping oldKey in fallback list
     process.env["BYOK_ENCRYPTION_KEY"] = newKey.toString("base64");
@@ -408,12 +408,12 @@ test("7. Agent 2: Zero-downtime key rotation with fallback keys and re-encryptio
     assert.deepEqual(fallbacks[0], oldKey);
 
     // 3. Credential is decrypted via fallback AND transparently re-encrypted with newKey!
-    const decrypted = getProviderCredential(userId, "openai");
+    const decrypted = await getProviderCredential(userId, "openai");
     assert.equal(decrypted?.apiKey, "original-openai-key");
 
     // 4. Remove fallback keys: reading MUST succeed with newKey alone because it was re-encrypted!
     delete process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"];
-    const decryptedWithNewKeyAlone = getProviderCredential(userId, "openai");
+    const decryptedWithNewKeyAlone = await getProviderCredential(userId, "openai");
     assert.equal(decryptedWithNewKeyAlone?.apiKey, "original-openai-key");
 
     // Proactive canary probe verifyVaultHealth
@@ -425,7 +425,7 @@ test("7. Agent 2: Zero-downtime key rotation with fallback keys and re-encryptio
   }
 });
 
-test("8. Agent 3 & 4: Hierarchical Key Derivation (HKDF) & Cryptographic Materials Cache", () => {
+test("8. Agent 3 & 4: Hierarchical Key Derivation (HKDF) & Cryptographic Materials Cache", async () => {
   const masterKey = crypto.randomBytes(32);
 
   // Deterministic HKDF derivation
@@ -460,7 +460,7 @@ test("8. Agent 3 & 4: Hierarchical Key Derivation (HKDF) & Cryptographic Materia
   assert.equal(CryptographicMaterialsCache.get("cache-test-2"), null);
 });
 
-test("9. Agent 5: Blind indexing for zero-knowledge queries and audit sanitizer", () => {
+test("9. Agent 5: Blind indexing for zero-knowledge queries and audit sanitizer", async () => {
   const masterKey = crypto.randomBytes(32);
   const hash1 = generateBlindIndex("acme-customer@example.com", masterKey);
   const hash2 = generateBlindIndex("ACME-CUSTOMER@example.com", masterKey);
@@ -479,7 +479,7 @@ test("9. Agent 5: Blind indexing for zero-knowledge queries and audit sanitizer"
   assert.equal(sanitized.baseUrl, "https://api.openai.com/v1");
 });
 
-test("10. Agent 6: Runtime attestation integrity fingerprint", () => {
+test("10. Agent 6: Runtime attestation integrity fingerprint", async () => {
   const { cleanup } = setupIsolatedEnv();
   try {
     const key = crypto.randomBytes(32);
@@ -497,7 +497,7 @@ test("10. Agent 6: Runtime attestation integrity fingerprint", () => {
   }
 });
 
-test("11. Agent 5: Constant-time comparison defends against timing attacks", () => {
+test("11. Agent 5: Constant-time comparison defends against timing attacks", async () => {
   const secretA = "5f4dcc3b5aa765d61d8327deb882cf99";
   const secretB = "5f4dcc3b5aa765d61d8327deb882cf99";
   const secretC = "5f4dcc3b5aa765d61d8327deb882cf00";
@@ -510,7 +510,7 @@ test("11. Agent 5: Constant-time comparison defends against timing attacks", () 
   assert.equal(constantTimeEqual(Buffer.from(secretA), Buffer.from(secretC)), false);
 });
 
-test("12. Agent 2: Bulk database re-encryption sweeps and migrates all fallback records", () => {
+test("12. Agent 2: Bulk database re-encryption sweeps and migrates all fallback records", async () => {
   const { cleanup } = setupIsolatedEnv();
   try {
     const keyOld = crypto.randomBytes(32);
@@ -518,36 +518,36 @@ test("12. Agent 2: Bulk database re-encryption sweeps and migrates all fallback 
 
     // Save records under keyOld
     process.env["BYOK_ENCRYPTION_KEY"] = keyOld.toString("base64");
-    saveProviderCredential("bulk-user-1", "openai", { apiKey: "key-1" });
-    saveProviderCredential("bulk-user-1", "anthropic", { apiKey: "key-2" });
-    saveProviderCredential("bulk-user-1", "google", { apiKey: "key-3" });
+    await saveProviderCredential("bulk-user-1", "openai", { apiKey: "key-1" });
+    await saveProviderCredential("bulk-user-1", "anthropic", { apiKey: "key-2" });
+    await saveProviderCredential("bulk-user-1", "google", { apiKey: "key-3" });
 
     // Rotate active key to keyNew with keyOld as fallback
     process.env["BYOK_ENCRYPTION_KEY"] = keyNew.toString("base64");
     process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"] = keyOld.toString("base64");
 
     // Proactive migration sweep for bulk-user-1
-    const result = reencryptAllCredentialsWithPrimaryKey("bulk-user-1");
+    const result = await reencryptAllCredentialsWithPrimaryKey("bulk-user-1");
     assert.equal(result.total, 3);
     assert.equal(result.reencrypted, 3);
     assert.equal(result.failed, 0);
 
     // Running again: all should now be skipped because they are already under primary key!
-    const secondPass = reencryptAllCredentialsWithPrimaryKey("bulk-user-1");
+    const secondPass = await reencryptAllCredentialsWithPrimaryKey("bulk-user-1");
     assert.equal(secondPass.skipped, 3);
     assert.equal(secondPass.reencrypted, 0);
 
     // Remove fallback keys completely: everything must still decrypt cleanly under keyNew!
     delete process.env["BYOK_FALLBACK_ENCRYPTION_KEYS"];
-    assert.equal(getProviderCredential("bulk-user-1", "openai")?.apiKey, "key-1");
-    assert.equal(getProviderCredential("bulk-user-1", "anthropic")?.apiKey, "key-2");
-    assert.equal(getProviderCredential("bulk-user-1", "google")?.apiKey, "key-3");
+    assert.equal((await getProviderCredential("bulk-user-1", "openai"))?.apiKey, "key-1");
+    assert.equal((await getProviderCredential("bulk-user-1", "anthropic"))?.apiKey, "key-2");
+    assert.equal((await getProviderCredential("bulk-user-1", "google"))?.apiKey, "key-3");
   } finally {
     cleanup();
   }
 });
 
-test("13. Agent 2 & 3: Defensive clone on cached materials and soft quarantine", () => {
+test("13. Agent 2 & 3: Defensive clone on cached materials and soft quarantine", async () => {
   // Defensive clone prevents caller mutations
   CryptographicMaterialsCache.clear();
   const rawKey = crypto.randomBytes(32);
@@ -573,20 +573,20 @@ test("13. Agent 2 & 3: Defensive clone on cached materials and soft quarantine",
   try {
     const key = crypto.randomBytes(32);
     process.env["BYOK_ENCRYPTION_KEY"] = key.toString("base64");
-    saveProviderCredential("quarantine-user", "openai", { apiKey: "test-key" });
+    await saveProviderCredential("quarantine-user", "openai", { apiKey: "test-key" });
 
     // Quarantine without shredding
-    const qResult = purgeOrQuarantineCredential("quarantine-user", "openai", {
+    const qResult = await purgeOrQuarantineCredential("quarantine-user", "openai", {
       quarantineOnly: true,
     });
     assert.equal(qResult.quarantined, true);
     assert.equal(qResult.shredded, false);
 
     // Active purge
-    const pResult = purgeOrQuarantineCredential("quarantine-user", "openai");
+    const pResult = await purgeOrQuarantineCredential("quarantine-user", "openai");
     assert.equal(pResult.quarantined, false);
     assert.equal(pResult.shredded, true);
-    assert.equal(getProviderCredential("quarantine-user", "openai"), null);
+    assert.equal(await getProviderCredential("quarantine-user", "openai"), null);
   } finally {
     cleanup();
   }

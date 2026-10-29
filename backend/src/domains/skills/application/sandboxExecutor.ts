@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import type { SandboxPaths } from "./sandboxManager.js";
+import { Sandbox } from "@vercel/sandbox";
 
 export const DEFAULT_COMMAND_TIMEOUT_MS = 60000; // 60s
 export const MAX_OUTPUT_BYTES = 1024 * 1024; // 1MB
@@ -112,6 +113,58 @@ export class DockerSandboxExecutor implements SandboxExecutor {
 
   async cleanupConversation(): Promise<void> {
     // Docker containers are run with --rm so they auto-clean on termination
+  }
+}
+
+/** Isolated persistent workspace backed by Vercel's Firecracker sandbox. */
+export class VercelSandboxExecutor implements SandboxExecutor {
+  public readonly name = "vercel-sandbox";
+  private readonly queue = new Map<string, Promise<unknown>>();
+
+  async isAvailable(): Promise<boolean> {
+    return process.env["VERCEL"] === "1";
+  }
+
+  async execute(command: string, paths: SandboxPaths, options?: SandboxExecutionOptions): Promise<ExecutionResult> {
+    const conversationId = path.basename(paths.baseDir).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 48);
+    return this.serialized(conversationId, async () => {
+      const sandbox = await this.getSandbox(conversationId);
+      const result = await sandbox.runCommand({
+        cmd: "bash",
+        args: ["-lc", command],
+        cwd: "/vercel/sandbox/workspace",
+        timeoutMs: options?.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS,
+      });
+      return {
+        stdout: (await result.stdout()).slice(0, MAX_OUTPUT_BYTES),
+        stderr: (await result.stderr()).slice(0, MAX_OUTPUT_BYTES),
+        exitCode: result.exitCode ?? 1,
+        timedOut: result.exitCode === null,
+      };
+    });
+  }
+
+  async withConversation<T>(conversationId: string, work: (sandbox: Sandbox) => Promise<T>): Promise<T> {
+    return this.serialized(conversationId, async () => work(await this.getSandbox(conversationId)));
+  }
+
+  private async getSandbox(conversationId: string): Promise<Sandbox> {
+    return Sandbox.getOrCreate({
+      name: `openedup-${conversationId}`,
+      runtime: "node24",
+      timeout: 5 * 60 * 1000,
+    });
+  }
+
+  private async serialized<T>(key: string, work: () => Promise<T>): Promise<T> {
+    const prior = this.queue.get(key) ?? Promise.resolve();
+    const current = prior.catch(() => undefined).then(work);
+    this.queue.set(key, current);
+    try {
+      return await current;
+    } finally {
+      if (this.queue.get(key) === current) this.queue.delete(key);
+    }
   }
 }
 
@@ -308,6 +361,7 @@ function runProcessWithLimits(
  * Factory to retrieve the active SandboxExecutor.
  */
 export function getSandboxExecutor(): SandboxExecutor {
+  if (process.env["VERCEL"] === "1") return new VercelSandboxExecutor();
   const mode = process.env["SANDBOX_MODE"] || "docker";
   const nodeEnv = process.env["NODE_ENV"];
   const isDevOrTest = nodeEnv === "development" || nodeEnv === "test" || !nodeEnv;

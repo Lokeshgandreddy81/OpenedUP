@@ -3,6 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { SkillFileEntry } from "./skillParser.js";
+import { getSupabaseStorageAdmin } from "../../../platform/storage/supabaseStorage.js";
+
+const SKILL_FILES_BUCKET = "openedup-skill-files";
+const REMOTE_SKILL_PREFIX = "supabase://skills/";
 
 export class SkillIntegrityError extends Error {
   constructor(message: string) {
@@ -28,6 +32,56 @@ export function getSkillsStorageDir(): string {
 export function resolveSkillVersionDir(scope: string, name: string, version: number): string {
   const root = getSkillsStorageDir();
   return path.join(root, scope, name, `v${version}`);
+}
+
+export function createSkillStoragePath(skillId: string, version: number): string {
+  if (process.env["VERCEL"] === "1" || process.env["DATABASE_URL"]?.trim()) {
+    return `${REMOTE_SKILL_PREFIX}${skillId}/v${version}`;
+  }
+  return path.join(getSkillsStorageDir(), "skills", skillId, `v${version}`);
+}
+
+function remoteObjectPath(storagePath: string, relativePath: string): string {
+  const prefix = storagePath.slice(REMOTE_SKILL_PREFIX.length);
+  const segments = relativePath.replace(/\\/g, "/").split("/");
+  if (
+    !prefix ||
+    prefix.startsWith("/") ||
+    prefix.split("/").some((segment) => !segment || segment === "." || segment === "..") ||
+    segments.some((segment) => !segment || segment === "." || segment === "..")
+  ) {
+    throw new Error("Invalid skill storage path.");
+  }
+  return `skills/${prefix}/${segments.join("/")}`;
+}
+
+export async function persistSkillFiles(storagePath: string, files: SkillFileEntry[]): Promise<void> {
+  if (!storagePath.startsWith(REMOTE_SKILL_PREFIX)) {
+    writeSkillFilesToDisk(storagePath, files);
+    return;
+  }
+  const bucket = getSupabaseStorageAdmin().storage.from(SKILL_FILES_BUCKET);
+  for (const file of files) {
+    const contentType = file.relativePath.toLowerCase().endsWith(".md")
+      ? "text/markdown"
+      : "application/octet-stream";
+    const { error } = await bucket.upload(remoteObjectPath(storagePath, file.relativePath), file.content, {
+      contentType,
+      upsert: true,
+    });
+    if (error) throw new Error("Could not persist skill package content to Supabase Storage.");
+  }
+}
+
+export async function readSkillFile(storagePath: string, relativePath: string): Promise<Buffer | null> {
+  if (!storagePath.startsWith(REMOTE_SKILL_PREFIX)) {
+    return readSkillFileFromDisk(storagePath, relativePath);
+  }
+  const { data, error } = await getSupabaseStorageAdmin()
+    .storage.from(SKILL_FILES_BUCKET)
+    .download(remoteObjectPath(storagePath, relativePath));
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
 }
 
 /**

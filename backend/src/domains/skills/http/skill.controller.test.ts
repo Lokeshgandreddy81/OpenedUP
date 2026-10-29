@@ -71,11 +71,11 @@ Do work.`)
   return zip.toBuffer();
 }
 
-test("Skill Registry API - listSkills returns seeded builtin skills and filters", () => {
+test("Skill Registry API - listSkills returns seeded builtin skills and filters", async () => {
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
   setSkillRepository(repo);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
   const { res, getStatus, getBody } = mockRes();
   const req = {
@@ -84,7 +84,7 @@ test("Skill Registry API - listSkills returns seeded builtin skills and filters"
     headers: {},
   } as unknown as Request;
 
-  listSkills(req, res);
+  await listSkills(req, res);
   assert.equal(getStatus(), 200);
   const skills = getBody().skills;
   assert.ok(Array.isArray(skills));
@@ -99,19 +99,19 @@ test("Skill Registry API - listSkills returns seeded builtin skills and filters"
     headers: {},
   } as unknown as Request;
 
-  listSkills(reqQuery, resQuery);
+  await listSkills(reqQuery, resQuery);
   const filtered = getQueryBody().skills;
   assert.equal(filtered.length, 1);
   assert.equal(filtered[0]!.name, "csv-summary");
 });
 
-test("Skill Registry API - getSkill returns metadata with file tree", () => {
+test("Skill Registry API - getSkill returns metadata with file tree", async () => {
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
   setSkillRepository(repo);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
-  const builtin = repo.getByNameAndScope("csv-summary", "builtin");
+  const builtin = await repo.getByNameAndScope("csv-summary", "builtin");
   assert.ok(builtin);
 
   const { res, getStatus, getBody } = mockRes();
@@ -121,7 +121,7 @@ test("Skill Registry API - getSkill returns metadata with file tree", () => {
     headers: {},
   } as unknown as Request;
 
-  getSkill(req, res);
+  await getSkill(req, res);
   assert.equal(getStatus(), 200);
   const skill = getBody().skill;
   assert.equal(skill.name, "csv-summary");
@@ -184,7 +184,7 @@ test("Skill Registry API - createSkill, updateSkill (versioning), deleteSkill wi
     params: { id: created.id },
     headers: {},
   } as unknown as Request;
-  deleteSkill(reqBobDel, resBobDel);
+  await deleteSkill(reqBobDel, resBobDel);
   assert.equal(getBobDelStatus(), 403);
 
   // 5. Authorized delete by user-alice
@@ -194,18 +194,18 @@ test("Skill Registry API - createSkill, updateSkill (versioning), deleteSkill wi
     params: { id: created.id },
     headers: {},
   } as unknown as Request;
-  deleteSkill(reqDel, resDel);
+  await deleteSkill(reqDel, resDel);
   assert.equal(getDelStatus(), 204);
-  assert.equal(repo.get(created.id), null);
+  assert.equal(await repo.get(created.id), null);
 });
 
-test("Skill Registry API - Conversation skills permissions guard (cannot enable private skill of other user)", () => {
+test("Skill Registry API - Conversation skills permissions guard (cannot enable private skill of other user)", async () => {
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
   setSkillRepository(repo);
 
   // User Alice's private skill
-  const aliceSkill = repo.create({
+  const aliceSkill = await repo.create({
     name: "alice-secret",
     description: "Alice private skill",
     scope: "user",
@@ -222,7 +222,7 @@ test("Skill Registry API - Conversation skills permissions guard (cannot enable 
     headers: {},
   } as unknown as Request;
 
-  setConversationSkills(reqBob, resBob);
+  await setConversationSkills(reqBob, resBob);
   assert.equal(getBobStatus(), 403);
   assert.ok(getBobBody().error.includes("access denied"));
 
@@ -242,7 +242,7 @@ test("Skill Registry API - Conversation skills permissions guard (cannot enable 
     headers: {},
   } as unknown as Request;
 
-  setConversationSkills(reqAlice, resAlice);
+  await setConversationSkills(reqAlice, resAlice);
   assert.equal(getAliceStatus(), 200);
   assert.equal(getAliceBody().skills.length, 1);
   assert.equal(getAliceBody().skills[0]!.name, "alice-secret");

@@ -107,7 +107,7 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
   let payload = req.body as ChatRequest;
   try {
     payload = await resolveStoredChatImages(req, res, payload);
-    const credential = resolveRequestProviderCredential(req, payload);
+    const credential = await resolveRequestProviderCredential(req, payload);
     if (!requireUserCredential(req, res, payload, credential.apiKey)) return;
 
     const result = await processChat(payload, {
@@ -156,10 +156,10 @@ export async function handleChatStream(
 ): Promise<void> {
   const startTime = Date.now();
   let payload = req.body as ChatRequest;
-  let credential: ReturnType<typeof resolveRequestProviderCredential>;
+  let credential: Awaited<ReturnType<typeof resolveRequestProviderCredential>>;
   try {
     payload = await resolveStoredChatImages(req, res, payload);
-    credential = resolveRequestProviderCredential(req, payload);
+    credential = await resolveRequestProviderCredential(req, payload);
   } catch (error: unknown) {
     logEvent("ERROR /api/chat/stream credential lookup", {
       requestId: req.id,
@@ -262,10 +262,10 @@ export async function handleChapterChat(
   _next: NextFunction
 ): Promise<void> {
   let request = req.body as ChapterChatRequest;
-  let credential: ReturnType<typeof resolveRequestProviderCredential>;
+  let credential: Awaited<ReturnType<typeof resolveRequestProviderCredential>>;
   try {
     request = await resolveStoredChapterImages(req, res, request);
-    credential = resolveRequestProviderCredential(req, request);
+    credential = await resolveRequestProviderCredential(req, request);
   } catch (error: unknown) {
     const status = error instanceof AppError ? error.statusCode : 400;
     res.status(status).json({
@@ -313,10 +313,10 @@ export async function handleChapterChatStream(
   _next: NextFunction
 ): Promise<void> {
   let request = req.body as ChapterChatRequest;
-  let credential: ReturnType<typeof resolveRequestProviderCredential>;
+  let credential: Awaited<ReturnType<typeof resolveRequestProviderCredential>>;
   try {
     request = await resolveStoredChapterImages(req, res, request);
-    credential = resolveRequestProviderCredential(req, request);
+    credential = await resolveRequestProviderCredential(req, request);
   } catch (error: unknown) {
     const status = error instanceof AppError ? error.statusCode : 400;
     res.status(status).json({

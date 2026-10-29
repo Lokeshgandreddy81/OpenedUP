@@ -37,77 +37,77 @@ export class ScheduledTaskService {
     private readonly loadCredential: CredentialLoader = getProviderCredential
   ) {}
 
-  list(userId: string): ScheduledTaskRecord[] {
-    return this.tasks.list(userId);
+  async list(userId: string): Promise<ScheduledTaskRecord[]> {
+    return await this.tasks.list(userId);
   }
 
-  create(userId: string, input: ScheduledTaskInput, headerBaseUrl?: string): ScheduledTaskRecord {
+  async create(userId: string, input: ScheduledTaskInput, headerBaseUrl?: string): Promise<ScheduledTaskRecord> {
     this.assertModel(input.model);
     const provider = getModelMeta(input.model).provider as ProviderId;
-    const existing = this.loadCredential(userId, provider);
+    const existing = await this.loadCredential(userId, provider);
     const apiKey = input.apiKey?.trim() || existing?.apiKey;
     const baseUrl = headerBaseUrl?.trim() || existing?.baseUrl;
     if (apiKey) {
-      saveProviderCredential(userId, provider, {
+      await saveProviderCredential(userId, provider, {
         apiKey,
         ...(baseUrl ? { baseUrl } : {}),
       });
     }
-    return this.tasks.create(userId, input);
+    return await this.tasks.create(userId, input);
   }
 
-  update(
+  async update(
     userId: string,
     id: string,
     input: UpdateScheduledTaskRequest,
     headerBaseUrl?: string
-  ): ScheduledTaskRecord | null {
+  ): Promise<ScheduledTaskRecord | null> {
     this.assertModel(input.model);
     const provider = getModelMeta(input.model).provider as ProviderId;
-    const existing = this.loadCredential(userId, provider);
+    const existing = await this.loadCredential(userId, provider);
     const apiKey = input.apiKey?.trim() || existing?.apiKey;
     const baseUrl = headerBaseUrl?.trim() || existing?.baseUrl;
     if (apiKey) {
-      saveProviderCredential(userId, provider, {
+      await saveProviderCredential(userId, provider, {
         apiKey,
         ...(baseUrl ? { baseUrl } : {}),
       });
     }
-    return this.tasks.update(userId, id, input);
+    return await this.tasks.update(userId, id, input);
   }
 
-  delete(userId: string, id: string): boolean {
-    return this.tasks.delete(userId, id);
+  async delete(userId: string, id: string): Promise<boolean> {
+    return await this.tasks.delete(userId, id);
   }
 
-  import(userId: string, input: ImportScheduledTasksRequest) {
+  async import(userId: string, input: ImportScheduledTasksRequest) {
     for (const task of input.tasks) {
       this.assertModel(task.model);
       if (task.apiKey?.trim()) {
         const provider = getModelMeta(task.model).provider as ProviderId;
-        const existing = this.loadCredential(userId, provider);
-        saveProviderCredential(userId, provider, {
+        const existing = await this.loadCredential(userId, provider);
+        await saveProviderCredential(userId, provider, {
           apiKey: task.apiKey.trim(),
           ...(existing?.baseUrl ? { baseUrl: existing.baseUrl } : {}),
         });
       }
     }
-    return this.tasks.import(userId, input);
+    return await this.tasks.import(userId, input);
   }
 
-  runNow(
+  async runNow(
     userId: string,
     taskId: string,
     credential?: { apiKey?: string; baseUrl?: string }
-  ): ScheduledTaskRunRecord | null {
-    const task = this.tasks.get(userId, taskId);
+  ): Promise<ScheduledTaskRunRecord | null> {
+    const task = await this.tasks.get(userId, taskId);
     if (!task) return null;
     const provider = getModelMeta(task.model).provider as ProviderId;
-    const saved = this.loadCredential(userId, provider);
+    const saved = await this.loadCredential(userId, provider);
     const apiKey = credential?.apiKey?.trim() || saved?.apiKey;
     const baseUrl = credential?.baseUrl?.trim() || saved?.baseUrl;
     if (apiKey) {
-      saveProviderCredential(userId, provider, {
+      await saveProviderCredential(userId, provider, {
         apiKey,
         ...(baseUrl ? { baseUrl } : {}),
       });
@@ -117,25 +117,25 @@ export class ScheduledTaskService {
         `MISSING_API_KEY:${provider}:Connect your ${PROVIDER_CATALOG[provider].name} key in Customize → Providers to run this task.`
       );
     }
-    return this.tasks.createManualRun(userId, taskId);
+    return await this.tasks.createManualRun(userId, taskId);
   }
 
-  getRun(userId: string, runId: string): ScheduledTaskRunRecord | null {
-    return this.tasks.getRun(userId, runId);
+  async getRun(userId: string, runId: string): Promise<ScheduledTaskRunRecord | null> {
+    return await this.tasks.getRun(userId, runId);
   }
 
-  listRuns(userId: string, taskId: string): ScheduledTaskRunRecord[] | null {
-    if (!this.tasks.get(userId, taskId)) return null;
-    return this.tasks.listRuns(userId, taskId);
+  async listRuns(userId: string, taskId: string): Promise<ScheduledTaskRunRecord[] | null> {
+    if (!await this.tasks.get(userId, taskId)) return null;
+    return await this.tasks.listRuns(userId, taskId);
   }
 
-  recoverAfterRestart(): void {
-    this.tasks.recoverLeases();
+  async recoverAfterRestart(): Promise<void> {
+    await this.tasks.recoverLeases();
   }
 
   async executeNext(now = Date.now()): Promise<boolean> {
-    this.tasks.enqueueDueRuns(now);
-    const run = this.tasks.claimNextRun(now, 5 * 60_000);
+    await this.tasks.enqueueDueRuns(now);
+    const run = await this.tasks.claimNextRun(now, 5 * 60_000);
     if (!run) return false;
     await this.execute(run);
     return true;
@@ -153,7 +153,7 @@ export class ScheduledTaskService {
   }
 
   private async execute(run: ClaimedScheduledRun): Promise<void> {
-    const task = this.tasks.getForExecution(run.taskId);
+    const task = await this.tasks.getForExecution(run.taskId);
     if (!task) return;
     const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
 
@@ -161,7 +161,7 @@ export class ScheduledTaskService {
       const model = MODEL_REGISTRY[task.model];
       if (!model?.isChatModel) throw new Error("The selected model is no longer available.");
       const provider = getModelMeta(task.model).provider as ProviderId;
-      const credential = this.loadCredential(task.userId, provider);
+      const credential = await this.loadCredential(task.userId, provider);
       if (!credential || !isValidApiKey(credential.apiKey)) {
         throw new Error(
           `MISSING_API_KEY:${provider}:Connect your ${PROVIDER_CATALOG[provider].name} key in Customize → Providers to run this task.`
@@ -182,11 +182,11 @@ export class ScheduledTaskService {
       );
       let conversationId: string | null = null;
       if (task.notifications === "Important updates") {
-        conversationId = this.persistConversation(task, response.content, false);
+        conversationId = await this.persistConversation(task, response.content, false);
         if (conversationId && !task.startInNewChat)
-          this.tasks.setConversationId(task.id, conversationId);
+          await this.tasks.setConversationId(task.id, conversationId);
       }
-      this.tasks.finishRun({
+      await this.tasks.finishRun({
         runId: run.id,
         taskId: task.id,
         status: "succeeded",
@@ -216,12 +216,12 @@ export class ScheduledTaskService {
 
       let conversationId: string | null = null;
       if (task.notifications === "Important updates" || task.notifications === "Failed runs only") {
-        conversationId = this.persistConversation(task, safeMessage, true);
+        conversationId = await this.persistConversation(task, safeMessage, true);
         if (conversationId && !task.startInNewChat)
-          this.tasks.setConversationId(task.id, conversationId);
+          await this.tasks.setConversationId(task.id, conversationId);
       }
 
-      this.tasks.finishRun({
+      await this.tasks.finishRun({
         runId: run.id,
         taskId: task.id,
         status: "failed",
@@ -232,25 +232,25 @@ export class ScheduledTaskService {
     }
   }
 
-  private persistConversation(
-    task: NonNullable<ReturnType<ScheduledTaskRepository["getForExecution"]>>,
+  private async persistConversation(
+    task: NonNullable<Awaited<ReturnType<ScheduledTaskRepository["getForExecution"]>>>,
     output: string,
     isFailure = false
-  ): string | null {
+  ): Promise<string | null> {
     try {
       const reusable =
         !task.startInNewChat && task.conversationId
-          ? this.conversations.get(task.userId, task.conversationId)
+          ? await this.conversations.get(task.userId, task.conversationId)
           : null;
       const conversation =
-        reusable ?? this.conversations.create(task.userId, task.title, task.model);
-      this.conversations.appendMessage(task.userId, conversation.id, {
+        reusable ?? await this.conversations.create(task.userId, task.title, task.model);
+      await this.conversations.appendMessage(task.userId, conversation.id, {
         role: "user",
         content: task.prompt,
         status: "complete",
         metadata: { source: "scheduled-task", taskId: task.id },
       });
-      this.conversations.appendMessage(task.userId, conversation.id, {
+      await this.conversations.appendMessage(task.userId, conversation.id, {
         role: "assistant",
         content: isFailure
           ? `⚠️ Scheduled task "${task.title}" could not run.\n\n${output}`

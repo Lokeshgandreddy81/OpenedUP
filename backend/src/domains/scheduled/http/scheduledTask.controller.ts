@@ -40,14 +40,14 @@ function extractHeaderCredential(req: Request): {
   return { headerApiKey, headerBaseUrl };
 }
 
-export function listScheduledTasks(req: Request, res: Response): void {
-  res.json({ tasks: scheduledTasks.list(getUserId(req)) });
+export async function listScheduledTasks(req: Request, res: Response): Promise<void> {
+  res.json({ tasks: await scheduledTasks.list(getUserId(req)) });
 }
 
-export function createScheduledTask(req: Request, res: Response, next: NextFunction): void {
+export async function createScheduledTask(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { headerBaseUrl } = extractHeaderCredential(req);
-    const task = scheduledTasks.create(
+    const task = await scheduledTasks.create(
       getUserId(req),
       req.body as ScheduledTaskInput,
       headerBaseUrl
@@ -58,10 +58,10 @@ export function createScheduledTask(req: Request, res: Response, next: NextFunct
   }
 }
 
-export function updateScheduledTask(req: Request, res: Response, next: NextFunction): void {
+export async function updateScheduledTask(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { headerBaseUrl } = extractHeaderCredential(req);
-    const task = scheduledTasks.update(
+    const task = await scheduledTasks.update(
       getUserId(req),
       req.params["id"]!,
       req.body as UpdateScheduledTaskRequest,
@@ -77,27 +77,27 @@ export function updateScheduledTask(req: Request, res: Response, next: NextFunct
   }
 }
 
-export function deleteScheduledTask(req: Request, res: Response): void {
-  if (!scheduledTasks.delete(getUserId(req), req.params["id"]!)) {
+export async function deleteScheduledTask(req: Request, res: Response): Promise<void> {
+  if (!(await scheduledTasks.delete(getUserId(req), req.params["id"]!))) {
     res.status(404).json({ error: "Scheduled task not found.", requestId: req.id });
     return;
   }
   res.status(204).end();
 }
 
-export function importScheduledTasks(req: Request, res: Response, next: NextFunction): void {
+export async function importScheduledTasks(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.json(scheduledTasks.import(getUserId(req), req.body as ImportScheduledTasksRequest));
+    res.json(await scheduledTasks.import(getUserId(req), req.body as ImportScheduledTasksRequest));
   } catch (error) {
     handleKnownRequestError(error, req, res, next);
   }
 }
 
-export function queueScheduledTaskRun(req: Request, res: Response): void {
+export async function queueScheduledTaskRun(req: Request, res: Response): Promise<void> {
   const { headerApiKey, headerBaseUrl } = extractHeaderCredential(req);
 
   try {
-    const run = scheduledTasks.runNow(
+    const run = await scheduledTasks.runNow(
       getUserId(req),
       req.params["id"]!,
       headerApiKey || headerBaseUrl
@@ -125,8 +125,8 @@ export function queueScheduledTaskRun(req: Request, res: Response): void {
   }
 }
 
-export function getScheduledTaskRun(req: Request, res: Response): void {
-  const run = scheduledTasks.getRun(getUserId(req), req.params["runId"]!);
+export async function getScheduledTaskRun(req: Request, res: Response): Promise<void> {
+  const run = await scheduledTasks.getRun(getUserId(req), req.params["runId"]!);
   if (!run) {
     res.status(404).json({ error: "Scheduled task run not found.", requestId: req.id });
     return;
@@ -134,8 +134,8 @@ export function getScheduledTaskRun(req: Request, res: Response): void {
   res.json({ run });
 }
 
-export function listScheduledTaskRuns(req: Request, res: Response): void {
-  const runs = scheduledTasks.listRuns(getUserId(req), req.params["id"]!);
+export async function listScheduledTaskRuns(req: Request, res: Response): Promise<void> {
+  const runs = await scheduledTasks.listRuns(getUserId(req), req.params["id"]!);
   if (!runs) {
     res.status(404).json({ error: "Scheduled task not found.", requestId: req.id });
     return;

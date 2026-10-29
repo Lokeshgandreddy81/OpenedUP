@@ -41,7 +41,7 @@ describe("Phase 7: Limits & Analytics Tests", () => {
     assert.ok(typeof fourth.retryAfterSeconds === "number" && fourth.retryAfterSeconds > 0);
   });
 
-  test("2. Skill tool calls per conversation per minute throttles and returns model-readable error", () => {
+  test("2. Skill tool calls per conversation per minute throttles and returns model-readable error", async () => {
     process.env["SKILL_TOOL_CALLS_PER_CONV_PER_MIN"] = "2";
     const convId = "conv-skill-limit";
 
@@ -53,7 +53,7 @@ describe("Phase 7: Limits & Analytics Tests", () => {
     assert.ok(third.message?.includes("Rate limit exceeded"));
 
     // Verify handleSkillToolCall surfaces this error cleanly to model
-    const toolCallRes = handleSkillToolCall("any-skill", convId, "user-1", repo);
+    const toolCallRes = await handleSkillToolCall("any-skill", convId, "user-1", repo);
     assert.equal(toolCallRes.isError, true);
     assert.ok(toolCallRes.content.includes("Rate limit exceeded"));
   });
@@ -85,19 +85,19 @@ describe("Phase 7: Limits & Analytics Tests", () => {
     assert.ok(checkAfterHeavyBash.message?.includes("Daily sandbox CPU quota exceeded"));
   });
 
-  test("5. Analytics from skill_usage computes top skills, failure rates, and averages", () => {
+  test("5. Analytics from skill_usage computes top skills, failure rates, and averages", async () => {
     const convId1 = "conv-analytics-1";
     const convId2 = "conv-analytics-2";
 
     // Seed usage
-    repo.logUsage(convId1, "csv-summary", "user-1", "Skill", 120, "success");
-    repo.logUsage(convId1, "csv-summary", "user-1", "Bash", 450, "success");
-    repo.logUsage(convId1, "csv-summary", "user-1", "Bash", 310, "error");
+    await repo.logUsage(convId1, "csv-summary", "user-1", "Skill", 120, "success");
+    await repo.logUsage(convId1, "csv-summary", "user-1", "Bash", 450, "success");
+    await repo.logUsage(convId1, "csv-summary", "user-1", "Bash", 310, "error");
 
-    repo.logUsage(convId2, "web-research", "user-2", "Skill", 80, "success");
-    repo.logUsage(convId2, "web-research", "user-2", "Read", 25, "success");
+    await repo.logUsage(convId2, "web-research", "user-2", "Skill", 80, "success");
+    await repo.logUsage(convId2, "web-research", "user-2", "Read", 25, "success");
 
-    const analytics = repo.getAnalytics(7);
+    const analytics = await repo.getAnalytics(7);
 
     assert.equal(analytics.totalCalls, 5);
     assert.equal(analytics.totalToolLoops, 2);

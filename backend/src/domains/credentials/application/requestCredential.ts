@@ -11,10 +11,10 @@ export function providerForModelRequest(payload: ProviderModelRequest): Provider
     : getModelMeta(payload.model).provider;
 }
 
-export function resolveRequestProviderCredential(
+export async function resolveRequestProviderCredential(
   req: Request,
   payload: ProviderModelRequest
-): { apiKey: string | undefined; baseUrl: string | undefined } {
+): Promise<{ apiKey: string | undefined; baseUrl: string | undefined }> {
   const rawKey = Array.isArray(req.headers["x-provider-key"])
     ? req.headers["x-provider-key"][0]
     : req.headers["x-provider-key"];
@@ -28,7 +28,7 @@ export function resolveRequestProviderCredential(
   let savedCredential = null;
   if (req.principal?.uid) {
     try {
-      savedCredential = getProviderCredential(req.principal.uid, provider);
+      savedCredential = await getProviderCredential(req.principal.uid, provider);
     } catch {
       // An unavailable vault entry cannot be used for this request.
     }

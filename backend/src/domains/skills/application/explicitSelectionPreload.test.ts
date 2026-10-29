@@ -25,10 +25,10 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
   const conversationId = `conv-explicit-${Date.now()}`;
   let originalFetch: typeof globalThis.fetch;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     const db = getChatDatabase();
     repo = new SkillRepository(db);
-    seedBuiltinSkills(repo);
+    await seedBuiltinSkills(repo);
     originalFetch = globalThis.fetch;
   });
 
@@ -37,17 +37,17 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
   });
 
   test("Explicitly selected skill is preloaded exactly once, while unselected enabled skills use progressive loading", async () => {
-    const helloSkill = repo.getByNameAndScope("hello-format", "builtin");
-    const csvSkill = repo.getByNameAndScope("csv-summary", "builtin");
+    const helloSkill = await repo.getByNameAndScope("hello-format", "builtin");
+    const csvSkill = await repo.getByNameAndScope("csv-summary", "builtin");
     assert.ok(helloSkill);
     assert.ok(csvSkill);
 
     // 1. Explicitly select hello-format (explicitly_selected: true)
-    repo.setConversationSkills(conversationId, [helloSkill.id], "test-user", {
+    await repo.setConversationSkills(conversationId, [helloSkill.id], "test-user", {
       explicitlySelected: true,
     });
 
-    const unpreloaded = repo.getUnpreloadedExplicitSkills(conversationId);
+    const unpreloaded = await repo.getUnpreloadedExplicitSkills(conversationId);
     assert.equal(unpreloaded.length, 1);
     assert.equal(unpreloaded[0]!.name, "hello-format");
 
@@ -112,7 +112,7 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
     assert.ok(syntheticToolResult, "Turn 1 must contain synthetic tool_result with SKILL.md body");
 
     // Check that skill is now marked as preloaded in database
-    const unpreloadedAfter = repo.getUnpreloadedExplicitSkills(conversationId);
+    const unpreloadedAfter = await repo.getUnpreloadedExplicitSkills(conversationId);
     assert.equal(unpreloadedAfter.length, 0, "Skill must be marked as preloaded after Turn 1");
 
     // Turn 2: Send another message in the same conversation
@@ -142,16 +142,16 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
     assert.equal(turn2Result.finalText, "Turn 2 response.");
 
     // On Turn 2, toolTraces in result must NOT contain another pre-load
-    const unpreloadedTurn2 = repo.getUnpreloadedExplicitSkills(conversationId);
+    const unpreloadedTurn2 = await repo.getUnpreloadedExplicitSkills(conversationId);
     assert.equal(unpreloadedTurn2.length, 0);
 
     // 2. Unselected enabled skill (explicitlySelected = false) uses progressive loading (not preloaded)
     const convAutoId = `conv-auto-${Date.now()}`;
-    repo.setConversationSkills(convAutoId, [csvSkill.id], "test-user", {
+    await repo.setConversationSkills(convAutoId, [csvSkill.id], "test-user", {
       explicitlySelected: false,
     });
 
-    const unselectedUnpreloaded = repo.getUnpreloadedExplicitSkills(convAutoId);
+    const unselectedUnpreloaded = await repo.getUnpreloadedExplicitSkills(convAutoId);
     assert.equal(
       unselectedUnpreloaded.length,
       0,

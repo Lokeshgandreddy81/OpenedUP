@@ -8,12 +8,12 @@ import { ConversationRepository } from "../repositories/conversationRepository.j
 
 const conversations = new ConversationRepository();
 
-export function listConversations(req: Request, res: Response): void {
-  res.json({ conversations: conversations.list(req.principal!.uid) });
+export async function listConversations(req: Request, res: Response): Promise<void> {
+  res.json({ conversations: await conversations.list(req.principal!.uid) });
 }
 
-export function getConversation(req: Request, res: Response): void {
-  const conversation = conversations.get(req.principal!.uid, req.params["id"]!);
+export async function getConversation(req: Request, res: Response): Promise<void> {
+  const conversation = await conversations.get(req.principal!.uid, req.params["id"]!);
   if (!conversation) {
     res.status(404).json({ error: "Conversation not found.", requestId: req.id });
     return;
@@ -21,7 +21,7 @@ export function getConversation(req: Request, res: Response): void {
   res.json({ conversation });
 }
 
-export function createConversation(req: Request, res: Response): void {
+export async function createConversation(req: Request, res: Response): Promise<void> {
   const body = req.body as CreateConversationRequest;
   const requestBody = req.body as CreateConversationRequest & {
     projectId?: unknown;
@@ -30,27 +30,27 @@ export function createConversation(req: Request, res: Response): void {
   const requestedProjectId = requestBody.projectId ?? requestBody.project_id;
   const projectId = typeof requestedProjectId === "string" ? requestedProjectId : undefined;
   res.status(201).json({
-    conversation: conversations.create(req.principal!.uid, body.title, body.model, projectId),
+    conversation: await conversations.create(req.principal!.uid, body.title, body.model, projectId),
   });
 }
 
-export function updateConversation(req: Request, res: Response): void {
+export async function updateConversation(req: Request, res: Response): Promise<void> {
   const body = req.body as UpdateConversationRequest;
-  if (!conversations.update(req.principal!.uid, req.params["id"]!, body)) {
+  if (!await conversations.update(req.principal!.uid, req.params["id"]!, body)) {
     res.status(404).json({ error: "Conversation not found.", requestId: req.id });
     return;
   }
-  res.json({ conversation: conversations.get(req.principal!.uid, req.params["id"]!) });
+  res.json({ conversation: await conversations.get(req.principal!.uid, req.params["id"]!) });
 }
 
-export function deleteConversation(req: Request, res: Response): void {
-  conversations.delete(req.principal!.uid, req.params["id"]!);
+export async function deleteConversation(req: Request, res: Response): Promise<void> {
+  await conversations.delete(req.principal!.uid, req.params["id"]!);
   res.status(204).end();
 }
 
-export function deleteMessagesFrom(req: Request, res: Response): void {
+export async function deleteMessagesFrom(req: Request, res: Response): Promise<void> {
   if (
-    !conversations.deleteMessagesFrom(
+    !await conversations.deleteMessagesFrom(
       req.principal!.uid,
       req.params["id"]!,
       req.params["messageId"]!
@@ -62,9 +62,9 @@ export function deleteMessagesFrom(req: Request, res: Response): void {
   res.status(204).end();
 }
 
-export function appendConversationMessage(req: Request, res: Response): void {
+export async function appendConversationMessage(req: Request, res: Response): Promise<void> {
   const body = req.body as AppendConversationMessageRequest;
-  const message = conversations.appendMessage(req.principal!.uid, req.params["id"]!, {
+  const message = await conversations.appendMessage(req.principal!.uid, req.params["id"]!, {
     ...body,
     metadata: body.metadata ?? {},
   });

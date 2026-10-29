@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { asyncHandler } from "../../../platform/http/middleware/asyncHandler.js";
 import multer from "multer";
 import { createRateLimiter } from "../../../platform/http/middleware/rateLimiter.js";
 import {
@@ -44,36 +45,36 @@ const skillUploadLimiter = createRateLimiter({
 export const skillRouter = Router();
 
 // Directory / Marketplace
-skillRouter.get("/directory/skills", listDirectorySkills);
-skillRouter.get("/directory/categories", listCategories);
-skillRouter.post("/directory/skills/:id/add-to-library", addDirectorySkillToLibrary);
+skillRouter.get("/directory/skills", asyncHandler(listDirectorySkills));
+skillRouter.get("/directory/categories", asyncHandler(listCategories));
+skillRouter.post("/directory/skills/:id/add-to-library", asyncHandler(addDirectorySkillToLibrary));
 
 // Skills CRUD & Analytics
-skillRouter.get("/skills", listSkills);
-skillRouter.get("/skills/analytics", getSkillsAnalytics);
-skillRouter.post("/skills/validate", validateDraft);
-skillRouter.post("/skills/test-scratch", testScratchSkill);
-skillRouter.get("/skills/:id", getSkill);
-skillRouter.get("/skills/:id/versions", getSkillVersions);
-skillRouter.get("/skills/:id/contents", getSkillContents);
-skillRouter.post("/skills", skillUploadLimiter, upload.single("file"), createSkill);
-skillRouter.put("/skills/:id", skillUploadLimiter, upload.single("file"), updateSkill);
-skillRouter.delete("/skills/:id", deleteSkill);
+skillRouter.get("/skills", asyncHandler(listSkills));
+skillRouter.get("/skills/analytics", asyncHandler(getSkillsAnalytics));
+skillRouter.post("/skills/validate", asyncHandler(validateDraft));
+skillRouter.post("/skills/test-scratch", asyncHandler(testScratchSkill));
+skillRouter.get("/skills/:id", asyncHandler(getSkill));
+skillRouter.get("/skills/:id/versions", asyncHandler(getSkillVersions));
+skillRouter.get("/skills/:id/contents", asyncHandler(getSkillContents));
+skillRouter.post("/skills", skillUploadLimiter, upload.single("file"), asyncHandler(createSkill));
+skillRouter.put("/skills/:id", skillUploadLimiter, upload.single("file"), asyncHandler(updateSkill));
+skillRouter.delete("/skills/:id", asyncHandler(deleteSkill));
 
 // Admin & Approval workflow
-skillRouter.post("/skills/:id/submit-review", submitForReview);
-skillRouter.post("/skills/:id/approve", approveSkill);
-skillRouter.post("/skills/:id/reject", rejectSkill);
-skillRouter.get("/admin/skills/queue", getAdminQueue);
+skillRouter.post("/skills/:id/submit-review", asyncHandler(submitForReview));
+skillRouter.post("/skills/:id/approve", asyncHandler(approveSkill));
+skillRouter.post("/skills/:id/reject", asyncHandler(rejectSkill));
+skillRouter.get("/admin/skills/queue", asyncHandler(getAdminQueue));
 
 // Conversation skills
-skillRouter.get("/conversations/:id/skills", getConversationSkills);
-skillRouter.put("/conversations/:id/skills", setConversationSkills);
-skillRouter.post("/conversations/:id/skills/sync-project", syncConversationProjectSkills);
+skillRouter.get("/conversations/:id/skills", asyncHandler(getConversationSkills));
+skillRouter.put("/conversations/:id/skills", asyncHandler(setConversationSkills));
+skillRouter.post("/conversations/:id/skills/sync-project", asyncHandler(syncConversationProjectSkills));
 
 // Project skills
-skillRouter.get("/projects/:id/skills", getProjectSkills);
-skillRouter.put("/projects/:id/skills", setProjectSkills);
+skillRouter.get("/projects/:id/skills", asyncHandler(getProjectSkills));
+skillRouter.put("/projects/:id/skills", asyncHandler(setProjectSkills));
 
 // Downloadable conversation attachments
-skillRouter.get("/conversations/:id/files/:filename", downloadConversationFile);
+skillRouter.get("/conversations/:id/files/:filename", asyncHandler(downloadConversationFile));

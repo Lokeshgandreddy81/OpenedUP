@@ -5,6 +5,7 @@ import {
   UpdateScheduledTaskRequestSchema,
 } from "@charan-interiors/contracts";
 import { validateBody } from "../../../platform/http/middleware/validate.js";
+import { asyncHandler } from "../../../platform/http/middleware/asyncHandler.js";
 import {
   createScheduledTask,
   deleteScheduledTask,
@@ -17,19 +18,19 @@ import {
 } from "./scheduledTask.controller.js";
 
 export const scheduledTaskRouter = Router();
-scheduledTaskRouter.get("/", listScheduledTasks);
-scheduledTaskRouter.post("/", validateBody(ScheduledTaskInputSchema), createScheduledTask);
+scheduledTaskRouter.get("/", asyncHandler(listScheduledTasks));
+scheduledTaskRouter.post("/", validateBody(ScheduledTaskInputSchema), asyncHandler(createScheduledTask));
 scheduledTaskRouter.post(
   "/import",
   validateBody(ImportScheduledTasksRequestSchema),
-  importScheduledTasks
+  asyncHandler(importScheduledTasks)
 );
-scheduledTaskRouter.get("/runs/:runId", getScheduledTaskRun);
-scheduledTaskRouter.get("/:id/runs", listScheduledTaskRuns);
-scheduledTaskRouter.post("/:id/run", queueScheduledTaskRun);
+scheduledTaskRouter.get("/runs/:runId", asyncHandler(getScheduledTaskRun));
+scheduledTaskRouter.get("/:id/runs", asyncHandler(listScheduledTaskRuns));
+scheduledTaskRouter.post("/:id/run", asyncHandler(queueScheduledTaskRun));
 scheduledTaskRouter.put(
   "/:id",
   validateBody(UpdateScheduledTaskRequestSchema),
-  updateScheduledTask
+  asyncHandler(updateScheduledTask)
 );
-scheduledTaskRouter.delete("/:id", deleteScheduledTask);
+scheduledTaskRouter.delete("/:id", asyncHandler(deleteScheduledTask));

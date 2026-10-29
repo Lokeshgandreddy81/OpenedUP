@@ -33,6 +33,11 @@ export class SandboxSecurityError extends Error {
   }
 }
 
+function isPathInside(root: string, candidate: string): boolean {
+  const relative = path.relative(path.resolve(root), path.resolve(candidate));
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+}
+
 /**
  * Returns base sandbox storage directory.
  */
@@ -141,13 +146,13 @@ export function resolveSandboxPath(
     const subPath = normalized.replace(/^\/?mnt\/skills\//, "");
     const fullPath = path.resolve(paths.skillsMountDir, subPath);
 
-    if (!fullPath.startsWith(path.resolve(paths.skillsMountDir))) {
+    if (!isPathInside(paths.skillsMountDir, fullPath)) {
       throw new SandboxSecurityError("Path traversal escape from /mnt/skills detected.");
     }
     if (fs.existsSync(fullPath)) {
       const realTarget = fs.realpathSync(fullPath);
       const realMount = fs.realpathSync(paths.skillsMountDir);
-      if (!realTarget.startsWith(realMount)) {
+      if (!isPathInside(realMount, realTarget)) {
         throw new SandboxSecurityError("Symlink escape from /mnt/skills detected.");
       }
     }
@@ -158,14 +163,14 @@ export function resolveSandboxPath(
   const cleanRel = normalized.replace(/^\//, "");
   const fullPath = path.resolve(paths.workspaceDir, cleanRel);
 
-  if (!fullPath.startsWith(path.resolve(paths.workspaceDir))) {
+  if (!isPathInside(paths.workspaceDir, fullPath)) {
     throw new SandboxSecurityError("Path traversal escape from workspace detected.");
   }
 
   if (fs.existsSync(fullPath)) {
     const realTarget = fs.realpathSync(fullPath);
     const realWorkspace = fs.realpathSync(paths.workspaceDir);
-    if (!realTarget.startsWith(realWorkspace)) {
+    if (!isPathInside(realWorkspace, realTarget)) {
       throw new SandboxSecurityError("Symlink escape from workspace detected.");
     }
   }

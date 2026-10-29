@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { ProviderId } from "@charan-interiors/contracts";
-import { getChatDatabase } from "../../../platform/database/chatDatabase.js";
+import { getDatabaseClient } from "../../../platform/database/databaseClient.js";
 import { AppError } from "../../../platform/errors/errors.js";
 
 export class CredentialDecryptionError extends AppError {
@@ -360,11 +360,11 @@ export interface ProviderCredential {
 /**
  * Encrypts and persists a provider credential bound to the user and provider AAD.
  */
-export function saveProviderCredential(
+export async function saveProviderCredential(
   userId: string,
   provider: ProviderId,
   credential: ProviderCredential
-): void {
+): Promise<void> {
   const key = getEncryptionKey();
   const nonce = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, nonce);
@@ -376,9 +376,9 @@ export function saveProviderCredential(
   const authTag = cipher.getAuthTag();
   secureWipeBuffer(plaintextBuffer);
 
-  const db = getChatDatabase();
-  const saveTx = db.transaction(() => {
-    db.prepare(
+  const db = getDatabaseClient();
+  await db.transaction(async (tx) => {
+    await tx.prepare(
       `INSERT INTO provider_credentials(user_id, provider_id, nonce, auth_tag, ciphertext, updated_at)
        VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, provider_id) DO UPDATE SET
@@ -387,8 +387,7 @@ export function saveProviderCredential(
          ciphertext = excluded.ciphertext,
          updated_at = excluded.updated_at`
     ).run(userId, provider, nonce, authTag, ciphertext, Date.now());
-  });
-  saveTx();
+  })();
 
   // Invalidate any cached material for this user
   CryptographicMaterialsCache.invalidate(`${userId}:${provider}`);
@@ -441,11 +440,11 @@ function attemptDecrypt(
  * If the primary key fails and fallback rotation keys are configured, attempts decryption
  * using fallback keys and transparently re-encrypts under the primary key (seamless zero-downtime rotation).
  */
-export function getProviderCredential(
+export async function getProviderCredential(
   userId: string,
   provider: ProviderId
-): ProviderCredential | null {
-  const row = getChatDatabase()
+): Promise<ProviderCredential | null> {
+  const row = await getDatabaseClient()
     .prepare(
       "SELECT nonce, auth_tag, ciphertext FROM provider_credentials WHERE user_id = ? AND provider_id = ?"
     )
@@ -480,7 +479,7 @@ export function getProviderCredential(
       try {
         const decrypted = attemptDecrypt(fallbackKey, row, userId, provider);
         // Seamless key rotation: re-encrypt record with the active primary key!
-        saveProviderCredential(userId, provider, decrypted);
+        await saveProviderCredential(userId, provider, decrypted);
         return decrypted;
       } catch {
         // Try next fallback key
@@ -495,38 +494,31 @@ export function getProviderCredential(
 /**
  * Scoped executor that provides decrypted credential access and automatically cleans up memory.
  */
-export function withDecryptedCredential<T>(
+export async function withDecryptedCredential<T>(
   userId: string,
   provider: ProviderId,
   fn: (credential: ProviderCredential) => T
-): T | null {
-  const cred = getProviderCredential(userId, provider);
+): Promise<T | null> {
+  const cred = await getProviderCredential(userId, provider);
   if (!cred) return null;
   return fn(cred);
 }
 
-export function updateProviderEndpoint(
+export async function updateProviderEndpoint(
   userId: string,
   provider: ProviderId,
   baseUrl: string
-): ProviderCredential | null {
-  const db = getChatDatabase();
-  const tx = db.transaction(() => {
-    const existing = getProviderCredential(userId, provider);
-    if (!existing) return null;
-    const updated: ProviderCredential = {
-      ...existing,
-      baseUrl,
-    };
-    saveProviderCredential(userId, provider, updated);
-    return updated;
-  });
-  return tx();
+): Promise<ProviderCredential | null> {
+  const existing = await getProviderCredential(userId, provider);
+  if (!existing) return null;
+  const updated: ProviderCredential = { ...existing, baseUrl };
+  await saveProviderCredential(userId, provider, updated);
+  return updated;
 }
 
-export function listProviderCredentials(userId: string): ProviderId[] {
+export async function listProviderCredentials(userId: string): Promise<ProviderId[]> {
   return (
-    getChatDatabase()
+    await getDatabaseClient()
       .prepare(
         "SELECT provider_id FROM provider_credentials WHERE user_id = ? ORDER BY provider_id ASC"
       )
@@ -534,28 +526,27 @@ export function listProviderCredentials(userId: string): ProviderId[] {
   ).map((row) => row.provider_id);
 }
 
-export function deleteProviderCredential(userId: string, provider: ProviderId): boolean {
-  const db = getChatDatabase();
-  const tx = db.transaction(() => {
+export async function deleteProviderCredential(userId: string, provider: ProviderId): Promise<boolean> {
+  const db = getDatabaseClient();
+  return db.transaction(async (tx) => {
     const zeroNonce = Buffer.alloc(12, 0);
     const zeroAuthTag = Buffer.alloc(16, 0);
     const zeroCiphertext = Buffer.alloc(0);
 
     // Secure shredding prior to row removal
-    db.prepare(
+    await tx.prepare(
       `UPDATE provider_credentials
        SET nonce = ?, auth_tag = ?, ciphertext = ?, updated_at = ?
        WHERE user_id = ? AND provider_id = ?`
     ).run(zeroNonce, zeroAuthTag, zeroCiphertext, Date.now(), userId, provider);
 
-    const result = db
+    const result = await tx
       .prepare("DELETE FROM provider_credentials WHERE user_id = ? AND provider_id = ?")
       .run(userId, provider);
 
     CryptographicMaterialsCache.invalidate(`${userId}:${provider}`);
     return result.changes > 0;
-  });
-  return tx();
+  })();
 }
 
 /**
@@ -563,18 +554,18 @@ export function deleteProviderCredential(userId: string, provider: ProviderId): 
  * Proactively sweeps all credentials in the database to re-encrypt records currently
  * encrypted under fallback keys into the active primary key, without requiring user logins.
  */
-export function reencryptAllCredentialsWithPrimaryKey(userId?: string): {
+export async function reencryptAllCredentialsWithPrimaryKey(userId?: string): Promise<{
   total: number;
   reencrypted: number;
   skipped: number;
   failed: number;
-} {
-  const db = getChatDatabase();
+}> {
+  const db = getDatabaseClient();
   const query = userId
     ? "SELECT user_id, provider_id, nonce, auth_tag, ciphertext FROM provider_credentials WHERE user_id = ?"
     : "SELECT user_id, provider_id, nonce, auth_tag, ciphertext FROM provider_credentials";
 
-  const rows = (userId ? db.prepare(query).all(userId) : db.prepare(query).all()) as Array<{
+  const rows = (userId ? await db.prepare(query).all(userId) : await db.prepare(query).all()) as Array<{
     user_id: string;
     provider_id: ProviderId;
     nonce: Buffer;
@@ -600,7 +591,7 @@ export function reencryptAllCredentialsWithPrimaryKey(userId?: string): {
       for (const fallbackKey of fallbackKeys) {
         try {
           const cred = attemptDecrypt(fallbackKey, row, row.user_id, row.provider_id);
-          saveProviderCredential(row.user_id, row.provider_id, cred);
+          await saveProviderCredential(row.user_id, row.provider_id, cred);
           reencrypted += 1;
           migrated = true;
           break;
@@ -626,16 +617,16 @@ export function reencryptAllCredentialsWithPrimaryKey(userId?: string): {
  * Agent 2: Soft-Delete Quarantine & Shredding Safeguard.
  * Safely coordinates cryptographic shredding with optional quarantine audit status.
  */
-export function purgeOrQuarantineCredential(
+export async function purgeOrQuarantineCredential(
   userId: string,
   provider: ProviderId,
   options?: { quarantineOnly?: boolean }
-): { quarantined: boolean; shredded: boolean } {
+): Promise<{ quarantined: boolean; shredded: boolean }> {
   if (options?.quarantineOnly) {
     // Invalidate memory cache immediately to cease active utilization
     CryptographicMaterialsCache.invalidate(`${userId}:${provider}`);
     return { quarantined: true, shredded: false };
   }
-  const shredded = deleteProviderCredential(userId, provider);
+  const shredded = await deleteProviderCredential(userId, provider);
   return { quarantined: false, shredded };
 }

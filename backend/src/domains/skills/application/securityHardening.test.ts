@@ -90,10 +90,10 @@ test("Security Hardening - Admin authorization required to publish builtin or or
   assert.ok(getBody().error.includes("administrator privileges"));
 });
 
-test("Security Hardening - Skill tool call rate limiter throttles excessive calls", () => {
+test("Security Hardening - Skill tool call rate limiter throttles excessive calls", async () => {
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
   const now = Date.now();
   db.prepare(
@@ -101,14 +101,14 @@ test("Security Hardening - Skill tool call rate limiter throttles excessive call
      VALUES (?, ?, ?, ?, ?, ?)`
   ).run("conv-rate-1", "user-flooder", "Flood Test", "claude-3-5-sonnet", now, now);
 
-  const builtin = repo.getByNameAndScope("hello-format", "builtin");
+  const builtin = await repo.getByNameAndScope("hello-format", "builtin");
   assert.ok(builtin);
-  repo.setConversationSkills("conv-rate-1", [builtin.id], "user-flooder");
+  await repo.setConversationSkills("conv-rate-1", [builtin.id], "user-flooder");
 
   let throttled = false;
   // Trigger 105 rapid tool calls
   for (let i = 0; i < 105; i++) {
-    const res = handleSkillToolCall("hello-format", "conv-rate-1", "user-flooder", repo);
+    const res = await handleSkillToolCall("hello-format", "conv-rate-1", "user-flooder", repo);
     if (res.isError && res.content.includes("Rate limit exceeded")) {
       throttled = true;
       break;

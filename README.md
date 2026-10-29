@@ -58,15 +58,19 @@ The Compose stack serves the app on port 8080. Retain the `openedup-data` volume
 
 ## Vercel deployment
 
-The root `vercel.json` defines Vercel Services routing for the Vite frontend and Express API, with `/api/*` sent to the backend. Services are currently in beta; choose **Services** as the Vercel project's framework and confirm the feature is enabled for your account.
+The root `vercel.json` defines Vercel Services routing for the Vite frontend and Express API, with `/api/*` sent to the backend. Vercel Services availability depends on the account; enable it for the project before deploying this configuration.
 
-Uploads for PDF analysis, receipt images, chat images, and ZIP skill packages now use short-lived Supabase Storage signed uploads. Apply `supabase/migrations/20261028000000_openedup_app_schema.sql` in the Supabase SQL editor to create private buckets with PDF, image, and skill-package size limits before using these upload routes. The server checks account ownership before reading uploaded objects and removes them after processing. Cleanup is best effort; a scheduled job to delete abandoned uploads is still required before production.
+Uploads for PDF analysis, receipt images, chat images, and ZIP skill packages use short-lived Supabase Storage signed uploads. Apply both `supabase/migrations/20261028000000_openedup_app_schema.sql` and `supabase/migrations/20261029000000_skill_storage_bucket.sql` before using the backend. The server checks account ownership before reading uploaded objects and removes processed uploads; abandoned-upload cleanup still needs a scheduled cleanup job.
 
-**Do not deploy this backend to production yet.** Application records and skill/workspace data still use synchronous SQLite and local filesystem paths; `DATABASE_URL` is not connected to the repositories, and the SQL migration does not migrate existing SQLite data. The Docker sandbox, 2-second scheduled-task worker, and abandoned-upload cleanup also still require Vercel-compatible implementations. Vercel instances have ephemeral storage and the current function request limit makes the direct Storage upload path necessary; these remaining runtime changes must land before production data is safe.
+The backend repositories use Supabase Postgres when `DATABASE_URL` is present. Use the Supabase **shared transaction pooler** URI for Vercel, keep it server-only, and add it under the backend service's Production environment as `DATABASE_URL`. Do not use the direct database host if your Vercel functions need IPv4 connectivity. The API refuses to silently fall back to SQLite in production, and `/readyz` checks that its configured database is reachable.
 
-The current local environment has Supabase Auth settings, but no `SUPABASE_SECRET_KEY` or Postgres connection string. Create a Supabase secret key in **Settings → API Keys** and add it as a server-only Vercel production variable; the upload route accepts the legacy `SUPABASE_SERVICE_ROLE_KEY` name as a fallback. Use `DATABASE_URL` only after the PostgreSQL repository migration is implemented. Never use a `VITE_` prefix for server secrets, and never commit populated environment files.
+Configure the frontend service with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Configure the backend service with `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `BYOK_ENCRYPTION_KEY`, and `DATABASE_URL`. `BYOK_ENCRYPTION_KEY` must be base64 for exactly 32 random bytes; generate it with `openssl rand -base64 32` and keep it stable. Keep secret values out of `VITE_` variables. The Supabase secret key is used only for server-side Storage operations. Provider keys such as `GEMINI_API_KEY` are optional unless server-side PDF OCR uses them. Never commit populated environment files.
 
-For the frontend build, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. For the backend, add `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `BYOK_ENCRYPTION_KEY`; provider keys such as `GEMINI_API_KEY` are optional unless server-side PDF OCR uses them. Keep `DATABASE_URL` unset until the repository migration is ready.
+Skill packages and generated chat files are stored in private Supabase Storage buckets. Chat code execution uses the isolated Vercel Sandbox SDK; enable Vercel Sandbox for the project. It runs Bash and workspace Read/Write/SendUserFile tools in an isolated microVM, and generated file downloads require the authenticated owner of the conversation. The Vercel Sandbox SDK authenticates with Vercel OIDC in deployed functions.
+
+Scheduled tasks need a separate worker because serverless functions do not keep the local polling loop alive. Build and deploy `backend/Dockerfile` as a Northflank scheduled job using command `node dist/scheduled-worker.js`, scheduled once per minute. Copy the backend's production environment variables to this job. The worker drains up to five due tasks per run. Set up a second daily Northflank job with command `node dist/upload-cleanup-worker.js`; it removes signed-upload objects older than 24 hours (up to 1,000 per run). The main Vercel API and scheduled-task worker must use the same Postgres database. (Northflank can run image commands on a cron schedule: <https://northflank.com/docs/v1/application/run/run-an-image-once-or-on-a-schedule>.)
+
+The existing Vercel SQLite data was ephemeral and is not migrated by these SQL migrations. After configuration, verify `/readyz`, sign in, create a conversation, and confirm it persists across separate function invocations before routing production traffic. Vercel deployment and Supabase configuration still need to be completed in the respective dashboards.
 
 ## Common checks
 
@@ -89,7 +93,7 @@ The root [`package.json`](package.json) owns the current workspace commands; CI 
 
 ## Security
 
-Production must use authenticated identity and the Docker sandbox. Keep `SANDBOX_MODE=unsafe-local` limited to development and tests. Report vulnerabilities through GitHub Private Vulnerability Reporting.
+Production must use authenticated identity and an isolated execution runtime (Vercel Sandbox on Vercel, Docker for the standalone server). Keep `SANDBOX_MODE=unsafe-local` limited to development and tests. Report vulnerabilities through GitHub Private Vulnerability Reporting.
 
 ## License
 

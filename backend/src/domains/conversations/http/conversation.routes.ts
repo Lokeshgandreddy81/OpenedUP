@@ -5,6 +5,7 @@ import {
   UpdateConversationRequestSchema,
 } from "@charan-interiors/contracts";
 import { validateBody } from "../../../platform/http/middleware/validate.js";
+import { asyncHandler } from "../../../platform/http/middleware/asyncHandler.js";
 import {
   appendConversationMessage,
   createConversation,
@@ -16,14 +17,14 @@ import {
 } from "./conversation.controller.js";
 
 export const conversationRouter = Router();
-conversationRouter.get("/", listConversations);
-conversationRouter.post("/", validateBody(CreateConversationRequestSchema), createConversation);
-conversationRouter.get("/:id", getConversation);
-conversationRouter.patch("/:id", validateBody(UpdateConversationRequestSchema), updateConversation);
-conversationRouter.delete("/:id", deleteConversation);
-conversationRouter.delete("/:id/messages/:messageId", deleteMessagesFrom);
+conversationRouter.get("/", asyncHandler(listConversations));
+conversationRouter.post("/", validateBody(CreateConversationRequestSchema), asyncHandler(createConversation));
+conversationRouter.get("/:id", asyncHandler(getConversation));
+conversationRouter.patch("/:id", validateBody(UpdateConversationRequestSchema), asyncHandler(updateConversation));
+conversationRouter.delete("/:id", asyncHandler(deleteConversation));
+conversationRouter.delete("/:id/messages/:messageId", asyncHandler(deleteMessagesFrom));
 conversationRouter.post(
   "/:id/messages",
   validateBody(AppendConversationMessageRequestSchema),
-  appendConversationMessage
+  asyncHandler(appendConversationMessage)
 );

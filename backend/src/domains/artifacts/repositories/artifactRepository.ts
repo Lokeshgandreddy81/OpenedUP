@@ -4,7 +4,11 @@ import type {
   ArtifactRequest,
   ImportArtifactsRequest,
 } from "@charan-interiors/contracts";
-import { getChatDatabase, type ChatDatabase } from "../../../platform/database/chatDatabase.js";
+import type { Database as BetterSqliteDatabase } from "better-sqlite3";
+import {
+  asDatabaseClient,
+  type DatabaseClient,
+} from "../../../platform/database/databaseClient.js";
 
 export interface StoredArtifact {
   id: string;
@@ -59,10 +63,14 @@ function readTags(raw: unknown): string[] {
 }
 
 export class ArtifactRepository {
-  constructor(private readonly db: ChatDatabase = getChatDatabase()) {}
+  private readonly db: DatabaseClient;
 
-  list(userId: string): StoredArtifact[] {
-    const rows = this.db
+  constructor(db?: DatabaseClient | BetterSqliteDatabase) {
+    this.db = asDatabaseClient(db);
+  }
+
+  async list(userId: string): Promise<StoredArtifact[]> {
+    const rows = await this.db
       .prepare(
         `SELECT id, user_id, legacy_id, title, category, content, language, model_used, is_shared,
                 is_favorite, collection, tags_json, created_at, updated_at
@@ -72,14 +80,14 @@ export class ArtifactRepository {
     return rows.map((row) => this.map(row, userId));
   }
 
-  create(
+  async create(
     userId: string,
     input: ArtifactRequest,
     legacy?: { id: string; createdAt: number; updatedAt: number }
-  ): StoredArtifact {
+  ): Promise<StoredArtifact> {
     const now = Date.now();
     const id = randomUUID();
-    this.db
+    await this.db
       .prepare(
         `INSERT INTO chat_artifacts(id, user_id, legacy_id, title, category, content, language, model_used,
                                     is_shared, is_favorite, collection, tags_json, created_at, updated_at)
@@ -119,17 +127,16 @@ export class ArtifactRepository {
     };
   }
 
-  import(userId: string, request: ImportArtifactsRequest): { imported: number; skipped: number } {
+  async import(userId: string, request: ImportArtifactsRequest): Promise<{ imported: number; skipped: number }> {
     const insert = this.db.prepare(
       `INSERT INTO chat_artifacts(id, user_id, legacy_id, title, category, content, language, model_used,
                                   is_shared, is_favorite, collection, tags_json, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, legacy_id) DO NOTHING`
     );
     let imported = 0;
-    this.db.exec("BEGIN IMMEDIATE");
-    try {
+    await this.db.transaction(async () => {
       for (const artifact of request.artifacts) {
-        const result = insert.run(
+        const result = await insert.run(
           randomUUID(),
           userId,
           artifact.legacyId,
@@ -147,34 +154,29 @@ export class ArtifactRepository {
         );
         imported += Number(result.changes > 0);
       }
-      this.db.exec("COMMIT");
-    } catch (error) {
-      this.db.exec("ROLLBACK");
-      throw error;
-    }
+    })();
     return { imported, skipped: request.artifacts.length - imported };
   }
 
-  setShared(userId: string, id: string, isShared: boolean): boolean {
-    return (
-      this.db
-        .prepare(
-          "UPDATE chat_artifacts SET is_shared = ?, updated_at = ? WHERE user_id = ? AND id = ?"
-        )
-        .run(Number(isShared), Date.now(), userId, id).changes > 0
-    );
+  async setShared(userId: string, id: string, isShared: boolean): Promise<boolean> {
+    const result = await this.db
+      .prepare(
+        "UPDATE chat_artifacts SET is_shared = ?, updated_at = ? WHERE user_id = ? AND id = ?"
+      )
+      .run(Number(isShared), Date.now(), userId, id);
+    return result.changes > 0;
   }
 
-  update(userId: string, id: string, input: ArtifactRequest): StoredArtifact | null {
-    const update = this.db.transaction(() => {
-      const current = this.db
+  async update(userId: string, id: string, input: ArtifactRequest): Promise<StoredArtifact | null> {
+    const update = this.db.transaction(async () => {
+      const current = await this.db
         .prepare(
           `SELECT title, category, content, language, model_used, is_favorite, collection, tags_json
            FROM chat_artifacts WHERE user_id = ? AND id = ?`
         )
         .get(userId, id) as Record<string, unknown> | undefined;
       if (!current) return false;
-      this.db
+      await this.db
         .prepare(
           `INSERT INTO chat_artifact_versions(id, artifact_id, user_id, title, category, content, language, model_used, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -190,16 +192,16 @@ export class ArtifactRepository {
           current["model_used"],
           Date.now()
         );
-      this.db
+      await this.db
         .prepare(
           `DELETE FROM chat_artifact_versions
            WHERE user_id = ? AND artifact_id = ? AND id NOT IN (
              SELECT id FROM chat_artifact_versions WHERE user_id = ? AND artifact_id = ?
-             ORDER BY created_at DESC, rowid DESC LIMIT 50
+             ORDER BY created_at DESC, id DESC LIMIT 50
            )`
         )
         .run(userId, id, userId, id);
-      this.db
+      await this.db
         .prepare(
           `UPDATE chat_artifacts
            SET title = ?, category = ?, content = ?, language = ?, model_used = ?, is_shared = ?,
@@ -224,16 +226,16 @@ export class ArtifactRepository {
         );
       return true;
     });
-    if (!update()) return null;
-    return this.list(userId).find((artifact) => artifact.id === id) || null;
+    if (!await update()) return null;
+    return (await this.list(userId)).find((artifact) => artifact.id === id) || null;
   }
 
-  updateOrganization(
+  async updateOrganization(
     userId: string,
     id: string,
     input: ArtifactOrganizationRequest
-  ): StoredArtifact | null {
-    const current = this.db
+  ): Promise<StoredArtifact | null> {
+    const current = await this.db
       .prepare(
         `SELECT is_favorite, collection, tags_json
          FROM chat_artifacts WHERE user_id = ? AND id = ?`
@@ -241,7 +243,7 @@ export class ArtifactRepository {
       .get(userId, id) as Record<string, unknown> | undefined;
     if (!current) return null;
 
-    this.db
+    await this.db
       .prepare(
         `UPDATE chat_artifacts SET is_favorite = ?, collection = ?, tags_json = ?
          WHERE user_id = ? AND id = ?`
@@ -255,18 +257,18 @@ export class ArtifactRepository {
         userId,
         id
       );
-    return this.list(userId).find((artifact) => artifact.id === id) || null;
+    return (await this.list(userId)).find((artifact) => artifact.id === id) || null;
   }
 
-  versions(userId: string, artifactId: string): StoredArtifactVersion[] | null {
-    const owned = this.db
+  async versions(userId: string, artifactId: string): Promise<StoredArtifactVersion[] | null> {
+    const owned = await this.db
       .prepare("SELECT 1 FROM chat_artifacts WHERE user_id = ? AND id = ?")
       .get(userId, artifactId);
     if (!owned) return null;
-    const rows = this.db
+    const rows = await this.db
       .prepare(
         `SELECT id, title, category, content, language, model_used, created_at
-         FROM chat_artifact_versions WHERE user_id = ? AND artifact_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 50`
+         FROM chat_artifact_versions WHERE user_id = ? AND artifact_id = ? ORDER BY created_at DESC, id DESC LIMIT 50`
       )
       .all(userId, artifactId) as Array<Record<string, unknown>>;
     return rows.map((row) => ({
@@ -280,11 +282,11 @@ export class ArtifactRepository {
     }));
   }
 
-  delete(userId: string, id: string): boolean {
-    return (
-      this.db.prepare("DELETE FROM chat_artifacts WHERE user_id = ? AND id = ?").run(userId, id)
-        .changes > 0
-    );
+  async delete(userId: string, id: string): Promise<boolean> {
+    const result = await this.db
+      .prepare("DELETE FROM chat_artifacts WHERE user_id = ? AND id = ?")
+      .run(userId, id);
+    return result.changes > 0;
   }
 
   private map(row: Record<string, unknown>, viewerId: string): StoredArtifact {

@@ -6,6 +6,7 @@ import {
   verifyVaultHealth,
   getVaultAttestationFingerprint,
 } from "../../../domains/credentials/application/credentialVault.js";
+import { getDatabaseClient } from "../../database/databaseClient.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -30,12 +31,17 @@ export async function getReadyz(_req: Request, res: Response): Promise<void> {
   const geminiConfigured = Boolean(resolveApiKey());
   const vaultHealth = verifyVaultHealth();
   const vaultAttestation = getVaultAttestationFingerprint();
-  // SQLite is useful for local development, but Vercel's function filesystem is ephemeral.
-  // Until the repositories use the configured Postgres database, Vercel is not durable-ready.
-  const persistentStorageReady = process.env["VERCEL"] !== "1";
+  let persistentStorageReady = false;
+  try {
+    await getDatabaseClient().get("SELECT 1 AS ready");
+    persistentStorageReady = true;
+  } catch {
+    persistentStorageReady = false;
+  }
 
-  res.status(200).json({
-    status: vaultHealth.healthy && persistentStorageReady ? "ready" : "degraded",
+  const ready = vaultHealth.healthy && persistentStorageReady;
+  res.status(ready ? 200 : 503).json({
+    status: ready ? "ready" : "degraded",
     geminiConfigured,
     pythonAvailable,
     vaultHealthy: vaultHealth.healthy,

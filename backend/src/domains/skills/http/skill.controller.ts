@@ -17,13 +17,18 @@ import { validateSkillDraft } from "../application/skillValidator.js";
 import { initSandbox, cleanupSandbox, executeBash } from "../application/sandboxManager.js";
 import { handleSkillToolCall } from "../application/skillToolHandler.js";
 import {
-  resolveSkillVersionDir,
-  writeSkillFilesToDisk,
-  readSkillFileFromDisk,
+  createSkillStoragePath,
+  persistSkillFiles,
+  readSkillFile,
 } from "../application/skillStorage.js";
 import { getRequestIdentity } from "../../../platform/auth/identity.js";
 import { checkUploadRateLimit } from "../application/rateLimits.js";
-import { deleteUserUploads, downloadUserUpload } from "../../../platform/storage/supabaseStorage.js";
+import {
+  deleteUserUploads,
+  downloadGeneratedFile,
+  downloadUserUpload,
+} from "../../../platform/storage/supabaseStorage.js";
+import { ConversationRepository } from "../../conversations/repositories/conversationRepository.js";
 
 let activeRepository: SkillRepository | null = null;
 
@@ -68,7 +73,7 @@ function canEditSkill(skill: SkillRecord, userId: string, isAdmin: boolean): boo
   return false;
 }
 
-export function listSkills(req: Request, res: Response): void {
+export async function listSkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const userId = identity.userId;
@@ -76,7 +81,7 @@ export function listSkills(req: Request, res: Response): void {
   const scopeQuery = req.query["scope"] as SkillScope | undefined;
   const searchQuery = req.query["q"] as string | undefined;
 
-  const skills = repo.listVisible(userId, orgId, {
+  const skills = await repo.listVisible(userId, orgId, {
     scope: scopeQuery,
     query: searchQuery,
   });
@@ -96,20 +101,20 @@ export function listSkills(req: Request, res: Response): void {
   res.json({ skills: responseItems });
 }
 
-export function getSkill(req: Request, res: Response): void {
+export async function getSkill(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const userId = identity.userId;
   const orgId = identity.orgId;
   const id = req.params["id"]!;
 
-  const skill = repo.get(id);
+  const skill = await repo.get(id);
   if (!skill || !canViewSkill(skill, userId, orgId)) {
     res.status(404).json({ error: "Skill not found or access denied.", requestId: req.id });
     return;
   }
 
-  const files = repo.listFiles(id);
+  const files = await repo.listFiles(id);
 
   res.json({
     skill: {
@@ -125,87 +130,91 @@ export function getSkill(req: Request, res: Response): void {
   });
 }
 
-export function listDirectorySkills(req: Request, res: Response): void {
+export async function listDirectorySkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const category = req.query["category"] as string | undefined;
   const q = req.query["q"] as string | undefined;
 
-  const skills = repo.listDirectorySkills({ category, query: q });
-  const enriched = skills.map((s) => ({
-    ...s,
-    categories: repo.getSkillCategories(s.id),
-    agentsCount: repo.listSkillAgents(s.id).length,
-  }));
+  const skills = await repo.listDirectorySkills({ category, query: q });
+  const enriched = await Promise.all(
+    skills.map(async (s) => ({
+      ...s,
+      categories: await repo.getSkillCategories(s.id),
+      agentsCount: (await repo.listSkillAgents(s.id)).length,
+    }))
+  );
 
   res.json({ skills: enriched });
 }
 
-export function listCategories(req: Request, res: Response): void {
+export async function listCategories(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
-  const categories = repo.listCategories();
+  const categories = await repo.listCategories();
   res.json({ categories });
 }
 
-export function addDirectorySkillToLibrary(req: Request, res: Response): void {
+export async function addDirectorySkillToLibrary(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const skillId = req.params["id"]!;
 
   try {
-    const userCopy = repo.addDirectorySkillToUserLibrary(skillId, identity.userId);
+    const userCopy = await repo.addDirectorySkillToUserLibrary(skillId, identity.userId);
     res.status(201).json({ skill: userCopy });
   } catch (err) {
     res.status(404).json({ error: (err as Error).message, requestId: req.id });
   }
 }
 
-export function getSkillVersions(req: Request, res: Response): void {
+export async function getSkillVersions(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const id = req.params["id"]!;
 
-  const skill = repo.get(id);
+  const skill = await repo.get(id);
   if (!skill || !canViewSkill(skill, identity.userId, identity.orgId)) {
     res.status(404).json({ error: "Skill not found or access denied.", requestId: req.id });
     return;
   }
 
-  const versions = repo.listSkillVersions(id);
+  const versions = await repo.listSkillVersions(id);
   res.json({ versions });
 }
 
-export function getSkillContents(req: Request, res: Response): void {
+export async function getSkillContents(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const id = req.params["id"]!;
 
-  const skill = repo.get(id);
+  const skill = await repo.get(id);
   if (!skill || !canViewSkill(skill, identity.userId, identity.orgId)) {
     res.status(404).json({ error: "Skill not found or access denied.", requestId: req.id });
     return;
   }
 
-  const files = repo.listFiles(id);
-  const filesWithContent = files.map((f) => {
-    let textContent: string | null = null;
-    const isText = /\.(md|py|js|ts|json|txt|yaml|yml|sh|env|csv|html|css)$/i.test(f.relativePath);
-    if (isText && skill.storagePath) {
-      const buffer = readSkillFileFromDisk(skill.storagePath, f.relativePath);
-      if (buffer) {
-        textContent = buffer.toString("utf8");
+  const files = await repo.listFiles(id);
+  const filesWithContent = await Promise.all(
+    files.map(async (f) => {
+      let textContent: string | null = null;
+      const isText = /\.(md|py|js|ts|json|txt|yaml|yml|sh|env|csv|html|css)$/i.test(f.relativePath);
+      if (isText && skill.storagePath) {
+        const buffer = await readSkillFile(skill.storagePath, f.relativePath);
+        if (buffer) {
+          textContent = buffer.toString("utf8");
+        }
       }
-    }
-    return {
-      relativePath: f.relativePath,
-      sizeBytes: f.sizeBytes,
-      sha256: f.sha256,
-      isText,
-      content: textContent,
-    };
-  });
+      return {
+        relativePath: f.relativePath,
+        sizeBytes: f.sizeBytes,
+        sha256: f.sha256,
+        isText,
+        content: textContent,
+      };
+    })
+  );
 
-  const agents = repo.listSkillAgents(id);
-  const categories = repo.getSkillCategories(id);
+  const agents = await repo.listSkillAgents(id);
+  const categories = await repo.getSkillCategories(id);
 
   res.json({
     skill: {
@@ -311,7 +320,7 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
     }
 
     // Check if skill with this name already exists in this scope
-    const existing = repo.getByNameAndScope(
+    const existing = await repo.getByNameAndScope(
       parsed.name,
       requestedScope,
       requestedScope === "user" ? userId : null,
@@ -322,16 +331,16 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
       // In user scope, if owned by user, smoothly update to next version instead of failing with 409
       if (existing.scope === "user" && canEditSkill(existing, userId, isAdmin)) {
         const nextVersion = existing.version + 1;
-        const versionDir = resolveSkillVersionDir(existing.scope, existing.name, nextVersion);
-        writeSkillFilesToDisk(versionDir, parsed.files);
+        const versionDir = createSkillStoragePath(existing.id, nextVersion);
+        await persistSkillFiles(versionDir, parsed.files);
 
-        const updated = repo.update(existing.id, {
+        const updated = await repo.update(existing.id, {
           description: parsed.description,
           storagePath: versionDir,
           version: nextVersion,
         });
 
-        const fileRecords = repo.replaceFiles(
+        const fileRecords = await repo.replaceFiles(
           existing.id,
           parsed.files.map((f) => ({
             relativePath: f.relativePath,
@@ -342,13 +351,13 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
 
         if (parsed.categories?.length) {
           for (const catName of parsed.categories) {
-            const catId = repo.ensureCategory(catName);
-            repo.linkSkillCategory(existing.id, catId);
+            const catId = await repo.ensureCategory(catName);
+            await repo.linkSkillCategory(existing.id, catId);
           }
         }
 
         if (parsed.agents?.length) {
-          repo.saveSkillAgents(
+          await repo.saveSkillAgents(
             existing.id,
             parsed.agents.map((ag) => ({
               name: ag.name,
@@ -375,8 +384,9 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const versionDir = resolveSkillVersionDir(requestedScope, parsed.name, 1);
-    writeSkillFilesToDisk(versionDir, parsed.files);
+    const skillId = crypto.randomUUID();
+    const versionDir = createSkillStoragePath(skillId, 1);
+    await persistSkillFiles(versionDir, parsed.files);
 
     const requestedApprovalStatus = req.body?.approvalStatus as SkillApprovalStatus | undefined;
     const initialApprovalStatus: SkillApprovalStatus =
@@ -388,7 +398,8 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
             ? "approved"
             : "draft";
 
-    const created = repo.create({
+    const created = await repo.create({
+      id: skillId,
       name: parsed.name,
       description: parsed.description,
       scope: requestedScope,
@@ -405,7 +416,7 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
       approvalStatus: initialApprovalStatus,
     });
 
-    const fileRecords = repo.addFiles(
+    const fileRecords = await repo.addFiles(
       created.id,
       parsed.files.map((f) => ({
         relativePath: f.relativePath,
@@ -416,13 +427,13 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
 
     if (parsed.categories?.length) {
       for (const catName of parsed.categories) {
-        const catId = repo.ensureCategory(catName);
-        repo.linkSkillCategory(created.id, catId);
+        const catId = await repo.ensureCategory(catName);
+        await repo.linkSkillCategory(created.id, catId);
       }
     }
 
     if (parsed.agents?.length) {
-      repo.saveSkillAgents(
+      await repo.saveSkillAgents(
         created.id,
         parsed.agents.map((a) => ({
           name: a.name,
@@ -433,7 +444,12 @@ export async function createSkill(req: Request, res: Response): Promise<void> {
       );
     }
 
-    repo.recordSkillVersion(created.id, 1, created.changelog || "Initial release", fileRecords);
+    await repo.recordSkillVersion(
+      created.id,
+      1,
+      created.changelog || "Initial release",
+      fileRecords
+    );
 
     res.status(201).json({
       skill: {
@@ -468,7 +484,7 @@ export async function updateSkill(req: Request, res: Response): Promise<void> {
   const isAdmin = identity.role === "admin";
   const id = req.params["id"]!;
 
-  const existing = repo.get(id);
+  const existing = await repo.get(id);
   if (!existing) {
     res.status(404).json({ error: "Skill not found.", requestId: req.id });
     return;
@@ -527,16 +543,16 @@ export async function updateSkill(req: Request, res: Response): Promise<void> {
     }
 
     const nextVersion = existing.version + 1;
-    const versionDir = resolveSkillVersionDir(existing.scope, existing.name, nextVersion);
-    writeSkillFilesToDisk(versionDir, parsed.files);
+    const versionDir = createSkillStoragePath(existing.id, nextVersion);
+    await persistSkillFiles(versionDir, parsed.files);
 
-    const updated = repo.update(id, {
+    const updated = await repo.update(id, {
       description: parsed.description,
       storagePath: versionDir,
       version: nextVersion,
     });
 
-    const fileRecords = repo.replaceFiles(
+    const fileRecords = await repo.replaceFiles(
       id,
       parsed.files.map((f) => ({
         relativePath: f.relativePath,
@@ -571,14 +587,14 @@ export async function updateSkill(req: Request, res: Response): Promise<void> {
   }
 }
 
-export function deleteSkill(req: Request, res: Response): void {
+export async function deleteSkill(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const userId = identity.userId;
   const isAdmin = identity.role === "admin";
   const id = req.params["id"]!;
 
-  const existing = repo.get(id);
+  const existing = await repo.get(id);
   if (!existing) {
     res.status(404).json({ error: "Skill not found.", requestId: req.id });
     return;
@@ -589,28 +605,30 @@ export function deleteSkill(req: Request, res: Response): void {
     return;
   }
 
-  repo.delete(id);
+  await repo.delete(id);
   res.status(204).end();
 }
 
-export function getConversationSkills(req: Request, res: Response): void {
+export async function getConversationSkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const conversationId = req.params["id"]!;
   const projectId = req.query["projectId"] as string | undefined;
 
-  const skills = repo.getConversationSkills(conversationId);
-  const metaList = skills.map((s) => {
-    const meta = repo.getConversationSkillMeta(conversationId, s.id);
-    return {
-      ...s,
-      explicitlySelected: meta?.explicitlySelected ?? false,
-      source: meta?.source ?? "direct",
-    };
-  });
+  const skills = await repo.getConversationSkills(conversationId);
+  const metaList = await Promise.all(
+    skills.map(async (s) => {
+      const meta = await repo.getConversationSkillMeta(conversationId, s.id);
+      return {
+        ...s,
+        explicitlySelected: meta?.explicitlySelected ?? false,
+        source: meta?.source ?? "direct",
+      };
+    })
+  );
 
   let hasProjectUpdate = false;
   if (projectId) {
-    const projectSkills = repo.getProjectSkills(projectId);
+    const projectSkills = await repo.getProjectSkills(projectId);
     const projectSkillIds = new Set(projectSkills.map((s) => s.id));
     const currentProjectSkills = metaList.filter((s) => s.source === "project");
     const currentProjectSkillIds = new Set(currentProjectSkills.map((s) => s.id));
@@ -626,7 +644,7 @@ export function getConversationSkills(req: Request, res: Response): void {
   res.json({ skills: metaList, hasProjectUpdate });
 }
 
-export function syncConversationProjectSkills(req: Request, res: Response): void {
+export async function syncConversationProjectSkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const conversationId = req.params["id"]!;
@@ -640,14 +658,14 @@ export function syncConversationProjectSkills(req: Request, res: Response): void
   }
 
   // Remove existing skills that came from project
-  repo.removeProjectSourcedConversationSkills(conversationId);
+  await repo.removeProjectSourcedConversationSkills(conversationId);
 
   // Inherit latest project skills
-  const updated = repo.inheritProjectSkills(conversationId, projectId, identity.userId);
+  const updated = await repo.inheritProjectSkills(conversationId, projectId, identity.userId);
   res.json({ skills: updated, synced: true });
 }
 
-export function setConversationSkills(req: Request, res: Response): void {
+export async function setConversationSkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const userId = identity.userId;
@@ -662,7 +680,7 @@ export function setConversationSkills(req: Request, res: Response): void {
 
   // Verify that the user has permission to see EACH skill
   for (const skillId of skillIds) {
-    const skill = repo.get(skillId);
+    const skill = await repo.get(skillId);
     if (!skill || !canViewSkill(skill, userId, orgId)) {
       res.status(403).json({
         error: `Cannot enable skill '${skillId}': skill not found or access denied.`,
@@ -674,16 +692,16 @@ export function setConversationSkills(req: Request, res: Response): void {
 
   const explicitlySelected =
     req.body?.explicitly_selected !== undefined ? Boolean(req.body.explicitly_selected) : true;
-  const enabled = repo.setConversationSkills(conversationId, skillIds, userId, {
+  const enabled = await repo.setConversationSkills(conversationId, skillIds, userId, {
     explicitlySelected,
   });
   res.json({ skills: enabled });
 }
 
-export function getProjectSkills(req: Request, res: Response): void {
+export async function getProjectSkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const projectId = req.params["id"]!;
-  const skills = repo.getProjectSkills(projectId);
+  const skills = await repo.getProjectSkills(projectId);
   res.json({ skills });
 }
 
@@ -691,7 +709,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { getSandboxBaseDir } from "../application/sandboxManager.js";
 
-export function setProjectSkills(req: Request, res: Response): void {
+export async function setProjectSkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const userId = identity.userId;
@@ -706,7 +724,7 @@ export function setProjectSkills(req: Request, res: Response): void {
 
   // Verify that the user has permission to see EACH skill
   for (const skillId of skillIds) {
-    const skill = repo.get(skillId);
+    const skill = await repo.get(skillId);
     if (!skill || !canViewSkill(skill, userId, orgId)) {
       res.status(403).json({
         error: `Cannot enable skill '${skillId}': skill not found or access denied.`,
@@ -716,13 +734,29 @@ export function setProjectSkills(req: Request, res: Response): void {
     }
   }
 
-  const enabled = repo.setProjectSkills(projectId, skillIds);
+  const enabled = await repo.setProjectSkills(projectId, skillIds);
   res.json({ skills: enabled });
 }
 
-export function downloadConversationFile(req: Request, res: Response): void {
+export async function downloadConversationFile(req: Request, res: Response): Promise<void> {
   const conversationId = req.params["id"]!;
   const filename = path.basename(req.params["filename"]!);
+
+  if (process.env["VERCEL"] === "1") {
+    const identity = getRequestIdentity(req);
+    const conversation = await new ConversationRepository().get(identity.userId, conversationId);
+    if (!conversation) {
+      res.status(404).json({ error: "File not found.", requestId: req.id });
+      return;
+    }
+    const stored = await downloadGeneratedFile(identity.userId, conversationId, filename);
+    if (!stored) {
+      res.status(404).json({ error: "File not found.", requestId: req.id });
+      return;
+    }
+    res.redirect(302, stored.signedUrl);
+    return;
+  }
 
   const baseDir = getSandboxBaseDir(conversationId);
   const attachmentPath = path.join(baseDir, "attachments", filename);
@@ -742,13 +776,13 @@ export function downloadConversationFile(req: Request, res: Response): void {
   res.download(targetPath, filename);
 }
 
-export function submitForReview(req: Request, res: Response): void {
+export async function submitForReview(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const id = req.params["id"]!;
   const targetScope = req.body?.targetScope as SkillScope | undefined;
 
-  const skill = repo.get(id);
+  const skill = await repo.get(id);
   if (!skill) {
     res.status(404).json({ error: "Skill not found.", requestId: req.id });
     return;
@@ -768,11 +802,11 @@ export function submitForReview(req: Request, res: Response): void {
     return;
   }
 
-  const updated = repo.updateApprovalStatus(id, "pending_review", null, targetScope);
+  const updated = await repo.updateApprovalStatus(id, "pending_review", null, targetScope);
   res.json({ skill: updated });
 }
 
-export function approveSkill(req: Request, res: Response): void {
+export async function approveSkill(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const id = req.params["id"]!;
@@ -785,17 +819,17 @@ export function approveSkill(req: Request, res: Response): void {
     return;
   }
 
-  const skill = repo.get(id);
+  const skill = await repo.get(id);
   if (!skill) {
     res.status(404).json({ error: "Skill not found.", requestId: req.id });
     return;
   }
 
-  const updated = repo.updateApprovalStatus(id, "approved", null);
+  const updated = await repo.updateApprovalStatus(id, "approved", null);
   res.json({ skill: updated });
 }
 
-export function rejectSkill(req: Request, res: Response): void {
+export async function rejectSkill(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
   const id = req.params["id"]!;
@@ -809,17 +843,17 @@ export function rejectSkill(req: Request, res: Response): void {
     return;
   }
 
-  const skill = repo.get(id);
+  const skill = await repo.get(id);
   if (!skill) {
     res.status(404).json({ error: "Skill not found.", requestId: req.id });
     return;
   }
 
-  const updated = repo.updateApprovalStatus(id, "rejected", reason);
+  const updated = await repo.updateApprovalStatus(id, "rejected", reason);
   res.json({ skill: updated });
 }
 
-export function getAdminQueue(req: Request, res: Response): void {
+export async function getAdminQueue(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const identity = getRequestIdentity(req);
 
@@ -831,15 +865,15 @@ export function getAdminQueue(req: Request, res: Response): void {
     return;
   }
 
-  const queue = repo.listPendingApproval();
+  const queue = await repo.listPendingApproval();
   res.json({ queue });
 }
 
-export function getSkillsAnalytics(req: Request, res: Response): void {
+export async function getSkillsAnalytics(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
   const days = req.query["days"] ? parseInt(String(req.query["days"]), 10) : 30;
 
-  const analytics = repo.getAnalytics(Number.isFinite(days) ? days : 30);
+  const analytics = await repo.getAnalytics(Number.isFinite(days) ? days : 30);
   res.json({ analytics });
 }
 
@@ -876,11 +910,12 @@ export async function testScratchSkill(req: Request, res: Response): Promise<voi
   ];
 
   const parsed = parseSkillPackage(rawFiles);
-  const scratchSkillDir = resolveSkillVersionDir("user", `scratch-${parsed.name}`, 1);
-  writeSkillFilesToDisk(scratchSkillDir, parsed.files);
-
+  const scratchSkillId = crypto.randomUUID();
+  const scratchSkillDir = createSkillStoragePath(scratchSkillId, 1);
+  await persistSkillFiles(scratchSkillDir, parsed.files);
   const scratchRepo = getSkillRepository();
-  const created = scratchRepo.create({
+  const created = await scratchRepo.create({
+    id: scratchSkillId,
     name: parsed.name,
     description: parsed.description,
     scope: "user",
@@ -890,7 +925,7 @@ export async function testScratchSkill(req: Request, res: Response): Promise<voi
     isActive: true,
   });
 
-  scratchRepo.setConversationSkills(scratchConvId, [created.id], identity.userId, {
+  await scratchRepo.setConversationSkills(scratchConvId, [created.id], identity.userId, {
     explicitlySelected: true,
   });
   const sandboxPaths = initSandbox(scratchConvId, [created]);
@@ -904,7 +939,7 @@ export async function testScratchSkill(req: Request, res: Response): Promise<voi
     }> = [];
 
     // Step 1: Preload Skill instructions
-    const skillResult = handleSkillToolCall(
+    const skillResult = await handleSkillToolCall(
       created.name,
       scratchConvId,
       identity.userId,
@@ -947,6 +982,6 @@ export async function testScratchSkill(req: Request, res: Response): Promise<voi
     });
   } finally {
     cleanupSandbox(scratchConvId);
-    scratchRepo.delete(created.id);
+    await scratchRepo.delete(created.id);
   }
 }

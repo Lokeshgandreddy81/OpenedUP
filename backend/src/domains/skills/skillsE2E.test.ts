@@ -12,14 +12,14 @@ import { initSandbox, executeWrite } from "./application/sandboxManager.js";
 import { SANDBOX_TOOLS, executeSandboxTool } from "./application/sandboxTools.js";
 import { SKILL_TOOL_DEFINITION } from "./application/skillToolHandler.js";
 
-function setupE2EEnvironment() {
+async function setupE2EEnvironment() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "skills-e2e-"));
   process.env["SANDBOX_BASE_DIR"] = tmpDir;
   process.env["SKILLS_STORAGE_DIR"] = path.join(tmpDir, "skill_storage");
 
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);
-  seedBuiltinSkills(repo);
+  await seedBuiltinSkills(repo);
 
   return {
     db,
@@ -36,7 +36,7 @@ function setupE2EEnvironment() {
 }
 
 test("Skills E2E Integration - Full progressive loading & multi-tool workflow", async () => {
-  const { db, repo, cleanup } = setupE2EEnvironment();
+  const { db, repo, cleanup } = await setupE2EEnvironment();
 
   try {
     const conversationId = "conv-e2e-123";
@@ -50,11 +50,11 @@ test("Skills E2E Integration - Full progressive loading & multi-tool workflow", 
     ).run(conversationId, userId, "CSV Analytics", "claude-3-5-sonnet", now, now);
 
     // 2. Enable 'csv-summary' skill for this conversation
-    const csvSkill = repo.getByNameAndScope("csv-summary", "builtin");
+    const csvSkill = await repo.getByNameAndScope("csv-summary", "builtin");
     assert.ok(csvSkill, "csv-summary skill should be seeded");
-    repo.setConversationSkills(conversationId, [csvSkill.id], userId);
+    await repo.setConversationSkills(conversationId, [csvSkill.id], userId);
 
-    const enabledSkills = repo.getConversationSkills(conversationId);
+    const enabledSkills = await repo.getConversationSkills(conversationId);
     assert.equal(enabledSkills.length, 1);
     assert.equal(enabledSkills[0]?.name, "csv-summary");
 
@@ -192,7 +192,7 @@ test("Skills E2E Integration - Full progressive loading & multi-tool workflow", 
       assert.deepEqual(toolNames, ["Skill", "Bash", "SendUserFile"]);
 
       // Verify skill usage table was updated
-      const usage = repo.listUsage(conversationId);
+      const usage = await repo.listUsage(conversationId);
       assert.equal(usage.length, 1);
       assert.equal(usage[0]?.skill, "csv-summary");
 
@@ -207,11 +207,11 @@ test("Skills E2E Integration - Full progressive loading & multi-tool workflow", 
   }
 });
 
-test("Skills E2E Security - Unauthorized skill access is strictly blocked", () => {
-  const { db, repo, cleanup } = setupE2EEnvironment();
+test("Skills E2E Security - Unauthorized skill access is strictly blocked", async () => {
+  const { db, repo, cleanup } = await setupE2EEnvironment();
   try {
     // User Alice creates a private skill
-    const aliceSkill = repo.create({
+    const aliceSkill = await repo.create({
       name: "alice-confidential",
       description: "Alice confidential skill",
       scope: "user",
@@ -220,7 +220,7 @@ test("Skills E2E Security - Unauthorized skill access is strictly blocked", () =
     });
 
     // User Bob tries to list visible skills
-    const visibleToBob = repo.listVisible("user-bob");
+    const visibleToBob = await repo.listVisible("user-bob");
     assert.ok(!visibleToBob.some((s) => s.id === aliceSkill.id));
 
     // Bob creates conversation
@@ -232,7 +232,7 @@ test("Skills E2E Security - Unauthorized skill access is strictly blocked", () =
 
     // Bob tries to force-enable Alice's private skill
     // The prompt builder must never see Alice's skill for Bob
-    const bobEnabled = repo.getConversationSkills("conv-bob-99");
+    const bobEnabled = await repo.getConversationSkills("conv-bob-99");
     const bobPrompt = buildSkillsPrompt(bobEnabled);
     assert.ok(!bobPrompt.includes("alice-confidential"));
   } finally {
