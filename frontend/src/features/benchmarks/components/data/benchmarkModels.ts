@@ -2,7 +2,7 @@
  * Artificial Analysis Official AI Model Benchmark Dataset
  *
  * Sourced directly from live Artificial Analysis evaluation platform:
- * - 274 frontier and open-weights model entries, including the latest v5.0 release
+ * - 273 frontier and open-weights models
  * - Verified Quality Index (0-100 composite Artificial Analysis Intelligence Index)
  * - Real API pricing ($/1M blended, input, output)
  * - Measured latency (TTFT seconds) and output throughput (tokens/sec)
@@ -367,67 +367,6 @@ export const CREATOR_METADATA: Record<
 
 export const BENCHMARK_MODELS: AIModelBenchmark[] = [
   {
-    id: "gemini-4-carbon-high",
-    name: "Gemini 4 Carbon (high)",
-    creator: "google",
-    creatorDisplayName: "Google",
-    releaseDate: "2026-10-28",
-    weightsType: "proprietary",
-    contextWindowTokens: 1000000,
-    isReasoningModel: true,
-    noPublicApi: true,
-    reasoningType: "extended-thinking",
-    modalities: ["text", "vision", "audio", "video"],
-    qualityIndexVersion: "v5.0",
-    quality: {
-      intelligenceIndex: 59,
-      mmluPro: null,
-      gpqaDiamond: null,
-      sweBenchVerified: null,
-      humanitiesLastExam: null,
-      chatbotArenaElo: null,
-      omniscienceAccuracy: 58,
-      omniscienceNonHallucination: 89,
-      math500: null,
-      briefcaseV11: null,
-      gdpvalAa: null,
-      terminalBench40: 65,
-      frontierCode11: null,
-      analystAgentAa: null,
-      itBenchAa: null,
-      automationBenchAa: 78,
-      frontierCode20: 41,
-      hleDiamond: 69,
-      terminalBenchScience01: 65,
-      critPtV2HardSubset: 63,
-      gdpPdfAllPass: 28,
-      aaOmniscienceIndex: 54,
-      secBenchPro: 88.2,
-      exploitGym: 54.8,
-      cweBench: 71,
-    },
-    performance: {
-      outputSpeedTokensPerSec: { median: 99.8 },
-      ttftSeconds: { median: 97.48 },
-      endToEnd500TokensSec: 102.49,
-    },
-    pricing: {
-      blendedPricePer1M: 8,
-      sourceBlendedPricePer1M: 2.94,
-      sourceBlendedPriceBasis: "7:2:1 cached-input:input:output mix",
-      inputPricePer1M: 4,
-      outputPricePer1M: 20,
-      cacheHitPricePer1M: 0.2,
-      costPerTaskUsd: 7.76,
-    },
-    summary:
-      "Google’s Gemini 4 Carbon (high) is a reasoning model focused on long-horizon engineering and cybersecurity. Sara Analysis Intelligence Index v5.0: 59 (#1 in its evaluated cohort). Access is currently limited to selected cyber defenders and trusted partners; a public API is not yet generally available. Google announced introductory pricing of $2/M input and $10/M output; standard pricing is $4/M input and $20/M output, with cached input at a 95% discount.",
-    tags: ["reasoning", "frontier", "coding", "agentic", "cybersecurity"],
-    officialUrl:
-      "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/",
-    benchmarkSourceUrl: "https://artificialanalysis.ai/models/gemini-4-carbon/",
-  },
-  {
     id: "claude-opus-5-5-max-with-fallback",
     name: "Claude Opus 5.5 (max with fallback)",
     creator: "anthropic",
@@ -477,7 +416,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0299,
     },
     summary:
-      "Claude Opus 5.5 (max with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 58/100, throughput: 97 tok/s.",
+      "Claude Opus 5.5 (max with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 58/100, throughput: 97 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -531,7 +470,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0273,
     },
     summary:
-      "Claude Sonnet 5.5 (max with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 56/100, throughput: 140 tok/s.",
+      "Claude Sonnet 5.5 (max with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 56/100, throughput: 140 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -585,7 +524,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0173,
     },
     summary:
-      "Claude Opus 5.5 (xhigh with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 56/100, throughput: 86 tok/s.",
+      "Claude Opus 5.5 (xhigh with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 56/100, throughput: 86 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -640,7 +579,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Muse Wonder Full (max) ranked in Sara Analysis; provider: Meta. Intelligence score: 56/100, throughput: 120 tok/s.",
+      "Muse Wonder Full (max) evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 56/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -696,7 +635,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.02,
     },
     summary:
-      "Kimi K3.1 Pro ranked in Sara Analysis; provider: Moonshot AI. Intelligence score: 55/100 (#4 global), #1 in Terminal-Bench 4.0 (67.2%), MoE 2.8T/104B active, 1M context.",
+      "Kimi K3.1 Pro evaluated on Artificial Analysis benchmarks by Moonshot AI. Intelligence score: 55/100 (#4 global), #1 in Terminal-Bench 4.0 (67.2%), MoE 2.8T/104B active, 1M context.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -750,7 +689,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0091,
     },
     summary:
-      "Claude Opus 5.5 (high with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 54/100, throughput: 83 tok/s.",
+      "Claude Opus 5.5 (high with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 54/100, throughput: 83 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -804,7 +743,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0382,
     },
     summary:
-      "Claude Fable 5.1 (max with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 53/100, throughput: 71 tok/s.",
+      "Claude Fable 5.1 (max with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 53/100, throughput: 71 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -858,7 +797,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0299,
     },
     summary:
-      "Claude Fable 5.1 (xhigh with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 53/100, throughput: 64 tok/s.",
+      "Claude Fable 5.1 (xhigh with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 53/100, throughput: 64 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -912,7 +851,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0163,
     },
     summary:
-      "GPT-6 Astra (max) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 53/100, throughput: 65 tok/s.",
+      "GPT-6 Astra (max) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 53/100, throughput: 65 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -966,7 +905,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.01,
     },
     summary:
-      "Gemini 4 Argon (high) ranked in Sara Analysis; provider: Google. Intelligence score: 53/100, throughput: 120 tok/s.",
+      "Gemini 4 Argon (high) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 53/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1020,7 +959,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0226,
     },
     summary:
-      "Muse Wonder (max) ranked in Sara Analysis; provider: Meta. Intelligence score: 52/100, throughput: 176 tok/s.",
+      "Muse Wonder (max) evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 52/100, throughput: 176 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1074,7 +1013,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0116,
     },
     summary:
-      "GPT-6 Astra (xhigh) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 52/100, throughput: 56 tok/s.",
+      "GPT-6 Astra (xhigh) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 52/100, throughput: 56 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1128,7 +1067,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.01,
     },
     summary:
-      "Claude Sonnet 5.5 (xhigh with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 52/100, throughput: 113 tok/s.",
+      "Claude Sonnet 5.5 (xhigh with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 52/100, throughput: 113 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1182,7 +1121,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0036,
     },
     summary:
-      "GPT-6.1 Sol (max) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 52/100, throughput: 64 tok/s.",
+      "GPT-6.1 Sol (max) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 52/100, throughput: 64 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1236,7 +1175,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0067,
     },
     summary:
-      "Claude Opus 5.5 (medium with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 51/100, throughput: 82 tok/s.",
+      "Claude Opus 5.5 (medium with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 51/100, throughput: 82 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1290,7 +1229,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0196,
     },
     summary:
-      "Claude Fable 5.1 (high with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 51/100, throughput: 59 tok/s.",
+      "Claude Fable 5.1 (high with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 51/100, throughput: 59 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1344,7 +1283,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.002,
     },
     summary:
-      "GPT-6.1 Sol (xhigh) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 51/100, throughput: 58 tok/s.",
+      "GPT-6.1 Sol (xhigh) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 51/100, throughput: 58 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1398,7 +1337,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0086,
     },
     summary:
-      "GPT-6 Astra (high) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 51/100, throughput: 54 tok/s.",
+      "GPT-6 Astra (high) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 51/100, throughput: 54 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1452,7 +1391,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0016,
     },
     summary:
-      "GPT-6.1 Sol (high) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 50/100, throughput: 53 tok/s.",
+      "GPT-6.1 Sol (high) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 50/100, throughput: 53 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1506,7 +1445,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0077,
     },
     summary:
-      "GPT-6 Astra (medium) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 50/100, throughput: 50 tok/s.",
+      "GPT-6 Astra (medium) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 50/100, throughput: 50 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1560,7 +1499,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0149,
     },
     summary:
-      "Claude Fable 5.1 (medium with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 49/100, throughput: 59 tok/s.",
+      "Claude Fable 5.1 (medium with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 49/100, throughput: 59 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1614,7 +1553,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.008,
     },
     summary:
-      "Muse Spark 1.3 (max) ranked in Sara Analysis; provider: Meta. Intelligence score: 48/100, throughput: 139 tok/s.",
+      "Muse Spark 1.3 (max) evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 48/100, throughput: 139 tok/s.",
     tags: ["reasoning", "open-weights", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1668,7 +1607,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.001,
     },
     summary:
-      "GPT-6.1 Sol (medium) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 48/100, throughput: 49 tok/s.",
+      "GPT-6.1 Sol (medium) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 48/100, throughput: 49 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1721,7 +1660,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0119,
     },
     summary:
-      "Claude Fable 5.1 (low with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 47/100, throughput: 60 tok/s.",
+      "Claude Fable 5.1 (low with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 47/100, throughput: 60 tok/s.",
     tags: ["frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1775,7 +1714,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0044,
     },
     summary:
-      "Claude Sonnet 5.5 (high with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 47/100, throughput: 111 tok/s.",
+      "Claude Sonnet 5.5 (high with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 47/100, throughput: 111 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1829,7 +1768,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0187,
     },
     summary:
-      "Grok 4.7 (xhigh) ranked in Sara Analysis; provider: SpaceXAI. Intelligence score: 46/100, throughput: 97 tok/s.",
+      "Grok 4.7 (xhigh) evaluated on Artificial Analysis benchmarks by SpaceXAI. Intelligence score: 46/100, throughput: 97 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1883,7 +1822,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0137,
     },
     summary:
-      "Grok 4.7 (high) ranked in Sara Analysis; provider: SpaceXAI. Intelligence score: 46/100, throughput: 98 tok/s.",
+      "Grok 4.7 (high) evaluated on Artificial Analysis benchmarks by SpaceXAI. Intelligence score: 46/100, throughput: 98 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1936,7 +1875,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0007,
     },
     summary:
-      "MiMo-V2.6-Pro ranked in Sara Analysis; provider: Xiaomi. Intelligence score: 46/100, throughput: 48 tok/s.",
+      "MiMo-V2.6-Pro evaluated on Artificial Analysis benchmarks by Xiaomi. Intelligence score: 46/100, throughput: 48 tok/s.",
     tags: ["frontier", "cost-effective", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -1989,7 +1928,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0041,
     },
     summary:
-      "GPT-6 Astra (low) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 46/100, throughput: 56 tok/s.",
+      "GPT-6 Astra (low) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 46/100, throughput: 56 tok/s.",
     tags: ["frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2043,7 +1982,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0271,
     },
     summary:
-      "Qwen3.8 Max (0902) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 45/100, throughput: 37 tok/s.",
+      "Qwen3.8 Max (0902) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 45/100, throughput: 37 tok/s.",
     tags: ["reasoning", "open-weights", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2097,7 +2036,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0069,
     },
     summary:
-      "Muse Spark 1.3 (xhigh) ranked in Sara Analysis; provider: Meta. Intelligence score: 45/100, throughput: 288 tok/s.",
+      "Muse Spark 1.3 (xhigh) evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 45/100, throughput: 288 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2151,7 +2090,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.01,
     },
     summary:
-      "GLM-5.3 (max) ranked in Sara Analysis; provider: Z AI. Intelligence score: 45/100, throughput: 93 tok/s.",
+      "GLM-5.3 (max) evaluated on Artificial Analysis benchmarks by Z AI. Intelligence score: 45/100, throughput: 93 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2204,7 +2143,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0052,
     },
     summary:
-      "Step 5 Preview ranked in Sara Analysis; provider: StepFun. Intelligence score: 44/100, throughput: 93 tok/s.",
+      "Step 5 Preview evaluated on Artificial Analysis benchmarks by StepFun. Intelligence score: 44/100, throughput: 93 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2258,7 +2197,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.01,
     },
     summary:
-      "Kimi K3 (max) ranked in Sara Analysis; provider: Kimi. Intelligence score: 44/100, throughput: 43 tok/s.",
+      "Kimi K3 (max) evaluated on Artificial Analysis benchmarks by Kimi. Intelligence score: 44/100, throughput: 43 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2312,7 +2251,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0167,
     },
     summary:
-      "Grok 4.6 (high) ranked in Sara Analysis; provider: SpaceXAI. Intelligence score: 44/100, throughput: 66 tok/s.",
+      "Grok 4.6 (high) evaluated on Artificial Analysis benchmarks by SpaceXAI. Intelligence score: 44/100, throughput: 66 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2366,7 +2305,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0167,
     },
     summary:
-      "Grok 4.6 (xhigh) ranked in Sara Analysis; provider: SpaceXAI. Intelligence score: 44/100, throughput: 65 tok/s.",
+      "Grok 4.6 (xhigh) evaluated on Artificial Analysis benchmarks by SpaceXAI. Intelligence score: 44/100, throughput: 65 tok/s.",
     tags: ["reasoning", "frontier", "coding", "agentic"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2420,7 +2359,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.001,
     },
     summary:
-      "Claude Haiku 5.5 (max) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 43/100, throughput: 235 tok/s.",
+      "Claude Haiku 5.5 (max) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 43/100, throughput: 235 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2473,7 +2412,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0028,
     },
     summary:
-      "Claude Opus 5.5 (low with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 42/100, throughput: 80 tok/s.",
+      "Claude Opus 5.5 (low with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 42/100, throughput: 80 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2526,7 +2465,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0063,
     },
     summary:
-      "Grok 4.7 (low) ranked in Sara Analysis; provider: SpaceXAI. Intelligence score: 42/100, throughput: 75 tok/s.",
+      "Grok 4.7 (low) evaluated on Artificial Analysis benchmarks by SpaceXAI. Intelligence score: 42/100, throughput: 75 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2579,7 +2518,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0007,
     },
     summary:
-      "GPT-6.1 Sol (low) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 42/100, throughput: 51 tok/s.",
+      "GPT-6.1 Sol (low) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 42/100, throughput: 51 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2621,14 +2560,14 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
     pricing: {
       blendedPricePer1M: 2,
       sourceBlendedPricePer1M: 0.73,
-      sourceBlendedPriceBasis: "Published 7:2:1 cache-hit:input:output mix",
+      sourceBlendedPriceBasis: "Artificial Analysis 7:2:1 cache-hit:input:output mix",
       inputPricePer1M: 1,
       outputPricePer1M: 5,
       cacheHitPricePer1M: 0.05,
       costPerTaskUsd: 0.4,
     },
     summary:
-      "Sara Analysis Intelligence Index 48/100; Terminal-Bench 4.0: 50.3%; output speed 90.9 tokens/s; cost $0.40 per Intelligence Index task.",
+      "Artificial Analysis Intelligence Index 48/100; Terminal-Bench 4.0: 50.3%; output speed 90.9 tokens/s; cost $0.40 per Intelligence Index task.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai/models/gpt-6-1-terra",
   },
@@ -2681,7 +2620,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0014,
     },
     summary:
-      "GLM-5.3-Flash ranked in Sara Analysis; provider: Z AI. Intelligence score: 42/100, throughput: 77 tok/s.",
+      "GLM-5.3-Flash evaluated on Artificial Analysis benchmarks by Z AI. Intelligence score: 42/100, throughput: 77 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2735,7 +2674,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0006,
     },
     summary:
-      "Claude Haiku 5.5 (xhigh) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 41/100, throughput: 198 tok/s.",
+      "Claude Haiku 5.5 (xhigh) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 41/100, throughput: 198 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2788,7 +2727,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.005,
     },
     summary:
-      "Ling 3.1 Flash ranked in Sara Analysis; provider: InclusionAI. Intelligence score: 41/100, throughput: 210 tok/s.",
+      "Ling 3.1 Flash evaluated on Artificial Analysis benchmarks by InclusionAI. Intelligence score: 41/100, throughput: 210 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2842,7 +2781,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0062,
     },
     summary:
-      "Gemini 3.8 Flash (high) ranked in Sara Analysis; provider: Google. Intelligence score: 41/100, throughput: 150 tok/s.",
+      "Gemini 3.8 Flash (high) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 41/100, throughput: 150 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2896,7 +2835,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0024,
     },
     summary:
-      "Claude Sonnet 5.5 (medium with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 41/100, throughput: 109 tok/s.",
+      "Claude Sonnet 5.5 (medium with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 41/100, throughput: 109 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -2949,7 +2888,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0108,
     },
     summary:
-      "Qwen3.8 2.4T A95B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 40/100, throughput: 38 tok/s.",
+      "Qwen3.8 2.4T A95B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 40/100, throughput: 38 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3002,7 +2941,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0019,
     },
     summary:
-      "Qwen3.8-Flash-Next ranked in Sara Analysis; provider: Alibaba. Intelligence score: 40/100, throughput: 53 tok/s.",
+      "Qwen3.8-Flash-Next evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 40/100, throughput: 53 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3056,7 +2995,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0047,
     },
     summary:
-      "Gemini 3.8 Flash (medium) ranked in Sara Analysis; provider: Google. Intelligence score: 40/100, throughput: 120 tok/s.",
+      "Gemini 3.8 Flash (medium) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 40/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3110,7 +3049,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0024,
     },
     summary:
-      "DeepSeek V4.1 Flash (max) ranked in Sara Analysis; provider: DeepSeek. Intelligence score: 39/100, throughput: 227 tok/s.",
+      "DeepSeek V4.1 Flash (max) evaluated on Artificial Analysis benchmarks by DeepSeek. Intelligence score: 39/100, throughput: 227 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3164,7 +3103,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0042,
     },
     summary:
-      "Muse Spark Open (xhigh) ranked in Sara Analysis; provider: Meta. Intelligence score: 39/100, throughput: 140 tok/s.",
+      "Muse Spark Open (xhigh) evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 39/100, throughput: 140 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3217,7 +3156,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0056,
     },
     summary:
-      "Mistral Large 4 Preview ranked in Sara Analysis; provider: Mistral. Intelligence score: 38/100, throughput: 75 tok/s.",
+      "Mistral Large 4 Preview evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 38/100, throughput: 75 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3271,7 +3210,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0004,
     },
     summary:
-      "GPT-6 Luna (max) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 38/100, throughput: 124 tok/s.",
+      "GPT-6 Luna (max) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 38/100, throughput: 124 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3313,14 +3252,14 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
     pricing: {
       blendedPricePer1M: 2,
       sourceBlendedPricePer1M: 0.73,
-      sourceBlendedPriceBasis: "Published 7:2:1 cache-hit:input:output mix",
+      sourceBlendedPriceBasis: "Artificial Analysis 7:2:1 cache-hit:input:output mix",
       inputPricePer1M: 1,
       outputPricePer1M: 5,
       cacheHitPricePer1M: 0.05,
       costPerTaskUsd: 0.19,
     },
     summary:
-      "Sara Analysis Intelligence Index 45/100; output speed 90.9 tokens/s; cost $0.19 per Intelligence Index task.",
+      "Artificial Analysis Intelligence Index 45/100; output speed 90.9 tokens/s; cost $0.19 per Intelligence Index task.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai/models/gpt-6-1-terra-xhigh",
   },
@@ -3373,7 +3312,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0003,
     },
     summary:
-      "MiMo-V2.6-Flash ranked in Sara Analysis; provider: Xiaomi. Intelligence score: 38/100, throughput: 49 tok/s.",
+      "MiMo-V2.6-Flash evaluated on Artificial Analysis benchmarks by Xiaomi. Intelligence score: 38/100, throughput: 49 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3427,7 +3366,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0004,
     },
     summary:
-      "Claude Haiku 5.5 (high) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 38/100, throughput: 189 tok/s.",
+      "Claude Haiku 5.5 (high) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 38/100, throughput: 189 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3481,7 +3420,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0034,
     },
     summary:
-      "DeepSeek V4 Pro 0813 (max) ranked in Sara Analysis; provider: DeepSeek. Intelligence score: 36/100, throughput: 93 tok/s.",
+      "DeepSeek V4 Pro 0813 (max) evaluated on Artificial Analysis benchmarks by DeepSeek. Intelligence score: 36/100, throughput: 93 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3534,7 +3473,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0017,
     },
     summary:
-      "Claude Sonnet 5.5 (low with fallback) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 36/100, throughput: 110 tok/s.",
+      "Claude Sonnet 5.5 (low with fallback) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 36/100, throughput: 110 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3587,7 +3526,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Agnes 2.5 Pro Beta ranked in Sara Analysis; provider: Sapiens AI. Intelligence score: 35/100, throughput: 111 tok/s.",
+      "Agnes 2.5 Pro Beta evaluated on Artificial Analysis benchmarks by Sapiens AI. Intelligence score: 35/100, throughput: 111 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3641,7 +3580,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0052,
     },
     summary:
-      "DeepSeek V4 Flash Vision (max) ranked in Sara Analysis; provider: DeepSeek. Intelligence score: 35/100, throughput: 189 tok/s.",
+      "DeepSeek V4 Flash Vision (max) evaluated on Artificial Analysis benchmarks by DeepSeek. Intelligence score: 35/100, throughput: 189 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3695,7 +3634,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0002,
     },
     summary:
-      "GPT-6 Luna (xhigh) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 35/100, throughput: 122 tok/s.",
+      "GPT-6 Luna (xhigh) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 35/100, throughput: 122 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3749,7 +3688,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0003,
     },
     summary:
-      "Claude Haiku 5.5 (medium) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 34/100, throughput: 185 tok/s.",
+      "Claude Haiku 5.5 (medium) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 34/100, throughput: 185 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3802,7 +3741,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0043,
     },
     summary:
-      "GLM-5.3 (low) ranked in Sara Analysis; provider: Z AI. Intelligence score: 34/100, throughput: 82 tok/s.",
+      "GLM-5.3 (low) evaluated on Artificial Analysis benchmarks by Z AI. Intelligence score: 34/100, throughput: 82 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3844,14 +3783,14 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
     pricing: {
       blendedPricePer1M: 2,
       sourceBlendedPricePer1M: 0.73,
-      sourceBlendedPriceBasis: "Published 7:2:1 cache-hit:input:output mix",
+      sourceBlendedPriceBasis: "Artificial Analysis 7:2:1 cache-hit:input:output mix",
       inputPricePer1M: 1,
       outputPricePer1M: 5,
       cacheHitPricePer1M: 0.05,
       costPerTaskUsd: 0.13,
     },
     summary:
-      "Sara Analysis Intelligence Index 44/100; output speed 91.0 tokens/s; cost $0.13 per Intelligence Index task.",
+      "Artificial Analysis Intelligence Index 44/100; output speed 91.0 tokens/s; cost $0.13 per Intelligence Index task.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai/models/gpt-6-1-terra-high",
   },
@@ -3904,7 +3843,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "JT-4.1 Flash 236B A21B ranked in Sara Analysis; provider: China Mobile. Intelligence score: 34/100, throughput: 120 tok/s.",
+      "JT-4.1 Flash 236B A21B evaluated on Artificial Analysis benchmarks by China Mobile. Intelligence score: 34/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -3958,7 +3897,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.005,
     },
     summary:
-      "Qwen3.8 27B (xhigh) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 34/100, throughput: 42 tok/s.",
+      "Qwen3.8 27B (xhigh) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 34/100, throughput: 42 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4011,7 +3950,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Motif 3 ranked in Sara Analysis; provider: Motif Technologies. Intelligence score: 34/100, throughput: 120 tok/s.",
+      "Motif 3 evaluated on Artificial Analysis benchmarks by Motif Technologies. Intelligence score: 34/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4064,7 +4003,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemini 3.8 Flash (low) ranked in Sara Analysis; provider: Google. Intelligence score: 33/100, throughput: 120 tok/s.",
+      "Gemini 3.8 Flash (low) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 33/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4118,7 +4057,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "GPT-6 Luna (high) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 33/100, throughput: 123 tok/s.",
+      "GPT-6 Luna (high) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 33/100, throughput: 123 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4172,7 +4111,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "GPT-5.3 Codex (xhigh) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 33/100, throughput: 108 tok/s.",
+      "GPT-5.3 Codex (xhigh) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 33/100, throughput: 108 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4225,7 +4164,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2 Horizon 375B A23B ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 31/100, throughput: 1,009.4 tok/s.",
+      "K2 Horizon 375B A23B evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 31/100, throughput: 1,009.4 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4278,7 +4217,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0028,
     },
     summary:
-      "Beam 1.0 ranked in Sara Analysis; provider: Reflection. Intelligence score: 30/100, throughput: 303 tok/s.",
+      "Beam 1.0 evaluated on Artificial Analysis benchmarks by Reflection. Intelligence score: 30/100, throughput: 303 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4320,14 +4259,14 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
     pricing: {
       blendedPricePer1M: 2,
       sourceBlendedPricePer1M: 0.73,
-      sourceBlendedPriceBasis: "Published 7:2:1 cache-hit:input:output mix",
+      sourceBlendedPriceBasis: "Artificial Analysis 7:2:1 cache-hit:input:output mix",
       inputPricePer1M: 1,
       outputPricePer1M: 5,
       cacheHitPricePer1M: 0.05,
       costPerTaskUsd: 0.1,
     },
     summary:
-      "Sara Analysis Intelligence Index 41/100; output speed 90.9 tokens/s; cost $0.10 per Intelligence Index task.",
+      "Artificial Analysis Intelligence Index 41/100; output speed 90.9 tokens/s; cost $0.10 per Intelligence Index task.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai/models/gpt-6-1-terra-medium",
   },
@@ -4380,7 +4319,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0057,
     },
     summary:
-      "Kimi K3 (low) ranked in Sara Analysis; provider: Kimi. Intelligence score: 30/100, throughput: 40 tok/s.",
+      "Kimi K3 (low) evaluated on Artificial Analysis benchmarks by Kimi. Intelligence score: 30/100, throughput: 40 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4434,7 +4373,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "GPT-6 Luna (medium) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 30/100, throughput: 120 tok/s.",
+      "GPT-6 Luna (medium) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 30/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4487,7 +4426,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0065,
     },
     summary:
-      "Gemini 3.1 Pro Preview ranked in Sara Analysis; provider: Google. Intelligence score: 30/100, throughput: 139 tok/s.",
+      "Gemini 3.1 Pro Preview evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 30/100, throughput: 139 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4540,7 +4479,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Claude Haiku 5.5 (low) ranked in Sara Analysis; provider: Anthropic. Intelligence score: 29/100, throughput: 171 tok/s.",
+      "Claude Haiku 5.5 (low) evaluated on Artificial Analysis benchmarks by Anthropic. Intelligence score: 29/100, throughput: 171 tok/s.",
     tags: ["frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4594,7 +4533,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0026,
     },
     summary:
-      "MiniMax-M3 ranked in Sara Analysis; provider: MiniMax. Intelligence score: 29/100, throughput: 123 tok/s.",
+      "MiniMax-M3 evaluated on Artificial Analysis benchmarks by MiniMax. Intelligence score: 29/100, throughput: 123 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4647,7 +4586,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nex-N2-Pro ranked in Sara Analysis; provider: Nex AGI. Intelligence score: 28/100, throughput: 120 tok/s.",
+      "Nex-N2-Pro evaluated on Artificial Analysis benchmarks by Nex AGI. Intelligence score: 28/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4701,7 +4640,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0056,
     },
     summary:
-      "Qwen3.8 27B (medium) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 28/100, throughput: 44 tok/s.",
+      "Qwen3.8 27B (medium) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 28/100, throughput: 44 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4743,14 +4682,14 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
     pricing: {
       blendedPricePer1M: 2,
       sourceBlendedPricePer1M: 0.73,
-      sourceBlendedPriceBasis: "Published 7:2:1 cache-hit:input:output mix",
+      sourceBlendedPriceBasis: "Artificial Analysis 7:2:1 cache-hit:input:output mix",
       inputPricePer1M: 1,
       outputPricePer1M: 5,
       cacheHitPricePer1M: 0.05,
       costPerTaskUsd: 0.05,
     },
     summary:
-      "Sara Analysis Intelligence Index 36/100; output speed 91.0 tokens/s; cost $0.05 per Intelligence Index task.",
+      "Artificial Analysis Intelligence Index 36/100; output speed 91.0 tokens/s; cost $0.05 per Intelligence Index task.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai/models/gpt-6-1-terra-low",
   },
@@ -4804,7 +4743,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "JT-4.1 Flash 236B A21B (non-reasoning) ranked in Sara Analysis; provider: China Mobile. Intelligence score: 27/100, throughput: 120 tok/s.",
+      "JT-4.1 Flash 236B A21B (non-reasoning) evaluated on Artificial Analysis benchmarks by China Mobile. Intelligence score: 27/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4858,7 +4797,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0101,
     },
     summary:
-      "Quasar 438B (max) ranked in Sara Analysis; provider: Multiverse Computing. Intelligence score: 27/100, throughput: 172 tok/s.",
+      "Quasar 438B (max) evaluated on Artificial Analysis benchmarks by Multiverse Computing. Intelligence score: 27/100, throughput: 172 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4911,7 +4850,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0035,
     },
     summary:
-      "Solar Pro 4 ranked in Sara Analysis; provider: Upstage. Intelligence score: 27/100, throughput: 117 tok/s.",
+      "Solar Pro 4 evaluated on Artificial Analysis benchmarks by Upstage. Intelligence score: 27/100, throughput: 117 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -4964,7 +4903,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0009,
     },
     summary:
-      "Nemotron 3.5 Super VL ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 26/100, throughput: 409 tok/s.",
+      "Nemotron 3.5 Super VL evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 26/100, throughput: 409 tok/s.",
     tags: ["open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5017,7 +4956,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0023,
     },
     summary:
-      "Apodex 1.1 ranked in Sara Analysis; provider: Apodex. Intelligence score: 26/100, throughput: 120 tok/s.",
+      "Apodex 1.1 evaluated on Artificial Analysis benchmarks by Apodex. Intelligence score: 26/100, throughput: 120 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5070,7 +5009,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0053,
     },
     summary:
-      "Qwen3.8 27B (low) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 26/100, throughput: 45 tok/s.",
+      "Qwen3.8 27B (low) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 26/100, throughput: 45 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5123,7 +5062,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0034,
     },
     summary:
-      "GPT-5.5 Instant (June 2026) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 26/100, throughput: 154 tok/s.",
+      "GPT-5.5 Instant (June 2026) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 26/100, throughput: 154 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5176,7 +5115,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0027,
     },
     summary:
-      "Kimi K2.7 Code ranked in Sara Analysis; provider: Kimi. Intelligence score: 26/100, throughput: 52 tok/s.",
+      "Kimi K2.7 Code evaluated on Artificial Analysis benchmarks by Kimi. Intelligence score: 26/100, throughput: 52 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5229,7 +5168,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0004,
     },
     summary:
-      "Inkling Small ranked in Sara Analysis; provider: Thinking Machines. Intelligence score: 26/100, throughput: 199 tok/s.",
+      "Inkling Small evaluated on Artificial Analysis benchmarks by Thinking Machines. Intelligence score: 26/100, throughput: 199 tok/s.",
     tags: ["frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5282,7 +5221,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2 Horizon MoVA 36B A4B ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 25/100, throughput: 120 tok/s.",
+      "K2 Horizon MoVA 36B A4B evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 25/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5335,7 +5274,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0004,
     },
     summary:
-      "Hy3 ranked in Sara Analysis; provider: Tencent. Intelligence score: 25/100, throughput: 85 tok/s.",
+      "Hy3 evaluated on Artificial Analysis benchmarks by Tencent. Intelligence score: 25/100, throughput: 85 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5388,7 +5327,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0011,
     },
     summary:
-      "Qwen3.7 Plus ranked in Sara Analysis; provider: Alibaba. Intelligence score: 25/100, throughput: 56 tok/s.",
+      "Qwen3.7 Plus evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 25/100, throughput: 56 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5442,7 +5381,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Inkling (xhigh) ranked in Sara Analysis; provider: Thinking Machines. Intelligence score: 25/100, throughput: 206 tok/s.",
+      "Inkling (xhigh) evaluated on Artificial Analysis benchmarks by Thinking Machines. Intelligence score: 25/100, throughput: 206 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5495,7 +5434,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Solar Open2 250B ranked in Sara Analysis; provider: Upstage. Intelligence score: 25/100, throughput: 120 tok/s.",
+      "Solar Open2 250B evaluated on Artificial Analysis benchmarks by Upstage. Intelligence score: 25/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5549,7 +5488,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0011,
     },
     summary:
-      "DeepSeek V4.1 Flash (non-reasoning) ranked in Sara Analysis; provider: DeepSeek. Intelligence score: 25/100, throughput: 366 tok/s.",
+      "DeepSeek V4.1 Flash (non-reasoning) evaluated on Artificial Analysis benchmarks by DeepSeek. Intelligence score: 25/100, throughput: 366 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5602,7 +5541,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Ling-3.0-flash-VL ranked in Sara Analysis; provider: InclusionAI. Intelligence score: 25/100, throughput: 120 tok/s.",
+      "Ling-3.0-flash-VL evaluated on Artificial Analysis benchmarks by InclusionAI. Intelligence score: 25/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5655,7 +5594,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0019,
     },
     summary:
-      "Solar Mini 4 ranked in Sara Analysis; provider: Upstage. Intelligence score: 24/100, throughput: 89 tok/s.",
+      "Solar Mini 4 evaluated on Artificial Analysis benchmarks by Upstage. Intelligence score: 24/100, throughput: 89 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5708,7 +5647,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0029,
     },
     summary:
-      "Nemotron 3 Ultra ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 23/100, throughput: 137 tok/s.",
+      "Nemotron 3 Ultra evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 23/100, throughput: 137 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5761,7 +5700,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Ling-3.0-flash-Fin ranked in Sara Analysis; provider: InclusionAI. Intelligence score: 23/100, throughput: 306 tok/s.",
+      "Ling-3.0-flash-Fin evaluated on Artificial Analysis benchmarks by InclusionAI. Intelligence score: 23/100, throughput: 306 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5814,7 +5753,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0009,
     },
     summary:
-      "Gemini 3.5 Flash-Lite ranked in Sara Analysis; provider: Google. Intelligence score: 22/100, throughput: 437 tok/s.",
+      "Gemini 3.5 Flash-Lite evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 22/100, throughput: 437 tok/s.",
     tags: ["frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5867,7 +5806,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "G9v3-39A5B ranked in Sara Analysis; provider: AI9Stars. Intelligence score: 22/100, throughput: 120 tok/s.",
+      "G9v3-39A5B evaluated on Artificial Analysis benchmarks by AI9Stars. Intelligence score: 22/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5920,7 +5859,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "KAT-Coder-Pro V2 ranked in Sara Analysis; provider: KwaiKAT. Intelligence score: 22/100, throughput: 120 tok/s.",
+      "KAT-Coder-Pro V2 evaluated on Artificial Analysis benchmarks by KwaiKAT. Intelligence score: 22/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -5973,7 +5912,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "GPT-6 Luna (low) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 22/100, throughput: 125 tok/s.",
+      "GPT-6 Luna (low) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 22/100, throughput: 125 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6026,7 +5965,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "A.X-K2 ranked in Sara Analysis; provider: SK Telecom. Intelligence score: 21/100, throughput: 120 tok/s.",
+      "A.X-K2 evaluated on Artificial Analysis benchmarks by SK Telecom. Intelligence score: 21/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6080,7 +6019,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 397B A17B (non-reasoning) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 21/100, throughput: 56 tok/s.",
+      "Qwen3.5 397B A17B (non-reasoning) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 21/100, throughput: 56 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6133,7 +6072,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nemotron 3.5 Bolt 74B-A9B ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 21/100, throughput: 120 tok/s.",
+      "Nemotron 3.5 Bolt 74B-A9B evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 21/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6175,14 +6114,14 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
     pricing: {
       blendedPricePer1M: 2,
       sourceBlendedPricePer1M: 0.73,
-      sourceBlendedPriceBasis: "Published 7:2:1 cache-hit:input:output mix",
+      sourceBlendedPriceBasis: "Artificial Analysis 7:2:1 cache-hit:input:output mix",
       inputPricePer1M: 1,
       outputPricePer1M: 5,
       cacheHitPricePer1M: 0.05,
       costPerTaskUsd: 0.11,
     },
     summary:
-      "Sara Analysis Intelligence Index 33/100; output speed 91.1 tokens/s; cost $0.11 per Intelligence Index task.",
+      "Artificial Analysis Intelligence Index 33/100; output speed 91.1 tokens/s; cost $0.11 per Intelligence Index task.",
     tags: ["frontier", "multimodal"],
     officialUrl: "https://artificialanalysis.ai/models/gpt-6-1-terra-non-reasoning",
   },
@@ -6235,7 +6174,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2 Horizon 7B ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 21/100, throughput: 120 tok/s.",
+      "K2 Horizon 7B evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 21/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6288,7 +6227,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 Omni Plus ranked in Sara Analysis; provider: Alibaba. Intelligence score: 20/100, throughput: 84 tok/s.",
+      "Qwen3.5 Omni Plus evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 20/100, throughput: 84 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6342,7 +6281,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0018,
     },
     summary:
-      "DeepSeek V4 Pro 0813 (non-reasoning) ranked in Sara Analysis; provider: DeepSeek. Intelligence score: 20/100, throughput: 91 tok/s.",
+      "DeepSeek V4 Pro 0813 (non-reasoning) evaluated on Artificial Analysis benchmarks by DeepSeek. Intelligence score: 20/100, throughput: 91 tok/s.",
     tags: ["reasoning", "open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6396,7 +6335,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "o3 ranked in Sara Analysis; provider: OpenAI. Intelligence score: 20/100, throughput: 157 tok/s.",
+      "o3 evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 20/100, throughput: 157 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6450,7 +6389,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0125,
     },
     summary:
-      "Qwen3.8 27B (non-reasoning) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 20/100, throughput: 43 tok/s.",
+      "Qwen3.8 27B (non-reasoning) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 20/100, throughput: 43 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6503,7 +6442,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K-EXAONE 2.0 ranked in Sara Analysis; provider: LG AI Research. Intelligence score: 20/100, throughput: 120 tok/s.",
+      "K-EXAONE 2.0 evaluated on Artificial Analysis benchmarks by LG AI Research. Intelligence score: 20/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6556,7 +6495,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0008,
     },
     summary:
-      "LongCat 2.0 ranked in Sara Analysis; provider: LongCat. Intelligence score: 19/100, throughput: 65 tok/s.",
+      "LongCat 2.0 evaluated on Artificial Analysis benchmarks by LongCat. Intelligence score: 19/100, throughput: 65 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6609,7 +6548,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "JT-35B-Flash ranked in Sara Analysis; provider: China Mobile. Intelligence score: 19/100, throughput: 120 tok/s.",
+      "JT-35B-Flash evaluated on Artificial Analysis benchmarks by China Mobile. Intelligence score: 19/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6663,7 +6602,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "GPT-6 Luna (non-reasoning) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 18/100, throughput: 121 tok/s.",
+      "GPT-6 Luna (non-reasoning) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 18/100, throughput: 121 tok/s.",
     tags: ["reasoning", "frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6716,7 +6655,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0024,
     },
     summary:
-      "Qwen3.5 397B A17B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 18/100, throughput: 55 tok/s.",
+      "Qwen3.5 397B A17B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 18/100, throughput: 55 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6769,7 +6708,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0024,
     },
     summary:
-      "Qwen3.6 35B A3B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 18/100, throughput: 139 tok/s.",
+      "Qwen3.6 35B A3B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 18/100, throughput: 139 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6823,7 +6762,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 122B A10B (non-reasoning) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 18/100, throughput: 139 tok/s.",
+      "Qwen3.5 122B A10B (non-reasoning) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 18/100, throughput: 139 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6877,7 +6816,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0003,
     },
     summary:
-      "Muse Glimmer (high) ranked in Sara Analysis; provider: Meta. Intelligence score: 17/100, throughput: 141 tok/s.",
+      "Muse Glimmer (high) evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 17/100, throughput: 141 tok/s.",
     tags: ["reasoning", "open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6930,7 +6869,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Doubao Seed Code ranked in Sara Analysis; provider: ByteDance Seed. Intelligence score: 17/100, throughput: 120 tok/s.",
+      "Doubao Seed Code evaluated on Artificial Analysis benchmarks by ByteDance Seed. Intelligence score: 17/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -6983,7 +6922,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 26B A4B ranked in Sara Analysis; provider: Google. Intelligence score: 17/100, throughput: 67 tok/s.",
+      "Gemma 4 26B A4B evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 17/100, throughput: 67 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7036,7 +6975,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0014,
     },
     summary:
-      "Ring-2.6-1T ranked in Sara Analysis; provider: InclusionAI. Intelligence score: 17/100, throughput: 121 tok/s.",
+      "Ring-2.6-1T evaluated on Artificial Analysis benchmarks by InclusionAI. Intelligence score: 17/100, throughput: 121 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7089,7 +7028,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2 Horizon 3.7B ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 16/100, throughput: 120 tok/s.",
+      "K2 Horizon 3.7B evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 16/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7142,7 +7081,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0016,
     },
     summary:
-      "Qwen3.5 122B A10B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 16/100, throughput: 131 tok/s.",
+      "Qwen3.5 122B A10B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 16/100, throughput: 131 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7196,7 +7135,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.6 35B A3B (non-reasoning) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 15/100, throughput: 154 tok/s.",
+      "Qwen3.6 35B A3B (non-reasoning) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 15/100, throughput: 154 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7249,7 +7188,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 31B ranked in Sara Analysis; provider: Google. Intelligence score: 15/100, throughput: 35 tok/s.",
+      "Gemma 4 31B evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 15/100, throughput: 35 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7303,7 +7242,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "ERNIE 5.0 Thinking Preview ranked in Sara Analysis; provider: Baidu. Intelligence score: 14/100, throughput: 120 tok/s.",
+      "ERNIE 5.0 Thinking Preview evaluated on Artificial Analysis benchmarks by Baidu. Intelligence score: 14/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7357,7 +7296,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0025,
     },
     summary:
-      "Mistral Medium 3.5 ranked in Sara Analysis; provider: Mistral. Intelligence score: 14/100, throughput: 164 tok/s.",
+      "Mistral Medium 3.5 evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 14/100, throughput: 164 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7410,7 +7349,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 12B ranked in Sara Analysis; provider: Google. Intelligence score: 14/100, throughput: 116 tok/s.",
+      "Gemma 4 12B evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 14/100, throughput: 116 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7464,7 +7403,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Pro Preview (medium) ranked in Sara Analysis; provider: Amazon. Intelligence score: 14/100, throughput: 131 tok/s.",
+      "Nova 2.0 Pro Preview (medium) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 14/100, throughput: 131 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7518,7 +7457,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 31B (non-reasoning) ranked in Sara Analysis; provider: Google. Intelligence score: 14/100, throughput: 48 tok/s.",
+      "Gemma 4 31B (non-reasoning) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 14/100, throughput: 48 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7572,7 +7511,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Omni (medium) ranked in Sara Analysis; provider: Amazon. Intelligence score: 14/100, throughput: 120 tok/s.",
+      "Nova 2.0 Omni (medium) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 14/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7626,7 +7565,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Apriel-v1.6-15B-Thinker ranked in Sara Analysis; provider: ServiceNow. Intelligence score: 13/100, throughput: 120 tok/s.",
+      "Apriel-v1.6-15B-Thinker evaluated on Artificial Analysis benchmarks by ServiceNow. Intelligence score: 13/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7680,7 +7619,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Lite (high) ranked in Sara Analysis; provider: Amazon. Intelligence score: 13/100, throughput: 203 tok/s.",
+      "Nova 2.0 Lite (high) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 13/100, throughput: 203 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7734,7 +7673,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 9B (non-reasoning) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 13/100, throughput: 104 tok/s.",
+      "Qwen3.5 9B (non-reasoning) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 13/100, throughput: 104 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7787,7 +7726,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "EXAONE 4.5 33B ranked in Sara Analysis; provider: LG AI Research. Intelligence score: 13/100, throughput: 120 tok/s.",
+      "EXAONE 4.5 33B evaluated on Artificial Analysis benchmarks by LG AI Research. Intelligence score: 13/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7840,7 +7779,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Command A+ ranked in Sara Analysis; provider: Cohere. Intelligence score: 13/100, throughput: 168 tok/s.",
+      "Command A+ evaluated on Artificial Analysis benchmarks by Cohere. Intelligence score: 13/100, throughput: 168 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7894,7 +7833,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 26B A4B (non-reasoning) ranked in Sara Analysis; provider: Google. Intelligence score: 13/100, throughput: 98 tok/s.",
+      "Gemma 4 26B A4B (non-reasoning) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 13/100, throughput: 98 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -7947,7 +7886,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 4B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 13/100, throughput: 10 tok/s.",
+      "Qwen3.5 4B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 13/100, throughput: 10 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8000,7 +7939,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0004,
     },
     summary:
-      "Nemotron 3.5 Lightning ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 13/100, throughput: 299 tok/s.",
+      "Nemotron 3.5 Lightning evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 13/100, throughput: 299 tok/s.",
     tags: ["open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8053,7 +7992,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Pro Preview (low) ranked in Sara Analysis; provider: Amazon. Intelligence score: 13/100, throughput: 132 tok/s.",
+      "Nova 2.0 Pro Preview (low) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 13/100, throughput: 132 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8106,7 +8045,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0004,
     },
     summary:
-      "Granite 4.2 30B ranked in Sara Analysis; provider: IBM. Intelligence score: 13/100, throughput: 77 tok/s.",
+      "Granite 4.2 30B evaluated on Artificial Analysis benchmarks by IBM. Intelligence score: 13/100, throughput: 77 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8160,7 +8099,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Lite (medium) ranked in Sara Analysis; provider: Amazon. Intelligence score: 12/100, throughput: 196 tok/s.",
+      "Nova 2.0 Lite (medium) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 12/100, throughput: 196 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8213,7 +8152,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 Omni Flash ranked in Sara Analysis; provider: Alibaba. Intelligence score: 12/100, throughput: 233 tok/s.",
+      "Qwen3.5 Omni Flash evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 12/100, throughput: 233 tok/s.",
     tags: ["open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8266,7 +8205,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "MiniCPM5-2B ranked in Sara Analysis; provider: OpenBMB. Intelligence score: 12/100, throughput: 120 tok/s.",
+      "MiniCPM5-2B evaluated on Artificial Analysis benchmarks by OpenBMB. Intelligence score: 12/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8319,7 +8258,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0006,
     },
     summary:
-      "Mercury 2.5 ranked in Sara Analysis; provider: Inception. Intelligence score: 12/100, throughput: 776 tok/s.",
+      "Mercury 2.5 evaluated on Artificial Analysis benchmarks by Inception. Intelligence score: 12/100, throughput: 776 tok/s.",
     tags: ["open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8372,7 +8311,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "JT-MINI ranked in Sara Analysis; provider: China Mobile. Intelligence score: 12/100, throughput: 120 tok/s.",
+      "JT-MINI evaluated on Artificial Analysis benchmarks by China Mobile. Intelligence score: 12/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8426,7 +8365,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Magistral Medium 1.2 ranked in Sara Analysis; provider: Mistral. Intelligence score: 12/100, throughput: 120 tok/s.",
+      "Magistral Medium 1.2 evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 12/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8479,7 +8418,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Lite (low) ranked in Sara Analysis; provider: Amazon. Intelligence score: 12/100, throughput: 201 tok/s.",
+      "Nova 2.0 Lite (low) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 12/100, throughput: 201 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8533,7 +8472,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "HyperNova 60B 2605 (high) ranked in Sara Analysis; provider: Multiverse Computing. Intelligence score: 12/100, throughput: 120 tok/s.",
+      "HyperNova 60B 2605 (high) evaluated on Artificial Analysis benchmarks by Multiverse Computing. Intelligence score: 12/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8586,7 +8525,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nemotron Cascade 2 30B A3B ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 12/100, throughput: 120 tok/s.",
+      "Nemotron Cascade 2 30B A3B evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 12/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8640,7 +8579,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0004,
     },
     summary:
-      "gpt-oss-120b (high) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 12/100, throughput: 229 tok/s.",
+      "gpt-oss-120b (high) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 12/100, throughput: 229 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8694,7 +8633,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2 Think V2 ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 11/100, throughput: 120 tok/s.",
+      "K2 Think V2 evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 11/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8747,7 +8686,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "LongCat Flash Lite ranked in Sara Analysis; provider: LongCat. Intelligence score: 11/100, throughput: 120 tok/s.",
+      "LongCat Flash Lite evaluated on Artificial Analysis benchmarks by LongCat. Intelligence score: 11/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8801,7 +8740,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "HyperCLOVA X SEED Think (32B) ranked in Sara Analysis; provider: Naver. Intelligence score: 11/100, throughput: 120 tok/s.",
+      "HyperCLOVA X SEED Think (32B) evaluated on Artificial Analysis benchmarks by Naver. Intelligence score: 11/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8854,7 +8793,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Mistral Small 4 ranked in Sara Analysis; provider: Mistral. Intelligence score: 11/100, throughput: 186 tok/s.",
+      "Mistral Small 4 evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 11/100, throughput: 186 tok/s.",
     tags: ["open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8907,7 +8846,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3 Next 80B A3B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 11/100, throughput: 155 tok/s.",
+      "Qwen3 Next 80B A3B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 11/100, throughput: 155 tok/s.",
     tags: ["open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -8960,7 +8899,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.001,
     },
     summary:
-      "Qwen3.5 9B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 11/100, throughput: 59 tok/s.",
+      "Qwen3.5 9B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 11/100, throughput: 59 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9013,7 +8952,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Omni (low) ranked in Sara Analysis; provider: Amazon. Intelligence score: 11/100, throughput: 120 tok/s.",
+      "Nova 2.0 Omni (low) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 11/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9066,7 +9005,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Granite 4.2 8B ranked in Sara Analysis; provider: IBM. Intelligence score: 11/100, throughput: 128 tok/s.",
+      "Granite 4.2 8B evaluated on Artificial Analysis benchmarks by IBM. Intelligence score: 11/100, throughput: 128 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9119,7 +9058,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Ling 3.0 Tiny ranked in Sara Analysis; provider: InclusionAI. Intelligence score: 11/100, throughput: 16 tok/s.",
+      "Ling 3.0 Tiny evaluated on Artificial Analysis benchmarks by InclusionAI. Intelligence score: 11/100, throughput: 16 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9172,7 +9111,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Mi:dm K 2.5 Pro ranked in Sara Analysis; provider: Korea Telecom. Intelligence score: 11/100, throughput: 120 tok/s.",
+      "Mi:dm K 2.5 Pro evaluated on Artificial Analysis benchmarks by Korea Telecom. Intelligence score: 11/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9225,7 +9164,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "G9v3-3B ranked in Sara Analysis; provider: AI9Stars. Intelligence score: 11/100, throughput: 120 tok/s.",
+      "G9v3-3B evaluated on Artificial Analysis benchmarks by AI9Stars. Intelligence score: 11/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9279,7 +9218,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0006,
     },
     summary:
-      "Trinity Large Thinking ranked in Sara Analysis; provider: Arcee AI. Intelligence score: 11/100, throughput: 352 tok/s.",
+      "Trinity Large Thinking evaluated on Artificial Analysis benchmarks by Arcee AI. Intelligence score: 11/100, throughput: 352 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9333,7 +9272,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 4B (non-reasoning) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 11/100, throughput: 8 tok/s.",
+      "Qwen3.5 4B (non-reasoning) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 11/100, throughput: 8 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9386,7 +9325,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "INTELLECT-3 ranked in Sara Analysis; provider: Prime Intellect. Intelligence score: 11/100, throughput: 120 tok/s.",
+      "INTELLECT-3 evaluated on Artificial Analysis benchmarks by Prime Intellect. Intelligence score: 11/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9439,7 +9378,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Solar Open 100B ranked in Sara Analysis; provider: Upstage. Intelligence score: 10/100, throughput: 120 tok/s.",
+      "Solar Open 100B evaluated on Artificial Analysis benchmarks by Upstage. Intelligence score: 10/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9492,7 +9431,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nemotron 3 Nano Omni 30B A3B ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 10/100, throughput: 236 tok/s.",
+      "Nemotron 3 Nano Omni 30B A3B evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 10/100, throughput: 236 tok/s.",
     tags: ["open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9545,7 +9484,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "gpt-oss-120b (low) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 10/100, throughput: 249 tok/s.",
+      "gpt-oss-120b (low) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 10/100, throughput: 249 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9599,7 +9538,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Pro Preview (non-reasoning) ranked in Sara Analysis; provider: Amazon. Intelligence score: 10/100, throughput: 116 tok/s.",
+      "Nova 2.0 Pro Preview (non-reasoning) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 10/100, throughput: 116 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9652,7 +9591,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "gpt-oss-20b (low) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 10/100, throughput: 296 tok/s.",
+      "gpt-oss-20b (low) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 10/100, throughput: 296 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9705,7 +9644,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "North Mini Code ranked in Sara Analysis; provider: Cohere. Intelligence score: 10/100, throughput: 91 tok/s.",
+      "North Mini Code evaluated on Artificial Analysis benchmarks by Cohere. Intelligence score: 10/100, throughput: 91 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9759,7 +9698,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2-V2 (high) ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 10/100, throughput: 120 tok/s.",
+      "K2-V2 (high) evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 10/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9812,7 +9751,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "DiffusionGemma 26B A4B ranked in Sara Analysis; provider: Google. Intelligence score: 10/100, throughput: 120 tok/s.",
+      "DiffusionGemma 26B A4B evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 10/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9866,7 +9805,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 12B (non-reasoning) ranked in Sara Analysis; provider: Google. Intelligence score: 9/100, throughput: 120 tok/s.",
+      "Gemma 4 12B (non-reasoning) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 9/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9919,7 +9858,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0002,
     },
     summary:
-      "Llama 4 Maverick ranked in Sara Analysis; provider: Meta. Intelligence score: 9/100, throughput: 46 tok/s.",
+      "Llama 4 Maverick evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 9/100, throughput: 46 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -9972,7 +9911,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0024,
     },
     summary:
-      "Qwen3 Coder Next ranked in Sara Analysis; provider: Alibaba. Intelligence score: 9/100, throughput: 75 tok/s.",
+      "Qwen3 Coder Next evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 9/100, throughput: 75 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10025,7 +9964,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Motif-2-12.7B ranked in Sara Analysis; provider: Motif Technologies. Intelligence score: 9/100, throughput: 120 tok/s.",
+      "Motif-2-12.7B evaluated on Artificial Analysis benchmarks by Motif Technologies. Intelligence score: 9/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10078,7 +10017,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova Premier ranked in Sara Analysis; provider: Amazon. Intelligence score: 9/100, throughput: 120 tok/s.",
+      "Nova Premier evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 9/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10131,7 +10070,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Granite 4.2 3B ranked in Sara Analysis; provider: IBM. Intelligence score: 9/100, throughput: 218 tok/s.",
+      "Granite 4.2 3B evaluated on Artificial Analysis benchmarks by IBM. Intelligence score: 9/100, throughput: 218 tok/s.",
     tags: ["open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10185,7 +10124,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2-V2 (medium) ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 9/100, throughput: 120 tok/s.",
+      "K2-V2 (medium) evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 9/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10239,7 +10178,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Mistral Small 4 (non-reasoning) ranked in Sara Analysis; provider: Mistral. Intelligence score: 9/100, throughput: 176 tok/s.",
+      "Mistral Small 4 (non-reasoning) evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 9/100, throughput: 176 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10293,7 +10232,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Tri-21B-Think ranked in Sara Analysis; provider: Trillion Labs. Intelligence score: 9/100, throughput: 120 tok/s.",
+      "Tri-21B-Think evaluated on Artificial Analysis benchmarks by Trillion Labs. Intelligence score: 9/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10347,7 +10286,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "gpt-oss-20b (high) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 9/100, throughput: 224 tok/s.",
+      "gpt-oss-20b (high) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 9/100, throughput: 224 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10400,7 +10339,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Gemma 4 E4B ranked in Sara Analysis; provider: Google. Intelligence score: 9/100, throughput: 38 tok/s.",
+      "Gemma 4 E4B evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 9/100, throughput: 38 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10453,7 +10392,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Nemotron 3 Nano ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 9/100, throughput: 252 tok/s.",
+      "Nemotron 3 Nano evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 9/100, throughput: 252 tok/s.",
     tags: ["open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10506,7 +10445,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "MiniCPM5-1B ranked in Sara Analysis; provider: OpenBMB. Intelligence score: 9/100, throughput: 120 tok/s.",
+      "MiniCPM5-1B evaluated on Artificial Analysis benchmarks by OpenBMB. Intelligence score: 9/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10560,7 +10499,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Sarvam 105B (high) ranked in Sara Analysis; provider: Sarvam. Intelligence score: 9/100, throughput: 218 tok/s.",
+      "Sarvam 105B (high) evaluated on Artificial Analysis benchmarks by Sarvam. Intelligence score: 9/100, throughput: 218 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10614,7 +10553,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Lite (non-reasoning) ranked in Sara Analysis; provider: Amazon. Intelligence score: 9/100, throughput: 186 tok/s.",
+      "Nova 2.0 Lite (non-reasoning) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 9/100, throughput: 186 tok/s.",
     tags: ["reasoning", "frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10668,7 +10607,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "MiniCPM5-1B (non-reasoning) ranked in Sara Analysis; provider: OpenBMB. Intelligence score: 9/100, throughput: 120 tok/s.",
+      "MiniCPM5-1B (non-reasoning) evaluated on Artificial Analysis benchmarks by OpenBMB. Intelligence score: 9/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10721,7 +10660,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Magistral Small 1.2 ranked in Sara Analysis; provider: Mistral. Intelligence score: 9/100, throughput: 75 tok/s.",
+      "Magistral Small 1.2 evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 9/100, throughput: 75 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10774,7 +10713,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nanbeige4.1-3B ranked in Sara Analysis; provider: Nanbeige. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "Nanbeige4.1-3B evaluated on Artificial Analysis benchmarks by Nanbeige. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10827,7 +10766,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "LFM2.5-2.6B ranked in Sara Analysis; provider: Liquid AI. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "LFM2.5-2.6B evaluated on Artificial Analysis benchmarks by Liquid AI. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10880,7 +10819,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "EXAONE 4.0 32B ranked in Sara Analysis; provider: LG AI Research. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "EXAONE 4.0 32B evaluated on Artificial Analysis benchmarks by LG AI Research. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10934,7 +10873,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova 2.0 Omni (non-reasoning) ranked in Sara Analysis; provider: Amazon. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "Nova 2.0 Omni (non-reasoning) evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -10987,7 +10926,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Hermes 4 70B ranked in Sara Analysis; provider: Nous Research. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "Hermes 4 70B evaluated on Artificial Analysis benchmarks by Nous Research. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11040,7 +10979,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Falcon-H1R-7B ranked in Sara Analysis; provider: TII UAE. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "Falcon-H1R-7B evaluated on Artificial Analysis benchmarks by TII UAE. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11093,7 +11032,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 E2B ranked in Sara Analysis; provider: Google. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "Gemma 4 E2B evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11146,7 +11085,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3 Omni 30B A3B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 8/100, throughput: 101 tok/s.",
+      "Qwen3 Omni 30B A3B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 8/100, throughput: 101 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11199,7 +11138,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Step3 VL 10B ranked in Sara Analysis; provider: StepFun. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "Step3 VL 10B evaluated on Artificial Analysis benchmarks by StepFun. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11252,7 +11191,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Llama 3.3 70B ranked in Sara Analysis; provider: Meta. Intelligence score: 8/100, throughput: 93 tok/s.",
+      "Llama 3.3 70B evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 8/100, throughput: 93 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11305,7 +11244,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Llama Nemotron Ultra ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "Llama Nemotron Ultra evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11358,7 +11297,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "ERNIE 4.5 300B A47B ranked in Sara Analysis; provider: Baidu. Intelligence score: 8/100, throughput: 120 tok/s.",
+      "ERNIE 4.5 300B A47B evaluated on Artificial Analysis benchmarks by Baidu. Intelligence score: 8/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11411,7 +11350,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Hermes 4 405B ranked in Sara Analysis; provider: Nous Research. Intelligence score: 7/100, throughput: 36 tok/s.",
+      "Hermes 4 405B evaluated on Artificial Analysis benchmarks by Nous Research. Intelligence score: 7/100, throughput: 36 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11464,7 +11403,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "NVIDIA Nemotron Nano 12B v2 VL ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "NVIDIA Nemotron Nano 12B v2 VL evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11518,7 +11457,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 E4B (non-reasoning) ranked in Sara Analysis; provider: Google. Intelligence score: 7/100, throughput: 39 tok/s.",
+      "Gemma 4 E4B (non-reasoning) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 7/100, throughput: 39 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11571,7 +11510,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "NVIDIA Nemotron Nano 9B V2 ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 7/100, throughput: 194 tok/s.",
+      "NVIDIA Nemotron Nano 9B V2 evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 7/100, throughput: 194 tok/s.",
     tags: ["open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11625,7 +11564,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Hermes 4 405B (non-reasoning) ranked in Sara Analysis; provider: Nous Research. Intelligence score: 7/100, throughput: 37 tok/s.",
+      "Hermes 4 405B (non-reasoning) evaluated on Artificial Analysis benchmarks by Nous Research. Intelligence score: 7/100, throughput: 37 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11678,7 +11617,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2-V2 (low) ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "K2-V2 (low) evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11731,7 +11670,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Kimi Linear 48B A3B Instruct ranked in Sara Analysis; provider: Kimi. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "Kimi Linear 48B A3B Instruct evaluated on Artificial Analysis benchmarks by Kimi. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11784,7 +11723,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Llama 3.1 405B ranked in Sara Analysis; provider: Meta. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "Llama 3.1 405B evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11837,7 +11776,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "LFM2.5-8B-A1B ranked in Sara Analysis; provider: Liquid AI. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "LFM2.5-8B-A1B evaluated on Artificial Analysis benchmarks by Liquid AI. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11890,7 +11829,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Ring-flash-2.0 ranked in Sara Analysis; provider: InclusionAI. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "Ring-flash-2.0 evaluated on Artificial Analysis benchmarks by InclusionAI. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11944,7 +11883,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Olmo 3.1 32B Think ranked in Sara Analysis; provider: Allen Institute for AI. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "Olmo 3.1 32B Think evaluated on Artificial Analysis benchmarks by Allen Institute for AI. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -11997,7 +11936,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Command A ranked in Sara Analysis; provider: Cohere. Intelligence score: 7/100, throughput: 64 tok/s.",
+      "Command A evaluated on Artificial Analysis benchmarks by Cohere. Intelligence score: 7/100, throughput: 64 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12050,7 +11989,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 2B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "Qwen3.5 2B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12104,7 +12043,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nemotron 3 Nano (non-reasoning) ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 7/100, throughput: 261 tok/s.",
+      "Nemotron 3 Nano (non-reasoning) evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 7/100, throughput: 261 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12158,7 +12097,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "NVIDIA Nemotron Nano 9B V2 (non-reasoning) ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 7/100, throughput: 168 tok/s.",
+      "NVIDIA Nemotron Nano 9B V2 (non-reasoning) evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 7/100, throughput: 168 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12212,7 +12151,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Hermes 4 70B (non-reasoning) ranked in Sara Analysis; provider: Nous Research. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "Hermes 4 70B (non-reasoning) evaluated on Artificial Analysis benchmarks by Nous Research. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12266,7 +12205,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Sarvam 30B (high) ranked in Sara Analysis; provider: Sarvam. Intelligence score: 7/100, throughput: 120 tok/s.",
+      "Sarvam 30B (high) evaluated on Artificial Analysis benchmarks by Sarvam. Intelligence score: 7/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12319,7 +12258,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Olmo 3.1 32B Instruct ranked in Sara Analysis; provider: Allen Institute for AI. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Olmo 3.1 32B Instruct evaluated on Artificial Analysis benchmarks by Allen Institute for AI. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12373,7 +12312,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 4 E2B (non-reasoning) ranked in Sara Analysis; provider: Google. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Gemma 4 E2B (non-reasoning) evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12426,7 +12365,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0006,
     },
     summary:
-      "Llama 4 Scout ranked in Sara Analysis; provider: Meta. Intelligence score: 6/100, throughput: 119 tok/s.",
+      "Llama 4 Scout evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 6/100, throughput: 119 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12480,7 +12419,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "R1 1776 ranked in Sara Analysis; provider: Perplexity. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "R1 1776 evaluated on Artificial Analysis benchmarks by Perplexity. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12533,7 +12472,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Llama 3.2 90B (Vision) ranked in Sara Analysis; provider: Meta. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Llama 3.2 90B (Vision) evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12586,7 +12525,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0003,
     },
     summary:
-      "Celeris-1 ranked in Sara Analysis; provider: Celeris. Intelligence score: 6/100, throughput: 1,442.8 tok/s.",
+      "Celeris-1 evaluated on Artificial Analysis benchmarks by Celeris. Intelligence score: 6/100, throughput: 1,442.8 tok/s.",
     tags: ["frontier", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12639,7 +12578,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Phi-4 Mini ranked in Sara Analysis; provider: Microsoft. Intelligence score: 6/100, throughput: 45 tok/s.",
+      "Phi-4 Mini evaluated on Artificial Analysis benchmarks by Microsoft. Intelligence score: 6/100, throughput: 45 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12693,7 +12632,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "EXAONE 4.0 32B (non-reasoning) ranked in Sara Analysis; provider: LG AI Research. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "EXAONE 4.0 32B (non-reasoning) evaluated on Artificial Analysis benchmarks by LG AI Research. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12747,7 +12686,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 2B (non-reasoning) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Qwen3.5 2B (non-reasoning) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12800,7 +12739,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 0.8B ranked in Sara Analysis; provider: Alibaba. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Qwen3.5 0.8B evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12854,7 +12793,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "DeepHermes 3 - Mistral 24B (non-reasoning) ranked in Sara Analysis; provider: Nous Research. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "DeepHermes 3 - Mistral 24B (non-reasoning) evaluated on Artificial Analysis benchmarks by Nous Research. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12907,7 +12846,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Jamba 1.7 Large ranked in Sara Analysis; provider: AI21 Labs. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Jamba 1.7 Large evaluated on Artificial Analysis benchmarks by AI21 Labs. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -12960,7 +12899,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Granite 4.0 H Small ranked in Sara Analysis; provider: IBM. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Granite 4.0 H Small evaluated on Artificial Analysis benchmarks by IBM. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13013,7 +12952,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Ministral 3 14B ranked in Sara Analysis; provider: Mistral. Intelligence score: 6/100, throughput: 82 tok/s.",
+      "Ministral 3 14B evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 6/100, throughput: 82 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13066,7 +13005,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "LFM2 24B A2B ranked in Sara Analysis; provider: Liquid AI. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "LFM2 24B A2B evaluated on Artificial Analysis benchmarks by Liquid AI. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13119,7 +13058,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Phi-4 ranked in Sara Analysis; provider: Microsoft. Intelligence score: 6/100, throughput: 42 tok/s.",
+      "Phi-4 evaluated on Artificial Analysis benchmarks by Microsoft. Intelligence score: 6/100, throughput: 42 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13172,7 +13111,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nova Micro ranked in Sara Analysis; provider: Amazon. Intelligence score: 6/100, throughput: 301 tok/s.",
+      "Nova Micro evaluated on Artificial Analysis benchmarks by Amazon. Intelligence score: 6/100, throughput: 301 tok/s.",
     tags: ["frontier", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13226,7 +13165,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "NVIDIA Nemotron Nano 12B v2 VL (non-reasoning) ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 6/100, throughput: 200 tok/s.",
+      "NVIDIA Nemotron Nano 12B v2 VL (non-reasoning) evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 6/100, throughput: 200 tok/s.",
     tags: ["reasoning", "open-weights", "high-throughput"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13279,7 +13218,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Phi-4 Multimodal ranked in Sara Analysis; provider: Microsoft. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Phi-4 Multimodal evaluated on Artificial Analysis benchmarks by Microsoft. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13332,7 +13271,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "MiniCPM-V 4.6 1.3B ranked in Sara Analysis; provider: OpenBMB. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "MiniCPM-V 4.6 1.3B evaluated on Artificial Analysis benchmarks by OpenBMB. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13386,7 +13325,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Jamba Reasoning 3B ranked in Sara Analysis; provider: AI21 Labs. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Jamba Reasoning 3B evaluated on Artificial Analysis benchmarks by AI21 Labs. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13439,7 +13378,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Reka Flash 3 ranked in Sara Analysis; provider: Reka AI. Intelligence score: 6/100, throughput: 83 tok/s.",
+      "Reka Flash 3 evaluated on Artificial Analysis benchmarks by Reka AI. Intelligence score: 6/100, throughput: 83 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13493,7 +13432,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Olmo 3 7B Think ranked in Sara Analysis; provider: Allen Institute for AI. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Olmo 3 7B Think evaluated on Artificial Analysis benchmarks by Allen Institute for AI. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13546,7 +13485,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Molmo 7B-D ranked in Sara Analysis; provider: Allen Institute for AI. Intelligence score: 6/100, throughput: 120 tok/s.",
+      "Molmo 7B-D evaluated on Artificial Analysis benchmarks by Allen Institute for AI. Intelligence score: 6/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13599,7 +13538,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Ministral 3 8B ranked in Sara Analysis; provider: Mistral. Intelligence score: 5/100, throughput: 93 tok/s.",
+      "Ministral 3 8B evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 5/100, throughput: 93 tok/s.",
     tags: ["open-weights", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13652,7 +13591,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Llama 3.2 11B (Vision) ranked in Sara Analysis; provider: Meta. Intelligence score: 5/100, throughput: 19 tok/s.",
+      "Llama 3.2 11B (Vision) evaluated on Artificial Analysis benchmarks by Meta. Intelligence score: 5/100, throughput: 19 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13706,7 +13645,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Qwen3.5 0.8B (non-reasoning) ranked in Sara Analysis; provider: Alibaba. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Qwen3.5 0.8B (non-reasoning) evaluated on Artificial Analysis benchmarks by Alibaba. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13759,7 +13698,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Exaone 4.0 1.2B ranked in Sara Analysis; provider: LG AI Research. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Exaone 4.0 1.2B evaluated on Artificial Analysis benchmarks by LG AI Research. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13812,7 +13751,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Olmo 3 7B ranked in Sara Analysis; provider: Allen Institute for AI. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Olmo 3 7B evaluated on Artificial Analysis benchmarks by Allen Institute for AI. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13866,7 +13805,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Exaone 4.0 1.2B (non-reasoning) ranked in Sara Analysis; provider: LG AI Research. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Exaone 4.0 1.2B (non-reasoning) evaluated on Artificial Analysis benchmarks by LG AI Research. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13920,7 +13859,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "LFM2.5-1.2B-Thinking ranked in Sara Analysis; provider: Liquid AI. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "LFM2.5-1.2B-Thinking evaluated on Artificial Analysis benchmarks by Liquid AI. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -13973,7 +13912,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Jamba 1.7 Mini ranked in Sara Analysis; provider: AI21 Labs. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Jamba 1.7 Mini evaluated on Artificial Analysis benchmarks by AI21 Labs. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14026,7 +13965,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "LFM2.5-1.2B-Instruct ranked in Sara Analysis; provider: Liquid AI. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "LFM2.5-1.2B-Instruct evaluated on Artificial Analysis benchmarks by Liquid AI. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14079,7 +14018,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Granite 4.0 H 1B ranked in Sara Analysis; provider: IBM. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Granite 4.0 H 1B evaluated on Artificial Analysis benchmarks by IBM. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14132,7 +14071,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemma 3 270M ranked in Sara Analysis; provider: Google. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Gemma 3 270M evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14185,7 +14124,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Apertus 70B Instruct ranked in Sara Analysis; provider: Swiss AI Initiative. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Apertus 70B Instruct evaluated on Artificial Analysis benchmarks by Swiss AI Initiative. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14238,7 +14177,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Granite 4.0 Micro ranked in Sara Analysis; provider: IBM. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Granite 4.0 Micro evaluated on Artificial Analysis benchmarks by IBM. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14292,7 +14231,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "DeepHermes 3 - Llama-3.1 8B (non-reasoning) ranked in Sara Analysis; provider: Nous Research. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "DeepHermes 3 - Llama-3.1 8B (non-reasoning) evaluated on Artificial Analysis benchmarks by Nous Research. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["reasoning", "open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14345,7 +14284,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Molmo2-8B ranked in Sara Analysis; provider: Allen Institute for AI. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Molmo2-8B evaluated on Artificial Analysis benchmarks by Allen Institute for AI. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14398,7 +14337,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0.0001,
     },
     summary:
-      "Ministral 3 3B ranked in Sara Analysis; provider: Mistral. Intelligence score: 5/100, throughput: 217 tok/s.",
+      "Ministral 3 3B evaluated on Artificial Analysis benchmarks by Mistral. Intelligence score: 5/100, throughput: 217 tok/s.",
     tags: ["open-weights", "high-throughput", "cost-effective"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14451,7 +14390,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "LFM2.5-VL-1.6B ranked in Sara Analysis; provider: Liquid AI. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "LFM2.5-VL-1.6B evaluated on Artificial Analysis benchmarks by Liquid AI. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14504,7 +14443,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Granite 4.0 350M ranked in Sara Analysis; provider: IBM. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Granite 4.0 350M evaluated on Artificial Analysis benchmarks by IBM. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14557,7 +14496,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Tiny Aya Global ranked in Sara Analysis; provider: Cohere. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Tiny Aya Global evaluated on Artificial Analysis benchmarks by Cohere. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14610,7 +14549,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Apertus 8B Instruct ranked in Sara Analysis; provider: Swiss AI Initiative. Intelligence score: 5/100, throughput: 150 tok/s.",
+      "Apertus 8B Instruct evaluated on Artificial Analysis benchmarks by Swiss AI Initiative. Intelligence score: 5/100, throughput: 150 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14663,7 +14602,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Granite 4.0 H 350M ranked in Sara Analysis; provider: IBM. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Granite 4.0 H 350M evaluated on Artificial Analysis benchmarks by IBM. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14716,7 +14655,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Nemotron 3 Nano 4B ranked in Sara Analysis; provider: NVIDIA. Intelligence score: 5/100, throughput: 120 tok/s.",
+      "Nemotron 3 Nano 4B evaluated on Artificial Analysis benchmarks by NVIDIA. Intelligence score: 5/100, throughput: 120 tok/s.",
     tags: ["open-weights"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14769,7 +14708,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "K2 Horizon 0.9B ranked in Sara Analysis; provider: Institute of Foundation Models. Intelligence score: 3/100, throughput: 120 tok/s.",
+      "K2 Horizon 0.9B evaluated on Artificial Analysis benchmarks by Institute of Foundation Models. Intelligence score: 3/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14823,7 +14762,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "EXAONE 4.5 33B (non-reasoning) ranked in Sara Analysis; provider: LG AI Research. Intelligence score: 15/100, throughput: 120 tok/s.",
+      "EXAONE 4.5 33B (non-reasoning) evaluated on Artificial Analysis benchmarks by LG AI Research. Intelligence score: 15/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14877,7 +14816,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "GPT-6 Sol (Daybreak Blue, max) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 15/100, throughput: 120 tok/s.",
+      "GPT-6 Sol (Daybreak Blue, max) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 15/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14931,7 +14870,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Gemini 3 Deep Think ranked in Sara Analysis; provider: Google. Intelligence score: 15/100, throughput: 120 tok/s.",
+      "Gemini 3 Deep Think evaluated on Artificial Analysis benchmarks by Google. Intelligence score: 15/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -14985,7 +14924,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "GPT-5.5 Pro (xhigh) ranked in Sara Analysis; provider: OpenAI. Intelligence score: 15/100, throughput: 120 tok/s.",
+      "GPT-5.5 Pro (xhigh) evaluated on Artificial Analysis benchmarks by OpenAI. Intelligence score: 15/100, throughput: 120 tok/s.",
     tags: ["reasoning", "frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },
@@ -15038,7 +14977,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
       costPerTaskUsd: 0,
     },
     summary:
-      "Cogito v2.1 ranked in Sara Analysis; provider: Deep Cogito. Intelligence score: 15/100, throughput: 120 tok/s.",
+      "Cogito v2.1 evaluated on Artificial Analysis benchmarks by Deep Cogito. Intelligence score: 15/100, throughput: 120 tok/s.",
     tags: ["frontier"],
     officialUrl: "https://artificialanalysis.ai",
   },

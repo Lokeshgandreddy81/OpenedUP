@@ -97,10 +97,10 @@ export const CodingAgentIndexesFullChart: React.FC<CodingAgentIndexesFullChartPr
     switch (metricTab) {
       case "index":
         return {
-          title: "Sara Analysis Coding Agent Index",
+          title: "Artificial Analysis Coding Agent Index",
           hasArrow: !isPerformance,
           subtitle:
-            "Sara Analysis Coding Agent Index v1.5 incorporates 3 benchmarks: DeepSWE v1.1, Terminal-Bench 4.0, and SWE-Atlas-QnA · Higher is better",
+            "Artificial Analysis Coding Agent Index v1.5 incorporates 3 benchmarks: DeepSWE v1.1, Terminal-Bench 4.0, and SWE-Atlas-QnA · Higher is better",
         };
       case "cost":
         return {
@@ -616,11 +616,11 @@ export const CodingAgentIndexesFullChart: React.FC<CodingAgentIndexesFullChartPr
               </button>
               {isMetricInfoOpen && (
                 <p className="text-[12.5px] text-neutral-500 leading-relaxed mt-3 animate-in fade-in duration-150">
-                  The Sara Analysis Coding Agent Index is a composite score built from DeepSWE v1.1,
-                  Terminal-Bench 4.0, and SWE-Atlas-QnA. It is useful for quick comparison, but it
-                  should be read alongside the per-eval breakdowns. Each benchmark score averages
-                  pass@1 across three attempts per task, and the Index gives equal weight to its 3
-                  benchmark components.
+                  The Artificial Analysis Coding Agent Index is a composite score built from DeepSWE
+                  v1.1, Terminal-Bench 4.0, and SWE-Atlas-QnA. It is useful for quick comparison,
+                  but it should be read alongside the per-eval breakdowns. Each benchmark score
+                  averages pass@1 across three attempts per task, and the Index gives equal weight
+                  to its 3 benchmark components.
                 </p>
               )}
             </div>

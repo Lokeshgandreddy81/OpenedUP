@@ -149,7 +149,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
   return (
     <div
       {...(!isEmbedded ? { role: "dialog", "aria-modal": true } : {})}
-      aria-label="Sara Analysis Benchmarks"
+      aria-label="Artificial Analysis Benchmarks"
       className={
         isEmbedded
           ? "flex-1 w-full h-full min-w-0 bg-white flex flex-col font-sans select-none overflow-hidden text-neutral-900"
@@ -157,7 +157,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
       }
     >
       {/* ========================================================
-          TOP NAVIGATION HEADER (Sara Analysis)
+          TOP NAVIGATION HEADER (Artificial Analysis Official Bar)
           ======================================================== */}
       <header className="w-full h-14 bg-white border-b border-transparent px-4 md:px-6 relative flex items-center justify-between shrink-0 z-20">
         {/* Left: Back to document (hidden when embedded or hideBackButton) */}
@@ -280,7 +280,7 @@ export const BenchmarksView: React.FC<BenchmarksViewProps> = ({
         {/* VIEW: MODELS (Overview charts) */}
         {activeTab === "overview" && <ModelsOverviewView />}
 
-        {/* VIEW: CODING AGENTS (Sara Analysis Coding Agent Index) */}
+        {/* VIEW: CODING AGENTS (Artificial Analysis Coding Agent Index) */}
         {activeTab === "coding-agents" && (
           <CodingAgentsView
             onSelectModel={(modelId) => {

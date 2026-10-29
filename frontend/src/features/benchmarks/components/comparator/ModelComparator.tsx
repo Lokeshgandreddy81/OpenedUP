@@ -581,7 +581,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                 <span></span>
               </div>
 
-              {/* Row: Sara Analysis Intelligence Index */}
+              {/* Row: Artificial Analysis Intelligence Index */}
               {(() => {
                 const res = calculateWinner(
                   activeModels.map(({ slot, model }) => ({
@@ -595,7 +595,7 @@ export const ModelComparator: React.FC<ModelComparatorProps> = ({ models, initia
                     <div className={`font-bold text-slate-900 text-[14.4px]`}>
                       Intelligence Index
                       <div className="text-[10px] text-slate-400 font-normal">
-                        Sara Analysis composite (0-100)
+                        Artificial Analysis composite (0-100)
                       </div>
                     </div>
                     {activeModels.map(({ slot, model }) => {

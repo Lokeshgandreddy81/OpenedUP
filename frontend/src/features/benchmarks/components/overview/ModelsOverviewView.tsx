@@ -36,7 +36,7 @@ const LANGUAGE_MODELS_DATA: {
 } = {
   intelligence: {
     title: "Intelligence",
-    subtitle: "Sara Analysis Intelligence Index",
+    subtitle: "Artificial Analysis Intelligence Index",
     accentColor: "#736CD3",
     metricLabel: "Higher is better",
     items: [
@@ -575,27 +575,27 @@ export const IntelligenceIndexFullChart: React.FC = () => {
     switch (filterTab) {
       case "weights":
         return {
-          title: "Sara Analysis Intelligence Index by Open Weights / Proprietary",
+          title: "Artificial Analysis Intelligence Index by Open Weights / Proprietary",
           subtitle:
-            "Sara Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
+            "Artificial Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
         };
       case "inputs":
         return {
-          title: "Sara Analysis Intelligence Index by Input Modality",
+          title: "Artificial Analysis Intelligence Index by Input Modality",
           subtitle:
-            "Sara Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
+            "Artificial Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
         };
       case "country":
         return {
           title: "Leading Models by Country",
-          subtitle: "Sara Analysis Intelligence Index - Leading models",
+          subtitle: "Artificial Analysis Intelligence Index - Leading models",
         };
       case "intelligence-index":
       default:
         return {
-          title: "Sara Analysis Intelligence Index",
+          title: "Artificial Analysis Intelligence Index",
           subtitle:
-            "Sara Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
+            "Artificial Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
         };
     }
   };
@@ -2985,11 +2985,11 @@ export const BenchmarkBarCard: React.FC<{
 const MODELS_FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: "Which is the most intelligent AI model?",
-    a: "Gemini 4 Carbon (high) leads the newly released Sara Analysis Intelligence Index v5.0 with a score of 59. Version 5.0 uses nine revised evaluations, so its score is not directly comparable with the legacy v4.3.2 model list shown in the charts.",
+    a: "Claude Opus 5.5 (max with fallback) currently leads the Artificial Analysis Intelligence Index with a score of 58, out of 273 models evaluated.",
   },
   {
     q: "What are the top AI models?",
-    a: "Gemini 4 Carbon (high) currently leads the Sara Analysis Intelligence Index v5.0 with 59. Earlier model rankings in the charts use v4.3.2, a different evaluation set; compare models within the same index version.",
+    a: "The top AI models by Intelligence Index are: 1. Claude Opus 5.5 (max with fallback) (58), 2. Claude Sonnet 5.5 (max with fallback) (56), 3. Muse Wonder Full (max) (56), 4. Kimi K3.1 Pro (55), and 5. Claude Opus 5.5 (high with fallback) (54).",
   },
   {
     q: "Which is the fastest AI model?",
@@ -3005,7 +3005,7 @@ const MODELS_FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: "Which is the best open weights AI model?",
-    a: "MiMo-V2.6-Pro is the highest-ranked open weights model in the legacy v4.3.2 index with a score of 46. The benchmark catalog now also lists Gemini 4 Carbon’s separate v5.0 result; scores across versions are not directly comparable.",
+    a: "MiMo-V2.6-Pro is the highest-ranked open weights model with an Intelligence Index score of 46. There are 129 open weights models out of 273 total evaluated.",
   },
   {
     q: "What are the top open weights AI models?",
@@ -3013,10 +3013,10 @@ const MODELS_FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: "Which is the best reasoning model?",
-    a: "Gemini 4 Carbon (high) leads the latest Sara Analysis Intelligence Index v5.0 with 59. It is a reasoning model built for long-horizon engineering and cybersecurity work. The v5.0 score uses a revised evaluation set and should not be directly compared with legacy v4.3.2 scores.",
+    a: "Claude Opus 5.5 (max with fallback) leads among 118 reasoning models with an Intelligence Index score of 58. Reasoning models use extended thinking to work through complex problems before providing answers.",
   },
   {
-    q: "How are AI models compared in Sara Analysis?",
+    q: "How are AI models compared on Artificial Analysis?",
     a: "Models are compared across multiple dimensions including intelligence (quality), pricing, output speed (tokens per second), latency (time to first token), end-to-end response time, and context window size. Performance metrics are measured directly using standardized prompts across 273 models.",
   },
   {
@@ -3072,46 +3072,6 @@ const ModelsOverviewFaq: React.FC = () => {
 export const ModelsOverviewView: React.FC = () => {
   return (
     <div className="flex flex-col items-center gap-12 w-full max-w-[1560px] mx-auto pb-16 animate-in fade-in duration-150 px-2 sm:px-6">
-      <section className="w-full rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/80 via-white to-white p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold text-slate-900">Gemini 4 Carbon (high)</h2>
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
-                New · Sara Analysis v5.0
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-slate-600">
-              Leads the new nine-evaluation index with a score of 59. Version 5.0 uses a revised
-              evaluation set, so its score is shown separately from legacy v4.3.2 charts below.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-4">
-            <div className="text-right">
-              <div className="text-3xl font-semibold tabular-nums text-slate-950">59</div>
-              <div className="text-[11px] text-slate-500">Index score · #1</div>
-            </div>
-            <a
-              href="https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/"
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              Model details
-            </a>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t border-blue-100 pt-3 text-xs text-slate-600">
-          <span>Terminal-Bench 4.0: 65%</span>
-          <span>FrontierCode 2.0: 41%</span>
-          <span>HLE-Diamond: 69%</span>
-          <span>Cybersecurity: SEC-bench Pro 88.2%</span>
-        </div>
-        <p className="mt-2 text-[11px] text-slate-500">
-          Cybersecurity figures are Google-reported results from external benchmarks evaluated
-          without guardrails.
-        </p>
-      </section>
       {/* Alternating Staggered Layout (+10% width): Left 55% -> Right 55% -> Left 55% */}
       <div className="w-full flex flex-col gap-16">
         {/* 1. Intelligence: 55% width on the left */}
@@ -3135,7 +3095,7 @@ export const ModelsOverviewView: React.FC = () => {
 
         <div className="w-full border-b border-transparent" />
 
-        {/* 4. Sara Analysis Intelligence Index */}
+        {/* 4. Artificial Analysis Intelligence Index */}
         <div className="w-full max-w-[1560px] mx-auto flex justify-center">
           <IntelligenceIndexFullChart />
         </div>
