@@ -92,17 +92,6 @@ export const BenchmarkCatalogView: React.FC<BenchmarkCatalogViewProps> = ({
             <p className="mt-2 max-w-[60ch] text-xs leading-relaxed text-neutral-500">
               Benchmark scores measured independently · Higher is better
             </p>
-
-            <div className="mt-3 flex items-center gap-1.5 text-[12px] text-neutral-500">
-              <span
-                className="inline-block h-3.5 w-3.5 shrink-0 overflow-hidden rounded-xs border border-neutral-300/40"
-                style={{
-                  backgroundColor: "#B0B3B8",
-                  backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.7) 2px, rgba(255,255,255,0.7) 4px), repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)`,
-                }}
-              />
-              <span>No publicly available API</span>
-            </div>
           </div>
 
           {/* Right: evaluations + models selectors */}

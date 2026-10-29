@@ -301,7 +301,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
 
       // Status filter
       if (statusFilter === "current") {
-        if (m.noPublicApi) return false;
+        // Reserved for future status-based filtering
       }
 
       return true;

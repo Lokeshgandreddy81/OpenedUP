@@ -589,7 +589,7 @@ export const BENCHMARK_MODELS: AIModelBenchmark[] = [
     creatorDisplayName: "Meta",
     releaseDate: "2026-10-12",
     weightsType: "proprietary",
-    noPublicApi: true,
+
     contextWindowTokens: 1000000,
     maxOutputTokens: 64000,
     isReasoningModel: true,

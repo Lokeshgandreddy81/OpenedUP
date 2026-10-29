@@ -121,11 +121,6 @@ export const EvaluationChartCard: React.FC<EvaluationChartCardProps> = ({
                     style={{
                       height: `${heightPercent}%`,
                       backgroundColor: getCreatorColor(model.creator),
-                      ...(model.noPublicApi
-                        ? {
-                            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
-                          }
-                        : {}),
                     }}
                   />
                 </button>

@@ -9,7 +9,6 @@ export interface BenchmarkFilterModelItem {
   creator?: string;
   color?: string;
   badge?: string;
-  pattern?: boolean;
 }
 
 export interface BenchmarkModelsFilterDropdownProps {

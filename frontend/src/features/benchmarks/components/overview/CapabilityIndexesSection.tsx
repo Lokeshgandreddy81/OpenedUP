@@ -6,9 +6,6 @@ import { BenchmarkModelsFilterDropdown, BenchmarkFilterModelItem } from "../ui/B
 
 const CHART_HEIGHT = 330;
 
-const HATCH_PATTERN =
-  "repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255,255,255,0.32) 3.5px, rgba(255,255,255,0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0,0,0,0.3) 3.5px, rgba(0,0,0,0.3) 7px)";
-
 export const CapabilityIndexesSection: React.FC = () => {
   const [activeId, setActiveId] = useState(CAPABILITY_INDEXES[0].id);
   const [selectedModelMap, setSelectedModelMap] = useState<Record<string, string[]>>({});
@@ -34,14 +31,12 @@ export const CapabilityIndexesSection: React.FC = () => {
         creator: m.creator,
         color: m.color,
         badge: `${m.value}`,
-        pattern: m.pattern,
       })),
     [index.models]
   );
 
   const maxValue = activeModels.length > 0 ? Math.max(...activeModels.map((m) => m.value)) : 60;
   const scaleMax = maxValue * 1.08;
-  const hasNoPublicApi = activeModels.some((m) => m.pattern);
 
   return (
     <section className="w-full flex flex-col gap-6">
@@ -108,26 +103,8 @@ export const CapabilityIndexesSection: React.FC = () => {
             />
           </div>
 
-          {/* Legend Row */}
-          <div className="flex items-center justify-between gap-3 mt-8 text-[12.5px] text-neutral-800">
-            <div className="flex items-center gap-1.5">
-              {hasNoPublicApi && (
-                <>
-                  <span
-                    className="w-3.5 h-3.5 rounded-xs border border-neutral-300/40 relative overflow-hidden inline-block shrink-0"
-                    style={{
-                      backgroundColor: "#B0B3B8",
-                      backgroundImage: HATCH_PATTERN,
-                    }}
-                  />
-                  <span>No publicly available API</span>
-                </>
-              )}
-            </div>
-          </div>
-
           {/* Bar Chart */}
-          <div className="relative mt-5 overflow-x-auto no-scrollbar">
+          <div className="relative mt-8 overflow-x-auto no-scrollbar">
             {activeModels.length === 0 ? (
               <div className="py-20 text-center text-sm text-neutral-400">
                 No models selected. Use the filter dropdown above to select models.
@@ -156,7 +133,6 @@ export const CapabilityIndexesSection: React.FC = () => {
                           style={{
                             height: `${barHeightPx}px`,
                             backgroundColor: model.color,
-                            ...(model.pattern ? { backgroundImage: HATCH_PATTERN } : {}),
                           }}
                         >
                           <span className="text-[12px] font-medium text-white/95 leading-none">

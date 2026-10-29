@@ -256,7 +256,6 @@ interface FullIndexModelItem {
   creator: string;
   score: number;
   color: string;
-  noPublicApi?: boolean;
   weights: "proprietary" | "open_weights" | "open_restricted";
   modality: "multimodal" | "text_only";
   country: "us" | "cn" | "fr" | "ae";
@@ -286,7 +285,6 @@ const INTELLIGENCE_INDEX_MODELS: FullIndexModelItem[] = [
     creator: "meta",
     score: 55,
     color: "#0084FF",
-    noPublicApi: true,
     weights: "proprietary",
     modality: "multimodal",
     country: "us",
@@ -670,18 +668,6 @@ export const IntelligenceIndexFullChart: React.FC = () => {
       {/* Legend & Watermark */}
       <div className="flex flex-wrap items-center justify-between text-[12px] text-neutral-500 pt-0.5 gap-y-2">
         <div className="flex flex-wrap items-center gap-4">
-          {/* Patterned square for No publicly available API */}
-          <div className="flex items-center gap-1.5">
-            <span
-              className="w-3.5 h-3.5 rounded-xs border border-neutral-300/40 relative overflow-hidden inline-block shrink-0"
-              style={{
-                backgroundColor: "#B0B3B8",
-                backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.7) 2px, rgba(255,255,255,0.7) 4px), repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)`,
-              }}
-            />
-            <span>No publicly available API</span>
-          </div>
-
           {/* Tab-specific legend items */}
           {filterTab === "weights" && (
             <>
@@ -748,8 +734,6 @@ export const IntelligenceIndexFullChart: React.FC = () => {
               const ratio = item.score / maxScore;
               const barHeightPx = Math.max(34, Math.round(ratio * (CHART_HEIGHT - 38)));
               const barColor = getBarColor(item);
-              const isHatched = Boolean(item.noPublicApi);
-
               return (
                 <div
                   key={idx}
@@ -761,11 +745,6 @@ export const IntelligenceIndexFullChart: React.FC = () => {
                     style={{
                       height: `${barHeightPx}px`,
                       backgroundColor: barColor,
-                      ...(isHatched
-                        ? {
-                            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
-                          }
-                        : {}),
                     }}
                   >
                     <span className="text-[11px] font-mono font-bold text-white select-none">
@@ -1172,7 +1151,6 @@ interface TaskTokensModelItem {
   totalLabel: string;
   reasoningK: number;
   answerK: number;
-  noPublicApi?: boolean;
 }
 
 const TASK_TOKENS_MODELS: TaskTokensModelItem[] = [
@@ -1265,7 +1243,6 @@ const TASK_TOKENS_MODELS: TaskTokensModelItem[] = [
     totalLabel: "54k",
     reasoningK: 25,
     answerK: 29,
-    noPublicApi: true,
   },
   {
     name: "Muse\nWonder (max)",
@@ -1539,7 +1516,6 @@ export const TokenUseFullSection: React.FC = () => {
         creator: m.creator,
         color: m.color,
         badge: `${m.totalLabel}`,
-        pattern: m.noPublicApi,
       })),
     []
   );
@@ -1612,16 +1588,6 @@ export const TokenUseFullSection: React.FC = () => {
           <div className="flex flex-wrap items-center justify-between text-[12px] text-neutral-500 mt-5 gap-y-2">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-1.5">
-                <span
-                  className="w-3.5 h-3.5 rounded-xs border border-neutral-300/40 relative overflow-hidden inline-block shrink-0"
-                  style={{
-                    backgroundColor: "#B0B3B8",
-                    backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.7) 2px, rgba(255,255,255,0.7) 4px), repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)`,
-                  }}
-                />
-                <span>No publicly available API</span>
-              </div>
-              <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6] inline-block shrink-0" />
                 <span>Answer</span>
               </div>
@@ -1656,7 +1622,6 @@ export const TokenUseFullSection: React.FC = () => {
                       Math.round((item.reasoningK / item.totalK) * barHeightPx)
                     );
                     const answerHeight = Math.max(4, barHeightPx - reasoningHeight);
-                    const isHatched = Boolean(item.noPublicApi);
 
                     return (
                       <div
@@ -1678,11 +1643,6 @@ export const TokenUseFullSection: React.FC = () => {
                               height: `${reasoningHeight}px`,
                               backgroundColor: item.color,
                               opacity: 0.82,
-                              ...(isHatched
-                                ? {
-                                    backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
-                                  }
-                                : {}),
                             }}
                           >
                             {reasoningHeight > 14 && (
@@ -1698,11 +1658,6 @@ export const TokenUseFullSection: React.FC = () => {
                             style={{
                               height: `${answerHeight}px`,
                               backgroundColor: item.color,
-                              ...(isHatched
-                                ? {
-                                    backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
-                                  }
-                                : {}),
                             }}
                           >
                             {answerHeight > 14 && (
@@ -1987,7 +1942,6 @@ interface ContextWindowModelItem {
   creator: string;
   color: string;
   tokens: number;
-  noPublicApi?: boolean;
 }
 
 const TASK_CONTEXT_MODELS: ContextWindowModelItem[] = [
@@ -2039,7 +1993,6 @@ const TASK_CONTEXT_MODELS: ContextWindowModelItem[] = [
     creator: "meta",
     color: "#0084FF",
     tokens: 984000,
-    noPublicApi: true,
   },
   { name: "Qwen 3.6\nMax (0902)", creator: "alibaba", color: "#FF6900", tokens: 1000000 },
   { name: "Mistral Large\n4 Preview", creator: "mistral", color: "#EF4444", tokens: 524000 },
@@ -2069,7 +2022,6 @@ export const ContextWindowFullSection: React.FC = () => {
         creator: m.creator,
         color: m.color,
         badge: m.tokens >= 1000000 ? `${m.tokens / 1000000}M` : `${m.tokens / 1000}k`,
-        pattern: m.noPublicApi,
       })),
     []
   );
@@ -2137,24 +2089,8 @@ export const ContextWindowFullSection: React.FC = () => {
             />
           </div>
 
-          {/* Legend & Watermark */}
-          <div className="flex flex-wrap items-center justify-between text-[12px] text-neutral-500 mt-5 gap-y-2">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="w-3.5 h-3.5 rounded-xs border border-neutral-300/40 relative overflow-hidden inline-block shrink-0"
-                  style={{
-                    backgroundColor: "#B0B3B8",
-                    backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.7) 2px, rgba(255,255,255,0.7) 4px), repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)`,
-                  }}
-                />
-                <span>No publicly available API</span>
-              </div>
-            </div>
-          </div>
-
           {/* Bar Chart */}
-          <div className="relative mt-5 overflow-x-auto no-scrollbar">
+          <div className="relative mt-8 overflow-x-auto no-scrollbar">
             {activeModels.length === 0 ? (
               <div className="py-20 text-center text-sm text-neutral-400">
                 No models selected. Use the filter dropdown above to select models.
@@ -2171,7 +2107,6 @@ export const ContextWindowFullSection: React.FC = () => {
                   {activeModels.map((item, idx) => {
                     const ratio = Math.min(1.0, item.tokens / maxContext);
                     const barHeightPx = Math.max(16, Math.round(ratio * (CHART_HEIGHT - 38)));
-                    const isHatched = Boolean(item.noPublicApi);
 
                     return (
                       <div
@@ -2187,11 +2122,6 @@ export const ContextWindowFullSection: React.FC = () => {
                           style={{
                             height: `${barHeightPx}px`,
                             backgroundColor: item.color,
-                            ...(isHatched
-                              ? {
-                                  backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 3.5px, rgba(255, 255, 255, 0.32) 3.5px, rgba(255, 255, 255, 0.32) 7px), repeating-linear-gradient(-45deg, transparent, transparent 3.5px, rgba(0, 0, 0, 0.3) 3.5px, rgba(0, 0, 0, 0.3) 7px)`,
-                                }
-                              : {}),
                           }}
                         />
                       </div>

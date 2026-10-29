@@ -158,8 +158,7 @@ export interface AIModelBenchmark {
   activeParametersB?: number;
   /** Whether the model utilizes explicit chain-of-thought / extended reasoning */
   isReasoningModel: boolean;
-  /** True when the model has no publicly available API (hatched bars in charts) */
-  noPublicApi?: boolean;
+
   /** Operational reasoning type */
   reasoningType: ReasoningType;
   /** Input and output modalities supported */

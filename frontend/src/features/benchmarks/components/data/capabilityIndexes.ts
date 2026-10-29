@@ -3,7 +3,6 @@ export interface CapabilityIndexModel {
   creator: string;
   color: string;
   value: number;
-  pattern?: boolean;
 }
 
 export interface CapabilityIndexConfig {
@@ -58,7 +57,6 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
         creator: "meta",
         color: "#0089f4",
         value: 54,
-        pattern: true,
       },
       { name: "GPT-6.1 Sol (max)", creator: "openai", color: "#1f1f1f", value: 54 },
       { name: "Gemini 4 Argon (high)", creator: "google", color: "#34A853", value: 54 },
@@ -121,7 +119,6 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
         creator: "meta",
         color: "#0089f4",
         value: 58,
-        pattern: true,
       },
       { name: "GPT-6 Astra (max)", creator: "openai", color: "#1f1f1f", value: 57 },
       { name: "GPT-6.1 Sol (max)", creator: "openai", color: "#1f1f1f", value: 57 },
@@ -189,7 +186,6 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
         creator: "meta",
         color: "#0089f4",
         value: 55,
-        pattern: true,
       },
       { name: "Grok 4.7 (xhigh)", creator: "xai", color: "#736cd3", value: 54 },
       { name: "Muse Wonder (max)", creator: "meta", color: "#0089f4", value: 52 },
@@ -294,7 +290,6 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
         creator: "meta",
         color: "#0089f4",
         value: 57,
-        pattern: true,
       },
       {
         name: "Claude Fable 5.1 (max with fallback)",
@@ -364,7 +359,6 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
         creator: "meta",
         color: "#0089f4",
         value: 61,
-        pattern: true,
       },
       { name: "Gemini 4 Argon (high)", creator: "google", color: "#34A853", value: 60 },
       { name: "GPT-6 Astra (max)", creator: "openai", color: "#1f1f1f", value: 60 },
