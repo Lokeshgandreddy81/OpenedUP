@@ -1,5 +1,6 @@
 import { Pool, type PoolClient, type QueryResult } from "pg";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { supabaseRootCa } from "./supabaseCa.js";
 
 export interface SqlExecutor {
   query<Row extends object = Record<string, unknown>>(
@@ -38,7 +39,10 @@ export function getPostgresPool(): Pool {
     connectionTimeoutMillis: 5_000,
     idleTimeoutMillis: 10_000,
     allowExitOnIdle: true,
-    ssl: { rejectUnauthorized: true },
+    ssl: {
+      ca: process.env["DATABASE_SSL_CA"]?.trim() || supabaseRootCa,
+      rejectUnauthorized: true,
+    },
   });
   pool.on("error", (error) => {
     // Pool errors can occur while a serverless instance is idle; keep the process
