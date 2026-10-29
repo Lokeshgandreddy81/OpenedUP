@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
   Navigate,
   useLocation,
+  useNavigate,
   useNavigationType,
 } from "react-router-dom";
 import { AppProvider, useAppContext, WorkspaceSyncModal } from "./features/chapters/publicApi";
@@ -98,10 +99,28 @@ const ResetPasswordPage = lazyWithRetry(() =>
 const HomeRoute: React.FC<{ allowChatClose?: boolean }> = ({ allowChatClose = false }) => {
   const { user, loading } = useChatAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const navigationType = useNavigationType();
-  // Keep the landing page after an in-app close; direct visits and reloads resume at chat.
   const isChatCloseLanding =
     allowChatClose && navigationType === "REPLACE" && location.state?.source === "chat-close";
+
+  useEffect(() => {
+    if (!user || !isChatCloseLanding) return;
+
+    // Safari can keep this in-app landing route mounted while its tab is in the background.
+    const resumeChat = () => {
+      if (document.visibilityState === "visible") {
+        navigate(user.emailVerified ? "/chat" : "/verify-email", { replace: true });
+      }
+    };
+
+    window.addEventListener("focus", resumeChat);
+    document.addEventListener("visibilitychange", resumeChat);
+    return () => {
+      window.removeEventListener("focus", resumeChat);
+      document.removeEventListener("visibilitychange", resumeChat);
+    };
+  }, [isChatCloseLanding, navigate, user]);
 
   if (loading) return <LandingPageSkeleton />;
   if (user && !isChatCloseLanding) {
