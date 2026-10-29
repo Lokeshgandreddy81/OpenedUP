@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS conversations (
   model TEXT NOT NULL,
   is_pinned INTEGER NOT NULL DEFAULT 0,
   is_archived INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS conversations_user_updated
   ON conversations(user_id, is_archived, updated_at DESC);
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   status TEXT NOT NULL DEFAULT 'complete' CHECK(status IN ('complete', 'interrupted')),
   metadata_json TEXT NOT NULL DEFAULT '{}',
   sequence INTEGER NOT NULL,
-  created_at INTEGER NOT NULL,
+  created_at BIGINT NOT NULL,
   UNIQUE(conversation_id, sequence),
   FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS chat_artifacts (
   is_favorite INTEGER NOT NULL DEFAULT 0,
   collection TEXT,
   tags_json TEXT NOT NULL DEFAULT '[]',
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL,
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL,
   UNIQUE(user_id, legacy_id)
 );
 CREATE INDEX IF NOT EXISTS artifacts_shared_updated
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS chat_artifact_versions (
   content TEXT NOT NULL,
   language TEXT,
   model_used TEXT,
-  created_at INTEGER NOT NULL,
+  created_at BIGINT NOT NULL,
   FOREIGN KEY(artifact_id) REFERENCES chat_artifacts(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS artifact_versions_owner_created
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS provider_credentials (
   nonce BYTEA NOT NULL,
   auth_tag BYTEA NOT NULL,
   ciphertext BYTEA NOT NULL,
-  updated_at INTEGER NOT NULL,
+  updated_at BIGINT NOT NULL,
   PRIMARY KEY(user_id, provider_id)
 );
 
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS project_snapshots (
   user_id TEXT NOT NULL,
   project_id TEXT NOT NULL,
   payload_json TEXT NOT NULL,
-  updated_at INTEGER NOT NULL,
+  updated_at BIGINT NOT NULL,
   PRIMARY KEY(user_id, project_id)
 );
 CREATE INDEX IF NOT EXISTS project_snapshots_owner_updated
@@ -105,10 +105,10 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
   notifications TEXT NOT NULL CHECK(notifications IN ('Important updates', 'Failed runs only')),
   start_in_new_chat INTEGER NOT NULL DEFAULT 0,
   conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL,
-  last_run_at INTEGER,
-  next_run_at INTEGER,
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL,
+  last_run_at BIGINT,
+  next_run_at BIGINT,
   UNIQUE(user_id, legacy_id)
 );
 CREATE INDEX IF NOT EXISTS scheduled_tasks_due
@@ -122,11 +122,11 @@ CREATE TABLE IF NOT EXISTS scheduled_task_runs (
   user_id TEXT NOT NULL,
   trigger TEXT NOT NULL CHECK(trigger IN ('scheduled', 'manual')),
   status TEXT NOT NULL CHECK(status IN ('queued', 'running', 'succeeded', 'failed')),
-  scheduled_for INTEGER,
-  created_at INTEGER NOT NULL,
-  started_at INTEGER,
-  finished_at INTEGER,
-  lease_until INTEGER,
+  scheduled_for BIGINT,
+  created_at BIGINT NOT NULL,
+  started_at BIGINT,
+  finished_at BIGINT,
+  lease_until BIGINT,
   output TEXT,
   error TEXT,
   model_used TEXT,
@@ -157,8 +157,8 @@ CREATE TABLE IF NOT EXISTS skills (
   tools_required TEXT,
   approval_status TEXT NOT NULL DEFAULT 'approved' CHECK(approval_status IN ('draft', 'pending_review', 'approved', 'rejected')),
   rejection_reason TEXT,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_unique_name
   ON skills(name, scope, COALESCE(owner_id, ''), COALESCE(org_id, ''));
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS skill_files (
   relative_path TEXT NOT NULL,
   size_bytes INTEGER NOT NULL,
   sha256 TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
+  created_at BIGINT NOT NULL,
   FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
   UNIQUE(skill_id, relative_path)
 );
@@ -181,10 +181,10 @@ CREATE INDEX IF NOT EXISTS idx_skill_files_skill
 CREATE TABLE IF NOT EXISTS conversation_skills (
   conversation_id TEXT NOT NULL,
   skill_id TEXT NOT NULL,
-  enabled_at INTEGER NOT NULL,
+  enabled_at BIGINT NOT NULL,
   enabled_by TEXT NOT NULL,
   explicitly_selected INTEGER NOT NULL DEFAULT 0,
-  preloaded_at INTEGER,
+  preloaded_at BIGINT,
   source TEXT NOT NULL DEFAULT 'direct' CHECK(source IN ('direct', 'project')),
   PRIMARY KEY(conversation_id, skill_id),
   FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS skill_usage (
   conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
   skill TEXT NOT NULL,
   user_id TEXT,
-  timestamp INTEGER NOT NULL,
+  timestamp BIGINT NOT NULL,
   tool_name TEXT DEFAULT 'Skill',
   duration_ms INTEGER,
   outcome TEXT DEFAULT 'success' CHECK(outcome IN ('success', 'error', 'timeout'))
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS skill_versions (
   version INTEGER NOT NULL,
   changelog TEXT,
   file_manifest TEXT,
-  created_at INTEGER NOT NULL,
+  created_at BIGINT NOT NULL,
   FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
   UNIQUE(skill_id, version)
 );
@@ -247,7 +247,7 @@ CREATE TABLE IF NOT EXISTS skill_agents (
   description TEXT,
   tools TEXT,
   system_prompt TEXT,
-  created_at INTEGER NOT NULL,
+  created_at BIGINT NOT NULL,
   FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
   UNIQUE(skill_id, name)
 );
