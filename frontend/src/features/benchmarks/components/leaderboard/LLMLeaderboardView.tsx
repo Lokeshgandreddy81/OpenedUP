@@ -650,9 +650,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
                         <ArrowUpDown size={11} className="text-neutral-400" />
                       )}
                     </div>
-                    <span className="text-[11px] font-normal text-neutral-400">
-                      Artificial Analysis
-                    </span>
+                    <span className="text-[11px] font-normal text-neutral-400">Sara Analysis</span>
                   </button>
                 </th>
 
@@ -803,6 +801,14 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
                         <span className="font-medium text-sm text-neutral-900 group-">
                           {m.name}
                         </span>
+                        {m.qualityIndexVersion && (
+                          <span
+                            className="rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700"
+                            title={`This score uses Sara Analysis ${m.qualityIndexVersion}; scores from older index versions are not directly comparable.`}
+                          >
+                            {m.qualityIndexVersion}
+                          </span>
+                        )}
                       </div>
                     </td>
 
@@ -821,7 +827,14 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
 
                     {/* 4. Intelligence Index */}
                     <td className="py-4 px-4 text-center">
-                      <span className="font-bold text-sm text-neutral-950 font-mono">
+                      <span
+                        className="font-bold text-sm text-neutral-950 font-mono"
+                        title={
+                          m.qualityIndexVersion
+                            ? `Sara Analysis ${m.qualityIndexVersion}`
+                            : undefined
+                        }
+                      >
                         {m.quality.intelligenceIndex == null
                           ? "—"
                           : Math.round(m.quality.intelligenceIndex)}
@@ -976,11 +989,11 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
           {[
             {
               q: "Which AI model ranks 1st on the LLM Leaderboard?",
-              a: "Claude Opus 5.5 (max with fallback) currently holds the #1 position on the Artificial Analysis Intelligence Index with a score of 58, out of 273 models ranked.",
+              a: "Gemini 4 Carbon (high) leads the newly released Sara Analysis Intelligence Index v5.0 with a score of 59. The new version uses nine revised evaluations; older scores in this leaderboard use v4.3.2 and are not directly comparable.",
             },
             {
               q: "What are the top models on the LLM Leaderboard?",
-              a: "The top models by Intelligence Index are: 1. Claude Opus 5.5 (max with fallback) (58), 2. Claude Sonnet 5.5 (max with fallback) (56), 3. Muse Wonder Full (max) (56), 4. Kimi K3.1 Pro (55), and 5. Claude Opus 5.5 (high with fallback) (54).",
+              a: "Gemini 4 Carbon (high) currently leads Sara Analysis v5.0 at 59. The v4.3.2 rankings still visible in this list use a different evaluation set; compare scores within the same version.",
             },
             {
               q: "Which AI model has the fastest output speed?",
@@ -992,7 +1005,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
             },
             {
               q: "Which is the best open weights model on the leaderboard?",
-              a: "MiMo-V2.6-Pro is the highest-ranked open weights model with an Intelligence Index score of 46. There are 129 open weights models out of 273 total on the leaderboard.",
+              a: "MiMo-V2.6-Pro is the highest-ranked open weights model in the legacy v4.3.2 index with a score of 46. The benchmark catalog also lists Gemini 4 Carbon’s separate v5.0 result; scores across versions are not directly comparable.",
             },
             {
               q: "What are the top open weights models on the leaderboard?",
@@ -1000,7 +1013,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
             },
             {
               q: "Which is the best reasoning model on the leaderboard?",
-              a: "Claude Opus 5.5 (max with fallback) leads among 118 reasoning models with an Intelligence Index score of 58, using extended thinking to solve complex problems before responding.",
+              a: "Gemini 4 Carbon (high) is the latest v5.0 index leader at 59. Its reasoning-focused design targets long-horizon engineering and cybersecurity workflows; v5.0 is a revised evaluation set.",
             },
             {
               q: "How do I filter models on the leaderboard?",

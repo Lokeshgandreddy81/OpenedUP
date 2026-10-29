@@ -23,7 +23,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
   {
     id: "financeAndAccounting",
     tabLabel: "Finance & Accounting",
-    title: "Artificial Analysis Finance & Accounting Index",
+    title: "Sara Analysis Finance & Accounting Index",
     evaluations:
       "Incorporates 7 evaluations: AA-Omniscience, GDPval-AA v2.1, AA-Briefcase v1.1, Humanity's Last Exam, AutomationBench-AA, AA-LCR v1.1, GDP.pdf",
     totalModels: 273,
@@ -81,7 +81,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
   {
     id: "strategyAndOps",
     tabLabel: "Strategy & Ops",
-    title: "Artificial Analysis Strategy & Ops Index",
+    title: "Sara Analysis Strategy & Ops Index",
     evaluations:
       "Incorporates 6 evaluations: GDPval-AA v2.1, AA-Briefcase v1.1, AA-Omniscience, AutomationBench-AA, AA-LCR v1.1, GDP.pdf",
     totalModels: 273,
@@ -139,7 +139,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
   {
     id: "legal",
     tabLabel: "Legal",
-    title: "Artificial Analysis Legal Index",
+    title: "Sara Analysis Legal Index",
     evaluations:
       "Incorporates 7 evaluations: AA-Omniscience, GDPval-AA v2.1, AA-Briefcase v1.1, Humanity's Last Exam, AA-LCR v1.1, GDP.pdf, AutomationBench-AA",
     totalModels: 273,
@@ -197,7 +197,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
   {
     id: "healthcareAndMedical",
     tabLabel: "Healthcare & Medical",
-    title: "Artificial Analysis Healthcare & Medical Index",
+    title: "Sara Analysis Healthcare & Medical Index",
     evaluations:
       "Incorporates 6 evaluations: AA-Omniscience, GDPval-AA v2.1, AA-Briefcase v1.1, MLCR-AA, Humanity's Last Exam, AutomationBench-AA",
     totalModels: 82,
@@ -242,7 +242,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
   {
     id: "engineering",
     tabLabel: "Engineering",
-    title: "Artificial Analysis Engineering Index",
+    title: "Sara Analysis Engineering Index",
     evaluations:
       "Incorporates 6 evaluations: AA-Omniscience, Humanity's Last Exam, CritPt, GDPval-AA v2.1, AA-Briefcase v1.1, Terminal-Bench 4.0",
     totalModels: 273,
@@ -300,7 +300,7 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
   {
     id: "economics",
     tabLabel: "Economics",
-    title: "Artificial Analysis Economics Index",
+    title: "Sara Analysis Economics Index",
     evaluations:
       "Incorporates 5 evaluations: AA-Omniscience, Humanity's Last Exam, GDPval-AA v2.1, AA-Briefcase v1.1, AA-LCR v1.1",
     totalModels: 273,

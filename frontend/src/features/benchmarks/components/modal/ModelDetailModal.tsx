@@ -99,8 +99,37 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                     Extended Thinking
                   </span>
                 )}
+                {model.qualityIndexVersion && (
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    Sara Analysis {model.qualityIndexVersion}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-1 max-w-xl line-clamp-2">{model.summary}</p>
+              {(model.officialUrl || model.benchmarkSourceUrl) && (
+                <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-medium">
+                  {model.officialUrl && (
+                    <a
+                      href={model.officialUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-700 hover:underline"
+                    >
+                      Google announcement
+                    </a>
+                  )}
+                  {model.benchmarkSourceUrl && (
+                    <a
+                      href={model.benchmarkSourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-700 hover:underline"
+                    >
+                      Sara Analysis benchmarks
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -204,8 +233,8 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                   {model.pricing.sourceBlendedPricePer1M != null &&
                     model.pricing.sourceBlendedPriceBasis && (
                       <div className="text-[10px] text-slate-500 mt-1">
-                        AA blend: ${model.pricing.sourceBlendedPricePer1M.toFixed(2)} / 1M ·{" "}
-                        {model.pricing.sourceBlendedPriceBasis}
+                        Sara Analysis blend: ${model.pricing.sourceBlendedPricePer1M.toFixed(2)} /
+                        1M · {model.pricing.sourceBlendedPriceBasis}
                       </div>
                     )}
                 </div>
@@ -226,7 +255,9 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                   <div className="px-4 py-2.5 flex justify-between">
                     <span className="text-slate-500">Max Output Length</span>
                     <span className="font-semibold text-slate-900 tabular-nums">
-                      {model.maxOutputTokens.toLocaleString()} tokens
+                      {model.maxOutputTokens == null
+                        ? "Not published"
+                        : `${model.maxOutputTokens.toLocaleString()} tokens`}
                     </span>
                   </div>
                   {model.totalParametersB && (
@@ -283,7 +314,8 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                 <div className="flex items-center gap-2">
                   <Sparkles size={16} className="text-[#0047FF]" />
                   <span className="font-semibold text-slate-900">
-                    Artificial Analysis Intelligence Index
+                    Sara Analysis Intelligence Index
+                    {model.qualityIndexVersion ? ` ${model.qualityIndexVersion}` : ""}
                   </span>
                 </div>
                 <span className="text-base font-bold text-[#0047FF] tabular-nums">
@@ -315,6 +347,60 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                   {
                     label: "Terminal-Bench 4.0 (Terminal & Agentic Coding)",
                     val: model.quality.terminalBench40,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "FrontierCode 2.0 (Repository Engineering)",
+                    val: model.quality.frontierCode20 ?? null,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "HLE-Diamond (Reasoning & Knowledge)",
+                    val: model.quality.hleDiamond ?? null,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "Terminal-Bench-Science 0.1",
+                    val: model.quality.terminalBenchScience01 ?? null,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "CritPt v2 (Hard Subset)",
+                    val: model.quality.critPtV2HardSubset ?? null,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "GDP.pdf (All-pass score)",
+                    val: model.quality.gdpPdfAllPass ?? null,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "AA-Omniscience v1.1 Index",
+                    val: model.quality.aaOmniscienceIndex ?? null,
+                    max: 100,
+                    unit: "",
+                  },
+                  {
+                    label: "SEC-bench Pro (Vulnerability Discovery)",
+                    val: model.quality.secBenchPro ?? null,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "ExploitGym (Exploit Validation)",
+                    val: model.quality.exploitGym ?? null,
+                    max: 100,
+                    unit: "%",
+                  },
+                  {
+                    label: "CWE-bench (Root-Cause Patching)",
+                    val: model.quality.cweBench ?? null,
                     max: 100,
                     unit: "%",
                   },
@@ -537,7 +623,9 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
             <div className="space-y-3">
               {providers.length === 0 ? (
                 <div className="p-8 text-center text-slate-500">
-                  No third-party inference providers registered for this model (first-party only).
+                  {model.noPublicApi
+                    ? "No public inference API or provider benchmark data is available for this model yet."
+                    : "No third-party inference providers are listed for this model yet."}
                 </div>
               ) : (
                 providers.map((match) => (
@@ -596,7 +684,7 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
-          <span>Data independently verified from Artificial Analysis</span>
+          <span>Data independently verified against published evaluation results</span>
           <button
             type="button"
             onClick={onClose}

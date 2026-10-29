@@ -46,7 +46,7 @@ const CODING_AGENT_METRIC_CARDS: {
 } = {
   index: {
     title: "Coding Agent Index",
-    subtitle: "Artificial Analysis Coding Agent Index v1.5",
+    subtitle: "Sara Analysis Coding Agent Index v1.5",
     accentColor: "#736CD3",
     metricLabel: "Higher is better",
     items: rankChartItems(
@@ -114,8 +114,8 @@ const CodingAgentSectionHeading: React.FC<CodingAgentSectionHeadingProps> = ({
 
 const CODING_AGENT_FAQ_ITEMS: { q: string; a: string }[] = [
   {
-    q: "What is the Artificial Analysis Coding Agent Index?",
-    a: "The Artificial Analysis Coding Agent Index is our composite score for coding-agent performance across the public benchmark suite on this page. It combines DeepSWE v1.1, Terminal-Bench 4.0, and SWE-Atlas-QnA to capture implementation, terminal workflow, repository-understanding, and broader software-engineering performance in a single headline metric.",
+    q: "What is the Sara Analysis Coding Agent Index?",
+    a: "The Sara Analysis Coding Agent Index is our composite score for coding-agent performance across the public benchmark suite on this page. It combines DeepSWE v1.1, Terminal-Bench 4.0, and SWE-Atlas-QnA to capture implementation, terminal workflow, repository-understanding, and broader software-engineering performance in a single headline metric.",
   },
   {
     q: "Which benchmarks are included in the index right now?",
@@ -295,7 +295,7 @@ export const CodingAgentsView: React.FC<CodingAgentsViewProps> = () => {
           <section id="coding-agent-performance" className="flex flex-col gap-6">
             <CodingAgentSectionHeading
               title="Performance"
-              subtitle="Performance across the Artificial Analysis Coding Agent Index."
+              subtitle="Performance across the Sara Analysis Coding Agent Index."
             />
 
             <CodingAgentIndexesFullChart variant="performance" />
@@ -305,7 +305,7 @@ export const CodingAgentsView: React.FC<CodingAgentsViewProps> = () => {
           <section id="coding-agent-token-usage" className="flex flex-col gap-6">
             <CodingAgentSectionHeading
               title="Token Usage"
-              subtitle="Token consumption across the Artificial Analysis Coding Agent Index, including total usage, token mix, efficiency, and per-benchmark breakdowns."
+              subtitle="Token consumption across the Sara Analysis Coding Agent Index, including total usage, token mix, efficiency, and per-benchmark breakdowns."
             />
 
             <TokenUsageChartCard />
@@ -315,7 +315,7 @@ export const CodingAgentsView: React.FC<CodingAgentsViewProps> = () => {
           <section id="coding-agent-cost" className="flex flex-col gap-6">
             <CodingAgentSectionHeading
               title="Cost"
-              subtitle="Cost across the Artificial Analysis Coding Agent Index based on current per-token API pricing, including cache write pricing and cache discounts where available. Many users will access coding agent harnesses through subscription plan offerings rather than pay-per-token."
+              subtitle="Cost across the Sara Analysis Coding Agent Index based on current per-token API pricing, including cache write pricing and cache discounts where available. Many users will access coding agent harnesses through subscription plan offerings rather than pay-per-token."
             />
 
             <CostChartCard />
@@ -325,7 +325,7 @@ export const CodingAgentsView: React.FC<CodingAgentsViewProps> = () => {
           <section id="coding-agent-execution-time" className="flex flex-col gap-6">
             <CodingAgentSectionHeading
               title="Execution Time"
-              subtitle="Active agent runtime across the Artificial Analysis Coding Agent Index."
+              subtitle="Active agent runtime across the Sara Analysis Coding Agent Index."
             />
 
             <ExecutionTimeChartCard />
@@ -335,7 +335,7 @@ export const CodingAgentsView: React.FC<CodingAgentsViewProps> = () => {
           <section id="coding-agent-safety-refusals" className="flex flex-col gap-6">
             <CodingAgentSectionHeading
               title="Safety Refusals"
-              subtitle="Safety refusal rates across the Artificial Analysis Coding Agent Index, broken down by benchmark."
+              subtitle="Safety refusal rates across the Sara Analysis Coding Agent Index, broken down by benchmark."
             />
 
             <SafetyRefusalChartCard />

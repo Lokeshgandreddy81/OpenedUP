@@ -756,7 +756,7 @@ export function getProvidersForModel(modelId: string): ModelProviderMatch[] {
     return matches.sort((a, b) => b.support.medianTps - a.support.medianTps);
   }
 
-  // Dynamic fallback for any of the 273 models from BENCHMARK_MODELS
+  // Dynamic fallback for any model from BENCHMARK_MODELS
   const model = BENCHMARK_MODELS.find((m) => m.id === modelId);
   if (!model) return [];
 

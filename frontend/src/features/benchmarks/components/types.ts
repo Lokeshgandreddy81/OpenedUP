@@ -51,7 +51,7 @@ export type WeightsType = "proprietary" | "open-weights" | "commercial-restricte
 
 export type ReasoningType = "standard" | "extended-thinking";
 
-export type Modality = "text" | "vision" | "audio";
+export type Modality = "text" | "vision" | "audio" | "video";
 
 // --- Benchmark Quality Metrics ---
 
@@ -93,6 +93,16 @@ export interface QualityMetrics {
   itBenchAa: number | null;
   /** AutomationBench-AA agentic SaaS workflow success rate (0 to 100) */
   automationBenchAa: number | null;
+  /** v5.0-only evaluations; keep separate from similarly named prior versions. */
+  frontierCode20?: number | null;
+  hleDiamond?: number | null;
+  terminalBenchScience01?: number | null;
+  critPtV2HardSubset?: number | null;
+  gdpPdfAllPass?: number | null;
+  aaOmniscienceIndex?: number | null;
+  secBenchPro?: number | null;
+  exploitGym?: number | null;
+  cweBench?: number | null;
 }
 
 // --- Benchmark Performance Metrics ---
@@ -151,7 +161,9 @@ export interface AIModelBenchmark {
   /** Maximum context window size in tokens */
   contextWindowTokens: number;
   /** Maximum output tokens generated in a single completion */
-  maxOutputTokens: number;
+  maxOutputTokens?: number;
+  /** Version of the composite index used for quality.intelligenceIndex. */
+  qualityIndexVersion?: string;
   /** Total parameter count in billions (if disclosed or estimated) */
   totalParametersB?: number;
   /** Active / activated parameter count in billions (for MoE architectures) */
@@ -176,6 +188,7 @@ export interface AIModelBenchmark {
   tags: string[];
   /** Official model card, documentation, or release announcement URL */
   officialUrl?: string;
+  benchmarkSourceUrl?: string;
 }
 
 // --- Inference Providers & Hosting ---
