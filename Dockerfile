@@ -28,16 +28,21 @@ WORKDIR /app/backend
 RUN npm run build
 
 # Stage 2: Production Runtime
-FROM node:24-alpine AS runner
+FROM node:24-trixie-slim AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PATH="/opt/pdf-venv/bin:${PATH}"
 
-# Install curl, python3, PDF libraries, and docker-cli for healthchecks, PDF extraction/OCR, and sandbox execution
-RUN apk --no-cache add curl libstdc++ python3 py3-pip docker-cli \
-  && pip3 install --no-cache-dir --break-system-packages pymupdf pypdf \
+# PyMuPDF publishes Linux wheels for glibc-based images, not Alpine's musl libc.
+# Keep Python packages isolated from Debian's system Python environment.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl docker-cli libstdc++6 python3 python3-venv \
+  && python3 -m venv /opt/pdf-venv \
+  && /opt/pdf-venv/bin/python -m pip install --no-cache-dir --only-binary=:all: pymupdf pypdf \
+  && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /var/lib/openedup/skills /var/lib/openedup/sandboxes \
   && chown -R node:node /var/lib/openedup
 
