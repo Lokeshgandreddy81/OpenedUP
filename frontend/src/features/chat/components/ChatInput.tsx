@@ -192,7 +192,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";
-    const nextHeight = Math.min(200, Math.max(24, textareaRef.current.scrollHeight));
+    const nextHeight = Math.min(200, Math.max(22, textareaRef.current.scrollHeight));
     textareaRef.current.style.height = `${nextHeight}px`;
   }, [text]);
 
@@ -454,7 +454,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setIsFileDragActive(false);
             void handleFilesSelected(event.dataTransfer.files);
           }}
-          className={`relative flex flex-col gap-1.5 rounded-2xl px-3.5 pt-3 pb-2 sm:px-4 sm:pt-3.5 sm:pb-2.5 ${
+          className={`relative flex flex-col gap-0.5 rounded-2xl px-3.5 pt-2.5 pb-2 sm:px-4 sm:pt-3 sm:pb-2 ${
             landingMode
               ? "border border-neutral-200/90 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] duration-200 hover:border-neutral-300 focus-within:border-neutral-400 focus-within:shadow-[0_4px_20px_rgba(0,0,0,0.07)]"
               : stableFrame
@@ -652,11 +652,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Listening… speak now…" : placeholder}
             rows={1}
-            className={`chat-composer-input w-full bg-transparent px-1 text-[14.5px] font-normal leading-relaxed text-neutral-900 placeholder:font-normal placeholder:text-neutral-400 focus:placeholder:text-neutral-300 resize-none outline-none min-h-[26px] max-h-[200px] tracking-[-0.01em]`}
+            className={`chat-composer-input w-full bg-transparent px-1 text-[14px] font-normal leading-snug text-neutral-900 placeholder:font-normal placeholder:text-neutral-400 focus:placeholder:text-neutral-300 resize-none outline-none min-h-[22px] max-h-[200px] tracking-[-0.01em]`}
           />
 
           {/* Bottom action row: Plus on left, Model selector + Stop/Send on right */}
-          <div className="flex min-h-8 items-center justify-between select-none pt-0.5">
+          <div className="flex min-h-7 items-center justify-between select-none pt-0">
             {/* Left: Add context / file plus icon with popover menu */}
             {chapterContextLabel ? (
               <div
