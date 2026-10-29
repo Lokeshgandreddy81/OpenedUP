@@ -162,14 +162,15 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   if (!isOpen) {
     return (
       <div className="hidden sm:flex h-full w-11 shrink-0 flex-col items-center gap-2 border-r border-slate-200/80 bg-white py-3 select-none">
+        {/* Sidebar toggle — always visible, works in every feature */}
         <button
           type="button"
-          onClick={onBack}
-          title="Go back"
-          aria-label="Go back"
+          onClick={onToggleOpen}
+          title="Open sidebar"
+          aria-label="Open sidebar"
           className="w-9 h-9 sm:w-8 sm:h-8 min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/40"
         >
-          <ArrowLeft size={18} strokeWidth={2} />
+          <PanelLeft size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
