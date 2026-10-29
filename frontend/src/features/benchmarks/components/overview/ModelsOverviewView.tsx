@@ -48,21 +48,21 @@ const LANGUAGE_MODELS_DATA: {
         color: "#34A853",
       },
       {
-        name: "Claude Opus\n5.5 (max\nwith fallback)",
+        name: "Claude Opus\n5.5 (max)",
         creator: "anthropic",
         value: 58,
         label: "58",
         color: "#CC785C",
       },
       {
-        name: "Kimi K3.1 Pro",
+        name: "Kimi K3.1\nPro",
         creator: "kimi",
         value: 55,
         label: "55",
         color: "#047AFE",
       },
       {
-        name: "Claude Fable\n5.1 (max with\nfallback)",
+        name: "Claude Fable\n5.1 (max)",
         creator: "anthropic",
         value: 53,
         label: "53",
@@ -79,9 +79,9 @@ const LANGUAGE_MODELS_DATA: {
       { name: "Muse\nWonder (max)", creator: "meta", value: 52, label: "52", color: "#0084FF" },
       { name: "GPT-6.1\nSol (max)", creator: "openai", value: 52, label: "52", color: "#171717" },
       { name: "GPT-6.1\nTerra (max)", creator: "openai", value: 48, label: "48", color: "#171717" },
-      { name: "Grok 4.7 (xhigh)", creator: "spacexai", value: 46, label: "46", color: "#736CD3" },
-      { name: "MiMo-V2.6-Pro", creator: "xiaomi", value: 46, label: "46", color: "#FF6900" },
-      { name: "GLM-5.3 (max)", creator: "zai", value: 45, label: "45", color: "#2563EB" },
+      { name: "Grok 4.7\n(xhigh)", creator: "spacexai", value: 46, label: "46", color: "#736CD3" },
+      { name: "MiMo-\nV2.6-Pro", creator: "xiaomi", value: 46, label: "46", color: "#FF6900" },
+      { name: "GLM-5.3\n(max)", creator: "zai", value: 45, label: "45", color: "#2563EB" },
       {
         name: "DeepSeek V4.1\nFlash (max)",
         creator: "deepseek",
@@ -113,14 +113,14 @@ const LANGUAGE_MODELS_DATA: {
         color: "#34A853",
       },
       {
-        name: "Claude Opus\n5.5 (max\nwith fallback)",
+        name: "Claude Opus\n5.5 (max)",
         creator: "anthropic",
         value: 97,
         label: "97",
         color: "#CC785C",
       },
-      { name: "Grok 4.7 (xhigh)", creator: "spacexai", value: 97, label: "97", color: "#736CD3" },
-      { name: "GLM-5.3 (max)", creator: "zai", value: 93, label: "93", color: "#2563EB" },
+      { name: "Grok 4.7\n(xhigh)", creator: "spacexai", value: 97, label: "97", color: "#736CD3" },
+      { name: "GLM-5.3\n(max)", creator: "zai", value: 93, label: "93", color: "#2563EB" },
       {
         name: "GPT-6.1\nTerra (max)",
         creator: "openai",
@@ -129,7 +129,7 @@ const LANGUAGE_MODELS_DATA: {
         color: "#171717",
       },
       {
-        name: "Claude Fable\n5.1 (max with\nfallback)",
+        name: "Claude Fable\n5.1 (max)",
         creator: "anthropic",
         value: 71,
         label: "71",
@@ -138,13 +138,13 @@ const LANGUAGE_MODELS_DATA: {
       { name: "GPT-6\nAstra (max)", creator: "openai", value: 65, label: "65", color: "#171717" },
       { name: "GPT-6.1\nSol (max)", creator: "openai", value: 64, label: "64", color: "#171717" },
       {
-        name: "Kimi K3.1 Pro",
+        name: "Kimi K3.1\nPro",
         creator: "kimi",
         value: 58,
         label: "58",
         color: "#047AFE",
       },
-      { name: "MiMo-V2.6-Pro", creator: "xiaomi", value: 48, label: "48", color: "#FF6900" },
+      { name: "MiMo-\nV2.6-Pro", creator: "xiaomi", value: 48, label: "48", color: "#FF6900" },
     ],
   },
   cost: {
@@ -154,43 +154,21 @@ const LANGUAGE_MODELS_DATA: {
     metricLabel: "Lower is better",
     items: [
       {
-        name: "GPT-6.1 Terra (low)",
+        name: "GPT-6.1\nTerra (low)",
         creator: "openai",
         value: 0.05,
         label: "$0.05",
         color: "#171717",
       },
       {
-        name: "GPT-6.1 Terra (medium)",
-        creator: "openai",
-        value: 0.1,
-        label: "$0.10",
-        color: "#171717",
-      },
-      {
-        name: "GPT-6.1 Terra (non-reasoning)",
-        creator: "openai",
-        value: 0.11,
-        label: "$0.11",
-        color: "#171717",
-      },
-      { name: "MiMo-V2.6-Pro", creator: "xiaomi", value: 0.13, label: "$0.13", color: "#FF6900" },
-      {
-        name: "GPT-6.1 Terra (high)",
-        creator: "openai",
+        name: "MiMo-\nV2.6-Pro",
+        creator: "xiaomi",
         value: 0.13,
         label: "$0.13",
-        color: "#171717",
+        color: "#FF6900",
       },
       {
-        name: "GPT-6.1 Terra (xhigh)",
-        creator: "openai",
-        value: 0.19,
-        label: "$0.19",
-        color: "#171717",
-      },
-      {
-        name: "GPT-6.1 Terra (max)",
+        name: "GPT-6.1\nTerra (max)",
         creator: "openai",
         value: 0.4,
         label: "$0.40",
@@ -217,9 +195,15 @@ const LANGUAGE_MODELS_DATA: {
         label: "$1.99",
         color: "#34A853",
       },
-      { name: "GLM-5.3 (max)", creator: "zai", value: 2.01, label: "$2.01", color: "#2563EB" },
       {
-        name: "Kimi K3.1 Pro",
+        name: "GLM-5.3\n(max)",
+        creator: "zai",
+        value: 2.01,
+        label: "$2.01",
+        color: "#2563EB",
+      },
+      {
+        name: "Kimi K3.1\nPro",
         creator: "kimi",
         value: 2.11,
         label: "$2.11",
@@ -233,7 +217,7 @@ const LANGUAGE_MODELS_DATA: {
         color: "#171717",
       },
       {
-        name: "Grok 4.7 (xhigh)",
+        name: "Grok 4.7\n(xhigh)",
         creator: "spacexai",
         value: 3.74,
         label: "$3.74",
@@ -247,18 +231,18 @@ const LANGUAGE_MODELS_DATA: {
         color: "#0084FF",
       },
       {
-        name: "Claude Opus\n5.5 (max\nwith fallback)",
+        name: "Claude Opus\n5.5 (max)",
         creator: "anthropic",
         value: 5.98,
         label: "$5.98",
         color: "#CC785C",
       },
       {
-        name: "Claude Fable\n5.1 (max with\nfallback)",
-        creator: "anthropic",
-        value: 7.63,
-        label: "$7.63",
-        color: "#CC785C",
+        name: "Gemini 4\nCarbon (high)",
+        creator: "google",
+        value: 7.76,
+        label: "$7.76",
+        color: "#34A853",
       },
     ],
   },
@@ -2912,6 +2896,11 @@ export const BenchmarkBarCard: React.FC<{
   const maxVal = Math.max(...values);
   const isLowerBetter = metricLabel === "Lower is better";
 
+  const gridColsStyle: React.CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
+  };
+
   return (
     <div className="flex-1 min-w-0 flex flex-col justify-between overflow-hidden py-2 px-1">
       {/* Card Header (alternating left / right alignment) */}
@@ -2937,11 +2926,11 @@ export const BenchmarkBarCard: React.FC<{
       </div>
 
       {/* Chart Canvas Area */}
-      <div className="mt-8 relative">
+      <div className="mt-8 relative w-full">
         {/* Vertical Bars */}
         <div
-          className="flex items-end justify-between gap-3 pt-4 pb-1 relative"
-          style={{ height: `${CHART_HEIGHT}px` }}
+          className="gap-2 sm:gap-2.5 pt-4 pb-1 relative w-full"
+          style={{ height: `${CHART_HEIGHT}px`, ...gridColsStyle }}
         >
           {items.map((item, idx) => {
             const barColor = item.color || getCreatorColor(item.creator);
@@ -2962,10 +2951,10 @@ export const BenchmarkBarCard: React.FC<{
             return (
               <div
                 key={idx}
-                className="flex-1 flex flex-col items-center justify-end relative h-full"
+                className="min-w-0 flex flex-col items-center justify-end relative h-full"
               >
                 {/* Value text above bar */}
-                <span className="text-[11.5px] font-mono leading-none mb-2 select-none text-neutral-600 font-medium">
+                <span className="text-[10.5px] sm:text-[11px] font-mono leading-none mb-2 select-none text-neutral-600 font-medium truncate max-w-full text-center">
                   {item.label}
                 </span>
 
@@ -2979,7 +2968,7 @@ export const BenchmarkBarCard: React.FC<{
                 >
                   {/* Inside rank number */}
                   {barHeightPx > 36 && (
-                    <span className="text-[10.5px] font-mono font-bold text-white/95 select-none relative z-10">
+                    <span className="text-[10px] sm:text-[10.5px] font-mono font-bold text-white/95 select-none relative z-10">
                       {idx + 1}
                     </span>
                   )}
@@ -2993,29 +2982,29 @@ export const BenchmarkBarCard: React.FC<{
         <div className="w-full border-b border-neutral-200" />
 
         {/* Creator Brand Logo Row */}
-        <div className="flex items-center justify-between gap-3 pt-3.5">
+        <div className="gap-2 sm:gap-2.5 pt-3.5 w-full" style={gridColsStyle}>
           {items.map((item, idx) => (
             <div
               key={idx}
-              className="flex-1 flex justify-center items-center py-1"
+              className="min-w-0 flex justify-center items-center py-1"
               title={`${item.name.replace(/\n/g, " ")} (${item.creator})`}
             >
-              <div className="w-6 h-6 flex items-center justify-center">
-                <CreatorLogo creator={item.creator} size={19} />
+              <div className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
+                <CreatorLogo creator={item.creator} size={18} />
               </div>
             </div>
           ))}
         </div>
 
         {/* Clean Multiline Model Labels (Centered under each bar, zero collision) */}
-        <div className="flex justify-between gap-3 pt-2.5 pb-2">
+        <div className="gap-2 sm:gap-2.5 pt-2.5 pb-2 w-full" style={gridColsStyle}>
           {items.map((item, idx) => (
             <div
               key={idx}
-              className="flex-1 flex flex-col items-center text-center px-0.5"
+              className="min-w-0 flex flex-col items-center text-center px-0.5"
               title={item.name.replace(/\n/g, " ")}
             >
-              <span className="text-[10px] sm:text-[10.5px] leading-[1.3] text-neutral-600 font-medium whitespace-pre-line break-words w-full select-none">
+              <span className="text-[9.5px] sm:text-[10px] leading-[1.3] text-neutral-600 font-medium whitespace-pre-line break-words w-full select-none text-center block">
                 {item.name}
               </span>
             </div>
@@ -3031,11 +3020,11 @@ export const BenchmarkBarCard: React.FC<{
 const MODELS_FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: "Which is the most intelligent AI model?",
-    a: "Claude Opus 5.5 (max with fallback) currently leads the Sara Analysis Intelligence Index with a score of 58, out of 273 models evaluated.",
+    a: "Gemini 4 Carbon (high) currently leads the Sara Analysis Intelligence Index with a score of 59, out of 274 models evaluated.",
   },
   {
     q: "What are the top AI models?",
-    a: "The top AI models by Intelligence Index are: 1. Claude Opus 5.5 (max with fallback) (58), 2. Claude Sonnet 5.5 (max with fallback) (56), 3. Muse Wonder Full (max) (56), 4. Kimi K3.1 Pro (55), and 5. Claude Opus 5.5 (high with fallback) (54).",
+    a: "The top AI models by Intelligence Index are: 1. Gemini 4 Carbon (high) (59), 2. Claude Opus 5.5 (max with fallback) (58), 3. Claude Sonnet 5.5 (max with fallback) (56), 4. Muse Wonder Full (max) (56), and 5. Kimi K3.1 Pro (55).",
   },
   {
     q: "Which is the fastest AI model?",
