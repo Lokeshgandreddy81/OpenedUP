@@ -30,13 +30,17 @@ export async function getReadyz(_req: Request, res: Response): Promise<void> {
   const geminiConfigured = Boolean(resolveApiKey());
   const vaultHealth = verifyVaultHealth();
   const vaultAttestation = getVaultAttestationFingerprint();
+  // SQLite is useful for local development, but Vercel's function filesystem is ephemeral.
+  // Until the repositories use the configured Postgres database, Vercel is not durable-ready.
+  const persistentStorageReady = process.env["VERCEL"] !== "1";
 
   res.status(200).json({
-    status: vaultHealth.healthy ? "ready" : "degraded",
+    status: vaultHealth.healthy && persistentStorageReady ? "ready" : "degraded",
     geminiConfigured,
     pythonAvailable,
     vaultHealthy: vaultHealth.healthy,
     vaultAttestation: vaultAttestation.status,
+    persistentStorageReady,
     timestamp: new Date().toISOString(),
   });
 }

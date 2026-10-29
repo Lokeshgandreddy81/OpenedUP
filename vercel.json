@@ -18,7 +18,15 @@
   },
   "rewrites": [
     {
+      "source": "/health",
+      "destination": { "service": "backend" }
+    },
+    {
       "source": "/healthz",
+      "destination": { "service": "backend" }
+    },
+    {
+      "source": "/readyz",
       "destination": { "service": "backend" }
     },
     {
