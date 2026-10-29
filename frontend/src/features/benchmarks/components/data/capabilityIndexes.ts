@@ -29,6 +29,12 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
     totalModels: 273,
     models: [
       {
+        name: "Gemini 4 Carbon (high)",
+        creator: "google",
+        color: "#34A853",
+        value: 62,
+      },
+      {
         name: "Claude Opus 5.5 (max with fallback)",
         creator: "anthropic",
         color: "#cc785c",
@@ -86,6 +92,12 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       "Incorporates 6 evaluations: GDPval-AA v2.1, AA-Briefcase v1.1, AA-Omniscience, AutomationBench-AA, AA-LCR v1.1, GDP.pdf",
     totalModels: 273,
     models: [
+      {
+        name: "Gemini 4 Carbon (high)",
+        creator: "google",
+        color: "#34A853",
+        value: 65,
+      },
       {
         name: "Claude Opus 5.5 (max with fallback)",
         creator: "anthropic",
@@ -145,6 +157,12 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
     totalModels: 273,
     models: [
       {
+        name: "Gemini 4 Carbon (high)",
+        creator: "google",
+        color: "#34A853",
+        value: 64,
+      },
+      {
         name: "Claude Opus 5.5 (max with fallback)",
         creator: "anthropic",
         color: "#cc785c",
@@ -203,6 +221,12 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
     totalModels: 82,
     models: [
       {
+        name: "Gemini 4 Carbon (high)",
+        creator: "google",
+        color: "#34A853",
+        value: 62,
+      },
+      {
         name: "Claude Opus 5.5 (max with fallback)",
         creator: "anthropic",
         color: "#cc785c",
@@ -247,6 +271,12 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       "Incorporates 6 evaluations: AA-Omniscience, Humanity's Last Exam, CritPt, GDPval-AA v2.1, AA-Briefcase v1.1, Terminal-Bench 4.0",
     totalModels: 273,
     models: [
+      {
+        name: "Gemini 4 Carbon (high)",
+        creator: "google",
+        color: "#34A853",
+        value: 63,
+      },
       {
         name: "Claude Opus 5.5 (max with fallback)",
         creator: "anthropic",
@@ -305,6 +335,12 @@ export const CAPABILITY_INDEXES: CapabilityIndexConfig[] = [
       "Incorporates 5 evaluations: AA-Omniscience, Humanity's Last Exam, GDPval-AA v2.1, AA-Briefcase v1.1, AA-LCR v1.1",
     totalModels: 273,
     models: [
+      {
+        name: "Gemini 4 Carbon (high)",
+        creator: "google",
+        color: "#34A853",
+        value: 67,
+      },
       {
         name: "Claude Opus 5.5 (max with fallback)",
         creator: "anthropic",

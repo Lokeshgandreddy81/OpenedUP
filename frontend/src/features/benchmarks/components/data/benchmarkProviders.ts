@@ -649,6 +649,14 @@ export const BENCHMARK_PROVIDERS: InferenceProvider[] = [
     hardwareType: "Google Cloud TPU v5p & TPU v5e Pods",
     modelSupport: [
       {
+        modelId: "gemini-4-carbon-high",
+        medianTps: 135,
+        p90Tps: 162,
+        medianTtft: 0.52,
+        blendedPricePer1M: 4.0,
+        uptimePercent: 99.99,
+      },
+      {
         modelId: "gemini-4-argon-high",
         medianTps: 145,
         p90Tps: 175,

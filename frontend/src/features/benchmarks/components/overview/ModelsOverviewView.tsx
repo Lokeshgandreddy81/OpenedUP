@@ -41,6 +41,13 @@ const LANGUAGE_MODELS_DATA: {
     metricLabel: "Higher is better",
     items: [
       {
+        name: "Gemini 4\nCarbon (high)",
+        creator: "google",
+        value: 59,
+        label: "59",
+        color: "#34A853",
+      },
+      {
         name: "Claude Opus\n5.5 (max\nwith fallback)",
         creator: "anthropic",
         value: 58,
@@ -98,6 +105,13 @@ const LANGUAGE_MODELS_DATA: {
         color: "#2243E6",
       },
       { name: "Muse\nWonder (max)", creator: "meta", value: 176, label: "176", color: "#0084FF" },
+      {
+        name: "Gemini 4\nCarbon (high)",
+        creator: "google",
+        value: 100,
+        label: "100",
+        color: "#34A853",
+      },
       {
         name: "Claude Opus\n5.5 (max\nwith fallback)",
         creator: "anthropic",
@@ -264,6 +278,15 @@ interface FullIndexModelItem {
 }
 
 const INTELLIGENCE_INDEX_MODELS: FullIndexModelItem[] = [
+  {
+    name: "Gemini 4\nCarbon (high)",
+    creator: "google",
+    score: 59,
+    color: "#34A853",
+    weights: "proprietary",
+    modality: "multimodal",
+    country: "us",
+  },
   {
     name: "Claude Sonnet\n5.5 (max\nwith fallback)",
     creator: "anthropic",
@@ -1098,6 +1121,19 @@ const TASK_COST_MODELS: TaskCostModelItem[] = [
       { value: 1.6, label: "$1.60", opacity: 1.0 },
     ],
   },
+  {
+    name: "Gemini 4\nCarbon (high)",
+    creator: "google",
+    color: "#34A853",
+    totalCost: 7.76,
+    totalLabel: "$7.76",
+    segments: [
+      { value: 1.55, label: "$1.55", opacity: 0.65 },
+      { value: 2.45, label: "$2.45", opacity: 0.78 },
+      { value: 1.9, label: "$1.90", opacity: 0.89 },
+      { value: 1.86, label: "$1.86", opacity: 1.0 },
+    ],
+  },
 ];
 
 interface TaskTimeModelItem {
@@ -1353,6 +1389,15 @@ const TASK_TOKENS_MODELS: TaskTokensModelItem[] = [
     totalLabel: "89k",
     reasoningK: 26,
     answerK: 63,
+  },
+  {
+    name: "Gemini 4\nCarbon (high)",
+    creator: "google",
+    color: "#34A853",
+    totalK: 95,
+    totalLabel: "95k",
+    reasoningK: 48,
+    answerK: 47,
   },
   {
     name: "Qwen 3.6\nMax (0902)",
@@ -1977,6 +2022,7 @@ const TASK_CONTEXT_MODELS: ContextWindowModelItem[] = [
   },
   { name: "GPT-6.1\nSol (max)", creator: "openai", color: "#171717", tokens: 1000000 },
   { name: "GLM-5.3 (max)", creator: "zai", color: "#2563EB", tokens: 1000000 },
+  { name: "Gemini 4\nCarbon (high)", creator: "google", color: "#34A853", tokens: 1000000 },
   { name: "Gemini 4\nArgon (high)", creator: "google", color: "#34A853", tokens: 1000000 },
   { name: "DeepSeek V4.1\nFlash (max)", creator: "deepseek", color: "#2243E6", tokens: 1000000 },
   { name: "Nemotron\n3.5 Super VL", creator: "nvidia", color: "#65A30D", tokens: 1000000 },

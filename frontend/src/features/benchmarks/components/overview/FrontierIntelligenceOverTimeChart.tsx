@@ -602,6 +602,16 @@ const TIMELINE_MODELS_DATA: TimelineModelPoint[] = [
     displayDate: "September 30, 2026",
     score: 53,
   },
+  {
+    id: "google-gemini-4-carbon-12",
+    name: "Gemini 4 Carbon (High)",
+    creatorId: "google",
+    creatorName: "Google",
+    color: "#34A853",
+    dateStr: "2026-10-28",
+    displayDate: "October 28, 2026",
+    score: 59,
+  },
 
   // ── SpaceXAI (#736cd3) ──
   {

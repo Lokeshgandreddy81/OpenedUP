@@ -54,6 +54,7 @@ export type AiModelId =
   | "claude-opus-5.5"
   | "claude-fable-5.1"
   | "gpt-6-astra"
+  | "gemini-4-carbon"
   | "gemini-4-argon"
   | "gpt-6.1-sol"
   | "grok-4.7"

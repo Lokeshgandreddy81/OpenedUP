@@ -190,6 +190,33 @@ export const ALL_CODING_AGENT_MODELS: CodingAgentModelItem[] = [
     isDefault15: true,
   },
   {
+    id: "antigravity-gemini-4-carbon",
+    name: "Gemini 4 Carbon",
+    modelLines: ["Gemini 4", "Carbon"],
+    agentName: "Antigravity CLI",
+    creatorId: "google",
+    creatorName: "Google",
+    modelColor: "#34A853",
+    agentColor: "#34A853",
+    providerDisplay: "(Google)",
+    indexScore: 68,
+    costUsd: 7.76,
+    costDisplay: "$7.76",
+    executionTimeMinutes: 28.2,
+    timeDisplay: "28.2m",
+    turnsPerTask: 38,
+    deepSweRate: 74.8,
+    terminalBenchRate: 81.2,
+    sweAtlasRate: 78.6,
+    inputTokens: 1.6,
+    cachedInputTokens: 15.4,
+    outputTokens: 0.35,
+    tokenPercentiles: { p5: 5, p25: 8.9, p50: 12.1, p75: 16.4, p95: 44 },
+    benchmarkTokens: { deepSwe: 22.4, terminalBench: 19.8, sweAtlas: 11.2 },
+    safetyRefusals: ZERO_SAFETY_REFUSALS,
+    isDefault15: true,
+  },
+  {
     id: "antigravity-gemini-4-argon",
     name: "Gemini 4 Argon",
     modelLines: ["Gemini 4", "Argon"],
@@ -1105,6 +1132,7 @@ export function resolveCodingAgentToModelId(agentModelId: string): string {
   if (agentModelId.includes("haiku-5-5")) return "claude-haiku-5-5-max";
   if (agentModelId.includes("gpt-6-astra")) return "gpt-6-astra-max";
   if (agentModelId.includes("gpt-6-1-sol")) return "gpt-6-1-sol-max";
+  if (agentModelId.includes("gemini-4-carbon")) return "gemini-4-carbon-high";
   if (agentModelId.includes("gemini-4-argon")) return "gemini-4-argon-high";
   if (agentModelId.includes("grok-4-7")) return "grok-4-7-xhigh";
   if (agentModelId.includes("glm-5-3")) return "glm-5-3-max";
