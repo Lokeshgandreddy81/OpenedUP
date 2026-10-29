@@ -651,7 +651,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
                       )}
                     </div>
                     <span className="text-[11px] font-normal text-neutral-400">
-                      Artificial Analysis
+                      Sara Analysis
                     </span>
                   </button>
                 </th>
@@ -976,7 +976,7 @@ export const LLMLeaderboardView: React.FC<LLMLeaderboardViewProps> = ({
           {[
             {
               q: "Which AI model ranks 1st on the LLM Leaderboard?",
-              a: "Claude Opus 5.5 (max with fallback) currently holds the #1 position on the Artificial Analysis Intelligence Index with a score of 58, out of 273 models ranked.",
+              a: "Claude Opus 5.5 (max with fallback) currently holds the #1 position on the Sara Analysis Intelligence Index with a score of 58, out of 273 models ranked.",
             },
             {
               q: "What are the top models on the LLM Leaderboard?",

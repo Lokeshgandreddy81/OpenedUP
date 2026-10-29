@@ -39,7 +39,7 @@ const COST_NOTES: { id: string; title: string; body: string[] }[] = [
     id: "what-cost-measures",
     title: "What Cost Is Measuring",
     body: [
-      "This chart shows the average pay-per-token API cost per task across the Artificial Analysis Coding Agent Index, spanning DeepSWE v1.1, Terminal-Bench 4.0, and SWE-Atlas-QnA.",
+      "This chart shows the average pay-per-token API cost per task across the Sara Analysis Coding Agent Index, spanning DeepSWE v1.1, Terminal-Bench 4.0, and SWE-Atlas-QnA.",
       "Where applicable, that cost model includes standard input pricing, discounted cached-input pricing, separate cache-write charges, and output pricing rather than treating all prompt tokens as if they were billed at the same uncached input rate.",
       "It is intended to show pay-per-token API cost, not consumer plan pricing or the full operational cost of deploying the system in production. Infrastructure, engineering, and supervision costs are not the focus of this metric.",
     ],

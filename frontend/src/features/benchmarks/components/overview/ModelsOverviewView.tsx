@@ -36,7 +36,7 @@ const LANGUAGE_MODELS_DATA: {
 } = {
   intelligence: {
     title: "Intelligence",
-    subtitle: "Artificial Analysis Intelligence Index",
+    subtitle: "Sara Analysis Intelligence Index",
     accentColor: "#736CD3",
     metricLabel: "Higher is better",
     items: [
@@ -575,27 +575,27 @@ export const IntelligenceIndexFullChart: React.FC = () => {
     switch (filterTab) {
       case "weights":
         return {
-          title: "Artificial Analysis Intelligence Index by Open Weights / Proprietary",
+          title: "Sara Analysis Intelligence Index by Open Weights / Proprietary",
           subtitle:
-            "Artificial Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
+            "Sara Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
         };
       case "inputs":
         return {
-          title: "Artificial Analysis Intelligence Index by Input Modality",
+          title: "Sara Analysis Intelligence Index by Input Modality",
           subtitle:
-            "Artificial Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
+            "Sara Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
         };
       case "country":
         return {
           title: "Leading Models by Country",
-          subtitle: "Artificial Analysis Intelligence Index - Leading models",
+          subtitle: "Sara Analysis Intelligence Index - Leading models",
         };
       case "intelligence-index":
       default:
         return {
-          title: "Artificial Analysis Intelligence Index",
+          title: "Sara Analysis Intelligence Index",
           subtitle:
-            "Artificial Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
+            "Sara Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1",
         };
     }
   };
@@ -2985,7 +2985,7 @@ export const BenchmarkBarCard: React.FC<{
 const MODELS_FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: "Which is the most intelligent AI model?",
-    a: "Claude Opus 5.5 (max with fallback) currently leads the Artificial Analysis Intelligence Index with a score of 58, out of 273 models evaluated.",
+    a: "Claude Opus 5.5 (max with fallback) currently leads the Sara Analysis Intelligence Index with a score of 58, out of 273 models evaluated.",
   },
   {
     q: "What are the top AI models?",
@@ -3016,7 +3016,7 @@ const MODELS_FAQ_ITEMS: { q: string; a: string }[] = [
     a: "Claude Opus 5.5 (max with fallback) leads among 118 reasoning models with an Intelligence Index score of 58. Reasoning models use extended thinking to work through complex problems before providing answers.",
   },
   {
-    q: "How are AI models compared on Artificial Analysis?",
+    q: "How are AI models compared on Sara Analysis?",
     a: "Models are compared across multiple dimensions including intelligence (quality), pricing, output speed (tokens per second), latency (time to first token), end-to-end response time, and context window size. Performance metrics are measured directly using standardized prompts across 273 models.",
   },
   {
@@ -3095,7 +3095,7 @@ export const ModelsOverviewView: React.FC = () => {
 
         <div className="w-full border-b border-transparent" />
 
-        {/* 4. Artificial Analysis Intelligence Index */}
+        {/* 4. Sara Analysis Intelligence Index */}
         <div className="w-full max-w-[1560px] mx-auto flex justify-center">
           <IntelligenceIndexFullChart />
         </div>
@@ -3116,7 +3116,7 @@ export const ModelsOverviewView: React.FC = () => {
 
         <div className="w-full border-b border-transparent my-6" />
 
-        {/* 7. Artificial Analysis Coding Agent Indexes */}
+        {/* 7. Sara Analysis Coding Agent Indexes */}
         <div className="w-full max-w-[1560px] mx-auto flex justify-center">
           <CodingAgentIndexesFullChart />
         </div>

@@ -283,7 +283,7 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
                 <div className="flex items-center gap-2">
                   <Sparkles size={16} className="text-[#0047FF]" />
                   <span className="font-semibold text-slate-900">
-                    Artificial Analysis Intelligence Index
+                    Sara Analysis Intelligence Index
                   </span>
                 </div>
                 <span className="text-base font-bold text-[#0047FF] tabular-nums">

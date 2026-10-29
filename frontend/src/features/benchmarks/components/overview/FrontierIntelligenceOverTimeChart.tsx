@@ -1524,7 +1524,7 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
           </div>
 
           <p className="text-[11px] sm:text-[11.5px] text-neutral-500 mt-1 max-w-2xl leading-relaxed">
-            Artificial Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase
+            Sara Analysis Intelligence Index v4.3.2 incorporates 10 evaluations: AA-Briefcase
             v1.1, GDPval-AA v2.1, AutomationBench-AA, Terminal-Bench 4.0, SciCode, Humanity's Last
             Exam, GDP.pdf, CritPt, AA-Omniscience, AA-LCR v1.1
           </p>
@@ -1674,7 +1674,7 @@ export const FrontierIntelligenceOverTimeChart: React.FC = () => {
               textAnchor="middle"
               className="text-[12px] font-medium fill-neutral-700 select-none font-sans"
             >
-              Artificial Analysis Intelligence Index
+              Sara Analysis Intelligence Index
             </text>
 
             {/* Y-Axis Ticks & Dashes */}
