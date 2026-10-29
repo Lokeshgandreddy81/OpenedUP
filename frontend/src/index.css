@@ -16,7 +16,8 @@
 }
 
 @keyframes float-gentle {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px) rotate(0deg);
   }
   50% {
@@ -25,7 +26,8 @@
 }
 
 @keyframes float-slow {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px) rotate(0deg);
   }
   50% {
@@ -1159,7 +1161,8 @@ select:focus-visible,
   font: inherit;
 }
 @keyframes assistantCaretBlink {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -1203,7 +1206,8 @@ select:focus-visible,
 }
 
 @keyframes tosaraAmbientPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(0.96);
     opacity: 0.45;
   }
@@ -1217,10 +1221,14 @@ select:focus-visible,
    then a fast spin is composited on top via animation.
    We use CSS custom props + style so both tilt + spin compose properly. */
 @keyframes tosaraRingOrbit {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 @keyframes tosaraCoreBlast {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .tosara-ring-plane {
