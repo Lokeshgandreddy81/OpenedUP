@@ -51,6 +51,7 @@ import {
   stripChapterNumberPrefix,
   toMinorUnits,
 } from "../services/engine";
+import { isPdfFile } from "../services/imageProcessor";
 import type { ReadingPhase } from "../state/types";
 import {
   CustomScrollList,
@@ -488,6 +489,10 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
     if (hasOnlyImageReceipts) return false;
     return true;
   }, [computedRows, photos]);
+
+  const failedPdf = photos.find(
+    (photo) => isPdfFile(photo.file, photo.name) && photo.status === "error"
+  );
 
   useEffect(() => {
     if (!isPdfDocument) return;
@@ -2155,6 +2160,40 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
                     <p className="text-xs text-slate-500">
                       Reading document structure and table of contents
                     </p>
+                  </div>
+                </div>
+              ) : failedPdf ? (
+                <div className="flex flex-col items-center justify-center gap-3.5 max-w-md animate-in fade-in duration-200">
+                  <div className="w-14 h-14 flex items-center justify-center text-rose-600">
+                    <BookOpen size={30} strokeWidth={1.75} />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-serif text-[22px] font-normal text-slate-800 tracking-tight">
+                      Couldn&apos;t analyze this PDF
+                    </h3>
+                    <p className="text-sm text-slate-600 break-words">
+                      {failedPdf.errorText || "Chapter extraction failed. Please try again."}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {onRetryFailedBatches && (
+                      <button
+                        type="button"
+                        onClick={onRetryFailedBatches}
+                        className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[13.5px] font-medium transition-colors cursor-pointer"
+                      >
+                        Try again
+                      </button>
+                    )}
+                    {onAddFiles && (
+                      <button
+                        type="button"
+                        onClick={() => addFilesInputRef.current?.click()}
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-[13.5px] font-medium transition-colors cursor-pointer"
+                      >
+                        Add another PDF
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (

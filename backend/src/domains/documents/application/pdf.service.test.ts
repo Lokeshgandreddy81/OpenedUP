@@ -119,6 +119,32 @@ test("searchable PDFs return local extraction without calling the selected provi
   assert.equal(result.ocr_recommended, false);
 });
 
+test("short searchable PDFs stay on local extraction without provider credentials", async (t) => {
+  let providerCalls = 0;
+  t.mock.method(globalThis, "fetch", async () => {
+    providerCalls += 1;
+    throw new Error("searchable PDFs should not call the provider");
+  });
+  const document = await PDFDocument.create();
+  const page = document.addPage([612, 792]);
+  page.drawText("A short searchable note with fewer than twenty five words", {
+    x: 50,
+    y: 700,
+  });
+
+  const result = await parsePdfChapters({
+    mimeType: "application/pdf",
+    base64Data: Buffer.from(await document.save()).toString("base64"),
+    modelId: "gemini-3.8-flash",
+  });
+
+  assert.equal(providerCalls, 0);
+  assert.equal(result.is_scanned_pdf, false);
+  assert.equal(result.total_pages, 1);
+  assert.ok(result.chapters.length > 0);
+  assert.match(result.chapters[0]?.content || "", /short searchable note/i);
+});
+
 test("scanned PDF without a BYOK key fails instead of returning local recovery", async (t) => {
   let providerCalls = 0;
   t.mock.method(globalThis, "fetch", async () => {

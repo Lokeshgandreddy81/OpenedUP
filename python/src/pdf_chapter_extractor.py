@@ -36,6 +36,10 @@ def clean_text(text: str) -> str:
     text = re.sub(r'[ \t]+', ' ', text)
     return text.strip()
 
+def looks_like_scanned_pdf(total_doc_words: int, has_images: bool) -> bool:
+    return total_doc_words < 25 and has_images
+
+
 def clean_markdown_decorations(text: str) -> str:
     """Strips leading/trailing markdown bold/italic asterisks, underscores, colons, and heading hashes."""
     if not text:
@@ -870,7 +874,7 @@ def parse_with_pymupdf(pdf_path: str, fallback_file_name: str = ""):
         has_images = any(len(doc[p].get_images()) > 0 for p in range(min(total_pages, 20)))
     except Exception:
         pass
-    is_scanned_pdf = (total_doc_words < 25) and (has_images or total_pages > 0)
+    is_scanned_pdf = looks_like_scanned_pdf(total_doc_words, has_images)
 
     # 1. Document title extraction
     meta_title = doc.metadata.get("title", "").strip() if doc.metadata else ""
@@ -1202,7 +1206,7 @@ def parse_with_pypdf(pdf_path: str, fallback_file_name: str = ""):
         has_images = any(len(getattr(reader.pages[p], "images", [])) > 0 for p in range(min(total_pages, 20)))
     except Exception:
         pass
-    is_scanned_pdf = (total_doc_words < 25) and (has_images or total_pages > 0)
+    is_scanned_pdf = looks_like_scanned_pdf(total_doc_words, has_images)
 
     if not meta_title and page_texts:
         for line in page_texts[0].split('\n')[:8]:

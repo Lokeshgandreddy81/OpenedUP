@@ -103,9 +103,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const photosForRequest = await Promise.all(
       batch.map(async (photo) => {
         const mimeType = photo.mimeType || "image/jpeg";
-        const fileBlob = photo.base64Data
-          ? base64ToBlob(photo.base64Data, mimeType)
-          : photo.file;
+        const fileBlob = photo.base64Data ? base64ToBlob(photo.base64Data, mimeType) : photo.file;
         if (!fileBlob) throw new Error(`Could not load ${photo.name} for upload.`);
         const storagePath = await uploadBlobForProcessing(fileBlob, photo.name, "image");
         return {
@@ -141,7 +139,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const requestParsePdf = async (photo: UploadedPhoto): Promise<ParsedPdfResult> => {
     const providerConfig = getProviderChatRequestConfig(receiptModel);
-    const pdfBlob = photo.file || (photo.base64Data ? base64ToBlob(photo.base64Data, "application/pdf") : null);
+    const pdfBlob =
+      photo.file || (photo.base64Data ? base64ToBlob(photo.base64Data, "application/pdf") : null);
     if (!pdfBlob) throw new Error(`Could not load ${photo.name} for upload.`);
     const storagePath = await uploadBlobForProcessing(pdfBlob, photo.name, "pdf");
     const payload = {
@@ -163,7 +162,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `PDF parse request failed (${response.status})`);
+      const message =
+        typeof errorData.error === "string"
+          ? errorData.error.replace(/^MISSING_API_KEY(?::[^:]+)?:/, "")
+          : `PDF parse request failed (${response.status})`;
+      throw new Error(message);
     }
     return (await response.json()) as ParsedPdfResult;
   };

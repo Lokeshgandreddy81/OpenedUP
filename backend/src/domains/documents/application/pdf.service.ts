@@ -217,7 +217,7 @@ export async function parsePdfChapters(
     const { stdout } = await execFileAsync(
       "python3",
       [scriptPath, tempFilePath, accurateTitle || fileName || "Document"],
-      { maxBuffer: 64 * 1024 * 1024 }
+      { maxBuffer: 64 * 1024 * 1024, timeout: 60_000 }
     );
 
     if (stdout && stdout.trim()) {
@@ -241,9 +241,7 @@ export async function parsePdfChapters(
   }
 
   const totalPages = Math.max(accuratePageCount, pyResult?.total_pages || 1);
-  const isScannedPdf = Boolean(
-    pyResult?.is_scanned_pdf || (pyResult?.total_words !== undefined && pyResult.total_words === 0)
-  );
+  const isScannedPdf = Boolean(pyResult?.is_scanned_pdf);
   if (pythonSuccess && pyResult && !isScannedPdf) {
     const { chapters: normalizedChapters, totalPages: calculatedTotal } = validateAndRepairChapters(
       pyResult.chapters || [],
