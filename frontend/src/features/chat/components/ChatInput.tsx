@@ -16,7 +16,6 @@ import {
   X,
   BookOpenText,
   ArrowUpRight,
-  Sparkles,
   Puzzle,
 } from "lucide-react";
 import {
@@ -30,7 +29,6 @@ import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
 import { readChatAttachments, type ChatAttachmentFile } from "../../../app/files/chatAttachments";
 import type { AiModelId, AiModelOption, EffortLevel } from "./chatTypes";
 import { ImageLightboxModal } from "./ImageLightboxModal";
-import type { SkillItem } from "../../skills";
 
 const ProjectsIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 15,
@@ -77,11 +75,6 @@ interface ChatInputProps {
   stableFrame?: boolean;
   landingMode?: boolean;
   isTemporaryChat?: boolean;
-  enabledSkills?: SkillItem[];
-  onRemoveSkill?: (skillId: string) => void;
-  onOpenSkillsModal?: () => void;
-  hasProjectUpdate?: boolean;
-  onSyncProjectSkills?: () => void;
 }
 
 const AVAILABLE_MODELS: AiModelOption[] = getChatModels().map((model) => ({
@@ -157,11 +150,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   starterPrompts = [],
   stableFrame = false,
   landingMode = false,
-  enabledSkills = [],
-  onRemoveSkill,
-  onOpenSkillsModal,
-  hasProjectUpdate = false,
-  onSyncProjectSkills,
 }) => {
   const [text, setText] = useState(initialText);
   const [attachments, setAttachments] = useState<ChatAttachmentFile[]>([]);
@@ -597,52 +585,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </div>
           )}
 
-          {/* Enabled skills chips */}
-          {enabledSkills && enabledSkills.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2 pb-0.5 animate-in fade-in duration-150">
-              {enabledSkills.map((s) => (
-                <span
-                  key={s.id}
-                  className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-0.5 rounded-lg text-[11.5px] font-mono bg-neutral-100 text-neutral-800 group"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 shrink-0" />
-                  <span className="truncate max-w-[160px]">{s.name}</span>
-                  {s.source === "project" && (
-                    <span className="px-1.5 py-0.2 rounded text-[9px] uppercase tracking-wider bg-neutral-200 text-neutral-600 font-sans font-medium">
-                      Project
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onRemoveSkill?.(s.id)}
-                    className="p-0.5 hover:bg-neutral-200 rounded-md text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
-                    title={`Disable ${s.name}`}
-                  >
-                    <X size={11} />
-                  </button>
-                </span>
-              ))}
-              {hasProjectUpdate && onSyncProjectSkills && (
-                <button
-                  type="button"
-                  onClick={onSyncProjectSkills}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer"
-                  title="Project default skills have been updated. Click to sync."
-                >
-                  <Sparkles size={11} className="text-amber-600" />
-                  <span>Update from project</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={onOpenSkillsModal}
-                className="text-[11px] text-slate-400 hover:text-slate-700 font-medium px-1.5 py-0.5 transition-colors cursor-pointer"
-              >
-                + Add skill
-              </button>
-            </div>
-          )}
-
           {/* Text input area */}
           <textarea
             data-testid="chat-composer"
@@ -797,11 +739,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       type="button"
                       onClick={() => {
                         setIsPlusMenuOpen(false);
-                        if (onOpenSkillsModal) {
-                          onOpenSkillsModal();
-                        } else {
-                          onOpenSkills?.();
-                        }
+                        onOpenSkills?.();
                       }}
                       className="w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between hover:bg-neutral-50 transition-colors cursor-pointer group"
                     >
