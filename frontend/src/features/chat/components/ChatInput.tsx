@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   Plus,
@@ -85,9 +85,6 @@ const AVAILABLE_MODELS: AiModelOption[] = getChatModels().map((model) => ({
   ...(model.tag ? { tag: model.tag } : {}),
   ...(model.description ? { description: model.description } : {}),
 }));
-// Keep the main picker focused on the free models; paid models remain in More models.
-const FREE_MODELS = AVAILABLE_MODELS.filter((model) => getModelMeta(model.id).isFree);
-const MORE_MODELS = AVAILABLE_MODELS.filter((model) => !getModelMeta(model.id).isFree);
 
 interface EffortOption {
   level: EffortLevel;
@@ -162,7 +159,30 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isModelCatalogOpen, setIsModelCatalogOpen] = useState(false);
 
-  const { customModelId, customModelProvider } = useProviderKeys();
+  const { customModelId, customModelProvider, hasKey } = useProviderKeys();
+  const freeModels = useMemo(
+    () => AVAILABLE_MODELS.filter((model) => getModelMeta(model.id).isFree),
+    []
+  );
+  const connectedProviderModels = useMemo(
+    () =>
+      AVAILABLE_MODELS.filter((model) => {
+        const metadata = getModelMeta(model.id);
+        return !metadata.isFree && model.id !== "custom-model" && hasKey(metadata.provider);
+      }),
+    [hasKey]
+  );
+  const connectedModelIds = useMemo(
+    () => new Set(connectedProviderModels.map((model) => model.id)),
+    [connectedProviderModels]
+  );
+  const moreModels = useMemo(
+    () =>
+      AVAILABLE_MODELS.filter(
+        (model) => !getModelMeta(model.id).isFree && !connectedModelIds.has(model.id)
+      ),
+    [connectedModelIds]
+  );
   const [modelHoverCard, setModelHoverCard] = useState<ModelHoverCardState | null>(null);
   const [activeLightboxImage, setActiveLightboxImage] = useState<{
     src: string;
@@ -411,7 +431,30 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const selectedModelSupportsImages = modelSupportsInput(selectedModel, "image");
   const hasImageAttachments = attachments.some((a) => Boolean(a.base64Data));
   const isImageCapabilityBlocked = hasImageAttachments && !selectedModelSupportsImages;
-  const selectedInMore = MORE_MODELS.find((m) => m.id === selectedModel);
+  const selectedInMore = moreModels.find((m) => m.id === selectedModel);
+  const connectedProviderIds = useMemo(
+    () => [...new Set(connectedProviderModels.map((model) => getModelMeta(model.id).provider))],
+    [connectedProviderModels]
+  );
+
+  const handleModelSelection = (modelId: AiModelId) => {
+    const metadata = getModelMeta(modelId);
+    const provider = modelId === "custom-model" ? customModelProvider : metadata.provider;
+    if (!metadata.isFree && !hasKey(provider)) {
+      setIsModelDropdownOpen(false);
+      setIsModelCatalogOpen(false);
+      setActiveSubmenu(null);
+      setModelHoverCard(null);
+      onOpenProviders?.();
+      return;
+    }
+
+    onChangeModel(modelId);
+    setIsModelDropdownOpen(false);
+    setIsModelCatalogOpen(false);
+    setActiveSubmenu(null);
+    setModelHoverCard(null);
+  };
 
   return (
     <>
@@ -964,18 +1007,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                             </span>
                           </div>
                           <div className="space-y-1">
-                            {FREE_MODELS.map((model) => {
+                            {freeModels.map((model) => {
                               const isSelected = model.id === selectedModel;
                               return (
                                 <button
                                   key={model.id}
                                   type="button"
-                                  onClick={() => {
-                                    onChangeModel(model.id);
-                                    setIsModelDropdownOpen(false);
-                                    setActiveSubmenu(null);
-                                    setModelHoverCard(null);
-                                  }}
+                                  onClick={() => handleModelSelection(model.id)}
                                   aria-describedby={
                                     modelHoverCard?.model.id === model.id
                                       ? "model-hover-details"
@@ -1015,6 +1053,60 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                               );
                             })}
                           </div>
+
+                          {connectedProviderModels.length > 0 && (
+                            <>
+                              <div className="my-2 border-t border-slate-200" />
+                              {connectedProviderIds.map((providerId) => (
+                                <section
+                                  key={providerId}
+                                  aria-label={`${PROVIDER_CATALOG[providerId].name} models`}
+                                >
+                                  <div className="px-2.5 pt-1.5 pb-1">
+                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                      {PROVIDER_CATALOG[providerId].name}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    {connectedProviderModels
+                                      .filter(
+                                        (model) => getModelMeta(model.id).provider === providerId
+                                      )
+                                      .map((model) => {
+                                        const isSelected = model.id === selectedModel;
+                                        return (
+                                          <button
+                                            key={model.id}
+                                            type="button"
+                                            onClick={() => handleModelSelection(model.id)}
+                                            className={`w-full text-left px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                                              isSelected
+                                                ? "bg-slate-100/80 text-slate-950 font-semibold ring-1 ring-inset ring-slate-200/80"
+                                                : "text-slate-800 hover:bg-slate-50"
+                                            }`}
+                                          >
+                                            <span className="min-w-0">
+                                              <span className="block truncate text-[13px] font-semibold leading-snug text-slate-950">
+                                                {model.name}
+                                              </span>
+                                              <span className="mt-0.5 block truncate text-[10px] font-normal text-slate-500">
+                                                {describeModelCapabilities(getModelMeta(model.id))}
+                                              </span>
+                                            </span>
+                                            {isSelected && (
+                                              <Check
+                                                size={14}
+                                                className="shrink-0 text-slate-700"
+                                              />
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                  </div>
+                                </section>
+                              ))}
+                            </>
+                          )}
 
                           <div className="my-2 border-t border-slate-200" />
 
@@ -1219,17 +1311,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
               <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 cool-scrollbar sm:px-7">
                 <div className="divide-y divide-slate-100">
-                  {MORE_MODELS.map((model) => {
+                  {moreModels.map((model) => {
                     const isSelected = model.id === selectedModel;
                     return (
                       <button
                         key={model.id}
                         type="button"
-                        onClick={() => {
-                          onChangeModel(model.id);
-                          setIsModelCatalogOpen(false);
-                          setModelHoverCard(null);
-                        }}
+                        onClick={() => handleModelSelection(model.id)}
                         className={`flex w-full items-center justify-between gap-4 rounded-xl px-3.5 py-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                           isSelected
                             ? "bg-slate-100 text-slate-950"
