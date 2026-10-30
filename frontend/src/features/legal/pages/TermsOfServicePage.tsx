@@ -67,28 +67,43 @@ export const TermsOfServicePage: React.FC = () => {
         <div className="space-y-12">
           {/* Section: Welcome */}
           <section className="space-y-3">
-            <h2 className="text-2xl font-light tracking-tight text-white">
-              Welcome to Sara
-            </h2>
+            <h2 className="text-2xl font-light tracking-tight text-white">Welcome to Sara</h2>
             <p className="font-light leading-relaxed text-white/80">
-              These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of Sara&apos;s website (<a href="https://tosara.in" className="underline hover:text-white">tosara.in</a>), AI agent execution platform, workspace sync tools, APIs, and associated software products (collectively, the &ldquo;Service&rdquo;). By accessing our website, creating an account, or using our services, you agree to be bound by these Terms.
+              These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of
+              Sara&apos;s website (
+              <a href="https://tosara.in" className="underline hover:text-white">
+                tosara.in
+              </a>
+              ), AI agent execution platform, workspace sync tools, APIs, and associated software
+              products (collectively, the &ldquo;Service&rdquo;). By accessing our website, creating
+              an account, or using our services, you agree to be bound by these Terms.
             </p>
           </section>
 
           {/* Section 1: Our Service */}
           <section className="space-y-3">
-            <h2 className="text-2xl font-light tracking-tight text-white">
-              1. Our Service
-            </h2>
+            <h2 className="text-2xl font-light tracking-tight text-white">1. Our Service</h2>
             <p className="font-light leading-relaxed text-white/80">
-              Sara is an AI-powered engineering and productivity partner designed to help founders, engineers, and teams:
+              Sara is an AI-powered engineering and productivity partner designed to help founders,
+              engineers, and teams:
             </p>
             <ul className="ml-4 list-disc space-y-2 font-light text-white/80">
-              <li>Orchestrate multi-agent autonomous coding tasks and full-stack software development</li>
+              <li>
+                Orchestrate multi-agent autonomous coding tasks and full-stack software development
+              </li>
               <li>Reconcile financial receipts, analyze complex documents, and audit long PDFs</li>
-              <li>Explore codebase architectures, automate bug fixes, and perform contextual refactoring</li>
-              <li>Verify web applications and code changes in live sandboxes with automated test validation</li>
-              <li>Accelerate product execution while maintaining engineering rigor and security standards</li>
+              <li>
+                Explore codebase architectures, automate bug fixes, and perform contextual
+                refactoring
+              </li>
+              <li>
+                Verify web applications and code changes in live sandboxes with automated test
+                validation
+              </li>
+              <li>
+                Accelerate product execution while maintaining engineering rigor and security
+                standards
+              </li>
             </ul>
           </section>
 
@@ -98,13 +113,25 @@ export const TermsOfServicePage: React.FC = () => {
               2. Account Registration and Access
             </h2>
             <p className="font-light leading-relaxed text-white/80">
-              To access certain features of Sara, you must authenticate using Google OAuth or a supported account credential. By registering:
+              To access certain features of Sara, you must authenticate using Google OAuth or a
+              supported account credential. By registering:
             </p>
             <ul className="ml-4 list-disc space-y-2 font-light text-white/80">
-              <li>You represent that you are at least 18 years of age and legally authorized to enter into this agreement.</li>
-              <li>You agree to provide true, current, and accurate credentials and profile details.</li>
-              <li>You are solely responsible for safeguarding your login credentials and for all actions taken under your account.</li>
-              <li>Early access and beta features are provided for developmental evaluation and may change as we refine the platform.</li>
+              <li>
+                You represent that you are at least 18 years of age and legally authorized to enter
+                into this agreement.
+              </li>
+              <li>
+                You agree to provide true, current, and accurate credentials and profile details.
+              </li>
+              <li>
+                You are solely responsible for safeguarding your login credentials and for all
+                actions taken under your account.
+              </li>
+              <li>
+                Early access and beta features are provided for developmental evaluation and may
+                change as we refine the platform.
+              </li>
             </ul>
           </section>
 
@@ -117,11 +144,26 @@ export const TermsOfServicePage: React.FC = () => {
               When utilizing Sara, you agree to:
             </p>
             <ul className="ml-4 list-disc space-y-2 font-light text-white/80">
-              <li>Use the Service exclusively for lawful software development, research, and legitimate business activities.</li>
-              <li>Never deploy harmful payloads, viruses, malicious bots, or code intended to breach or disrupt third-party infrastructure.</li>
-              <li>Never attempt to reverse engineer, decompile, or circumvent the platform&apos;s security sandboxes or access boundaries.</li>
-              <li>Respect the intellectual property, copyright, and patent rights of third parties in the code and materials you upload.</li>
-              <li>Adhere to all applicable local, national, and international cybersecurity and export compliance laws.</li>
+              <li>
+                Use the Service exclusively for lawful software development, research, and
+                legitimate business activities.
+              </li>
+              <li>
+                Never deploy harmful payloads, viruses, malicious bots, or code intended to breach
+                or disrupt third-party infrastructure.
+              </li>
+              <li>
+                Never attempt to reverse engineer, decompile, or circumvent the platform&apos;s
+                security sandboxes or access boundaries.
+              </li>
+              <li>
+                Respect the intellectual property, copyright, and patent rights of third parties in
+                the code and materials you upload.
+              </li>
+              <li>
+                Adhere to all applicable local, national, and international cybersecurity and export
+                compliance laws.
+              </li>
             </ul>
           </section>
 
@@ -135,15 +177,26 @@ export const TermsOfServicePage: React.FC = () => {
                 <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
                 <div className="space-y-2 text-sm font-light leading-relaxed text-white/80">
                   <p>
-                    <strong className="font-medium text-white">Important Notice:</strong> Sara provides AI-generated code, analysis, summaries, and suggestions based on probabilistic language models:
+                    <strong className="font-medium text-white">Important Notice:</strong> Sara
+                    provides AI-generated code, analysis, summaries, and suggestions based on
+                    probabilistic language models:
                   </p>
                   <ul className="list-disc space-y-1.5 pl-4">
-                    <li>AI responses and generated code may occasionally contain omissions, logic bugs, or hallucinated APIs.</li>
                     <li>
-                      <strong className="font-medium text-white">Human Verification Required:</strong> You are solely responsible for testing, auditing, and validating all code and outputs prior to production deployment.
+                      AI responses and generated code may occasionally contain omissions, logic
+                      bugs, or hallucinated APIs.
                     </li>
                     <li>
-                      Analysis related to legal documents, contracts, accounting records, or tax receipts is provided for workflow productivity only and does NOT constitute certified legal, tax, or financial advice.
+                      <strong className="font-medium text-white">
+                        Human Verification Required:
+                      </strong>{" "}
+                      You are solely responsible for testing, auditing, and validating all code and
+                      outputs prior to production deployment.
+                    </li>
+                    <li>
+                      Analysis related to legal documents, contracts, accounting records, or tax
+                      receipts is provided for workflow productivity only and does NOT constitute
+                      certified legal, tax, or financial advice.
                     </li>
                   </ul>
                 </div>
@@ -161,13 +214,19 @@ export const TermsOfServicePage: React.FC = () => {
             </p>
             <ul className="ml-4 list-disc space-y-2 font-light text-white/80">
               <li>
-                <strong className="font-medium text-white">Your Content:</strong> You retain complete ownership, copyright, and title to all repositories, files, prompts, and data you submit to Sara.
+                <strong className="font-medium text-white">Your Content:</strong> You retain
+                complete ownership, copyright, and title to all repositories, files, prompts, and
+                data you submit to Sara.
               </li>
               <li>
-                <strong className="font-medium text-white">Generated Work Product:</strong> You own the outputs, artifacts, and code generated by Sara for your projects, subject to your compliance with these Terms.
+                <strong className="font-medium text-white">Generated Work Product:</strong> You own
+                the outputs, artifacts, and code generated by Sara for your projects, subject to
+                your compliance with these Terms.
               </li>
               <li>
-                <strong className="font-medium text-white">Sara Platform IP:</strong> Sara AI, Inc. retains all rights, title, and intellectual property in the Sara platform, brand assets, logos, user interfaces, documentation, and agent orchestration frameworks.
+                <strong className="font-medium text-white">Sara Platform IP:</strong> Sara AI, Inc.
+                retains all rights, title, and intellectual property in the Sara platform, brand
+                assets, logos, user interfaces, documentation, and agent orchestration frameworks.
               </li>
             </ul>
           </section>
@@ -182,7 +241,8 @@ export const TermsOfServicePage: React.FC = () => {
               <Link to="/privacy" className="underline hover:text-white transition-colors">
                 Privacy Policy
               </Link>
-              , which is incorporated into these Terms by reference, to understand how we store, process, and protect your information.
+              , which is incorporated into these Terms by reference, to understand how we store,
+              process, and protect your information.
             </p>
           </section>
 
@@ -192,7 +252,10 @@ export const TermsOfServicePage: React.FC = () => {
               7. Service Availability &amp; Modifications
             </h2>
             <p className="font-light leading-relaxed text-white/80">
-              While we strive for high uptime and rapid agent execution, we cannot guarantee uninterrupted or defect-free service at all times. We reserve the right to perform routine system maintenance, apply bug fixes, deploy new model integrations, and adjust platform features to enhance stability.
+              While we strive for high uptime and rapid agent execution, we cannot guarantee
+              uninterrupted or defect-free service at all times. We reserve the right to perform
+              routine system maintenance, apply bug fixes, deploy new model integrations, and adjust
+              platform features to enhance stability.
             </p>
           </section>
 
@@ -202,7 +265,11 @@ export const TermsOfServicePage: React.FC = () => {
               8. Pricing, Billing, and Subscriptions
             </h2>
             <p className="font-light leading-relaxed text-white/80">
-              Certain features of Sara are made available free of charge, while advanced autonomous capabilities and extended compute tiers may require a paid subscription or usage credit. Pricing details are published transparently on our platform. All payments are processed securely through certified third-party payment providers. You may cancel your subscription at any time via your account settings.
+              Certain features of Sara are made available free of charge, while advanced autonomous
+              capabilities and extended compute tiers may require a paid subscription or usage
+              credit. Pricing details are published transparently on our platform. All payments are
+              processed securely through certified third-party payment providers. You may cancel
+              your subscription at any time via your account settings.
             </p>
           </section>
 
@@ -212,35 +279,40 @@ export const TermsOfServicePage: React.FC = () => {
               9. Limitation of Liability
             </h2>
             <p className="font-light leading-relaxed text-white/80">
-              Sara is provided on an &ldquo;AS IS&rdquo; and &ldquo;AS AVAILABLE&rdquo; basis without warranties of any kind, whether express or implied. To the maximum extent permitted by applicable law, Sara AI, Inc. and its officers, directors, and employees shall not be liable for any indirect, incidental, punitive, or consequential damages (including lost profits, lost business opportunities, data loss, or server downtime) resulting from your use of or inability to use the Service.
+              Sara is provided on an &ldquo;AS IS&rdquo; and &ldquo;AS AVAILABLE&rdquo; basis
+              without warranties of any kind, whether express or implied. To the maximum extent
+              permitted by applicable law, Sara AI, Inc. and its officers, directors, and employees
+              shall not be liable for any indirect, incidental, punitive, or consequential damages
+              (including lost profits, lost business opportunities, data loss, or server downtime)
+              resulting from your use of or inability to use the Service.
             </p>
           </section>
 
           {/* Section 10: Indemnification */}
           <section className="space-y-3">
-            <h2 className="text-2xl font-light tracking-tight text-white">
-              10. Indemnification
-            </h2>
+            <h2 className="text-2xl font-light tracking-tight text-white">10. Indemnification</h2>
             <p className="font-light leading-relaxed text-white/80">
-              You agree to defend, indemnify, and hold harmless Sara AI, Inc. and its affiliates from and against any third-party claims, liabilities, damages, and expenses (including reasonable legal fees) arising from your misuse of the Service or violation of these Terms.
+              You agree to defend, indemnify, and hold harmless Sara AI, Inc. and its affiliates
+              from and against any third-party claims, liabilities, damages, and expenses (including
+              reasonable legal fees) arising from your misuse of the Service or violation of these
+              Terms.
             </p>
           </section>
 
           {/* Section 11: Changes to Terms */}
           <section className="space-y-3">
-            <h2 className="text-2xl font-light tracking-tight text-white">
-              11. Changes to Terms
-            </h2>
+            <h2 className="text-2xl font-light tracking-tight text-white">11. Changes to Terms</h2>
             <p className="font-light leading-relaxed text-white/80">
-              We may update these Terms periodically as our platform grows. We will notify active users of significant revisions via email or platform announcements before they take effect. Your continued use of Sara following published revisions constitutes your acceptance of the updated Terms.
+              We may update these Terms periodically as our platform grows. We will notify active
+              users of significant revisions via email or platform announcements before they take
+              effect. Your continued use of Sara following published revisions constitutes your
+              acceptance of the updated Terms.
             </p>
           </section>
 
           {/* Section 12: Contact Us */}
           <section className="space-y-4">
-            <h2 className="text-2xl font-light tracking-tight text-white">
-              12. Contact Us
-            </h2>
+            <h2 className="text-2xl font-light tracking-tight text-white">12. Contact Us</h2>
             <p className="font-light leading-relaxed text-white/80">
               Questions regarding these Terms of Service or legal matters? Contact our team:
             </p>

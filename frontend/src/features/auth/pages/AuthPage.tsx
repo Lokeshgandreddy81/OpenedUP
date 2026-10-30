@@ -7,7 +7,10 @@ import { safeInternalPath } from "../authCallback";
 function signInErrorMessage(error: string): string {
   const message = error.toLowerCase();
   if (message.includes("not configured")) return error;
-  if (message.includes("provider") && (message.includes("disabled") || message.includes("not enabled"))) {
+  if (
+    message.includes("provider") &&
+    (message.includes("disabled") || message.includes("not enabled"))
+  ) {
     return "Google sign-in isn’t enabled in the Supabase project yet.";
   }
   if (message.includes("failed to fetch")) {
@@ -115,11 +118,17 @@ export const AuthPage: React.FC = () => {
 
         <p className="mt-4 text-[11.5px] leading-relaxed text-neutral-400">
           By continuing, you agree to our{" "}
-          <Link to="/terms" className="text-neutral-600 underline hover:text-neutral-900 transition-colors">
+          <Link
+            to="/terms"
+            className="text-neutral-600 underline hover:text-neutral-900 transition-colors"
+          >
             Terms of Service
           </Link>{" "}
           and{" "}
-          <Link to="/privacy" className="text-neutral-600 underline hover:text-neutral-900 transition-colors">
+          <Link
+            to="/privacy"
+            className="text-neutral-600 underline hover:text-neutral-900 transition-colors"
+          >
             Privacy Policy
           </Link>
           .

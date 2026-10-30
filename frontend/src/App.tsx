@@ -155,18 +155,9 @@ export const AppShell: React.FC = () => {
             </PageRoute>
           }
         />
-        <Route
-          path="/create-account"
-          element={<Navigate to="/sign-in" replace />}
-        />
-        <Route
-          path="/verify-email"
-          element={<Navigate to="/sign-in" replace />}
-        />
-        <Route
-          path="/auth/confirm"
-          element={<Navigate to="/sign-in" replace />}
-        />
+        <Route path="/create-account" element={<Navigate to="/sign-in" replace />} />
+        <Route path="/verify-email" element={<Navigate to="/sign-in" replace />} />
+        <Route path="/auth/confirm" element={<Navigate to="/sign-in" replace />} />
         <Route
           path="/auth/callback"
           element={
