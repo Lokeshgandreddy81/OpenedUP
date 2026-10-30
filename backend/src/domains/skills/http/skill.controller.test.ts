@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import AdmZip from "adm-zip";
 import type { Request, Response } from "express";
@@ -11,7 +14,12 @@ import {
   createSkill,
   updateSkill,
   deleteSkill,
+  getConversationSkills,
+  syncConversationProjectSkills,
   setConversationSkills,
+  getProjectSkills,
+  setProjectSkills,
+  downloadConversationFile,
   setSkillRepository,
 } from "./skill.controller.js";
 
@@ -213,6 +221,12 @@ test("Skill Registry API - Conversation skills permissions guard (cannot enable 
     storagePath: "/tmp/alice",
   });
 
+  const bobNow = Date.now();
+  db.prepare(
+    `INSERT INTO conversations (id, user_id, title, model, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run("conv-bob-1", "user-bob", "Bob Chat", "gemini-3.8-flash", bobNow, bobNow);
+
   // User Bob attempts to enable Alice's private skill in Bob's conversation
   const { res: resBob, getStatus: getBobStatus, getBody: getBobBody } = mockRes();
   const reqBob = {
@@ -246,4 +260,303 @@ test("Skill Registry API - Conversation skills permissions guard (cannot enable 
   assert.equal(getAliceStatus(), 200);
   assert.equal(getAliceBody().skills.length, 1);
   assert.equal(getAliceBody().skills[0]!.name, "alice-secret");
+});
+
+test("Skill conversation and project endpoints enforce resource ownership", async () => {
+  const db = openChatDatabase(":memory:");
+  const repo = new SkillRepository(db);
+  setSkillRepository(repo);
+
+  const skill = await repo.create({
+    name: "alice-project-skill",
+    description: "Skill attached to Alice's project and conversation.",
+    scope: "user",
+    ownerId: "user-alice",
+    storagePath: "/tmp/alice-project-skill",
+  });
+  const now = Date.now();
+  db.prepare(
+    `INSERT INTO conversations (id, user_id, title, model, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run("conv-alice-private", "user-alice", "Alice Chat", "default", now, now);
+  db.prepare(
+    `INSERT INTO project_snapshots (user_id, project_id, payload_json, updated_at)
+     VALUES (?, ?, ?, ?)`
+  ).run(
+    "user-alice",
+    "project-alice-private",
+    JSON.stringify({ id: "project-alice-private" }),
+    now
+  );
+  db.prepare(
+    `INSERT INTO conversations (id, user_id, title, model, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run("conv-bob-private", "user-bob", "Bob Chat", "default", now, now);
+  db.prepare(
+    `INSERT INTO project_snapshots (user_id, project_id, payload_json, updated_at)
+     VALUES (?, ?, ?, ?)`
+  ).run("user-bob", "project-alice-private", JSON.stringify({ id: "project-alice-private" }), now);
+  await repo.setConversationSkills("conv-alice-private", [skill.id], "user-alice");
+  await repo.setProjectSkills("user-alice", "project-alice-private", [skill.id]);
+
+  const reqFor = (
+    uid: string,
+    params: Record<string, string>,
+    body: object = {},
+    query = {},
+    orgId?: string
+  ) =>
+    ({
+      principal: { uid, ...(orgId ? { orgId } : {}) },
+      params,
+      body,
+      query,
+      headers: orgId ? { "x-org-id": orgId } : {},
+    }) as unknown as Request;
+
+  const conversationRead = mockRes();
+  await getConversationSkills(
+    reqFor("user-bob", { id: "conv-alice-private" }),
+    conversationRead.res
+  );
+  assert.equal(conversationRead.getStatus(), 404);
+
+  const conversationWrite = mockRes();
+  await setConversationSkills(
+    reqFor("user-bob", { id: "conv-alice-private" }, { skill_ids: [] }),
+    conversationWrite.res
+  );
+  assert.equal(conversationWrite.getStatus(), 404);
+  assert.deepEqual(
+    (await repo.getConversationSkills("conv-alice-private", "user-alice")).map((item) => item.id),
+    [skill.id]
+  );
+
+  const projectRead = mockRes();
+  await getProjectSkills(reqFor("user-bob", { id: "project-alice-private" }), projectRead.res);
+  assert.equal(projectRead.getStatus(), 200);
+  assert.deepEqual((projectRead.getBody() as { skills: unknown[] }).skills, []);
+
+  const projectWrite = mockRes();
+  await setProjectSkills(
+    reqFor("user-bob", { id: "project-alice-private" }, { skill_ids: [] }),
+    projectWrite.res
+  );
+  assert.equal(projectWrite.getStatus(), 200);
+  assert.deepEqual((projectWrite.getBody() as { skills: unknown[] }).skills, []);
+  assert.deepEqual(
+    (await repo.getProjectSkills("user-alice", "project-alice-private")).map((item) => item.id),
+    [skill.id]
+  );
+
+  const projectSync = mockRes();
+  await syncConversationProjectSkills(
+    reqFor("user-bob", { id: "conv-alice-private" }, { projectId: "project-alice-private" }),
+    projectSync.res
+  );
+  assert.equal(projectSync.getStatus(), 404);
+  assert.deepEqual(
+    (await repo.getConversationSkills("conv-alice-private", "user-alice")).map((item) => item.id),
+    [skill.id]
+  );
+
+  const ownerRead = mockRes();
+  await getConversationSkills(reqFor("user-alice", { id: "conv-alice-private" }), ownerRead.res);
+  assert.equal(ownerRead.getStatus(), 200);
+
+  const foreignProjectRead = mockRes();
+  await getConversationSkills(
+    reqFor("user-alice", { id: "conv-alice-private" }, {}, { projectId: "project-bob-private" }),
+    foreignProjectRead.res
+  );
+  assert.equal(foreignProjectRead.getStatus(), 404);
+
+  const ownerProjectRead = mockRes();
+  await getProjectSkills(
+    reqFor("user-alice", { id: "project-alice-private" }),
+    ownerProjectRead.res
+  );
+  assert.equal(ownerProjectRead.getStatus(), 200);
+
+  const collidingProjectRead = mockRes();
+  await getProjectSkills(
+    reqFor("user-bob", { id: "project-alice-private" }),
+    collidingProjectRead.res
+  );
+  assert.equal(collidingProjectRead.getStatus(), 200);
+  assert.deepEqual((collidingProjectRead.getBody() as { skills: unknown[] }).skills, []);
+
+  const collidingProjectSync = mockRes();
+  await syncConversationProjectSkills(
+    reqFor("user-bob", { id: "conv-bob-private" }, { projectId: "project-alice-private" }),
+    collidingProjectSync.res
+  );
+  assert.equal(collidingProjectSync.getStatus(), 200);
+  assert.deepEqual((collidingProjectSync.getBody() as { skills: unknown[] }).skills, []);
+});
+
+test("conversation and project links stop exposing organization skills after access is revoked", async () => {
+  const db = openChatDatabase(":memory:");
+  const repo = new SkillRepository(db);
+  setSkillRepository(repo);
+  const reqFor = (uid: string, params: Record<string, string>, body: object = {}, orgId?: string) =>
+    ({
+      principal: { uid, ...(orgId ? { orgId } : {}) },
+      params,
+      body,
+      query: {},
+      headers: orgId ? { "x-org-id": orgId } : {},
+    }) as unknown as Request;
+
+  try {
+    const orgSkill = await repo.create({
+      id: "revoked-org-skill",
+      name: "Former org skill",
+      description: "Private organization instructions",
+      scope: "org",
+      ownerId: "org-admin",
+      orgId: "old-org",
+      storagePath: "",
+    });
+    const now = Date.now();
+    db.prepare(
+      `INSERT INTO conversations (id, user_id, title, model, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run("revoked-org-conversation", "former-member", "Old Chat", "default", now, now);
+    db.prepare(
+      `INSERT INTO project_snapshots (user_id, project_id, payload_json, updated_at)
+       VALUES (?, ?, ?, ?)`
+    ).run(
+      "former-member",
+      "revoked-org-project",
+      JSON.stringify({ id: "revoked-org-project" }),
+      now
+    );
+    await repo.setConversationSkills("revoked-org-conversation", [orgSkill.id], "former-member", {
+      orgId: "old-org",
+    });
+    await repo.setProjectSkills("former-member", "revoked-org-project", [orgSkill.id], "old-org");
+
+    const memberConversation = mockRes();
+    await getConversationSkills(
+      reqFor("former-member", { id: "revoked-org-conversation" }, {}, "old-org"),
+      memberConversation.res
+    );
+    assert.deepEqual(
+      (memberConversation.getBody() as { skills: Array<{ id: string }> }).skills.map(
+        ({ id }) => id
+      ),
+      [orgSkill.id]
+    );
+
+    const memberProject = mockRes();
+    await getProjectSkills(
+      reqFor("former-member", { id: "revoked-org-project" }, {}, "old-org"),
+      memberProject.res
+    );
+    assert.deepEqual(
+      (memberProject.getBody() as { skills: Array<{ id: string }> }).skills.map(({ id }) => id),
+      [orgSkill.id]
+    );
+
+    const revokedConversation = mockRes();
+    await getConversationSkills(
+      reqFor("former-member", { id: "revoked-org-conversation" }),
+      revokedConversation.res
+    );
+    assert.deepEqual((revokedConversation.getBody() as { skills: unknown[] }).skills, []);
+
+    const revokedProject = mockRes();
+    await getProjectSkills(
+      reqFor("former-member", { id: "revoked-org-project" }),
+      revokedProject.res
+    );
+    assert.deepEqual((revokedProject.getBody() as { skills: unknown[] }).skills, []);
+
+    const syncAfterRevocation = mockRes();
+    await syncConversationProjectSkills(
+      reqFor(
+        "former-member",
+        { id: "revoked-org-conversation" },
+        { projectId: "revoked-org-project" }
+      ),
+      syncAfterRevocation.res
+    );
+    assert.deepEqual((syncAfterRevocation.getBody() as { skills: unknown[] }).skills, []);
+    assert.deepEqual(
+      (await repo.getConversationSkills("revoked-org-conversation", "former-member")).map(
+        ({ id }) => id
+      ),
+      []
+    );
+  } finally {
+    db.close();
+    setSkillRepository(null);
+  }
+});
+
+test("conversation file downloads require ownership of the conversation", async () => {
+  const previousSandboxBase = process.env["SANDBOX_BASE_DIR"];
+  const sandboxBase = fs.mkdtempSync(path.join(os.tmpdir(), "openedup-file-ownership-"));
+  process.env["SANDBOX_BASE_DIR"] = sandboxBase;
+  const db = openChatDatabase(":memory:");
+  const repo = new SkillRepository(db);
+  setSkillRepository(repo);
+
+  try {
+    const now = Date.now();
+    db.prepare(
+      `INSERT INTO conversations (id, user_id, title, model, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run("conv-file-owner", "file-owner", "Owner Chat", "default", now, now);
+
+    const filePath = path.join(sandboxBase, "conv-file-owner", "attachments", "report.txt");
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, "private attachment");
+
+    const requestFor = (uid: string) =>
+      ({
+        principal: { uid },
+        params: { id: "conv-file-owner", filename: "report.txt" },
+        headers: {},
+      }) as unknown as Request;
+    const responseFor = () => {
+      let statusCode = 200;
+      let downloadedPath: string | undefined;
+      const response = {
+        status(code: number) {
+          statusCode = code;
+          return response;
+        },
+        json() {
+          return response;
+        },
+        download(target: string) {
+          downloadedPath = target;
+          return response;
+        },
+      } as unknown as Response;
+      return {
+        response,
+        status: () => statusCode,
+        downloadedPath: () => downloadedPath,
+      };
+    };
+
+    const foreignResponse = responseFor();
+    await downloadConversationFile(requestFor("another-user"), foreignResponse.response);
+    assert.equal(foreignResponse.status(), 404);
+    assert.equal(foreignResponse.downloadedPath(), undefined);
+
+    const ownerResponse = responseFor();
+    await downloadConversationFile(requestFor("file-owner"), ownerResponse.response);
+    assert.equal(ownerResponse.status(), 200);
+    assert.equal(ownerResponse.downloadedPath(), filePath);
+  } finally {
+    db.close();
+    setSkillRepository(null);
+    if (previousSandboxBase === undefined) delete process.env["SANDBOX_BASE_DIR"];
+    else process.env["SANDBOX_BASE_DIR"] = previousSandboxBase;
+    fs.rmSync(sandboxBase, { recursive: true, force: true });
+  }
 });

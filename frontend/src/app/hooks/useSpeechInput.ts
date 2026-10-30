@@ -52,6 +52,7 @@ export function useSpeechInput(onTranscript: (transcript: string) => void) {
     recognition.interimResults = false;
     recognition.lang = navigator.language || "en-US";
     recognition.onresult = (event) => {
+      if (recognitionRef.current !== recognition) return;
       const transcript = Array.from(event.results)
         .filter((result) => result.isFinal !== false)
         .map((result) => result[0]?.transcript || "")

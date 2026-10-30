@@ -35,7 +35,7 @@ async function main(): Promise<void> {
 
   // 1. Enable csv-summary skill
   await repo.setConversationSkills(conversationId, [csvSkill.id], "test-user");
-  const enabledSkills = await repo.getConversationSkills(conversationId);
+  const enabledSkills = await repo.getConversationSkills(conversationId, "test-user");
   console.log(`[Setup] Enabled skill: ${csvSkill.name} (ID: ${csvSkill.id})`);
 
   // 2. Initialize sandbox & prepare workspace
@@ -68,11 +68,19 @@ async function main(): Promise<void> {
     ],
     systemInstruction: fullSystemPrompt,
     conversationId,
+    userId: "test-user",
     tools,
     repo,
     executeCustomTool: async (toolName, input) => {
       console.log(`\n  -> [TOOL CALL] ${toolName} with input: ${JSON.stringify(input)}`);
-      const toolRes = await executeSandboxTool(toolName, input, conversationId, sandbox, repo);
+      const toolRes = await executeSandboxTool(
+        toolName,
+        input,
+        conversationId,
+        sandbox,
+        repo,
+        "test-user"
+      );
       const preview =
         toolRes.content.length > 200 ? toolRes.content.slice(0, 200) + "..." : toolRes.content;
       console.log(`  <- [TOOL RESULT] (${toolRes.isError ? "ERROR" : "OK"}): ${preview}`);

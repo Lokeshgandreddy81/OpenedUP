@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { authenticatedChatFetch } from "../../../app/api/chatApi";
 import { getSupabaseAccessToken } from "../../../app/integrations/supabaseAuth";
@@ -32,8 +32,74 @@ export interface ArtifactOrganizationUpdate {
 }
 
 const ARTIFACTS_STORAGE_KEY = "openedup_artifacts_v1";
+const ANONYMOUS_ARTIFACTS_STORAGE_KEY = `${ARTIFACTS_STORAGE_KEY}:anonymous`;
+const ARTIFACT_IMPORT_OWNER_KEY = `${ARTIFACTS_STORAGE_KEY}:import-owner`;
+const ARTIFACT_IMPORT_OWNER_COOKIE = "openedup_artifact_import_owner";
+const ARTIFACT_IMPORT_COMPLETE_KEY = `${ARTIFACTS_STORAGE_KEY}:import-complete`;
 const ARTIFACTS_SYNC_EVENT = "openedup-artifacts-sync";
 const ARTIFACT_VERSIONS_STORAGE_KEY = "openedup_artifact_versions_v1";
+
+function readArtifactImportOwner(): string | null {
+  try {
+    const owner = window.localStorage.getItem(ARTIFACT_IMPORT_OWNER_KEY);
+    if (owner) return owner;
+  } catch {
+    // Try the cross-tab cookie when local storage is unavailable.
+  }
+  try {
+    const ownerCookie = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${ARTIFACT_IMPORT_OWNER_COOKIE}=`));
+    return ownerCookie
+      ? decodeURIComponent(ownerCookie.slice(ARTIFACT_IMPORT_OWNER_COOKIE.length + 1))
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function reserveArtifactImport(userId: string): boolean {
+  try {
+    window.localStorage.setItem(ARTIFACT_IMPORT_OWNER_KEY, userId);
+    if (window.localStorage.getItem(ARTIFACT_IMPORT_OWNER_KEY) === userId) return true;
+  } catch {
+    // Use a cross-tab cookie when the storage quota is exhausted.
+  }
+  try {
+    document.cookie = `${ARTIFACT_IMPORT_OWNER_COOKIE}=${encodeURIComponent(userId)}; Path=/; Max-Age=31536000; SameSite=Strict`;
+    return readArtifactImportOwner() === userId;
+  } catch {
+    return false;
+  }
+}
+
+function clearArtifactImportOwner(): void {
+  try {
+    window.localStorage.removeItem(ARTIFACT_IMPORT_OWNER_KEY);
+  } catch {
+    // Clear the cross-tab marker too.
+  }
+  try {
+    document.cookie = `${ARTIFACT_IMPORT_OWNER_COOKIE}=; Path=/; Max-Age=0; SameSite=Strict`;
+  } catch {
+    // A stale marker is safe once the legacy source has been removed.
+  }
+}
+
+function localArtifactStorageKey(): string {
+  try {
+    if (
+      readArtifactImportOwner() ||
+      window.localStorage.getItem(ARTIFACT_IMPORT_COMPLETE_KEY) === "true"
+    ) {
+      return ANONYMOUS_ARTIFACTS_STORAGE_KEY;
+    }
+  } catch {
+    return ANONYMOUS_ARTIFACTS_STORAGE_KEY;
+  }
+  return ARTIFACTS_STORAGE_KEY;
+}
 
 export function getStoredArtifactVersions(id: string): ArtifactVersion[] {
   try {
@@ -46,10 +112,22 @@ export function getStoredArtifactVersions(id: string): ArtifactVersion[] {
   }
 }
 
-export function getStoredArtifacts(): ArtifactItem[] {
+export function getStoredArtifacts(userId: string | null = null): ArtifactItem[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(ARTIFACTS_STORAGE_KEY);
+    const owner = readArtifactImportOwner();
+    if (owner && owner !== userId) {
+      const anonymousRaw = window.localStorage.getItem(ANONYMOUS_ARTIFACTS_STORAGE_KEY);
+      const anonymousItems = anonymousRaw ? JSON.parse(anonymousRaw) : [];
+      return Array.isArray(anonymousItems) ? anonymousItems : [];
+    }
+    const migrationComplete = window.localStorage.getItem(ARTIFACT_IMPORT_COMPLETE_KEY) === "true";
+    const key = userId
+      ? migrationComplete && !owner
+        ? null
+        : ARTIFACTS_STORAGE_KEY
+      : localArtifactStorageKey();
+    const raw = key ? window.localStorage.getItem(key) : null;
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -74,7 +152,8 @@ function normalizeArtifactTags(tags: string[] = []): string[] {
 export function saveArtifactItem(
   item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
 ): ArtifactItem {
-  const current = getStoredArtifacts();
+  const storageKey = localArtifactStorageKey();
+  const current = readLocalArtifactsAt(storageKey);
   const existingArtifact = current.find((artifact) => artifact.id === item.id);
   const now = Date.now();
   const newItem: ArtifactItem = {
@@ -122,17 +201,27 @@ export function saveArtifactItem(
       : [newItem, ...current];
 
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(ARTIFACTS_STORAGE_KEY, JSON.stringify(next));
+    window.localStorage.setItem(storageKey, JSON.stringify(next));
     window.dispatchEvent(new CustomEvent(ARTIFACTS_SYNC_EVENT));
   }
   return newItem;
+}
+
+function readLocalArtifactsAt(key: string): ArtifactItem[] {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) || "null");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 export function updateStoredArtifactOrganization(
   id: string,
   update: ArtifactOrganizationUpdate
 ): ArtifactItem | null {
-  const current = getStoredArtifacts();
+  const storageKey = localArtifactStorageKey();
+  const current = readLocalArtifactsAt(storageKey);
   const existing = current.find((artifact) => artifact.id === id);
   if (!existing) return null;
   const updated: ArtifactItem = {
@@ -142,7 +231,7 @@ export function updateStoredArtifactOrganization(
     ...(update.tags !== undefined ? { tags: normalizeArtifactTags(update.tags) } : {}),
   };
   window.localStorage.setItem(
-    ARTIFACTS_STORAGE_KEY,
+    storageKey,
     JSON.stringify(current.map((artifact) => (artifact.id === id ? updated : artifact)))
   );
   window.dispatchEvent(new CustomEvent(ARTIFACTS_SYNC_EVENT));
@@ -150,22 +239,32 @@ export function updateStoredArtifactOrganization(
 }
 
 export async function persistArtifactItem(
-  item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
+  item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt"> & { id?: string },
+  userId: string | null = null
 ): Promise<ArtifactItem> {
-  if (!(await getSupabaseAccessToken())) return saveArtifactItem(item);
-  const response = await authenticatedChatFetch("/api/artifacts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(item),
-  });
+  const token = await getSupabaseAccessToken();
+  if (!token && !userId) return saveArtifactItem(item);
+  if (!token || !userId) {
+    throw new Error("The signed-in account changed. Retry saving this artifact.");
+  }
+  const response = await authenticatedChatFetch(
+    "/api/artifacts",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(item),
+    },
+    userId
+  );
   if (!response.ok) throw new Error("Could not save artifact to your account.");
   return ((await response.json()) as { artifact: ArtifactItem }).artifact;
 }
 
 export function deleteArtifactItem(id: string): void {
   if (typeof window === "undefined") return;
-  const next = getStoredArtifacts().filter((a) => a.id !== id);
-  window.localStorage.setItem(ARTIFACTS_STORAGE_KEY, JSON.stringify(next));
+  const storageKey = localArtifactStorageKey();
+  const next = readLocalArtifactsAt(storageKey).filter((a) => a.id !== id);
+  window.localStorage.setItem(storageKey, JSON.stringify(next));
   try {
     const versions = JSON.parse(
       window.localStorage.getItem(ARTIFACT_VERSIONS_STORAGE_KEY) || "{}"
@@ -180,62 +279,93 @@ export function deleteArtifactItem(id: string): void {
 
 export function useArtifacts() {
   const { user } = useChatAuth();
-  const [artifacts, setArtifacts] = useState<ArtifactItem[]>(() => getStoredArtifacts());
+  const currentUserId = user?.uid;
+  const currentUserIdRef = useRef<string | null>(currentUserId ?? null);
+  currentUserIdRef.current = currentUserId ?? null;
+  const [artifacts, setArtifacts] = useState<ArtifactItem[]>(() => getStoredArtifacts(null));
+  const [loadedAccountUid, setLoadedAccountUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [syncAttempt, setSyncAttempt] = useState(0);
 
   const refresh = useCallback(() => {
-    setArtifacts(getStoredArtifacts());
-  }, []);
+    if (currentUserId) setSyncAttempt((attempt) => attempt + 1);
+    else setArtifacts(getStoredArtifacts(null));
+  }, [currentUserId]);
 
   useEffect(() => {
     let cancelled = false;
     if (!user) {
       refresh();
+      setLoadedAccountUid(null);
       setLoading(false);
       setError("");
       return;
     }
+    const userId = user.uid;
     setLoading(true);
     setError("");
     void (async () => {
       try {
-        const legacy = getStoredArtifacts();
-        if (legacy.length) {
-          const imported = await authenticatedChatFetch("/api/artifacts/import", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              artifacts: legacy.map((a) => ({
-                legacyId: a.id,
-                title: a.title,
-                category: a.category,
-                content: a.content,
-                language: a.language,
-                modelUsed: a.modelUsed,
-                // Existing local share toggles were device-local. Never expose old local records
-                // to every signed-in account as a side effect of the one-time import.
-                isShared: false,
-                isFavorite: a.isFavorite ?? false,
-                collection: a.collection ?? null,
-                tags: a.tags ?? [],
-                createdAt: a.createdAt,
-                updatedAt: a.updatedAt,
-              })),
-            }),
-          });
-          if (!imported.ok) throw new Error("Artifact import failed.");
+        let legacyOwner = readArtifactImportOwner();
+        const legacy = legacyOwner && legacyOwner !== userId ? [] : getStoredArtifacts(userId);
+        if (legacy.length && !legacyOwner) {
+          if (!reserveArtifactImport(userId)) {
+            throw new Error("Could not safely reserve browser-saved artifacts for this account.");
+          }
+          legacyOwner = userId;
         }
-        const response = await authenticatedChatFetch("/api/artifacts");
+        if (legacy.length) {
+          const imported = await authenticatedChatFetch(
+            "/api/artifacts/import",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                artifacts: legacy.map((a) => ({
+                  legacyId: a.id,
+                  title: a.title,
+                  category: a.category,
+                  content: a.content,
+                  language: a.language,
+                  modelUsed: a.modelUsed,
+                  // Existing local share toggles were device-local. Never expose old local records
+                  // to every signed-in account as a side effect of the one-time import.
+                  isShared: false,
+                  isFavorite: a.isFavorite ?? false,
+                  collection: a.collection ?? null,
+                  tags: a.tags ?? [],
+                  createdAt: a.createdAt,
+                  updatedAt: a.updatedAt,
+                })),
+              }),
+            },
+            userId
+          );
+          if (!imported.ok) throw new Error("Artifact import failed.");
+          window.localStorage.removeItem(ARTIFACTS_STORAGE_KEY);
+          if (window.localStorage.getItem(ARTIFACTS_STORAGE_KEY) === null) {
+            window.localStorage.setItem(ARTIFACT_IMPORT_COMPLETE_KEY, "true");
+            clearArtifactImportOwner();
+          }
+        } else if (legacyOwner === userId) {
+          window.localStorage.removeItem(ARTIFACTS_STORAGE_KEY);
+          if (window.localStorage.getItem(ARTIFACTS_STORAGE_KEY) === null) {
+            window.localStorage.setItem(ARTIFACT_IMPORT_COMPLETE_KEY, "true");
+            clearArtifactImportOwner();
+          }
+        }
+        const response = await authenticatedChatFetch("/api/artifacts", {}, userId);
         if (!response.ok) throw new Error("Artifact load failed.");
         const data = (await response.json()) as { artifacts: ArtifactItem[] };
-        if (!cancelled) setArtifacts(data.artifacts);
+        if (!cancelled) {
+          setArtifacts(data.artifacts);
+          setLoadedAccountUid(userId);
+        }
       } catch {
         if (!cancelled) {
-          refresh();
           setError(
-            "Could not sync artifacts with your account. Showing browser-saved artifacts; retry by reopening this page."
+            "Could not sync artifacts with your account. Retry to load them from your account."
           );
         }
       } finally {
@@ -257,8 +387,17 @@ export function useArtifacts() {
     };
   }, [refresh]);
 
+  const assertCurrentAccount = (expectedUserId: string) => {
+    if (currentUserIdRef.current !== expectedUserId) {
+      throw new Error("The signed-in account changed. Retry the action.");
+    }
+  };
+
   return {
-    artifacts,
+    artifacts:
+      (user && loadedAccountUid !== user.uid) || (!user && loadedAccountUid !== null)
+        ? []
+        : artifacts,
     loading,
     error,
     retrySync: () => setSyncAttempt((attempt) => attempt + 1),
@@ -266,13 +405,18 @@ export function useArtifacts() {
       item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
     ) => {
       if (!user) return saveArtifactItem(item);
-      const response = await authenticatedChatFetch("/api/artifacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item),
-      });
+      const response = await authenticatedChatFetch(
+        "/api/artifacts",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        },
+        user.uid
+      );
       if (!response.ok) throw new Error("Could not save artifact.");
       const data = (await response.json()) as { artifact: ArtifactItem };
+      assertCurrentAccount(user.uid);
       setArtifacts((current) => [
         data.artifact,
         ...current.filter((a) => a.id !== data.artifact.id),
@@ -284,13 +428,18 @@ export function useArtifacts() {
       item: Omit<ArtifactItem, "id" | "createdAt" | "updatedAt" | "isOwner">
     ) => {
       if (!user) return saveArtifactItem({ ...item, id });
-      const response = await authenticatedChatFetch(`/api/artifacts/${encodeURIComponent(id)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item),
-      });
+      const response = await authenticatedChatFetch(
+        `/api/artifacts/${encodeURIComponent(id)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        },
+        user.uid
+      );
       if (!response.ok) throw new Error("Could not update artifact.");
       const data = (await response.json()) as { artifact: ArtifactItem };
+      assertCurrentAccount(user.uid);
       setArtifacts((current) =>
         current.map((artifact) => (artifact.id === id ? data.artifact : artifact))
       );
@@ -308,10 +457,12 @@ export function useArtifacts() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(update),
-        }
+        },
+        user.uid
       );
       if (!response.ok) throw new Error("Could not update artifact organization.");
       const data = (await response.json()) as { artifact: ArtifactItem };
+      assertCurrentAccount(user.uid);
       setArtifacts((current) =>
         current.map((artifact) => (artifact.id === id ? data.artifact : artifact))
       );
@@ -320,12 +471,15 @@ export function useArtifacts() {
     getVersions: async (id: string): Promise<ArtifactVersion[]> => {
       if (!user) return getStoredArtifactVersions(id);
       const response = await authenticatedChatFetch(
-        `/api/artifacts/${encodeURIComponent(id)}/versions`
+        `/api/artifacts/${encodeURIComponent(id)}/versions`,
+        {},
+        user.uid
       );
       if (!response.ok) throw new Error("Could not load artifact history.");
       const data = (await response.json()) as {
         versions: Array<Omit<ArtifactVersion, "updatedAt"> & { createdAt: number }>;
       };
+      assertCurrentAccount(user.uid);
       return data.versions.map(({ createdAt, ...version }) => ({
         ...version,
         updatedAt: createdAt,
@@ -333,10 +487,15 @@ export function useArtifacts() {
     },
     removeArtifact: async (id: string) => {
       if (!user) return deleteArtifactItem(id);
-      const response = await authenticatedChatFetch(`/api/artifacts/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
+      const response = await authenticatedChatFetch(
+        `/api/artifacts/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+        },
+        user.uid
+      );
       if (!response.ok) throw new Error("Could not delete artifact.");
+      assertCurrentAccount(user.uid);
       setArtifacts((current) => current.filter((a) => a.id !== id));
     },
     setShared: async (id: string, isShared: boolean) => {
@@ -347,9 +506,11 @@ export function useArtifacts() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ isShared }),
-        }
+        },
+        user.uid
       );
       if (!response.ok) throw new Error("Could not update artifact sharing.");
+      assertCurrentAccount(user.uid);
       setArtifacts((current) => current.map((a) => (a.id === id ? { ...a, isShared } : a)));
     },
   };

@@ -552,43 +552,59 @@ paths:
 
   /api/projects:
     get:
-      summary: List the caller's projects with nested sessions and files
+      summary: List the caller's projects and nested sessions/files
+      description: Large project collections are returned through a short-lived signed storage URL to stay within function response limits.
       security: [{ SupabaseBearer: [] }]
       responses:
-        "200": { description: Account-owned project snapshots. }
+        "200": { description: Account-owned project snapshots, inline or as a signed storage URL. }
     put:
       summary: Replace the caller's project snapshot collection
-      description: Replaces only the authenticated user's projects. Project and session history is validated and bounded by the shared project schemas.
+      description: Replaces only the authenticated user's projects. Project and session history is validated and bounded by the shared project schemas. Large collections are uploaded to private storage first and submitted by snapshotPath.
       security: [{ SupabaseBearer: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [projects]
-              properties:
-                projects:
-                  type: array
-                  maxItems: 100
+              oneOf:
+                - type: object
+                  required: [projects]
+                  properties:
+                    projects:
+                      type: array
+                      maxItems: 1000
+                - type: object
+                  required: [snapshotPath]
+                  properties:
+                    snapshotPath:
+                      type: string
+                      maxLength: 500
       responses:
-        "200": { description: Saved project snapshots. }
+        "200": { description: Saved project snapshots, inline or as a signed storage URL. }
         "400": { description: Invalid or oversized project snapshot. }
   /api/projects/import:
     post:
       summary: Idempotently import legacy browser projects
+      description: Large imports are uploaded to private storage first and submitted by snapshotPath.
       security: [{ SupabaseBearer: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [projects]
-              properties:
-                projects:
-                  type: array
-                  maxItems: 100
+              oneOf:
+                - type: object
+                  required: [projects]
+                  properties:
+                    projects:
+                      type: array
+                      maxItems: 1000
+                - type: object
+                  required: [snapshotPath]
+                  properties:
+                    snapshotPath:
+                      type: string
+                      maxLength: 500
       responses:
         "200": { description: Imported and skipped project counts. }
         "400": { description: Invalid or oversized project snapshot. }

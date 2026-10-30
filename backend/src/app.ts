@@ -51,6 +51,17 @@ export function createApp(): Express {
   } else {
     app.use("/api", attachOptionalSupabaseUser);
   }
+  app.use("/api", (req, res, next) => {
+    const expectedUserId = req.get("X-Expected-User-Id");
+    if (expectedUserId && expectedUserId !== req.principal?.uid) {
+      res.status(409).json({
+        error: "The signed-in account changed before the request was sent.",
+        requestId: req.id,
+      });
+      return;
+    }
+    next();
+  });
   let seedPromise: Promise<void> | undefined;
   app.use(
     "/api",

@@ -71,7 +71,8 @@ export class ConversationRepository {
     userId: string,
     title: string,
     model: string,
-    projectId?: string
+    projectId?: string,
+    orgId?: string | null
   ): Promise<StoredConversation> {
     const now = Date.now();
     const id = randomUUID();
@@ -82,7 +83,7 @@ export class ConversationRepository {
         [id, userId, title, model, now, now]
       );
       if (projectId) {
-        await new SkillRepository(tx).inheritProjectSkills(id, projectId, userId);
+        await new SkillRepository(tx).inheritProjectSkills(id, projectId, userId, orgId);
       }
     })();
 
@@ -130,14 +131,18 @@ export class ConversationRepository {
   }
 
   async delete(userId: string, id: string): Promise<boolean> {
-    const result = await this.db.run(
-      "DELETE FROM conversations WHERE user_id = ? AND id = ?",
-      [userId, id]
-    );
+    const result = await this.db.run("DELETE FROM conversations WHERE user_id = ? AND id = ?", [
+      userId,
+      id,
+    ]);
     return result.changes > 0;
   }
 
-  async deleteMessagesFrom(userId: string, conversationId: string, messageId: string): Promise<boolean> {
+  async deleteMessagesFrom(
+    userId: string,
+    conversationId: string,
+    messageId: string
+  ): Promise<boolean> {
     const result = await this.db.run(
       `DELETE FROM chat_messages
        WHERE user_id = ? AND conversation_id = ? AND sequence >= (

@@ -35,10 +35,10 @@ interface TaskRow extends Record<string, unknown> {
   notifications: ScheduledTaskInput["notifications"];
   start_in_new_chat: number;
   conversation_id: string | null;
-  created_at: number;
-  updated_at: number;
-  last_run_at: number | null;
-  next_run_at: number | null;
+  created_at: number | string;
+  updated_at: number | string;
+  last_run_at: number | string | null;
+  next_run_at: number | string | null;
 }
 
 interface RunRow extends Record<string, unknown> {
@@ -46,10 +46,10 @@ interface RunRow extends Record<string, unknown> {
   task_id: string;
   trigger: ScheduledTaskRunRecord["trigger"];
   status: ScheduledTaskRunRecord["status"];
-  scheduled_for: number | null;
-  created_at: number;
-  started_at: number | null;
-  finished_at: number | null;
+  scheduled_for: number | string | null;
+  created_at: number | string;
+  started_at: number | string | null;
+  finished_at: number | string | null;
   output: string | null;
   error: string | null;
   model_used: string | null;
@@ -60,6 +60,11 @@ interface RunRow extends Record<string, unknown> {
 const TASK_COLUMNS = `id, user_id, legacy_id, title, prompt, icon, frequency, time, timezone,
   day_of_week, day_of_month, is_active, model_id, effort, notifications, start_in_new_chat,
   conversation_id, created_at, updated_at, last_run_at, next_run_at`;
+
+function timestamp(value: number | string | null): number | null {
+  // node-postgres returns BIGINT values as strings; API timestamps are numbers.
+  return value === null ? null : Number(value);
+}
 
 function recurrence(
   task: Pick<ScheduledTaskInput, "frequency" | "time" | "timezone" | "dayOfWeek" | "dayOfMonth">
@@ -89,10 +94,10 @@ function toTask(row: TaskRow): ScheduledTaskRecord {
     effort: row.effort,
     notifications: row.notifications,
     startInNewChat: Boolean(row.start_in_new_chat),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    lastRunAt: row.last_run_at,
-    nextRunAt: row.next_run_at,
+    createdAt: Number(row.created_at),
+    updatedAt: Number(row.updated_at),
+    lastRunAt: timestamp(row.last_run_at),
+    nextRunAt: timestamp(row.next_run_at),
   };
 }
 
@@ -102,10 +107,10 @@ function toRun(row: RunRow): ScheduledTaskRunRecord {
     taskId: row.task_id,
     trigger: row.trigger,
     status: row.status,
-    scheduledFor: row.scheduled_for,
-    createdAt: row.created_at,
-    startedAt: row.started_at,
-    finishedAt: row.finished_at,
+    scheduledFor: timestamp(row.scheduled_for),
+    createdAt: Number(row.created_at),
+    startedAt: timestamp(row.started_at),
+    finishedAt: timestamp(row.finished_at),
     output: row.output,
     error: row.error,
     modelUsed: row.model_used,
@@ -133,25 +138,25 @@ export class ScheduledTaskRepository {
 
   async list(userId: string): Promise<ScheduledTaskRecord[]> {
     return (
-      await this.db
+      (await this.db
         .prepare(
           `SELECT ${TASK_COLUMNS} FROM scheduled_tasks WHERE user_id = ? ORDER BY is_active DESC, next_run_at ASC, created_at DESC`
         )
-        .all(userId) as TaskRow[]
+        .all(userId)) as TaskRow[]
     ).map(toTask);
   }
 
   async get(userId: string, taskId: string): Promise<ScheduledTaskRecord | null> {
-    const row = await this.db
+    const row = (await this.db
       .prepare(`SELECT ${TASK_COLUMNS} FROM scheduled_tasks WHERE user_id = ? AND id = ?`)
-      .get(userId, taskId) as TaskRow | undefined;
+      .get(userId, taskId)) as TaskRow | undefined;
     return row ? toTask(row) : null;
   }
 
   async getForExecution(taskId: string): Promise<ScheduledTaskForExecution | null> {
-    const row = await this.db
+    const row = (await this.db
       .prepare(`SELECT ${TASK_COLUMNS} FROM scheduled_tasks WHERE id = ?`)
-      .get(taskId) as TaskRow | undefined;
+      .get(taskId)) as TaskRow | undefined;
     return row
       ? { ...toTask(row), userId: row.user_id, conversationId: row.conversation_id }
       : null;
@@ -217,9 +222,9 @@ export class ScheduledTaskRepository {
     taskId: string,
     patch: UpdateScheduledTaskRequest
   ): Promise<ScheduledTaskRecord | null> {
-    const current = await this.db
+    const current = (await this.db
       .prepare(`SELECT ${TASK_COLUMNS} FROM scheduled_tasks WHERE user_id = ? AND id = ?`)
-      .get(userId, taskId) as TaskRow | undefined;
+      .get(userId, taskId)) as TaskRow | undefined;
     if (!current) return null;
     const merged: ScheduledTaskInput = patch;
     const now = Date.now();
@@ -291,19 +296,19 @@ export class ScheduledTaskRepository {
   async enqueueDueRuns(now: number): Promise<number> {
     let queued = 0;
     const enqueue = this.db.transaction(async () => {
-      const due = await this.db
+      const due = (await this.db
         .prepare(
           `SELECT id, frequency, time, timezone, day_of_week, day_of_month, next_run_at
         FROM scheduled_tasks WHERE is_active = 1 AND next_run_at <= ? ORDER BY next_run_at LIMIT 100`
         )
-        .all(now) as Array<{
+        .all(now)) as Array<{
         id: string;
         frequency: ScheduledFrequency;
         time: string;
         timezone: string;
         day_of_week: number | null;
         day_of_month: number | null;
-        next_run_at: number;
+        next_run_at: number | string;
       }>;
       const insertRun = this.db.prepare(`INSERT INTO scheduled_task_runs
         (id, task_id, user_id, trigger, status, scheduled_for, created_at)
@@ -347,14 +352,14 @@ export class ScheduledTaskRepository {
   async claimNextRun(now: number, leaseMs: number): Promise<ClaimedScheduledRun | null> {
     let claimed: ClaimedScheduledRun | null = null;
     const claim = this.db.transaction(async () => {
-      const row = await this.db
+      const row = (await this.db
         .prepare(
           `SELECT r.*, t.user_id, t.conversation_id AS task_conversation_id FROM scheduled_task_runs r
         JOIN scheduled_tasks t ON t.id = r.task_id
         WHERE r.status = 'queued' OR (r.status = 'running' AND r.lease_until <= ?)
         ORDER BY r.created_at LIMIT 1`
         )
-        .get(now) as
+        .get(now)) as
         (RunRow & { user_id: string; task_conversation_id: string | null }) | undefined;
       if (!row) return;
       const update = await this.db
@@ -368,7 +373,7 @@ export class ScheduledTaskRepository {
       claimed = {
         ...toRun(row),
         status: "running",
-        startedAt: row.started_at ?? now,
+        startedAt: timestamp(row.started_at) ?? now,
         userId: row.user_id,
         conversationId: row.task_conversation_id,
       };
@@ -416,27 +421,29 @@ export class ScheduledTaskRepository {
       .run(conversationId, taskId);
   }
 
-  async recoverLeases(): Promise<void> {
+  async recoverLeases(now = Date.now()): Promise<void> {
     await this.db
-      .prepare("UPDATE scheduled_task_runs SET lease_until = 0 WHERE status = 'running'")
-      .run();
+      .prepare(
+        "UPDATE scheduled_task_runs SET lease_until = 0 WHERE status = 'running' AND lease_until <= ?"
+      )
+      .run(now);
   }
 
   async getRun(userId: string, runId: string): Promise<ScheduledTaskRunRecord | null> {
-    const row = await this.db
+    const row = (await this.db
       .prepare("SELECT * FROM scheduled_task_runs WHERE user_id = ? AND id = ?")
-      .get(userId, runId) as RunRow | undefined;
+      .get(userId, runId)) as RunRow | undefined;
     return row ? toRun(row) : null;
   }
 
   async listRuns(userId: string, taskId: string, limit = 30): Promise<ScheduledTaskRunRecord[]> {
     return (
-      await this.db
+      (await this.db
         .prepare(
           `SELECT * FROM scheduled_task_runs WHERE user_id = ? AND task_id = ?
       ORDER BY created_at DESC LIMIT ?`
         )
-        .all(userId, taskId, limit) as RunRow[]
+        .all(userId, taskId, limit)) as RunRow[]
     ).map(toRun);
   }
 }

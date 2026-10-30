@@ -122,6 +122,36 @@ test("Credential HTTP Controller: list, put, patch endpoint, and remove", async 
     assert.equal(updated?.apiKey, "sk-ant-test-controller-123");
     assert.equal(updated?.baseUrl, "https://custom.anthropic.endpoint/v1");
 
+    // 4a. Reject endpoint schemes that provider dispatch will not use.
+    const invalidEndpointReq = {
+      ...reqBase,
+      body: {
+        provider: "anthropic",
+        baseUrl: "http://localhost:1234/v1",
+      },
+    } as unknown as Request;
+    const invalidEndpointRes = mockResponse();
+    await updateCredentialEndpoint(invalidEndpointReq, invalidEndpointRes);
+    assert.equal(invalidEndpointRes.statusCode, 400);
+    assert.match((invalidEndpointRes.body as { error: string }).error, /must use HTTPS/);
+    const afterInvalidEndpoint = await getProviderCredential(userId, "anthropic");
+    assert.equal(afterInvalidEndpoint?.baseUrl, "https://custom.anthropic.endpoint/v1");
+
+    // 4b. Replacing a key without sending an endpoint preserves the saved endpoint.
+    const replaceKeyReq = {
+      ...reqBase,
+      body: {
+        provider: "anthropic",
+        apiKey: "sk-ant-replacement-key",
+      },
+    } as unknown as Request;
+    const replaceKeyRes = mockResponse();
+    await putCredential(replaceKeyReq, replaceKeyRes);
+    assert.equal(replaceKeyRes.statusCode, 204);
+    const replaced = await getProviderCredential(userId, "anthropic");
+    assert.equal(replaced?.apiKey, "sk-ant-replacement-key");
+    assert.equal(replaced?.baseUrl, "https://custom.anthropic.endpoint/v1");
+
     // 5. Update endpoint for non-existent credential returns 404
     const patchReq404 = {
       ...reqBase,

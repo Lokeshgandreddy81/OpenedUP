@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
+import Database from "better-sqlite3";
 import { openChatDatabase, type ChatDatabase } from "../../../platform/database/chatDatabase.js";
 import { SkillRepository } from "./skillRepository.js";
 
@@ -44,6 +48,63 @@ test("SkillRepository - Schema & Migrations: creates skills and enforces uniquen
   });
   assert.ok(userSkill.id);
   assert.notEqual(userSkill.id, skill1.id);
+});
+
+test("legacy project skill links are quarantined during owner-scoping migration", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "openedup-project-skills-migration-"));
+  const databasePath = path.join(directory, "chat.sqlite");
+  const initialDb = openChatDatabase(databasePath);
+  const repository = new SkillRepository(initialDb);
+  const skill = await repository.create({
+    name: "legacy-project-skill",
+    description: "A skill linked before project ownership was recorded.",
+    scope: "builtin",
+    storagePath: "/skills/legacy-project-skill",
+  });
+  initialDb
+    .prepare("INSERT INTO project_skills (user_id, project_id, skill_id) VALUES (?, ?, ?)")
+    .run("user-before-migration", "same-project-id", skill.id);
+  initialDb.close();
+
+  try {
+    const legacyDb = new Database(databasePath);
+    legacyDb.exec(`
+      PRAGMA foreign_keys = OFF;
+      DROP INDEX IF EXISTS idx_project_skills_project;
+      ALTER TABLE project_skills RENAME TO project_skills_owner_scoped;
+      CREATE TABLE project_skills (
+        project_id TEXT NOT NULL,
+        skill_id TEXT NOT NULL,
+        PRIMARY KEY(project_id, skill_id),
+        FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
+      );
+      INSERT INTO project_skills (project_id, skill_id)
+        SELECT project_id, skill_id FROM project_skills_owner_scoped;
+      DROP TABLE project_skills_owner_scoped;
+      CREATE INDEX idx_project_skills_project ON project_skills(project_id);
+      PRAGMA user_version = 6;
+      PRAGMA foreign_keys = ON;
+    `);
+    legacyDb.close();
+
+    const upgradedDb = openChatDatabase(databasePath);
+    try {
+      const quarantinedLink = upgradedDb
+        .prepare("SELECT user_id, project_id, skill_id FROM project_skills")
+        .get() as { user_id: string; project_id: string; skill_id: string } | undefined;
+      assert.deepEqual(quarantinedLink, {
+        user_id: "__legacy_unowned__",
+        project_id: "same-project-id",
+        skill_id: skill.id,
+      });
+      assert.deepEqual(upgradedDb.pragma("foreign_key_check"), []);
+      assert.equal(upgradedDb.pragma("user_version", { simple: true }), 7);
+    } finally {
+      upgradedDb.close();
+    }
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("Directory listing prefers the marketplace copy over a legacy built-in duplicate", async () => {
@@ -194,18 +255,21 @@ test("SkillRepository - Conversation skills and Project skills link & toggle", a
 
   // Enable skills for conversation
   await repo.setConversationSkills("conv-1", [skillA.id, skillB.id], "user-1");
-  let enabled = await repo.getConversationSkills("conv-1");
+  let enabled = await repo.getConversationSkills("conv-1", "user-1");
   assert.equal(enabled.length, 2);
 
   // Replace with just skillA
   await repo.setConversationSkills("conv-1", [skillA.id], "user-1");
-  enabled = await repo.getConversationSkills("conv-1");
+  enabled = await repo.getConversationSkills("conv-1", "user-1");
   assert.equal(enabled.length, 1);
   assert.equal(enabled[0]?.name, "skill-a");
 
   // Project skills
-  await repo.setProjectSkills("proj-1", [skillB.id]);
-  const projSkills = await repo.getProjectSkills("proj-1");
+  db.prepare(
+    "INSERT INTO project_snapshots (user_id, project_id, payload_json, updated_at) VALUES (?, ?, ?, ?)"
+  ).run("user-1", "proj-1", JSON.stringify({ id: "proj-1" }), Date.now());
+  await repo.setProjectSkills("user-1", "proj-1", [skillB.id]);
+  const projSkills = await repo.getProjectSkills("user-1", "proj-1");
   assert.equal(projSkills.length, 1);
   assert.equal(projSkills[0]?.name, "skill-b");
 });

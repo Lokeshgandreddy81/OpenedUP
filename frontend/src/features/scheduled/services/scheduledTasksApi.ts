@@ -220,21 +220,28 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-async function scheduledFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+async function scheduledFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  expectedUserId: string
+): Promise<Response> {
   const token = await getSupabaseAccessToken().catch(() => null);
+  const headers = new Headers(init.headers);
+  headers.set("X-Expected-User-Id", expectedUserId);
   if (token) {
-    const headers = new Headers(init.headers);
     if (!headers.has("Authorization")) {
       headers.set("Authorization", `Bearer ${token}`);
     }
     return fetch(input, { ...init, headers });
   }
-  return fetch(input, init);
+  return fetch(input, { ...init, headers });
 }
 
-async function ensureLegacyImport(): Promise<void> {
+async function ensureLegacyImport(userId: string): Promise<void> {
   const importedBy = localStorage.getItem(IMPORT_MARKER_KEY);
-  if (importedBy) return;
+  // A single browser's old task list belongs to the account that first claims it.
+  if (importedBy === "imported" || importedBy?.startsWith("complete:")) return;
+  if (importedBy && importedBy !== `pending:${userId}`) return;
   let legacy: unknown[] = [];
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(LEGACY_TASKS_KEY) || "[]");
@@ -245,64 +252,95 @@ async function ensureLegacyImport(): Promise<void> {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const tasks = legacy.map((task) => legacyInput(task, timezone)).filter((task) => task !== null);
   if (tasks.length > 0) {
-    const response = await scheduledFetch("/api/scheduled-tasks/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tasks }),
-    });
+    if (!importedBy) localStorage.setItem(IMPORT_MARKER_KEY, `pending:${userId}`);
+    if (localStorage.getItem(IMPORT_MARKER_KEY) !== `pending:${userId}`) {
+      throw new Error("Could not reserve browser-saved tasks for this account.");
+    }
+    const response = await scheduledFetch(
+      "/api/scheduled-tasks/import",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks }),
+      },
+      userId
+    );
     await parseResponse(response);
+    localStorage.removeItem(LEGACY_TASKS_KEY);
+    localStorage.setItem(IMPORT_MARKER_KEY, `complete:${userId}`);
+  } else {
+    localStorage.setItem(IMPORT_MARKER_KEY, `complete:${userId}`);
   }
-  localStorage.setItem(IMPORT_MARKER_KEY, "imported");
 }
 
-export async function listScheduledTasks(): Promise<ScheduledTask[]> {
-  await ensureLegacyImport();
-  const response = await scheduledFetch("/api/scheduled-tasks");
+export async function listScheduledTasks(userId: string): Promise<ScheduledTask[]> {
+  await ensureLegacyImport(userId);
+  const response = await scheduledFetch("/api/scheduled-tasks", {}, userId);
   const body = await parseResponse<{ tasks: ScheduledTaskRecord[] }>(response);
   return body.tasks.map(fromApiTask);
 }
 
 export async function createScheduledTask(
+  userId: string,
   input: ScheduledTaskInput,
   extraHeaders?: Record<string, string>
 ): Promise<ScheduledTask> {
-  const response = await scheduledFetch("/api/scheduled-tasks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...extraHeaders },
-    body: JSON.stringify(input),
-  });
+  const response = await scheduledFetch(
+    "/api/scheduled-tasks",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...extraHeaders },
+      body: JSON.stringify(input),
+    },
+    userId
+  );
   const body = await parseResponse<{ task: ScheduledTaskRecord }>(response);
   return fromApiTask(body.task);
 }
 
 export async function updateScheduledTask(
+  userId: string,
   id: string,
   task: ScheduledTask,
   extraHeaders?: Record<string, string>
 ): Promise<ScheduledTask> {
-  const response = await scheduledFetch(`/api/scheduled-tasks/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", ...extraHeaders },
-    body: JSON.stringify(toApiTask(task)),
-  });
+  const response = await scheduledFetch(
+    `/api/scheduled-tasks/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...extraHeaders },
+      body: JSON.stringify(toApiTask(task)),
+    },
+    userId
+  );
   const body = await parseResponse<{ task: ScheduledTaskRecord }>(response);
   return fromApiTask(body.task);
 }
 
-export async function deleteScheduledTask(id: string): Promise<void> {
-  const response = await scheduledFetch(`/api/scheduled-tasks/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
+export async function deleteScheduledTask(userId: string, id: string): Promise<void> {
+  const response = await scheduledFetch(
+    `/api/scheduled-tasks/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+    userId
+  );
   if (!response.ok) await parseResponse(response);
 }
 
-export async function listScheduledTaskRuns(taskId: string): Promise<ScheduledTaskRunRecord[]> {
-  const response = await scheduledFetch(`/api/scheduled-tasks/${encodeURIComponent(taskId)}/runs`);
+export async function listScheduledTaskRuns(
+  userId: string,
+  taskId: string
+): Promise<ScheduledTaskRunRecord[]> {
+  const response = await scheduledFetch(
+    `/api/scheduled-tasks/${encodeURIComponent(taskId)}/runs`,
+    {},
+    userId
+  );
   const body = await parseResponse<{ runs: ScheduledTaskRunRecord[] }>(response);
   return body.runs;
 }
 
 export async function runScheduledTask(
+  userId: string,
   id: string,
   apiKey?: string,
   baseUrl?: string
@@ -310,10 +348,11 @@ export async function runScheduledTask(
   const headers = new Headers();
   if (apiKey) headers.set("x-provider-key", apiKey);
   if (baseUrl) headers.set("x-provider-base-url", baseUrl);
-  const response = await scheduledFetch(`/api/scheduled-tasks/${encodeURIComponent(id)}/run`, {
-    method: "POST",
-    headers,
-  });
+  const response = await scheduledFetch(
+    `/api/scheduled-tasks/${encodeURIComponent(id)}/run`,
+    { method: "POST", headers },
+    userId
+  );
   const body = await parseResponse<{ run: ScheduledTaskRunRecord }>(response);
   let run = body.run;
   for (
@@ -324,7 +363,9 @@ export async function runScheduledTask(
     const delay = attempt === 0 ? 350 : attempt < 3 ? 600 : 1000;
     await new Promise((resolve) => setTimeout(resolve, delay));
     const statusResponse = await scheduledFetch(
-      `/api/scheduled-tasks/runs/${encodeURIComponent(run.id)}`
+      `/api/scheduled-tasks/runs/${encodeURIComponent(run.id)}`,
+      {},
+      userId
     );
     run = (await parseResponse<{ run: ScheduledTaskRunRecord }>(statusResponse)).run;
   }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import {
   Plus,
   Trash2,
@@ -66,6 +67,8 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
   sortBy = "popular",
   onCategoriesLoaded,
 }) => {
+  const { user } = useChatAuth();
+  const userId = user?.uid;
   const [internalIsCreatorOpen, setInternalIsCreatorOpen] = useState(false);
   const isCreatorOpen = controlledIsCreatorOpen ?? internalIsCreatorOpen;
   const setIsCreatorOpen = controlledSetIsCreatorOpen ?? setInternalIsCreatorOpen;
@@ -74,6 +77,28 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
   const [directorySkills, setDirectorySkills] = useState<SkillItem[]>([]);
   const [reviewQueue, setReviewQueue] = useState<SkillItem[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const currentUserIdRef = useRef(userId);
+  currentUserIdRef.current = userId;
+  const isCurrentUser = (requestUserId: string | undefined) =>
+    currentUserIdRef.current === requestUserId;
+  const [dataUserId, setDataUserId] = useState(userId);
+  const hasCurrentUserData = dataUserId === userId;
+  const visibleSkills = useMemo(
+    () => (hasCurrentUserData ? skills : []),
+    [hasCurrentUserData, skills]
+  );
+  const visibleDirectorySkills = useMemo(
+    () => (hasCurrentUserData ? directorySkills : []),
+    [hasCurrentUserData, directorySkills]
+  );
+  const visibleReviewQueue = useMemo(
+    () => (hasCurrentUserData ? reviewQueue : []),
+    [hasCurrentUserData, reviewQueue]
+  );
+  const visibleCategories = useMemo(
+    () => (hasCurrentUserData ? categories : []),
+    [hasCurrentUserData, categories]
+  );
   const [internalSelectedCategory, setInternalSelectedCategory] = useState<string>("All");
   const selectedCategory = controlledSelectedCategory ?? internalSelectedCategory;
   const setSelectedCategory = (cat: string) => {
@@ -87,10 +112,34 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
   const [modalSkillId, setModalSkillId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const visibleError = hasCurrentUserData ? error : null;
+  const visibleUploadError = hasCurrentUserData ? uploadError : null;
+  const visibleIsLoading = !hasCurrentUserData || isLoading;
+  const visibleIsUploading = hasCurrentUserData && isUploading;
 
   const localFileInputRef = useRef<HTMLInputElement>(null);
   const activeFileInputRef = fileInputRef || localFileInputRef;
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDataUserId(userId);
+    setSkills([]);
+    setDirectorySkills([]);
+    setReviewQueue([]);
+    setCategories([]);
+    setError(null);
+    setUploadError(null);
+    setIsUploading(false);
+    setShowReviewQueue(false);
+    setModalSkillId(null);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!hasCurrentUserData) {
+      onSkillsCountChange?.(0, 0);
+      onCategoriesLoaded?.([]);
+    }
+  }, [hasCurrentUserData, onCategoriesLoaded, onSkillsCountChange]);
 
   useEffect(() => {
     if (!isCategoryDropdownOpen) return;
@@ -104,53 +153,73 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
   }, [isCategoryDropdownOpen]);
 
   const fetchLibrary = useCallback(async () => {
+    const requestUserId = userId;
     try {
-      const data = await getSkills();
+      const data = await getSkills(undefined, requestUserId);
+      if (currentUserIdRef.current !== requestUserId) return [];
       setSkills(data);
+      setDataUserId(requestUserId);
       return data;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load skills.");
+      if (currentUserIdRef.current === requestUserId) {
+        setError(err instanceof Error ? err.message : "Failed to load skills.");
+      }
       return [];
     }
-  }, []);
+  }, [userId]);
 
   const fetchDirectory = useCallback(async () => {
+    const requestUserId = userId;
     try {
       const [dirData, catData] = await Promise.all([
-        getDirectorySkills({
-          category: selectedCategory !== "All" ? selectedCategory : undefined,
-          q: searchQuery || undefined,
-        }),
-        getDirectoryCategories(),
+        getDirectorySkills(
+          {
+            category: selectedCategory !== "All" ? selectedCategory : undefined,
+            q: searchQuery || undefined,
+          },
+          userId
+        ),
+        getDirectoryCategories(userId),
       ]);
+      if (currentUserIdRef.current !== requestUserId) return [];
       setDirectorySkills(dirData);
       setCategories(catData);
+      setDataUserId(requestUserId);
       onCategoriesLoaded?.(catData);
       return dirData;
     } catch {
       return [];
     }
-  }, [onCategoriesLoaded, searchQuery, selectedCategory]);
+  }, [onCategoriesLoaded, searchQuery, selectedCategory, userId]);
 
   const fetchReviewQueue = useCallback(async () => {
+    const requestUserId = userId;
     try {
-      const queue = await getAdminQueue();
+      const queue = await getAdminQueue(requestUserId);
+      if (currentUserIdRef.current !== requestUserId) return;
       setReviewQueue(queue);
+      setDataUserId(requestUserId);
     } catch {
       // ignore
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
+    const requestUserId = userId;
+    let cancelled = false;
     setIsLoading(true);
     Promise.all([fetchLibrary(), fetchDirectory(), fetchReviewQueue()])
       .then(([libData, dirData]) => {
+        if (cancelled || currentUserIdRef.current !== requestUserId) return;
         onSkillsCountChange?.(libData.length, dirData.length);
       })
       .finally(() => {
-        setIsLoading(false);
+        if (!cancelled && currentUserIdRef.current === requestUserId) setIsLoading(false);
       });
-  }, [fetchDirectory, fetchLibrary, fetchReviewQueue, onSkillsCountChange]);
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchDirectory, fetchLibrary, fetchReviewQueue, onSkillsCountChange, userId]);
 
   useEffect(() => {
     if (subTab === "Discover") {
@@ -159,13 +228,20 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
   }, [fetchDirectory, subTab]);
 
   useEffect(() => {
-    onSkillsCountChange?.(skills.length, directorySkills.length);
-  }, [skills.length, directorySkills.length, onSkillsCountChange]);
+    if (hasCurrentUserData)
+      onSkillsCountChange?.(visibleSkills.length, visibleDirectorySkills.length);
+  }, [
+    hasCurrentUserData,
+    visibleSkills.length,
+    visibleDirectorySkills.length,
+    onSkillsCountChange,
+  ]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0]!;
+    const requestUserId = userId;
 
     setIsUploading(true);
     setUploadError(null);
@@ -173,7 +249,8 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       const lowerName = file.name.toLowerCase();
 
       if (lowerName.endsWith(".zip")) {
-        const created = await uploadSkill(file, "user");
+        const created = await uploadSkill(file, "user", requestUserId);
+        if (!isCurrentUser(requestUserId)) return;
         setSkills((prev) => {
           const filtered = prev.filter((s) => s.id !== created.id && s.name !== created.name);
           return [created, ...filtered];
@@ -187,14 +264,18 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
             .toLowerCase()
             .replace(/[^a-z0-9-]/g, "-")
             .replace(/^-+|-+$/g, "") || "pdf-skill";
-        const created = await createSkillFromJson({
-          name: cleanName,
-          description: `Imported PDF knowledge base from ${file.name}`,
-          skillMd: `---\nname: ${cleanName}\ndescription: Imported PDF knowledge base from ${file.name}\n---\n# ${file.name}\n\n${content}`,
-          files: [],
-          scope: "user",
-          approvalStatus: "approved",
-        });
+        const created = await createSkillFromJson(
+          {
+            name: cleanName,
+            description: `Imported PDF knowledge base from ${file.name}`,
+            skillMd: `---\nname: ${cleanName}\ndescription: Imported PDF knowledge base from ${file.name}\n---\n# ${file.name}\n\n${content}`,
+            files: [],
+            scope: "user",
+            approvalStatus: "approved",
+          },
+          requestUserId
+        );
+        if (!isCurrentUser(requestUserId)) return;
         setSkills((prev) => {
           const filtered = prev.filter((s) => s.id !== created.id && s.name !== created.name);
           return [created, ...filtered];
@@ -213,14 +294,18 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
           ? text
           : `---\nname: ${cleanName}\ndescription: Imported skill from ${file.name}\n---\n${text}`;
 
-        const created = await createSkillFromJson({
-          name: cleanName,
-          description: `Imported skill from ${file.name}`,
-          skillMd,
-          files: [],
-          scope: "user",
-          approvalStatus: "approved",
-        });
+        const created = await createSkillFromJson(
+          {
+            name: cleanName,
+            description: `Imported skill from ${file.name}`,
+            skillMd,
+            files: [],
+            scope: "user",
+            approvalStatus: "approved",
+          },
+          requestUserId
+        );
+        if (!isCurrentUser(requestUserId)) return;
         setSkills((prev) => {
           const filtered = prev.filter((s) => s.id !== created.id && s.name !== created.name);
           return [created, ...filtered];
@@ -228,64 +313,84 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       } else {
         throw new Error("Unsupported format. Please select a .zip, .md, or .pdf file.");
       }
-      void fetchLibrary();
-      void fetchDirectory();
+      if (isCurrentUser(requestUserId)) {
+        void fetchLibrary();
+        void fetchDirectory();
+      }
     } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : "Failed to upload skill.");
+      if (isCurrentUser(requestUserId)) {
+        setUploadError(err instanceof Error ? err.message : "Failed to upload skill.");
+      }
     } finally {
-      setIsUploading(false);
+      if (isCurrentUser(requestUserId)) setIsUploading(false);
       if (activeFileInputRef.current) activeFileInputRef.current.value = "";
     }
   };
 
   const handleDelete = async (skillId: string) => {
     if (!confirm("Are you sure you want to delete this skill?")) return;
+    const requestUserId = userId;
     try {
-      await deleteSkill(skillId);
+      await deleteSkill(skillId, requestUserId);
+      if (!isCurrentUser(requestUserId)) return;
       setSkills((prev) => prev.filter((s) => s.id !== skillId));
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to delete skill.");
+      if (isCurrentUser(requestUserId)) {
+        alert(err instanceof Error ? err.message : "Failed to delete skill.");
+      }
     }
   };
 
   const handleApprove = async (skillId: string) => {
+    const requestUserId = userId;
     try {
-      await approveSkill(skillId);
+      await approveSkill(skillId, requestUserId);
+      if (!isCurrentUser(requestUserId)) return;
       setReviewQueue((prev) => prev.filter((s) => s.id !== skillId));
       void fetchLibrary();
       void fetchDirectory();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to approve skill.");
+      if (isCurrentUser(requestUserId)) {
+        alert(err instanceof Error ? err.message : "Failed to approve skill.");
+      }
     }
   };
 
   const handleReject = async (skillId: string) => {
     const reason = prompt("Enter rejection reason:");
     if (!reason || !reason.trim()) return;
+    const requestUserId = userId;
     try {
-      await rejectSkill(skillId, reason.trim());
+      await rejectSkill(skillId, reason.trim(), requestUserId);
+      if (!isCurrentUser(requestUserId)) return;
       setReviewQueue((prev) => prev.filter((s) => s.id !== skillId));
       void fetchLibrary();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to reject skill.");
+      if (isCurrentUser(requestUserId)) {
+        alert(err instanceof Error ? err.message : "Failed to reject skill.");
+      }
     }
   };
 
   const handleSubmitReview = async (skillId: string) => {
+    const requestUserId = userId;
     try {
-      const updated = await submitSkillForReview(skillId);
+      const updated = await submitSkillForReview(skillId, undefined, requestUserId);
+      if (!isCurrentUser(requestUserId)) return;
       setSkills((prev) => prev.map((s) => (s.id === skillId ? updated : s)));
       void fetchReviewQueue();
       alert("Skill submitted for administrator review.");
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to submit for review.");
+      if (isCurrentUser(requestUserId)) {
+        alert(err instanceof Error ? err.message : "Failed to submit for review.");
+      }
     }
   };
 
-  const libraryNames = useMemo(() => new Set(skills.map((s) => s.name)), [skills]);
+  const libraryNames = useMemo(() => new Set(visibleSkills.map((s) => s.name)), [visibleSkills]);
 
   const filteredLibrary = useMemo(() => {
-    let list = skills;
+    let list = visibleSkills;
     if (selectedCategory !== "All") {
       const catLower = selectedCategory.toLowerCase();
       list = list.filter(
@@ -314,10 +419,10 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       sorted.sort((a, b) => b.version - a.version);
     }
     return sorted;
-  }, [skills, selectedCategory, scopeFilter, searchQuery, sortBy]);
+  }, [visibleSkills, selectedCategory, scopeFilter, searchQuery, sortBy]);
 
   const filteredDirectory = useMemo(() => {
-    let list = directorySkills;
+    let list = visibleDirectorySkills;
     if (selectedCategory !== "All") {
       const catLower = selectedCategory.toLowerCase();
       list = list.filter(
@@ -346,7 +451,7 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       sorted.sort((a, b) => b.version - a.version);
     }
     return sorted;
-  }, [directorySkills, selectedCategory, scopeFilter, searchQuery, sortBy]);
+  }, [visibleDirectorySkills, selectedCategory, scopeFilter, searchQuery, sortBy]);
 
   const getScopeBadge = (skillOrScope: SkillItem | string | { scope: string; name?: string }) => {
     if (typeof skillOrScope !== "string") {
@@ -385,7 +490,7 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       />
 
       {/* Uploading progress notification */}
-      {isUploading && (
+      {visibleIsUploading && (
         <div className="flex items-center gap-2.5 p-3.5 bg-neutral-100 rounded-2xl text-[12.5px] text-neutral-700 animate-in fade-in duration-150">
           <Loader2 size={15} className="animate-spin text-neutral-900" />
           <span>Uploading and validating skill package...</span>
@@ -393,11 +498,11 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       )}
 
       {/* Upload error banner */}
-      {uploadError && (
+      {visibleUploadError && (
         <div className="flex items-center justify-between p-3.5 bg-rose-50 rounded-2xl text-[12.5px] text-rose-700 animate-in fade-in duration-150">
           <div className="flex items-center gap-2">
             <AlertCircle size={15} className="shrink-0" />
-            <span>{uploadError}</span>
+            <span>{visibleUploadError}</span>
           </div>
           <button
             onClick={() => setUploadError(null)}
@@ -408,24 +513,24 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
         </div>
       )}
 
-      {error && (
+      {visibleError && (
         <div
           role="alert"
           className="flex items-center gap-2 p-3.5 bg-rose-50 rounded-2xl text-[12.5px] text-rose-700"
         >
           <AlertCircle size={15} className="shrink-0" />
-          <span>{error}</span>
+          <span>{visibleError}</span>
         </div>
       )}
 
       {/* Admin review queue banner toggle if items exist */}
-      {reviewQueue.length > 0 && subTab === "Yours" && (
+      {visibleReviewQueue.length > 0 && subTab === "Yours" && (
         <div className="flex items-center justify-between px-5 py-3 bg-[#F8F8FA] rounded-2xl">
           <div className="flex items-center gap-2.5">
             <Clock size={15} className="text-neutral-700" />
             <span className="text-[13px] font-medium text-neutral-900">
-              {reviewQueue.length} {reviewQueue.length === 1 ? "skill awaits" : "skills await"}{" "}
-              admin review
+              {visibleReviewQueue.length}{" "}
+              {visibleReviewQueue.length === 1 ? "skill awaits" : "skills await"} admin review
             </span>
           </div>
           <button
@@ -439,9 +544,9 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       )}
 
       {/* Admin Review Queue List (when open) */}
-      {showReviewQueue && reviewQueue.length > 0 && subTab === "Yours" && (
+      {showReviewQueue && visibleReviewQueue.length > 0 && subTab === "Yours" && (
         <div className="flex flex-col gap-3 pb-2">
-          {reviewQueue.map((item) => (
+          {visibleReviewQueue.map((item) => (
             <div
               key={item.id}
               className="p-4 rounded-2xl bg-[#F8F8FA] hover:bg-[#F2F2F6] transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group"
@@ -523,7 +628,7 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
                   onClick={(e) => e.stopPropagation()}
                   className="absolute right-0 top-full mt-1.5 w-52 rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.2)] ring-1 ring-neutral-200/80 z-30 animate-in fade-in zoom-in-95 duration-100 text-[12.5px] text-neutral-700 select-none max-h-72 overflow-y-auto"
                 >
-                  {["All", ...categories.map((c) => c.name)].map((cat) => {
+                  {["All", ...visibleCategories.map((c) => c.name)].map((cat) => {
                     const isSelected = selectedCategory === cat;
                     return (
                       <button
@@ -549,7 +654,7 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
             </div>
           </div>
 
-          {filteredDirectory.length === 0 && !isLoading && (
+          {filteredDirectory.length === 0 && !visibleIsLoading && (
             <div className="flex flex-col items-center justify-center p-12 text-center bg-[#F8F8FA] rounded-3xl">
               <Search size={22} className="text-neutral-400 mb-2.5" />
               <h3 className="text-[15px] font-medium text-neutral-900">
@@ -593,11 +698,18 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (isAdded) return;
+                            const requestUserId = userId;
                             try {
-                              const copy = await addDirectorySkillToLibrary(skill.id);
+                              const copy = await addDirectorySkillToLibrary(
+                                skill.id,
+                                requestUserId
+                              );
+                              if (!isCurrentUser(requestUserId)) return;
                               setSkills((prev) => [copy, ...prev]);
                             } catch (err) {
-                              alert(err instanceof Error ? err.message : "Failed to add");
+                              if (isCurrentUser(requestUserId)) {
+                                alert(err instanceof Error ? err.message : "Failed to add");
+                              }
                             }
                           }}
                           disabled={isAdded}
@@ -646,7 +758,7 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
             </span>
           </div>
 
-          {filteredLibrary.length === 0 && !isLoading && (
+          {filteredLibrary.length === 0 && !visibleIsLoading && (
             <div className="flex flex-col items-center justify-center p-12 text-center bg-[#F8F8FA] rounded-3xl">
               <div className="w-12 h-12 rounded-2xl bg-neutral-200/60 flex items-center justify-center text-neutral-600 mb-3">
                 <Bot size={22} />
@@ -767,19 +879,20 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
       )}
 
       {/* Detail Modal */}
-      {modalSkillId && (
+      {hasCurrentUserData && modalSkillId && (
         <SkillDetailModal
           skillId={modalSkillId}
           onClose={() => setModalSkillId(null)}
           isAlreadyAdded={libraryNames.has(
-            directorySkills.find((s) => s.id === modalSkillId)?.name ||
-              skills.find((s) => s.id === modalSkillId)?.name ||
+            visibleDirectorySkills.find((s) => s.id === modalSkillId)?.name ||
+              visibleSkills.find((s) => s.id === modalSkillId)?.name ||
               ""
           )}
           onSkillAdded={(copy) => {
-            setSkills((prev) => [copy, ...prev]);
+            if (isCurrentUser(userId)) setSkills((prev) => [copy, ...prev]);
           }}
           onSkillDeleted={(deletedId) => {
+            if (!isCurrentUser(userId)) return;
             setSkills((prev) => prev.filter((s) => s.id !== deletedId));
             setDirectorySkills((prev) => prev.filter((s) => s.id !== deletedId));
           }}
@@ -792,7 +905,7 @@ export const CustomizeSkillsTab: React.FC<CustomizeSkillsTabProps> = ({
           isOpen={isCreatorOpen}
           onClose={() => setIsCreatorOpen(false)}
           onSkillCreated={(newSkill) => {
-            setSkills((prev) => [newSkill, ...prev]);
+            if (isCurrentUser(userId)) setSkills((prev) => [newSkill, ...prev]);
           }}
         />
       )}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Search,
   Plus,
@@ -168,9 +168,33 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
     setShared,
   } = useArtifacts();
   const { user } = useChatAuth();
-  const [selectedArtifact, setSelectedArtifact] = useState<ArtifactItem | null>(null);
+  const userId = user?.uid;
+  const authIdentityRef = useRef({ userId, generation: 0 });
+  const renderAuthIdentity = {
+    userId,
+    generation:
+      authIdentityRef.current.generation + (authIdentityRef.current.userId === userId ? 0 : 1),
+  };
+  useLayoutEffect(() => {
+    if (authIdentityRef.current.userId !== userId) {
+      authIdentityRef.current = {
+        userId,
+        generation: authIdentityRef.current.generation + 1,
+      };
+    }
+  }, [userId]);
+  const isCurrentAuthIdentity = (identity: { userId: string | undefined; generation: number }) =>
+    authIdentityRef.current.userId === identity.userId &&
+    authIdentityRef.current.generation === identity.generation;
+  const [ownerUserId, setOwnerUserId] = useState(userId);
+  const ownerStateIsCurrent = ownerUserId === userId;
+  const [selectedArtifactState, setSelectedArtifactState] = useState<ArtifactItem | null>(null);
+  const selectedArtifact = ownerStateIsCurrent ? selectedArtifactState : null;
+  const selectedArtifactRef = useRef(selectedArtifact);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ArtifactItem | null>(null);
+  const [deleteTargetState, setDeleteTargetState] = useState<ArtifactItem | null>(null);
+  const deleteTarget = ownerStateIsCurrent ? deleteTargetState : null;
+  const deleteTargetRef = useRef(deleteTarget);
   const [deleteError, setDeleteError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -183,15 +207,82 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
   const [newContent, setNewContent] = useState("");
   const [editorMode, setEditorMode] = useState<"Edit" | "Preview">("Edit");
   const [isSaving, setIsSaving] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [editingArtifactId, setEditingArtifactId] = useState<string | null>(null);
   const [artifactError, setArtifactError] = useState("");
   const [artifactVersions, setArtifactVersions] = useState<ArtifactVersion[]>([]);
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
   const [compareVersion, setCompareVersion] = useState<ArtifactVersion | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const historyRequestGenerationRef = useRef(0);
   const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null);
   const [isUpdatingShare, setIsUpdatingShare] = useState(false);
   const [recoveredDraft, setRecoveredDraft] = useState<RecoveredArtifactDraft | null>(null);
+  const visibleCreateOpen = ownerStateIsCurrent && isCreateOpen;
+  const visibleRecoveredDraft = ownerStateIsCurrent ? recoveredDraft : null;
+  const visibleImporting = ownerStateIsCurrent && isImporting;
+  const setSelectedArtifact = (action: React.SetStateAction<ArtifactItem | null>) => {
+    if (!isCurrentAuthIdentity(renderAuthIdentity)) return;
+    const nextArtifact =
+      typeof action === "function" ? action(selectedArtifactRef.current) : action;
+    if (nextArtifact?.id !== selectedArtifactRef.current?.id) {
+      historyRequestGenerationRef.current += 1;
+      setArtifactVersions([]);
+      setIsHistoryVisible(false);
+      setCompareVersion(null);
+      setIsLoadingHistory(false);
+    }
+    selectedArtifactRef.current = nextArtifact;
+    setSelectedArtifactState(nextArtifact);
+  };
+  const setDeleteTarget = (target: ArtifactItem | null) => {
+    if (!isCurrentAuthIdentity(renderAuthIdentity)) return;
+    setDeleteTargetState(target);
+  };
+
+  useLayoutEffect(() => {
+    selectedArtifactRef.current = selectedArtifact;
+    deleteTargetRef.current = deleteTarget;
+  }, [selectedArtifact, deleteTarget]);
+
+  useEffect(() => {
+    if (ownerStateIsCurrent) return;
+    setOwnerUserId(userId);
+    selectedArtifactRef.current = null;
+    deleteTargetRef.current = null;
+    setSelectedArtifactState(null);
+    setDeleteTargetState(null);
+    setDeleteError("");
+    setIsDeleting(false);
+    setIsCreateOpen(false);
+    setIsDiscardConfirmationOpen(false);
+    setNewTitle("");
+    setNewCategory("Documents");
+    setNewLanguage("markdown");
+    setNewContent("");
+    setEditorMode("Edit");
+    setIsSaving(false);
+    setIsImporting(false);
+    setEditingArtifactId(null);
+    setArtifactError("");
+    setArtifactVersions([]);
+    historyRequestGenerationRef.current += 1;
+    setIsHistoryVisible(false);
+    setCompareVersion(null);
+    setIsLoadingHistory(false);
+    setRestoringVersionId(null);
+    setIsUpdatingShare(false);
+    setRecoveredDraft(null);
+    setOrganizationSavingId(null);
+    setIsOrganizationEditorOpen(false);
+    setCollectionDraft("");
+    setTagsDraft("");
+    setCopiedId(null);
+    setIsRecoveredDraftMenuOpen(false);
+    setIsArtifactActionsOpen(false);
+    setIsCreateMenuOpen(false);
+    setSearchQuery("");
+  }, [ownerStateIsCurrent, userId]);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -333,11 +424,11 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
     : Boolean(newTitle.trim() || newContent.trim());
 
   useEffect(() => {
-    if (!isCreateOpen) {
+    if (!visibleCreateOpen) {
       setRecoveredDraft(null);
       return;
     }
-    const key = artifactDraftKey(user?.uid, editingArtifactId);
+    const key = artifactDraftKey(userId, editingArtifactId);
     try {
       const rawDraft = window.localStorage.getItem(key);
       if (!rawDraft) {
@@ -371,11 +462,11 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
       window.localStorage.removeItem(key);
       setRecoveredDraft(null);
     }
-  }, [isCreateOpen, editingArtifactId, editingArtifact, user?.uid]);
+  }, [ownerStateIsCurrent, visibleCreateOpen, editingArtifactId, editingArtifact, userId]);
 
   useEffect(() => {
-    if (!isCreateOpen || recoveredDraft) return;
-    const key = artifactDraftKey(user?.uid, editingArtifactId);
+    if (!visibleCreateOpen || recoveredDraft || !ownerStateIsCurrent) return;
+    const key = artifactDraftKey(userId, editingArtifactId);
     const timeout = window.setTimeout(() => {
       if (!newTitle.trim() && !newContent.trim() && !editingArtifactId) {
         window.localStorage.removeItem(key);
@@ -397,9 +488,10 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
     }, 400);
     return () => window.clearTimeout(timeout);
   }, [
-    isCreateOpen,
+    visibleCreateOpen,
+    ownerStateIsCurrent,
     recoveredDraft,
-    user?.uid,
+    userId,
     editingArtifactId,
     editingArtifact,
     hasUnsavedChanges,
@@ -410,7 +502,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
   ]);
 
   const requestCloseEditor = () => {
-    if (isSaving) return;
+    if (!ownerStateIsCurrent || isSaving) return;
     if (hasUnsavedChanges) {
       setIsDiscardConfirmationOpen(true);
       return;
@@ -420,16 +512,19 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
   };
 
   const handleCopy = async (id: string, text: string) => {
+    const identity = renderAuthIdentity;
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard is unavailable");
       await navigator.clipboard.writeText(text);
+      if (!isCurrentAuthIdentity(identity)) return;
       setCopiedId(id);
       setArtifactError("");
     } catch {
+      if (!isCurrentAuthIdentity(identity)) return;
       setCopiedId(null);
       setArtifactError("Could not copy this artifact. Check clipboard permissions and try again.");
     }
-    window.setTimeout(() => setCopiedId(null), 1800);
+    if (isCurrentAuthIdentity(identity)) window.setTimeout(() => setCopiedId(null), 1800);
   };
 
   const handleOpenCreate = (cat: "Code" | "Documents") => {
@@ -458,19 +553,24 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
   };
 
   const handleToggleFavorite = async (artifact: ArtifactItem) => {
+    const identity = renderAuthIdentity;
     setOrganizationSavingId(artifact.id);
     try {
       const updated = await updateOrganization(artifact.id, { isFavorite: !artifact.isFavorite });
+      if (!isCurrentAuthIdentity(identity)) return;
       setSelectedArtifact((current) => (current?.id === artifact.id ? updated : current));
     } catch (error) {
+      if (!isCurrentAuthIdentity(identity)) return;
       setArtifactError(error instanceof Error ? error.message : "Could not update favorite.");
     } finally {
-      setOrganizationSavingId(null);
+      if (isCurrentAuthIdentity(identity)) setOrganizationSavingId(null);
     }
   };
 
   const handleSaveOrganization = async () => {
     if (!selectedArtifact) return;
+    const identity = renderAuthIdentity;
+    const targetArtifactId = selectedArtifact.id;
     const tags = [
       ...new Set(
         tagsDraft
@@ -498,61 +598,81 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
         collection: collectionDraft.trim() || null,
         tags,
       });
+      if (!isCurrentAuthIdentity(identity) || selectedArtifactRef.current?.id !== targetArtifactId)
+        return;
       setSelectedArtifact(updated);
       setIsOrganizationEditorOpen(false);
       setArtifactError("");
     } catch (error) {
+      if (!isCurrentAuthIdentity(identity)) return;
       setArtifactError(error instanceof Error ? error.message : "Could not save organization.");
     } finally {
-      setOrganizationSavingId(null);
+      if (isCurrentAuthIdentity(identity)) setOrganizationSavingId(null);
     }
   };
 
   const handleImportArtifacts = async (file: File) => {
-    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-    const fileInfo = isPdf
-      ? { category: "Documents" as const, language: "markdown" }
-      : getArtifactFileInfo(file.name);
-    if (!fileInfo) {
-      setArtifactError("Choose a PDF, Markdown, text, or supported source-code file.");
-      return;
-    }
-
-    let content: string;
-    if (isPdf) {
-      const extracted = await extractPdfText(file);
-      content = extracted.content;
-    } else {
-      if (file.size > 200_000) {
-        setArtifactError("This file is larger than the 200 KB artifact limit.");
+    if (!ownerStateIsCurrent) return;
+    const identity = renderAuthIdentity;
+    setIsImporting(true);
+    setArtifactError("");
+    try {
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const fileInfo = isPdf
+        ? { category: "Documents" as const, language: "markdown" }
+        : getArtifactFileInfo(file.name);
+      if (!fileInfo) {
+        setArtifactError("Choose a PDF, Markdown, text, or supported source-code file.");
         return;
       }
-      content = await file.text();
-    }
 
-    if (!content.trim()) {
-      setArtifactError("This file is empty.");
-      return;
+      let content: string;
+      if (isPdf) {
+        const extracted = await extractPdfText(file);
+        if (!isCurrentAuthIdentity(identity)) return;
+        content = extracted.content;
+      } else {
+        if (file.size > 200_000) {
+          setArtifactError("This file is larger than the 200 KB artifact limit.");
+          return;
+        }
+        content = await file.text();
+        if (!isCurrentAuthIdentity(identity)) return;
+      }
+
+      if (!content.trim()) {
+        setArtifactError("This file is empty.");
+        return;
+      }
+      const saved = await addArtifact({
+        title:
+          file.name
+            .replace(/\.[^.]+$/, "")
+            .replace(/_/g, " ")
+            .replace(/\s+/g, " ")
+            .trim() || "Imported artifact",
+        category: fileInfo.category,
+        language: fileInfo.language,
+        content,
+        isShared: false,
+      });
+      if (!isCurrentAuthIdentity(identity)) return;
+      setSelectedArtifact(saved);
+      setArtifactError("");
+    } catch (error) {
+      if (!isCurrentAuthIdentity(identity)) return;
+      setArtifactError(error instanceof Error ? error.message : "Could not import this file.");
+    } finally {
+      if (isCurrentAuthIdentity(identity)) setIsImporting(false);
     }
-    const saved = await addArtifact({
-      title:
-        file.name
-          .replace(/\.[^.]+$/, "")
-          .replace(/_/g, " ")
-          .replace(/\s+/g, " ")
-          .trim() || "Imported artifact",
-      category: fileInfo.category,
-      language: fileInfo.language,
-      content,
-      isShared: false,
-    });
-    setSelectedArtifact(saved);
-    setArtifactError("");
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newContent.trim() || isSaving) return;
+    if (!ownerStateIsCurrent || !newTitle.trim() || !newContent.trim() || isSaving) return;
+    const identity = renderAuthIdentity;
+    const draftUserId = identity.userId;
+    const draftArtifactId = editingArtifactId;
     setIsSaving(true);
     try {
       const item = {
@@ -567,7 +687,8 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
       const saved = editingArtifactId
         ? await updateArtifact(editingArtifactId, item)
         : await addArtifact(item);
-      window.localStorage.removeItem(artifactDraftKey(user?.uid, editingArtifactId));
+      if (!isCurrentAuthIdentity(identity)) return;
+      window.localStorage.removeItem(artifactDraftKey(draftUserId, draftArtifactId));
       setIsCreateOpen(false);
       setSelectedArtifact(saved);
       setEditingArtifactId(null);
@@ -575,9 +696,10 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
       setIsHistoryVisible(false);
       setArtifactError("");
     } catch (error) {
+      if (!isCurrentAuthIdentity(identity)) return;
       setArtifactError(error instanceof Error ? error.message : "Could not save artifact.");
     } finally {
-      setIsSaving(false);
+      if (isCurrentAuthIdentity(identity)) setIsSaving(false);
     }
   };
 
@@ -595,21 +717,42 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
   };
 
   const handleShowHistory = async () => {
-    if (isLoadingHistory) return;
+    if (!selectedArtifact || isLoadingHistory || !ownerStateIsCurrent) return;
     if (isHistoryVisible) {
+      historyRequestGenerationRef.current += 1;
       setIsHistoryVisible(false);
+      setCompareVersion(null);
+      setIsLoadingHistory(false);
       return;
     }
+    const identity = renderAuthIdentity;
+    const targetArtifactId = selectedArtifact.id;
+    const requestGeneration = ++historyRequestGenerationRef.current;
     setIsLoadingHistory(true);
     try {
-      if (!selectedArtifact) return;
-      setArtifactVersions(await getVersions(selectedArtifact.id));
+      const versions = await getVersions(targetArtifactId);
+      if (
+        !isCurrentAuthIdentity(identity) ||
+        historyRequestGenerationRef.current !== requestGeneration ||
+        selectedArtifactRef.current?.id !== targetArtifactId
+      )
+        return;
+      setArtifactVersions(versions);
       setIsHistoryVisible(true);
       setArtifactError("");
     } catch (error) {
+      if (
+        !isCurrentAuthIdentity(identity) ||
+        historyRequestGenerationRef.current !== requestGeneration
+      )
+        return;
       setArtifactError(error instanceof Error ? error.message : "Could not load artifact history.");
     } finally {
-      setIsLoadingHistory(false);
+      if (
+        isCurrentAuthIdentity(identity) &&
+        historyRequestGenerationRef.current === requestGeneration
+      )
+        setIsLoadingHistory(false);
     }
   };
 
@@ -635,14 +778,10 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
           type="file"
           accept=".pdf,application/pdf,.md,.markdown,.txt,.js,.jsx,.ts,.tsx,.py,.html,.css,.json,.yaml,.yml,.sh,.sql,.rs,.go,.java,.c,.cpp"
           className="hidden"
+          disabled={visibleImporting}
           onChange={(event) => {
             const file = event.target.files?.[0];
-            if (file)
-              void handleImportArtifacts(file).catch((error) =>
-                setArtifactError(
-                  error instanceof Error ? error.message : "Could not import this file."
-                )
-              );
+            if (file) void handleImportArtifacts(file);
             event.currentTarget.value = "";
           }}
         />
@@ -679,10 +818,11 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
             {showEmptyLibrary ? (
               <button
                 type="button"
+                disabled={visibleImporting}
                 onClick={() => artifactFileInputRef.current?.click()}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 disabled:opacity-50"
               >
-                <Upload size={14} /> Import
+                <Upload size={14} /> {visibleImporting ? "Importing…" : "Import"}
               </button>
             ) : (
               <>
@@ -718,10 +858,11 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                 </div>
                 <button
                   type="button"
+                  disabled={visibleImporting}
                   onClick={() => artifactFileInputRef.current?.click()}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950 disabled:opacity-50"
                 >
-                  <Upload size={14} /> Import
+                  <Upload size={14} /> {visibleImporting ? "Importing…" : "Import"}
                 </button>
                 <div ref={createMenuRef} className="relative">
                   <button
@@ -933,7 +1074,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
             </button>
           </div>
         )}
-        {artifactError && !selectedArtifact && !isCreateOpen && (
+        {ownerStateIsCurrent && artifactError && !selectedArtifact && !visibleCreateOpen && (
           <p
             role="alert"
             className="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
@@ -1277,10 +1418,12 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                           type="button"
                           disabled={restoringVersionId === version.id}
                           onClick={async () => {
-                            if (restoringVersionId) return;
+                            if (restoringVersionId || !ownerStateIsCurrent) return;
+                            const identity = renderAuthIdentity;
+                            const targetArtifactId = selectedArtifact.id;
                             setRestoringVersionId(version.id);
                             try {
-                              const restored = await updateArtifact(selectedArtifact.id, {
+                              const restored = await updateArtifact(targetArtifactId, {
                                 title: version.title,
                                 category: version.category,
                                 content: version.content,
@@ -1288,16 +1431,28 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                                 modelUsed: version.modelUsed,
                                 isShared: Boolean(selectedArtifact.isShared),
                               });
+                              if (
+                                !isCurrentAuthIdentity(identity) ||
+                                selectedArtifactRef.current?.id !== targetArtifactId
+                              )
+                                return;
                               setSelectedArtifact(restored);
-                              setArtifactVersions(await getVersions(restored.id));
+                              const versions = await getVersions(restored.id);
+                              if (
+                                !isCurrentAuthIdentity(identity) ||
+                                selectedArtifactRef.current?.id !== targetArtifactId
+                              )
+                                return;
+                              setArtifactVersions(versions);
                             } catch (error) {
+                              if (!isCurrentAuthIdentity(identity)) return;
                               setArtifactError(
                                 error instanceof Error
                                   ? error.message
                                   : "Could not restore this version."
                               );
                             } finally {
-                              setRestoringVersionId(null);
+                              if (isCurrentAuthIdentity(identity)) setRestoringVersionId(null);
                             }
                           }}
                           className="shrink-0 rounded-lg border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50 disabled:cursor-wait disabled:opacity-60"
@@ -1400,20 +1555,29 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                         type="button"
                         disabled={isUpdatingShare}
                         onClick={async () => {
-                          if (isUpdatingShare) return;
+                          if (isUpdatingShare || !ownerStateIsCurrent) return;
+                          const identity = renderAuthIdentity;
+                          const targetArtifactId = selectedArtifact.id;
+                          const nextIsShared = !selectedArtifact.isShared;
                           setIsArtifactActionsOpen(false);
                           setIsUpdatingShare(true);
                           try {
-                            await setShared(selectedArtifact.id, !selectedArtifact.isShared);
+                            await setShared(targetArtifactId, nextIsShared);
+                            if (
+                              !isCurrentAuthIdentity(identity) ||
+                              selectedArtifactRef.current?.id !== targetArtifactId
+                            )
+                              return;
                             setSelectedArtifact((current) =>
-                              current ? { ...current, isShared: !current.isShared } : null
+                              current ? { ...current, isShared: nextIsShared } : null
                             );
                           } catch (error) {
+                            if (!isCurrentAuthIdentity(identity)) return;
                             setArtifactError(
                               error instanceof Error ? error.message : "Could not update sharing."
                             );
                           } finally {
-                            setIsUpdatingShare(false);
+                            if (isCurrentAuthIdentity(identity)) setIsUpdatingShare(false);
                           }
                         }}
                         className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
@@ -1453,8 +1617,12 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                         disabled={isLoadingHistory}
                         onClick={() => {
                           setIsArtifactActionsOpen(false);
-                          if (isHistoryVisible) setIsHistoryVisible(false);
-                          else void handleShowHistory();
+                          if (isHistoryVisible) {
+                            historyRequestGenerationRef.current += 1;
+                            setIsHistoryVisible(false);
+                            setCompareVersion(null);
+                            setIsLoadingHistory(false);
+                          } else void handleShowHistory();
                         }}
                         className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                       >
@@ -1537,19 +1705,24 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
               <button
                 type="button"
                 onClick={async () => {
-                  if (isDeleting) return;
+                  if (isDeleting || !ownerStateIsCurrent) return;
+                  const identity = renderAuthIdentity;
+                  const targetArtifactId = deleteTarget.id;
                   setIsDeleting(true);
                   try {
-                    await removeArtifact(deleteTarget.id);
-                    if (selectedArtifact?.id === deleteTarget.id) setSelectedArtifact(null);
-                    setDeleteTarget(null);
+                    await removeArtifact(targetArtifactId);
+                    if (!isCurrentAuthIdentity(identity)) return;
+                    if (selectedArtifactRef.current?.id === targetArtifactId)
+                      setSelectedArtifact(null);
+                    if (deleteTargetRef.current?.id === targetArtifactId) setDeleteTarget(null);
                     setDeleteError("");
                   } catch (error) {
+                    if (!isCurrentAuthIdentity(identity)) return;
                     setDeleteError(
                       error instanceof Error ? error.message : "Could not delete artifact."
                     );
                   } finally {
-                    setIsDeleting(false);
+                    if (isCurrentAuthIdentity(identity)) setIsDeleting(false);
                   }
                 }}
                 disabled={isDeleting}
@@ -1563,7 +1736,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
       )}
 
       {/* Create Artifact Modal */}
-      {isCreateOpen && (
+      {visibleCreateOpen && (
         <div
           role="dialog"
           aria-modal="true"
@@ -1591,7 +1764,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                 </h2>
               </div>
               <div className="flex shrink-0 items-start gap-2">
-                {recoveredDraft && (
+                {visibleRecoveredDraft && (
                   <div
                     ref={recoveredDraftMenuRef}
                     className="flex flex-col items-end"
@@ -1630,10 +1803,10 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
                         <button
                           type="button"
                           onClick={() => {
-                            setNewTitle(recoveredDraft.title);
-                            setNewCategory(recoveredDraft.category);
-                            setNewLanguage(recoveredDraft.language);
-                            setNewContent(recoveredDraft.content);
+                            setNewTitle(visibleRecoveredDraft.title);
+                            setNewCategory(visibleRecoveredDraft.category);
+                            setNewLanguage(visibleRecoveredDraft.language);
+                            setNewContent(visibleRecoveredDraft.content);
                             setRecoveredDraft(null);
                             setIsRecoveredDraftMenuOpen(false);
                           }}
@@ -1800,7 +1973,7 @@ export const ArtifactsScreen: React.FC<ArtifactsScreenProps> = ({ onNavigateToCh
         </div>
       )}
 
-      {isDiscardConfirmationOpen && (
+      {ownerStateIsCurrent && isDiscardConfirmationOpen && (
         <div
           role="alertdialog"
           aria-modal="true"

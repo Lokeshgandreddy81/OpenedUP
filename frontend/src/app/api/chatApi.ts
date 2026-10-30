@@ -1,11 +1,18 @@
 import { getSupabaseAccessToken } from "../integrations/supabaseAuth";
 
-export async function authenticatedChatFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const token = await getSupabaseAccessToken();
+export async function authenticatedChatFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  expectedUserId?: string,
+  getAccessToken: typeof getSupabaseAccessToken = getSupabaseAccessToken,
+  fetcher: typeof fetch = fetch
+) {
+  const token = await getAccessToken();
   if (!token) throw new Error("Sign in to access your saved chats and artifacts.");
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
-  return fetch(input, { ...init, headers });
+  if (expectedUserId) headers.set("X-Expected-User-Id", expectedUserId);
+  return fetcher(input, { ...init, headers });
 }
 
 export async function consumeChatStream(

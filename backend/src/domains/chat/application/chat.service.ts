@@ -32,7 +32,7 @@ export interface ProcessChatOptions {
   orgId?: string | null;
 }
 
-async function resolveChatSkillsContext(
+export async function resolveChatSkillsContext(
   payload: ChatRequest,
   options?: ProcessChatOptions
 ): Promise<{
@@ -44,7 +44,7 @@ async function resolveChatSkillsContext(
     const userId = options?.userId ?? "dev-user";
     const orgId = options?.orgId ?? null;
     const conversationSkills = payload.conversationId
-      ? await skillRepo.getConversationSkills(payload.conversationId)
+      ? await skillRepo.getConversationSkills(payload.conversationId, userId, orgId)
       : [];
     const visibleSkills = await skillRepo.listVisible(userId, orgId);
     const visibleById = new Map(visibleSkills.map((skill) => [skill.id, skill]));
@@ -136,6 +136,7 @@ export async function processChat(
       systemInstruction,
       conversationId: payload.conversationId,
       userId: options?.userId ?? "dev-user",
+      orgId: options?.orgId ?? null,
       tools: [SKILL_TOOL_DEFINITION, ...SANDBOX_TOOLS],
       repo: skillRepo,
       ...(options.signal ? { signal: options.signal } : {}),
@@ -146,7 +147,8 @@ export async function processChat(
           payload.conversationId!,
           sandboxPaths,
           skillRepo,
-          options?.userId
+          options?.userId,
+          options?.orgId
         ),
     });
     const elapsedMs = Date.now() - startTime;
@@ -256,6 +258,7 @@ export async function processChatStream(
       systemInstruction,
       conversationId: payload.conversationId,
       userId: options?.userId ?? "dev-user",
+      orgId: options?.orgId ?? null,
       tools: [SKILL_TOOL_DEFINITION, ...SANDBOX_TOOLS],
       repo: skillRepo,
       ...(options.signal ? { signal: options.signal } : {}),
@@ -266,7 +269,8 @@ export async function processChatStream(
           payload.conversationId!,
           sandboxPaths,
           skillRepo,
-          options.userId
+          options.userId,
+          options.orgId
         ),
     });
     if (loopResult.finalText) {

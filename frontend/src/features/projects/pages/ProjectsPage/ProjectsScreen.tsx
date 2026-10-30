@@ -19,17 +19,24 @@ import type {
   ProjectSortOption,
   ProjectFile,
 } from "../../components/projectTypes";
+import { applyProjectSessionUpdate } from "../../components/projectUpdates";
+import {
+  isProjectDataReadyForIdentity,
+  shouldPersistProjectsLocally,
+} from "../../components/projectIdentity";
 import { ProjectWorkspaceView } from "../../components/ProjectWorkspaceView";
 import { ProjectSessionView } from "../../components/ProjectSessionView";
 import {
   chatAttachmentsForContext,
   chatImageAttachments,
   readChatAttachments,
+  revokeChatAttachmentPreviewUrls,
   type ChatAttachmentFile,
 } from "../../../../app/files/chatAttachments";
 import type { EffortLevel } from "../../../chat";
 import {
   getLocalProjects,
+  clearSharedLocalProjects,
   loadAccountProjects,
   saveAccountProjects,
   saveLocalProjects,
@@ -51,35 +58,51 @@ export const ProjectsScreen: React.FC<{
   onOpenArtifacts,
 }) => {
   const { user, loading: authLoading } = useChatAuth();
-  // Load projects from localStorage
-  const [projects, setProjects] = useState<ProjectItem[]>(() => {
-    try {
-      return getLocalProjects();
-    } catch {
-      return [];
-    }
-  });
+  const currentUserId = user?.uid ?? null;
+  // Avoid showing shared legacy data until auth has identified its owner.
+  const [projects, setProjects] = useState<ProjectItem[]>(() =>
+    authLoading ? [] : getLocalProjects(user?.uid ?? null)
+  );
   const [loadedAccountUid, setLoadedAccountUid] = useState<string | null>(null);
   const [loadingAccountProjects, setLoadingAccountProjects] = useState(false);
   const [projectSyncError, setProjectSyncError] = useState("");
   const [projectImportWarning, setProjectImportWarning] = useState("");
   const [projectLoadRetryCount, setProjectLoadRetryCount] = useState(0);
   const [projectSaveRetryCount, setProjectSaveRetryCount] = useState(0);
-  const currentUidRef = useRef<string | null>(user?.uid || null);
-  currentUidRef.current = user?.uid || null;
+  const lastLoadedAccountUidRef = useRef<string | null>(null);
+  const projectImportWarningRef = useRef("");
+  const skipNextAnonymousSaveRef = useRef(false);
+  projectImportWarningRef.current = projectImportWarning;
+  const currentUidRef = useRef<string | null>(currentUserId);
+  currentUidRef.current = currentUserId;
+  const lastObservedUserIdRef = useRef<string | null>(currentUserId);
+  const authIdentityInitializedRef = useRef(!authLoading);
   const projectSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const lastSavedProjectsRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      const local = getLocalProjects();
-      setProjects(local);
+      if (lastLoadedAccountUidRef.current) {
+        clearSharedLocalProjects(
+          lastLoadedAccountUidRef.current,
+          projectImportWarningRef.current ? lastLoadedAccountUidRef.current : undefined
+        );
+        const anonymousProjects = getLocalProjects(null);
+        skipNextAnonymousSaveRef.current = true;
+        lastSavedProjectsRef.current = JSON.stringify(anonymousProjects);
+        setProjects(anonymousProjects);
+      } else {
+        const anonymousProjects = getLocalProjects(null);
+        skipNextAnonymousSaveRef.current = true;
+        lastSavedProjectsRef.current = JSON.stringify(anonymousProjects);
+        setProjects(anonymousProjects);
+      }
+      lastLoadedAccountUidRef.current = null;
       setLoadedAccountUid(null);
       setLoadingAccountProjects(false);
       setProjectSyncError("");
       setProjectImportWarning("");
-      lastSavedProjectsRef.current = null;
       return;
     }
 
@@ -95,6 +118,7 @@ export const ProjectsScreen: React.FC<{
         lastSavedProjectsRef.current = hasPendingSnapshot ? null : JSON.stringify(accountProjects);
         setProjectImportWarning(importWarning);
         setProjects(accountProjects);
+        lastLoadedAccountUidRef.current = user.uid;
         setLoadedAccountUid(user.uid);
       })
       .catch((error: unknown) => {
@@ -148,6 +172,8 @@ export const ProjectsScreen: React.FC<{
     }
     return false;
   });
+  const [createFormUserId, setCreateFormUserId] = useState<string | null>(currentUserId);
+  const visibleCreateModal = isCreateModalOpen && createFormUserId === currentUserId;
   const [cardMenuOpenId, setCardMenuOpenId] = useState<string | null>(null);
 
   // New project form state
@@ -163,12 +189,51 @@ export const ProjectsScreen: React.FC<{
   const initialRequestControllerRef = useRef<AbortController | null>(null);
   const userStoppedInitialRequestRef = useRef(false);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!authIdentityInitializedRef.current) {
+      authIdentityInitializedRef.current = true;
+      lastObservedUserIdRef.current = currentUserId;
+      setCreateFormUserId(currentUserId);
+      return;
+    }
+    if (lastObservedUserIdRef.current === currentUserId) return;
+    lastObservedUserIdRef.current = currentUserId;
+    setCreateFormUserId(currentUserId);
+    setIsCreateModalOpen(false);
+    setNewName("");
+    setNewDesc("");
+    setNewContext("");
+    revokeChatAttachmentPreviewUrls(modalFiles);
+    setModalFiles([]);
+    setModalFileError("");
+    setViewState("list");
+    setActiveProjectId(null);
+    setActiveSessionId(null);
+    setSearchQuery("");
+    setIsSearchOpen(false);
+    setIsSortMenuOpen(false);
+    setCardMenuOpenId(null);
+    initialRequestControllerRef.current?.abort();
+    initialRequestControllerRef.current = null;
+    userStoppedInitialRequestRef.current = false;
+    setGeneratingSessionId(null);
+  }, [authLoading, currentUserId, modalFiles]);
+
   // Keep anonymous projects local; account projects are saved as ordered server snapshots.
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
+      if (!shouldPersistProjectsLocally(null, loadedAccountUid)) return;
+      if (skipNextAnonymousSaveRef.current) {
+        skipNextAnonymousSaveRef.current = false;
+        return;
+      }
+      if (JSON.stringify(projects) === lastSavedProjectsRef.current) return;
       try {
         saveLocalProjects(projects);
+        lastSavedProjectsRef.current = JSON.stringify(projects);
       } catch {
         setProjectSyncError("Could not save projects in this browser. Check available storage.");
       }
@@ -304,24 +369,43 @@ export const ProjectsScreen: React.FC<{
   }, [projects, searchQuery, sortBy]);
 
   const handleOpenCreateModal = () => {
+    revokeChatAttachmentPreviewUrls(modalFiles);
     setNewName("");
     setNewDesc("");
     setNewContext("");
     setModalFiles([]);
+    setCreateFormUserId(currentUserId);
     setIsCreateModalOpen(true);
   };
 
   const handleModalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const result = await readChatAttachments(Array.from(files), modalFiles);
-    setModalFileError(result.errors.join(" "));
-    setModalFiles((prev) => [...prev, ...result.files]);
-    e.target.value = "";
+    if (!files || files.length === 0 || currentUidRef.current !== currentUserId) return;
+    const requestUserId = currentUserId;
+    try {
+      const result = await readChatAttachments(Array.from(files), modalFiles);
+      if (currentUidRef.current !== requestUserId) {
+        revokeChatAttachmentPreviewUrls(result.files);
+        return;
+      }
+      setModalFileError(result.errors.join(" "));
+      setModalFiles((prev) => [...prev, ...result.files]);
+    } catch (error) {
+      if (currentUidRef.current === requestUserId) {
+        setModalFileError(
+          error instanceof Error ? error.message : "Could not read the selected project files."
+        );
+      }
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const handleRemoveModalFile = (fileId: string) => {
-    setModalFiles((prev) => prev.filter((f) => f.id !== fileId));
+    if (currentUidRef.current !== currentUserId) return;
+    const removed = modalFiles.find((file) => file.id === fileId);
+    if (removed) revokeChatAttachmentPreviewUrls([removed]);
+    setModalFiles((prev) => prev.filter((file) => file.id !== fileId));
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -332,6 +416,8 @@ export const ProjectsScreen: React.FC<{
 
   const handleCreateProject = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    const expectedUserId = currentUserId;
+    if (currentUidRef.current !== expectedUserId || createFormUserId !== expectedUserId) return;
     const trimmed = newName.trim();
     if (!trimmed) return;
 
@@ -348,10 +434,14 @@ export const ProjectsScreen: React.FC<{
       files: modalFiles,
     };
 
-    setProjects((prev) => [newProject, ...prev]);
-    setActiveProjectId(newProject.id);
-    setViewState("workspace");
-    setIsCreateModalOpen(false);
+    setProjects((prev) =>
+      currentUidRef.current === expectedUserId ? [newProject, ...prev] : prev
+    );
+    setActiveProjectId((current) =>
+      currentUidRef.current === expectedUserId ? newProject.id : current
+    );
+    setViewState((current) => (currentUidRef.current === expectedUserId ? "workspace" : current));
+    setIsCreateModalOpen((current) => (currentUidRef.current === expectedUserId ? false : current));
   };
 
   const handleStartSession = async (
@@ -360,7 +450,9 @@ export const ProjectsScreen: React.FC<{
     effort: EffortLevel = "Medium",
     attachments: ChatAttachmentFile[] = []
   ) => {
-    if (!activeProject) return;
+    if (!activeProject || currentUidRef.current !== (user?.uid ?? null)) return;
+    const requestUserId = user?.uid ?? null;
+    const isCurrentRequest = () => currentUidRef.current === requestUserId;
     const targetProject = activeProject;
     const newSessionId = `sess-${Date.now()}`;
     const userMessage: ProjectSession["messages"][number] = {
@@ -397,7 +489,9 @@ export const ProjectsScreen: React.FC<{
       updatedAt: Date.now(),
     };
 
-    setProjects((prev) => prev.map((p) => (p.id === updatedProject.id ? updatedProject : p)));
+    setProjects((prev) =>
+      isCurrentRequest() ? prev.map((p) => (p.id === updatedProject.id ? updatedProject : p)) : prev
+    );
     setActiveSessionId(newSessionId);
     setGeneratingSessionId(newSessionId);
     setViewState("session");
@@ -415,6 +509,7 @@ export const ProjectsScreen: React.FC<{
       generationStatus?: "stopped" | "error",
       actionChips?: string[]
     ) => {
+      if (!isCurrentRequest()) return;
       const assistantMessage: ProjectSession["messages"][number] = {
         id: assistantId,
         role: "assistant",
@@ -437,28 +532,30 @@ export const ProjectsScreen: React.FC<{
           : {}),
       };
       setProjects((prev) =>
-        prev.map((project) =>
-          project.id !== targetProject.id
-            ? project
-            : {
-                ...project,
-                sessions: (project.sessions || []).map((session) =>
-                  session.id === newSessionId
-                    ? {
-                        ...session,
-                        messages: [userMessage, assistantMessage],
-                        updatedAt: Date.now(),
-                      }
-                    : session
-                ),
-                updatedAt: Date.now(),
-              }
-        )
+        isCurrentRequest()
+          ? prev.map((project) =>
+              project.id !== targetProject.id
+                ? project
+                : {
+                    ...project,
+                    sessions: (project.sessions || []).map((session) =>
+                      session.id === newSessionId
+                        ? {
+                            ...session,
+                            messages: [userMessage, assistantMessage],
+                            updatedAt: Date.now(),
+                          }
+                        : session
+                    ),
+                    updatedAt: Date.now(),
+                  }
+            )
+          : prev
       );
     };
 
     try {
-      const providerConfig = getProviderChatRequestConfig(modelId);
+      const providerConfig = getProviderChatRequestConfig(modelId, requestUserId);
       const imageAttachments = chatImageAttachments([
         ...attachments,
         ...(targetProject.files || []),
@@ -483,8 +580,8 @@ export const ProjectsScreen: React.FC<{
           },
         }),
       };
-      const response = await (user
-        ? authenticatedChatFetch("/api/chat/stream", requestInit)
+      const response = await (requestUserId
+        ? authenticatedChatFetch("/api/chat/stream", requestInit, requestUserId)
         : fetch("/api/chat/stream", requestInit));
 
       if (!response.ok) {
@@ -546,24 +643,36 @@ export const ProjectsScreen: React.FC<{
       }
     } finally {
       window.clearTimeout(requestTimeoutId);
-      userStoppedInitialRequestRef.current = false;
-      initialRequestControllerRef.current = null;
-      setGeneratingSessionId((current) => (current === newSessionId ? null : current));
+      if (initialRequestControllerRef.current === controller) {
+        userStoppedInitialRequestRef.current = false;
+        initialRequestControllerRef.current = null;
+      }
+      if (isCurrentRequest()) {
+        setGeneratingSessionId((current) => (current === newSessionId ? null : current));
+      }
     }
   };
 
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    const expectedUserId = currentUserId;
+    if (currentUidRef.current !== expectedUserId) return;
     setProjects((prev) => {
+      if (currentUidRef.current !== expectedUserId) return prev;
       const next = prev.filter((p) => p.id !== id);
-      try {
-        saveLocalProjects(next);
-      } catch {
-        // ignore
+      if (
+        currentUidRef.current === expectedUserId &&
+        shouldPersistProjectsLocally(expectedUserId, loadedAccountUid)
+      ) {
+        try {
+          saveLocalProjects(next);
+        } catch {
+          // ignore
+        }
       }
       return next;
     });
-    setCardMenuOpenId(null);
+    setCardMenuOpenId((current) => (currentUidRef.current === expectedUserId ? null : current));
   };
 
   const retryProjectSync = () => {
@@ -589,7 +698,11 @@ export const ProjectsScreen: React.FC<{
       </div>
     ) : null;
 
-  if (authLoading || loadingAccountProjects) {
+  if (
+    authLoading ||
+    loadingAccountProjects ||
+    !isProjectDataReadyForIdentity(user?.uid ?? null, loadedAccountUid)
+  ) {
     return (
       <div
         role="status"
@@ -649,15 +762,24 @@ export const ProjectsScreen: React.FC<{
             setViewState("session");
           }}
           onUpdateProject={(updated) => {
-            setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+            if (currentUidRef.current !== (user?.uid ?? null)) return;
+            setProjects((prev) =>
+              currentUidRef.current === (user?.uid ?? null)
+                ? prev.map((p) => (p.id === updated.id ? updated : p))
+                : prev
+            );
           }}
           onDeleteProject={(pId) => {
+            if (currentUidRef.current !== (user?.uid ?? null)) return;
             setProjects((prev) => {
+              if (currentUidRef.current !== (user?.uid ?? null)) return prev;
               const next = prev.filter((p) => p.id !== pId);
-              try {
-                saveLocalProjects(next);
-              } catch {
-                // ignore
+              if (shouldPersistProjectsLocally(user?.uid ?? null, loadedAccountUid)) {
+                try {
+                  saveLocalProjects(next);
+                } catch {
+                  // ignore
+                }
               }
               return next;
             });
@@ -685,7 +807,10 @@ export const ProjectsScreen: React.FC<{
           onOpenArtifacts={onOpenArtifacts}
           isInitialGenerating={generatingSessionId === activeSession.id}
           onStopInitialGeneration={() => {
-            if (generatingSessionId === activeSession.id) {
+            if (
+              currentUidRef.current === (user?.uid ?? null) &&
+              generatingSessionId === activeSession.id
+            ) {
               userStoppedInitialRequestRef.current = true;
               initialRequestControllerRef.current?.abort();
             }
@@ -694,19 +819,15 @@ export const ProjectsScreen: React.FC<{
             setViewState("workspace");
           }}
           onUpdateSession={(updatedSess) => {
-            const updatedSessions = (activeProject.sessions || []).map((s) =>
-              s.id === updatedSess.id ? updatedSess : s
-            );
-            const updatedProject: ProjectItem = {
-              ...activeProject,
-              sessions: updatedSessions,
-              updatedAt: Date.now(),
-            };
+            if (currentUidRef.current !== (user?.uid ?? null)) return;
             setProjects((prev) =>
-              prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+              currentUidRef.current === (user?.uid ?? null)
+                ? applyProjectSessionUpdate(prev, activeProject.id, updatedSess)
+                : prev
             );
           }}
           onDeleteSession={(sId) => {
+            if (currentUidRef.current !== (user?.uid ?? null)) return;
             const remaining = (activeProject.sessions || []).filter((s) => s.id !== sId);
             const updatedProject: ProjectItem = {
               ...activeProject,
@@ -715,7 +836,9 @@ export const ProjectsScreen: React.FC<{
               updatedAt: Date.now(),
             };
             setProjects((prev) =>
-              prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+              currentUidRef.current === (user?.uid ?? null)
+                ? prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+                : prev
             );
             setViewState("workspace");
           }}
@@ -1019,7 +1142,7 @@ export const ProjectsScreen: React.FC<{
       </div>
 
       {/* Create project dialog */}
-      {isCreateModalOpen && (
+      {visibleCreateModal && (
         <div
           role="dialog"
           aria-modal="true"

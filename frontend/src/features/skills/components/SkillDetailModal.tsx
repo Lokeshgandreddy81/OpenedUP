@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Plus, Check, FileCode, Loader2, Wrench, Bot, Copy, Trash2 } from "lucide-react";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import {
   getSkillContents,
   addDirectorySkillToLibrary,
@@ -29,8 +30,19 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
   onSkillDeleted,
   isAlreadyAdded = false,
 }) => {
+  const { user } = useChatAuth();
+  const userId = user?.uid;
+  const currentUserIdRef = useRef(userId);
+  currentUserIdRef.current = userId;
   const [activeTab, setActiveTab] = useState<"overview" | "contents" | "agents">("overview");
-  const [skillData, setSkillData] = useState<SkillContents | null>(null);
+  const [skillDataState, setSkillDataState] = useState<{
+    userId: string | undefined;
+    skillId: string;
+    skill: SkillContents | null;
+  }>({ userId, skillId, skill: null });
+  const hasCurrentSkillData =
+    skillDataState.userId === userId && skillDataState.skillId === skillId;
+  const skillData = hasCurrentSkillData ? skillDataState.skill : null;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFilePath, setSelectedFilePath] = useState<string>("SKILL.md");
@@ -38,8 +50,14 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
   const [added, setAdded] = useState(isAlreadyAdded);
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const visibleError = hasCurrentSkillData ? error : null;
+  const visibleIsLoading = !hasCurrentSkillData || isLoading;
+  const visibleAdded = hasCurrentSkillData ? added : isAlreadyAdded;
+  const visibleIsAdding = hasCurrentSkillData && isAdding;
+  const visibleIsDeleting = hasCurrentSkillData && isDeleting;
 
   const handleDelete = async () => {
+    const requestUserId = userId;
     if (
       !confirm(
         `Are you sure you want to delete '${skillData?.name || "this skill"}'? This cannot be undone.`
@@ -49,55 +67,67 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
     }
     setIsDeleting(true);
     try {
-      await deleteSkill(skillId);
+      await deleteSkill(skillId, requestUserId);
+      if (currentUserIdRef.current !== requestUserId) return;
       onSkillDeleted?.(skillId);
       onClose();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete skill");
+      if (currentUserIdRef.current === requestUserId) {
+        alert(err instanceof Error ? err.message : "Failed to delete skill");
+      }
     } finally {
-      setIsDeleting(false);
+      if (currentUserIdRef.current === requestUserId) setIsDeleting(false);
     }
   };
 
   useEffect(() => {
     let cancelled = false;
+    const requestUserId = userId;
     setIsLoading(true);
     setError(null);
+    setSkillDataState({ userId: requestUserId, skillId, skill: null });
+    setAdded(isAlreadyAdded);
+    setIsAdding(false);
+    setIsDeleting(false);
 
-    getSkillContents(skillId)
+    getSkillContents(skillId, requestUserId)
       .then((data) => {
-        if (!cancelled) {
-          setSkillData(data);
+        if (!cancelled && currentUserIdRef.current === requestUserId) {
+          setSkillDataState({ userId: requestUserId, skillId, skill: data });
           if (data.files && data.files.length > 0) {
             setSelectedFilePath(data.files[0].relativePath);
           }
         }
       })
       .catch((err) => {
-        if (!cancelled) {
+        if (!cancelled && currentUserIdRef.current === requestUserId) {
           setError(err instanceof Error ? err.message : "Failed to load skill contents");
         }
       })
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled && currentUserIdRef.current === requestUserId) setIsLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [skillId]);
+  }, [isAlreadyAdded, skillId, userId]);
 
   const handleAdd = async () => {
-    if (added || isAdding) return;
+    if (visibleAdded || visibleIsAdding) return;
+    const requestUserId = userId;
     setIsAdding(true);
     try {
-      const copy = await addDirectorySkillToLibrary(skillId);
+      const copy = await addDirectorySkillToLibrary(skillId, requestUserId);
+      if (currentUserIdRef.current !== requestUserId) return;
       setAdded(true);
       onSkillAdded?.(copy);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to add to library");
+      if (currentUserIdRef.current === requestUserId) {
+        alert(err instanceof Error ? err.message : "Failed to add to library");
+      }
     } finally {
-      setIsAdding(false);
+      if (currentUserIdRef.current === requestUserId) setIsAdding(false);
     }
   };
 
@@ -140,11 +170,11 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={isDeleting}
+                disabled={visibleIsDeleting}
                 className="h-10 px-4 rounded-xl text-xs sm:text-[13px] font-medium text-neutral-800 hover:text-neutral-950 bg-neutral-100 hover:bg-neutral-200/80 border border-neutral-200/70 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="Delete this skill"
               >
-                {isDeleting ? (
+                {visibleIsDeleting ? (
                   <Loader2 size={14} className="animate-spin text-neutral-700" />
                 ) : (
                   <Trash2 size={14} className="text-neutral-700" />
@@ -156,19 +186,19 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
             <button
               type="button"
               onClick={handleAdd}
-              disabled={added || isAdding}
+              disabled={visibleAdded || visibleIsAdding}
               className={`h-10 px-5 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer shadow-xs ${
-                added
+                visibleAdded
                   ? "bg-neutral-100 text-neutral-500 cursor-default"
                   : "bg-neutral-950 hover:bg-neutral-800 text-white"
               }`}
             >
-              {added ? (
+              {visibleAdded ? (
                 <>
                   <Check size={15} className="text-neutral-500" />
                   <span>Added</span>
                 </>
-              ) : isAdding ? (
+              ) : visibleIsAdding ? (
                 <>
                   <Loader2 size={15} className="animate-spin" />
                   <span>Adding...</span>
@@ -241,14 +271,14 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
 
         {/* Body content */}
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {isLoading ? (
+          {visibleIsLoading ? (
             <div className="flex flex-col items-center justify-center flex-1 py-16 text-neutral-400">
               <Loader2 size={28} className="animate-spin text-neutral-900 mb-3" />
               <p className="text-sm">Loading package contents...</p>
             </div>
-          ) : error ? (
+          ) : visibleError ? (
             <div className="p-6">
-              <div className="p-4 bg-rose-50 rounded-2xl text-rose-700 text-sm">{error}</div>
+              <div className="p-4 bg-rose-50 rounded-2xl text-rose-700 text-sm">{visibleError}</div>
             </div>
           ) : activeTab === "overview" ? (
             <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1">

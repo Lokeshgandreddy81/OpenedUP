@@ -70,14 +70,36 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     () => getSavedWorkspaceSession()?.accountEmail ?? null
   );
   const authenticatedUserIdRef = useRef<string | null>(null);
+  const hasResolvedAuthIdentityRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToChatAuth((user) => {
+      const nextUserId = user?.id ?? null;
+      const previousUserId = authenticatedUserIdRef.current;
+      if (hasResolvedAuthIdentityRef.current && previousUserId !== nextUserId) {
+        pipelineRunIdRef.current++;
+        photosRef.current.forEach((photo) => {
+          if (photo.objectUrl.startsWith("blob:")) URL.revokeObjectURL(photo.objectUrl);
+        });
+        clearDocumentCache();
+        clearPdfDocumentCache();
+        receiptsByPhotoIdRef.current.clear();
+        photosRef.current = [];
+        rowsRef.current = [];
+        setPhotos([]);
+        setRows([]);
+        setTotalReceiptsFound(0);
+        setRecentDiscoveries([]);
+        setFailedBatches([]);
+        setDuplicateReviewError(null);
+        setReadingPhase("idle");
+      }
       if (!user || (authenticatedUserIdRef.current && authenticatedUserIdRef.current !== user.id)) {
         clearSavedWorkspaceSession();
         setConnectedEmail(null);
       }
-      authenticatedUserIdRef.current = user?.id ?? null;
+      authenticatedUserIdRef.current = nextUserId;
+      hasResolvedAuthIdentityRef.current = true;
     });
     return () => unsubscribe();
   }, []);
@@ -97,15 +119,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const requestReadBatch = async (
     batch: UploadedPhoto[],
-    totalPhotosCount: number
+    totalPhotosCount: number,
+    accountUserId: string | null
   ): Promise<RawReceiptFromModel[]> => {
-    const providerConfig = getProviderChatRequestConfig(receiptModel);
+    const providerConfig = getProviderChatRequestConfig(receiptModel, accountUserId);
     const photosForRequest = await Promise.all(
       batch.map(async (photo) => {
         const mimeType = photo.mimeType || "image/jpeg";
         const fileBlob = photo.base64Data ? base64ToBlob(photo.base64Data, mimeType) : photo.file;
         if (!fileBlob) throw new Error(`Could not load ${photo.name} for upload.`);
-        const storagePath = await uploadBlobForProcessing(fileBlob, photo.name, "image");
+        const storagePath = await uploadBlobForProcessing(
+          fileBlob,
+          photo.name,
+          "image",
+          accountUserId ?? undefined
+        );
         return {
           globalIndex: photo.globalIndex,
           totalPhotos: totalPhotosCount,
@@ -126,8 +154,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       body: JSON.stringify(payload),
     };
     const idToken = await getSupabaseAccessToken();
+    if (idToken && !accountUserId) {
+      throw new Error("The signed-in account changed. Retry this receipt batch.");
+    }
     const res = idToken
-      ? await authenticatedChatFetch("/api/read-receipts", requestInit)
+      ? await authenticatedChatFetch("/api/read-receipts", requestInit, accountUserId ?? undefined)
       : await fetch("/api/read-receipts", requestInit);
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
@@ -137,12 +168,20 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return Array.isArray(data.receipts) ? data.receipts : [];
   };
 
-  const requestParsePdf = async (photo: UploadedPhoto): Promise<ParsedPdfResult> => {
-    const providerConfig = getProviderChatRequestConfig(receiptModel);
+  const requestParsePdf = async (
+    photo: UploadedPhoto,
+    accountUserId: string | null
+  ): Promise<ParsedPdfResult> => {
+    const providerConfig = getProviderChatRequestConfig(receiptModel, accountUserId);
     const pdfBlob =
       photo.file || (photo.base64Data ? base64ToBlob(photo.base64Data, "application/pdf") : null);
     if (!pdfBlob) throw new Error(`Could not load ${photo.name} for upload.`);
-    const storagePath = await uploadBlobForProcessing(pdfBlob, photo.name, "pdf");
+    const storagePath = await uploadBlobForProcessing(
+      pdfBlob,
+      photo.name,
+      "pdf",
+      accountUserId ?? undefined
+    );
     const payload = {
       mimeType: "application/pdf",
       storagePath,
@@ -156,8 +195,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       body: JSON.stringify(payload),
     };
     const idToken = await getSupabaseAccessToken();
+    if (idToken && !accountUserId) {
+      throw new Error("The signed-in account changed. Retry this PDF.");
+    }
     const response = idToken
-      ? await authenticatedChatFetch("/api/parse-pdf-chapters", requestInit)
+      ? await authenticatedChatFetch(
+          "/api/parse-pdf-chapters",
+          requestInit,
+          accountUserId ?? undefined
+        )
       : await fetch("/api/parse-pdf-chapters", requestInit);
 
     if (!response.ok) {
@@ -173,9 +219,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const finalizeMergedReceiptsAndTransition = async (
     runId: number,
+    accountUserId: string | null,
     activePhotosSnapshot?: UploadedPhoto[]
   ) => {
-    if (pipelineRunIdRef.current !== runId) return;
+    const isCurrentIdentity = () =>
+      pipelineRunIdRef.current === runId && authenticatedUserIdRef.current === accountUserId;
+    if (!isCurrentIdentity()) return;
 
     const orderedPhotos = [...(activePhotosSnapshot ?? photosRef.current)].sort(
       (a, b) => a.globalIndex - b.globalIndex
@@ -270,7 +319,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
       if (sortedInitialRows.length >= 2 && hasCandidatePair) {
         try {
-          const providerConfig = getProviderChatRequestConfig(receiptModel);
+          const providerConfig = getProviderChatRequestConfig(receiptModel, accountUserId);
           const requestInit: RequestInit = {
             method: "POST",
             headers: providerConfig.headers,
@@ -293,9 +342,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           };
           // Signed-in users can resolve saved vault credentials; anonymous users send BYOK headers.
           const idToken = await getSupabaseAccessToken();
+          if (!isCurrentIdentity()) return;
+          if (idToken && !accountUserId) {
+            throw new Error("The signed-in account changed. Retry duplicate review.");
+          }
           const dupRes = idToken
-            ? await authenticatedChatFetch("/api/check-duplicates", requestInit)
+            ? await authenticatedChatFetch(
+                "/api/check-duplicates",
+                requestInit,
+                accountUserId ?? undefined
+              )
             : await fetch("/api/check-duplicates", requestInit);
+          if (!isCurrentIdentity()) return;
           if (!dupRes.ok) {
             const failure = (await dupRes.json().catch(() => null)) as { error?: unknown } | null;
             throw new Error(
@@ -305,11 +363,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             );
           }
           const dupData = (await dupRes.json()) as { duplicates?: unknown };
+          if (!isCurrentIdentity()) return;
           if (!Array.isArray(dupData.duplicates)) {
             throw new Error("The selected model returned an invalid duplicate review response.");
           }
           modelDuplicates = dupData.duplicates;
         } catch (e) {
+          if (!isCurrentIdentity()) return;
           const message = e instanceof Error ? e.message : "Duplicate review failed.";
           setDuplicateReviewError(message);
           console.warn("Duplicate review failed; retaining deterministic receipt checks.");
@@ -317,7 +377,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       }
     }
 
-    if (pipelineRunIdRef.current !== runId) return;
+    if (!isCurrentIdentity()) return;
 
     setReadingPhase("adding_up");
     const verifiedRows = applyCodeVerifiedDuplicates(sortedInitialRows, modelDuplicates);
@@ -345,6 +405,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       allPhotosSnapshot?: UploadedPhoto[]
     ) => {
       const runId = ++pipelineRunIdRef.current;
+      const accountUserId = authenticatedUserIdRef.current;
+      const isCurrentIdentity = () =>
+        pipelineRunIdRef.current === runId && authenticatedUserIdRef.current === accountUserId;
       setReadingPhase("reading_photos");
       setFailedBatches([]);
 
@@ -376,7 +439,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         })
       );
 
-      if (pipelineRunIdRef.current !== runId) return;
+      if (!isCurrentIdentity()) return;
 
       const processedById = new Map<string, UploadedPhoto>();
       const failedPrepIds = new Map<string, string>();
@@ -427,7 +490,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
       const worker = async () => {
         while (nextBatchIndex < batches.length) {
-          if (pipelineRunIdRef.current !== runId) return;
+          if (!isCurrentIdentity()) return;
           const bIdx = nextBatchIndex++;
           const batch = batches[bIdx];
           const batchPhotoIds = new Set(batch.map((p) => p.id));
@@ -445,8 +508,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
             if (isSinglePdf) {
               const pdfPhoto = batch[0];
-              const parsedPdf = await requestParsePdf(pdfPhoto);
-              if (pipelineRunIdRef.current !== runId) return;
+              const parsedPdf = await requestParsePdf(pdfPhoto, accountUserId);
+              if (!isCurrentIdentity()) return;
 
               const rawChapters = parsedPdf.chapters || [];
               const chaptersWithDoc = rawChapters.map((ch) => ({
@@ -523,9 +586,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 };
               });
             } else {
-              batchReceipts = await requestReadBatch(batch, totalCount);
+              batchReceipts = await requestReadBatch(batch, totalCount, accountUserId);
             }
-            if (pipelineRunIdRef.current !== runId) return;
+            if (!isCurrentIdentity()) return;
 
             const byPhotoId = new Map<string, RawReceiptFromModel[]>();
             for (const p of batch) {
@@ -584,7 +647,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
               return next;
             });
           } catch (err: unknown) {
-            if (pipelineRunIdRef.current !== runId) return;
+            if (!isCurrentIdentity()) return;
             const message = err instanceof Error ? err.message : "Batch read failed";
             const startPhotoIndex = batch[0].globalIndex;
             const endPhotoIndex = batch[batch.length - 1].globalIndex;
@@ -612,7 +675,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       );
       await Promise.all(workers);
 
-      if (pipelineRunIdRef.current !== runId) return;
+      if (!isCurrentIdentity()) return;
 
       if (newFailedBatches.length > 0) {
         setFailedBatches(newFailedBatches);
@@ -624,14 +687,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           receiptsByPhotoIdRef.current.size > 0 ||
           rowsRef.current.length > 0
         ) {
-          await finalizeMergedReceiptsAndTransition(runId, allPhotosSnapshot);
+          await finalizeMergedReceiptsAndTransition(runId, accountUserId, allPhotosSnapshot);
         } else {
           setReadingPhase("idle");
         }
         return;
       }
 
-      await finalizeMergedReceiptsAndTransition(runId, allPhotosSnapshot);
+      await finalizeMergedReceiptsAndTransition(runId, accountUserId, allPhotosSnapshot);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [reducedMotion, receiptModel]
@@ -781,7 +844,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     if (pendingPhotos.length === 0) {
       const runId = ++pipelineRunIdRef.current;
       setFailedBatches([]);
-      void finalizeMergedReceiptsAndTransition(runId, photos);
+      void finalizeMergedReceiptsAndTransition(runId, authenticatedUserIdRef.current, photos);
       return;
     }
     if (pendingPhotos.length < photos.length) {

@@ -54,7 +54,7 @@ test("Skills E2E Integration - Full progressive loading & multi-tool workflow", 
     assert.ok(csvSkill, "csv-summary skill should be seeded");
     await repo.setConversationSkills(conversationId, [csvSkill.id], userId);
 
-    const enabledSkills = await repo.getConversationSkills(conversationId);
+    const enabledSkills = await repo.getConversationSkills(conversationId, userId);
     assert.equal(enabledSkills.length, 1);
     assert.equal(enabledSkills[0]?.name, "csv-summary");
 
@@ -180,7 +180,7 @@ test("Skills E2E Integration - Full progressive loading & multi-tool workflow", 
         tools: allTools,
         repo,
         executeCustomTool: (name, input) =>
-          executeSandboxTool(name, input, conversationId, sandboxPaths, repo),
+          executeSandboxTool(name, input, conversationId, sandboxPaths, repo, userId),
       });
 
       assert.equal(loopResult.stopReason, "end_turn");
@@ -232,7 +232,7 @@ test("Skills E2E Security - Unauthorized skill access is strictly blocked", asyn
 
     // Bob tries to force-enable Alice's private skill
     // The prompt builder must never see Alice's skill for Bob
-    const bobEnabled = await repo.getConversationSkills("conv-bob-99");
+    const bobEnabled = await repo.getConversationSkills("conv-bob-99", "user-bob");
     const bobPrompt = buildSkillsPrompt(bobEnabled);
     assert.ok(!bobPrompt.includes("alice-confidential"));
   } finally {

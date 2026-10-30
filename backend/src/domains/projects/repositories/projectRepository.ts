@@ -26,6 +26,17 @@ export class ProjectRepository {
 
   async replace(userId: string, request: ReplaceProjectsRequest): Promise<ProjectSnapshot[]> {
     await this.db.transaction(async (tx) => {
+      const retainedProjectIds = request.projects.map((project) => project.id);
+      if (retainedProjectIds.length === 0) {
+        await tx.run("DELETE FROM project_skills WHERE user_id = ?", [userId]);
+      } else {
+        const placeholders = retainedProjectIds.map(() => "?").join(", ");
+        await tx.run(
+          `DELETE FROM project_skills
+           WHERE user_id = ? AND project_id NOT IN (${placeholders})`,
+          [userId, ...retainedProjectIds]
+        );
+      }
       await tx.run("DELETE FROM project_snapshots WHERE user_id = ?", [userId]);
       for (const project of request.projects) {
         await tx.run(

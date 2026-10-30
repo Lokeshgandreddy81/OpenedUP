@@ -19,6 +19,7 @@ import {
 } from "@charan-interiors/contracts";
 import { CreatorLogo } from "../../benchmarks/publicApi";
 import { useProviderKeys } from "../services/keyStore";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 
 import { CustomizeSkillsTab } from "../../skills";
 
@@ -78,6 +79,10 @@ const PROVIDER_LOGO_CREATOR: Record<ProviderId, string> = {
 export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   initialCategory = "Providers",
 }) => {
+  const { user } = useChatAuth();
+  const userId = user?.uid;
+  const currentUserIdRef = useRef<string | undefined>(userId);
+  currentUserIdRef.current = userId;
   const [activeCategory, setActiveCategory] = useState<CustomizeCategory>(initialCategory);
   const [subTab, setSubTab] = useState<CustomizeSubTab>("Discover");
   const [expandedProviderId, setExpandedProviderId] = useState<ProviderId | null>("anthropic");
@@ -102,11 +107,29 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   const [draftKeys, setDraftKeys] = useState<Partial<Record<ProviderId, string>>>({});
   const [draftUrls, setDraftUrls] = useState<Partial<Record<ProviderId, string>>>({});
   const [revealedMap, setRevealedMap] = useState<Partial<Record<ProviderId, boolean>>>({});
+  const [draftOwnerId, setDraftOwnerId] = useState<string | null>(userId ?? null);
   const [isSavingMap, setIsSavingMap] = useState<Partial<Record<ProviderId, boolean>>>({});
   const [saveErrorMap, setSaveErrorMap] = useState<Partial<Record<ProviderId, string>>>({});
   const [selectedModelMap, setSelectedModelMap] = useState<Partial<Record<ProviderId, string>>>({});
   const [openModelDropdownId, setOpenModelDropdownId] = useState<ProviderId | null>(null);
   const [customProviderDropdownOpen, setCustomProviderDropdownOpen] = useState(false);
+  const hasCurrentDrafts = draftOwnerId === (userId ?? null);
+  const visibleDraftKeys = hasCurrentDrafts ? draftKeys : {};
+  const visibleDraftUrls = hasCurrentDrafts ? draftUrls : {};
+  const visibleRevealedMap = hasCurrentDrafts ? revealedMap : {};
+  const visibleIsSavingMap = hasCurrentDrafts ? isSavingMap : {};
+  const visibleSaveErrorMap = hasCurrentDrafts ? saveErrorMap : {};
+
+  useEffect(() => {
+    setDraftOwnerId(userId ?? null);
+    setDraftKeys({});
+    setDraftUrls({});
+    setRevealedMap({});
+    setIsSavingMap({});
+    setSaveErrorMap({});
+    setSelectedModelMap({});
+    setOpenModelDropdownId(null);
+  }, [userId]);
 
   // Skills synchronization
   const [skillsCount, setSkillsCount] = useState<number>(0);
@@ -172,88 +195,118 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
   }, [initialCategory]);
 
   const handleSaveProvider = async (providerId: ProviderId) => {
-    const rawKey = draftKeys[providerId] ?? keys[providerId] ?? "";
-    const rawUrl = draftUrls[providerId] ?? baseUrls[providerId];
+    const requestUserId = userId ?? null;
+    if (currentUserIdRef.current !== userId || draftOwnerId !== requestUserId) return;
+    const rawKey = visibleDraftKeys[providerId] ?? keys[providerId] ?? "";
+    const rawUrl = visibleDraftUrls[providerId] ?? baseUrls[providerId];
     const endpointOnlyUpdate = !rawKey.trim() && hasKey(providerId) && Boolean(rawUrl);
     if (!rawKey.trim() && !endpointOnlyUpdate) return;
 
-    setIsSavingMap((prev) => ({ ...prev, [providerId]: true }));
+    setIsSavingMap((prev) =>
+      currentUserIdRef.current === userId ? { ...prev, [providerId]: true } : prev
+    );
     try {
       if (rawKey.trim()) await setProviderKey(providerId, rawKey.trim(), rawUrl);
       else await setProviderEndpoint(providerId, rawUrl!);
+      if (currentUserIdRef.current !== userId) return;
 
       setSaveErrorMap((prev) => {
+        if (currentUserIdRef.current !== userId) return prev;
         const next = { ...prev };
         delete next[providerId];
         return next;
       });
       setDraftKeys((prev) => {
+        if (currentUserIdRef.current !== userId) return prev;
         const next = { ...prev };
         delete next[providerId];
         return next;
       });
       setDraftUrls((prev) => {
+        if (currentUserIdRef.current !== userId) return prev;
         const next = { ...prev };
         delete next[providerId];
         return next;
       });
     } catch (error) {
-      setSaveErrorMap((prev) => ({
-        ...prev,
-        [providerId]:
-          error instanceof Error
-            ? `${error.message}. Please check that your API key is valid and has not expired, or verify network connection.`
-            : "Could not save provider key. Please check your network connection and verify your key.",
-      }));
+      if (currentUserIdRef.current !== userId) return;
+      setSaveErrorMap((prev) =>
+        currentUserIdRef.current === userId
+          ? {
+              ...prev,
+              [providerId]:
+                error instanceof Error ? error.message : "Could not save provider settings.",
+            }
+          : prev
+      );
     } finally {
-      setIsSavingMap((prev) => ({ ...prev, [providerId]: false }));
+      setIsSavingMap((prev) =>
+        currentUserIdRef.current === userId ? { ...prev, [providerId]: false } : prev
+      );
     }
   };
 
   const handleRemoveProvider = async (providerId: ProviderId) => {
-    setIsSavingMap((prev) => ({ ...prev, [providerId]: true }));
+    const requestUserId = userId ?? null;
+    if (currentUserIdRef.current !== userId || draftOwnerId !== requestUserId) return;
+    setIsSavingMap((prev) =>
+      currentUserIdRef.current === userId ? { ...prev, [providerId]: true } : prev
+    );
     try {
       await deleteProviderKey(providerId);
+      if (currentUserIdRef.current !== userId) return;
       setDraftKeys((prev) => {
+        if (currentUserIdRef.current !== userId) return prev;
         const next = { ...prev };
         delete next[providerId];
         return next;
       });
       setDraftUrls((prev) => {
+        if (currentUserIdRef.current !== userId) return prev;
         const next = { ...prev };
         delete next[providerId];
         return next;
       });
       setSaveErrorMap((prev) => {
+        if (currentUserIdRef.current !== userId) return prev;
         const next = { ...prev };
         delete next[providerId];
         return next;
       });
     } catch (error) {
-      setSaveErrorMap((prev) => ({
-        ...prev,
-        [providerId]:
-          error instanceof Error
-            ? `${error.message}. Please check your connection and try again.`
-            : "Could not remove provider key. Please check your connection and try again.",
-      }));
+      if (currentUserIdRef.current !== userId) return;
+      setSaveErrorMap((prev) =>
+        currentUserIdRef.current === userId
+          ? {
+              ...prev,
+              [providerId]:
+                error instanceof Error ? error.message : "Could not remove provider key.",
+            }
+          : prev
+      );
     } finally {
-      setIsSavingMap((prev) => ({ ...prev, [providerId]: false }));
+      setIsSavingMap((prev) =>
+        currentUserIdRef.current === userId ? { ...prev, [providerId]: false } : prev
+      );
     }
   };
 
   const handleDiscardDraft = (providerId: ProviderId) => {
+    if (currentUserIdRef.current !== userId) return;
     setDraftKeys((prev) => {
+      if (currentUserIdRef.current !== userId) return prev;
       const next = { ...prev };
       delete next[providerId];
       return next;
     });
     setDraftUrls((prev) => {
+      if (currentUserIdRef.current !== userId) return prev;
       const next = { ...prev };
       delete next[providerId];
       return next;
     });
     setSaveErrorMap((prev) => {
+      if (currentUserIdRef.current !== userId) return prev;
       const next = { ...prev };
       delete next[providerId];
       return next;
@@ -767,23 +820,27 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 const isAccountConnected = hasAccountKey(provider.id);
                 const savedKey = keys[provider.id] || "";
                 const currentInput =
-                  draftKeys[provider.id] !== undefined ? draftKeys[provider.id]! : savedKey;
+                  visibleDraftKeys[provider.id] !== undefined
+                    ? visibleDraftKeys[provider.id]!
+                    : savedKey;
                 const savedEndpoint = baseUrls[provider.id] || provider.defaultBaseUrl;
                 const currentUrl =
-                  draftUrls[provider.id] !== undefined ? draftUrls[provider.id]! : savedEndpoint;
-                const isRevealed = Boolean(revealedMap[provider.id]);
-                const isSaving = Boolean(isSavingMap[provider.id]);
+                  visibleDraftUrls[provider.id] !== undefined
+                    ? visibleDraftUrls[provider.id]!
+                    : savedEndpoint;
+                const isRevealed = Boolean(visibleRevealedMap[provider.id]);
+                const isSaving = Boolean(visibleIsSavingMap[provider.id]);
                 const endpointChanged =
-                  draftUrls[provider.id] !== undefined &&
-                  draftUrls[provider.id]!.trim() !== savedEndpoint;
+                  visibleDraftUrls[provider.id] !== undefined &&
+                  visibleDraftUrls[provider.id]!.trim() !== savedEndpoint;
                 const hasKeyDraft =
-                  draftKeys[provider.id] !== undefined &&
-                  draftKeys[provider.id]!.trim() !== savedKey;
+                  visibleDraftKeys[provider.id] !== undefined &&
+                  visibleDraftKeys[provider.id]!.trim() !== savedKey;
                 const hasUnsavedDraft = hasKeyDraft || endpointChanged;
                 const canSaveProvider = Boolean(
                   currentInput.trim() || (isConnected && endpointChanged)
                 );
-                const saveError = saveErrorMap[provider.id];
+                const saveError = visibleSaveErrorMap[provider.id];
                 const models = getChatModelsForProvider(provider.id);
 
                 return (
@@ -880,12 +937,15 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                   id={`provider-key-${provider.id}`}
                                   type={isRevealed ? "text" : "password"}
                                   value={currentInput}
-                                  onChange={(e) =>
-                                    setDraftKeys((prev) => ({
-                                      ...prev,
-                                      [provider.id]: e.target.value,
-                                    }))
-                                  }
+                                  onChange={(e) => {
+                                    if (currentUserIdRef.current !== userId) return;
+                                    const value = e.target.value;
+                                    setDraftKeys((prev) =>
+                                      currentUserIdRef.current === userId
+                                        ? { ...prev, [provider.id]: value }
+                                        : prev
+                                    );
+                                  }}
                                   placeholder={
                                     isAccountConnected && !currentInput
                                       ? "••••••••••••••••"
@@ -895,12 +955,14 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                 />
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    setRevealedMap((prev) => ({
-                                      ...prev,
-                                      [provider.id]: !prev[provider.id],
-                                    }))
-                                  }
+                                  onClick={() => {
+                                    if (currentUserIdRef.current !== userId) return;
+                                    setRevealedMap((prev) =>
+                                      currentUserIdRef.current === userId
+                                        ? { ...prev, [provider.id]: !prev[provider.id] }
+                                        : prev
+                                    );
+                                  }}
                                   aria-label={isRevealed ? "Hide API key" : "Show API key"}
                                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
                                 >
@@ -1113,45 +1175,21 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-                                  <span className="select-none">Presets:</span>
+                                <div className="text-[11px] text-neutral-400">
+                                  <span className="select-none">Preset:</span>{" "}
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      setDraftUrls((prev) => ({
-                                        ...prev,
-                                        custom: "https://openrouter.ai/api/v1",
-                                      }))
-                                    }
+                                    onClick={() => {
+                                      if (currentUserIdRef.current !== userId) return;
+                                      setDraftUrls((prev) =>
+                                        currentUserIdRef.current === userId
+                                          ? { ...prev, custom: "https://openrouter.ai/api/v1" }
+                                          : prev
+                                      );
+                                    }}
                                     className="hover:text-neutral-900 cursor-pointer"
                                   >
                                     OpenRouter
-                                  </button>
-                                  <span>•</span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setDraftUrls((prev) => ({
-                                        ...prev,
-                                        custom: "http://localhost:11434/v1",
-                                      }))
-                                    }
-                                    className="hover:text-neutral-900 cursor-pointer"
-                                  >
-                                    Ollama
-                                  </button>
-                                  <span>•</span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setDraftUrls((prev) => ({
-                                        ...prev,
-                                        custom: "http://localhost:1234/v1",
-                                      }))
-                                    }
-                                    className="hover:text-neutral-900 cursor-pointer"
-                                  >
-                                    LM Studio
                                   </button>
                                 </div>
                               </div>
@@ -1171,12 +1209,15 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                 <input
                                   type="url"
                                   value={currentUrl}
-                                  onChange={(event) =>
-                                    setDraftUrls((prev) => ({
-                                      ...prev,
-                                      [provider.id]: event.target.value,
-                                    }))
-                                  }
+                                  onChange={(event) => {
+                                    if (currentUserIdRef.current !== userId) return;
+                                    const value = event.target.value;
+                                    setDraftUrls((prev) =>
+                                      currentUserIdRef.current === userId
+                                        ? { ...prev, [provider.id]: value }
+                                        : prev
+                                    );
+                                  }}
                                   placeholder={provider.defaultBaseUrl}
                                   aria-label={`${provider.name} API endpoint`}
                                   className="h-8 flex-1 px-3 bg-neutral-100 text-[12px] font-mono text-neutral-800 rounded-lg outline-none border-0"
@@ -1184,18 +1225,24 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                                 {currentUrl !== provider.defaultBaseUrl && (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      setDraftUrls((prev) => ({
-                                        ...prev,
-                                        [provider.id]: provider.defaultBaseUrl,
-                                      }))
-                                    }
+                                    onClick={() => {
+                                      if (currentUserIdRef.current !== userId) return;
+                                      setDraftUrls((prev) =>
+                                        currentUserIdRef.current === userId
+                                          ? { ...prev, [provider.id]: provider.defaultBaseUrl }
+                                          : prev
+                                      );
+                                    }}
                                     className="text-[11.5px] text-neutral-400 hover:text-neutral-800 cursor-pointer"
                                   >
                                     Reset
                                   </button>
                                 )}
                               </div>
+                              <p className="pt-1.5 text-[11px] text-neutral-400">
+                                Use a public HTTPS endpoint. Local and private network endpoints are
+                                blocked.
+                              </p>
                             </details>
                           </div>
                           {saveError && (

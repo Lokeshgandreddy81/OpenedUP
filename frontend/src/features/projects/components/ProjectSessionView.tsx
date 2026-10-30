@@ -142,7 +142,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
     userStoppedRequestRef.current = false;
     const requestTimeoutId = window.setTimeout(() => controller.abort(), 90_000);
     try {
-      const providerConfig = getProviderChatRequestConfig(model);
+      const providerConfig = getProviderChatRequestConfig(model, user?.uid ?? null);
       const imageAttachments = chatImageAttachments([...attachments, ...(project.files || [])]);
       const requestBody = JSON.stringify({
         messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -166,7 +166,7 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
         signal: controller.signal,
       };
       const response = await (user
-        ? authenticatedChatFetch("/api/chat/stream", requestInit)
+        ? authenticatedChatFetch("/api/chat/stream", requestInit, user.uid)
         : fetch("/api/chat/stream", requestInit));
 
       if (!response.ok) {
@@ -326,18 +326,21 @@ export const ProjectSessionView: React.FC<ProjectSessionViewProps> = ({
     const isCode = codeBlocks.length === 1;
     const category = isCode ? "Code" : "Documents";
     const { persistArtifactItem } = await import("../../artifacts");
-    await persistArtifactItem({
-      title: (
-        message.content.match(/^#{1,2}\s+(.+)$/m)?.[1]?.trim() ||
-        prompt ||
-        `${category} from chat`
-      ).slice(0, 100),
-      category,
-      content: isCode ? (codeBlocks[0]?.[2] || "").trim() : message.content,
-      language: isCode ? codeBlocks[0]?.[1]?.toLowerCase() || "text" : "markdown",
-      modelUsed: getKeyForModel(selectedModelId).modelName,
-      isShared: false,
-    });
+    await persistArtifactItem(
+      {
+        title: (
+          message.content.match(/^#{1,2}\s+(.+)$/m)?.[1]?.trim() ||
+          prompt ||
+          `${category} from chat`
+        ).slice(0, 100),
+        category,
+        content: isCode ? (codeBlocks[0]?.[2] || "").trim() : message.content,
+        language: isCode ? codeBlocks[0]?.[1]?.toLowerCase() || "text" : "markdown",
+        modelUsed: getKeyForModel(selectedModelId, user?.uid ?? null).modelName,
+        isShared: false,
+      },
+      user?.uid ?? null
+    );
   };
 
   return (

@@ -78,20 +78,20 @@ const CodingAgentsPage = lazyWithRetry(() =>
   }))
 );
 const AuthPage = lazyWithRetry(() =>
-  import("./features/auth/pages/AuthPage").then(({ AuthPage }) => ({ default: AuthPage }))
+  import("./features/auth").then(({ AuthPage }) => ({ default: AuthPage }))
 );
 const AuthCallbackPage = lazyWithRetry(() =>
-  import("./features/auth/pages/AuthCallbackPage").then(({ AuthCallbackPage }) => ({
+  import("./features/auth").then(({ AuthCallbackPage }) => ({
     default: AuthCallbackPage,
   }))
 );
 const PrivacyPolicyPage = lazyWithRetry(() =>
-  import("./features/legal/pages/PrivacyPolicyPage").then(({ PrivacyPolicyPage }) => ({
+  import("./features/legal").then(({ PrivacyPolicyPage }) => ({
     default: PrivacyPolicyPage,
   }))
 );
 const TermsOfServicePage = lazyWithRetry(() =>
-  import("./features/legal/pages/TermsOfServicePage").then(({ TermsOfServicePage }) => ({
+  import("./features/legal").then(({ TermsOfServicePage }) => ({
     default: TermsOfServicePage,
   }))
 );

@@ -10,6 +10,17 @@ export interface ChatAttachmentFile {
   previewUrl?: string;
 }
 
+export function revokeChatAttachmentPreviewUrls(
+  attachments: ChatAttachmentFile[],
+  retainedUrls: ReadonlySet<string> = new Set()
+): void {
+  for (const attachment of attachments) {
+    if (attachment.previewUrl?.startsWith("blob:") && !retainedUrls.has(attachment.previewUrl)) {
+      URL.revokeObjectURL(attachment.previewUrl);
+    }
+  }
+}
+
 const MAX_TEXT_FILE_BYTES = 100_000;
 const MAX_PDF_FILE_BYTES = 5_000_000;
 const MAX_IMAGE_FILE_BYTES = 10_000_000;

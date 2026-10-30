@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { deleteArtifactItem, getStoredArtifactVersions } from "./artifactStore";
+import {
+  deleteArtifactItem,
+  getStoredArtifactVersions,
+  getStoredArtifacts,
+  saveArtifactItem,
+} from "./artifactStore";
 
 function createStorage(): Storage {
   const values = new Map<string, string>();
@@ -46,5 +51,50 @@ test("deleting a local artifact also removes its saved version history", () => {
   assert.deepEqual(getStoredArtifactVersions("keep-artifact"), [
     { id: "kept-version", content: "keep" },
   ]);
+  delete (globalThis as { window?: Window }).window;
+});
+
+test("reserved legacy artifacts stay hidden from other accounts and anonymous writes", () => {
+  const storage = createStorage();
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { localStorage: storage, dispatchEvent: () => true } as unknown as Window,
+  });
+  storage.setItem("openedup_artifacts_v1:import-owner", "account-a");
+  const legacyArtifact = {
+    id: "legacy-private-artifact",
+    title: "Private legacy artifact",
+    category: "Documents",
+    content: "Account A content",
+    createdAt: 1,
+    updatedAt: 1,
+  };
+  storage.setItem("openedup_artifacts_v1", JSON.stringify([legacyArtifact]));
+
+  assert.deepEqual(getStoredArtifacts("account-a"), [legacyArtifact]);
+  assert.deepEqual(getStoredArtifacts("account-b"), []);
+  assert.deepEqual(getStoredArtifacts(null), []);
+
+  const anonymousArtifact = saveArtifactItem({
+    title: "Anonymous artifact",
+    category: "Documents",
+    content: "Anonymous content",
+  });
+
+  assert.deepEqual(JSON.parse(storage.getItem("openedup_artifacts_v1") || "[]"), [legacyArtifact]);
+  assert.deepEqual(getStoredArtifacts("account-b"), [
+    {
+      id: anonymousArtifact.id,
+      title: anonymousArtifact.title,
+      category: anonymousArtifact.category,
+      content: anonymousArtifact.content,
+      isShared: false,
+      isFavorite: false,
+      tags: [],
+      createdAt: anonymousArtifact.createdAt,
+      updatedAt: anonymousArtifact.updatedAt,
+    },
+  ]);
+  assert.deepEqual(getStoredArtifacts(null), getStoredArtifacts("account-b"));
   delete (globalThis as { window?: Window }).window;
 });

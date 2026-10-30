@@ -33,7 +33,8 @@ export async function handleSkillToolCall(
   skillName: string,
   conversationId: string,
   userId?: string | null,
-  repo: SkillRepository = new SkillRepository()
+  repo: SkillRepository = new SkillRepository(),
+  orgId?: string | null
 ): Promise<SkillToolResult> {
   const rateLimitStatus = checkSkillToolRateLimit(conversationId);
   if (!rateLimitStatus.allowed) {
@@ -52,7 +53,7 @@ export async function handleSkillToolCall(
   const cleanName = skillName.trim();
 
   // Fresh load from DB of this conversation's enabled skills
-  const enabledSkills = await repo.getConversationSkills(conversationId);
+  const enabledSkills = await repo.getConversationSkills(conversationId, userId, orgId);
   const matched = enabledSkills.find((s) => s.name === cleanName && s.isActive);
 
   if (!matched) {

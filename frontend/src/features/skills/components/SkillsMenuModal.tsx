@@ -14,6 +14,7 @@ export interface SkillsMenuModalProps {
   isOpen: boolean;
   onClose: () => void;
   conversationId: string;
+  userId?: string;
   enabledSkills: SkillItem[];
   onSkillsChange: (skills: SkillItem[]) => void;
 }
@@ -54,6 +55,7 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
   isOpen,
   onClose,
   conversationId,
+  userId,
   enabledSkills,
   onSkillsChange,
 }) => {
@@ -64,47 +66,99 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentUserIdRef = useRef(userId);
+  currentUserIdRef.current = userId;
+  const enabledSkillsIdentityRef = useRef(userId);
+  const blockedEnabledSkillsRef = useRef<SkillItem[] | null>(null);
+  if (enabledSkillsIdentityRef.current !== userId) {
+    enabledSkillsIdentityRef.current = userId;
+    blockedEnabledSkillsRef.current = enabledSkills;
+  } else if (blockedEnabledSkillsRef.current && blockedEnabledSkillsRef.current !== enabledSkills) {
+    blockedEnabledSkillsRef.current = null;
+  }
+  const [skillsUserId, setSkillsUserId] = useState(userId);
+  const hasCurrentUserSkills = skillsUserId === userId;
+  const visibleSkills = useMemo(
+    () => (hasCurrentUserSkills ? skills : []),
+    [hasCurrentUserSkills, skills]
+  );
+  const visibleIsLoading = !hasCurrentUserSkills || isLoading;
+  const visibleError = hasCurrentUserSkills ? error : null;
+  const visibleUploadError = hasCurrentUserSkills ? uploadError : null;
+  const visibleIsUploading = hasCurrentUserSkills && isUploading;
+  const isCurrentUser = (requestUserId: string | undefined) =>
+    currentUserIdRef.current === requestUserId;
 
-  const enabledIds = useMemo(() => new Set(enabledSkills.map((s) => s.id)), [enabledSkills]);
-
-  const loadSkills = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await getSkills({ scope: "user" });
-      setSkills(data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load skills.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const enabledSkillsForUser = useMemo(
+    () =>
+      enabledSkillsIdentityRef.current === userId &&
+      blockedEnabledSkillsRef.current !== enabledSkills
+        ? enabledSkills
+        : [],
+    [enabledSkills, userId]
+  );
+  const enabledIds = useMemo(
+    () => new Set(enabledSkillsForUser.map((s) => s.id)),
+    [enabledSkillsForUser]
+  );
 
   useEffect(() => {
-    if (isOpen) {
-      void loadSkills();
-    }
-  }, [isOpen]);
+    setSkillsUserId(userId);
+    setSkills([]);
+    setError(null);
+    setUploadError(null);
+    setIsUploading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const requestUserId = userId;
+    setIsLoading(true);
+    setError(null);
+    void getSkills({ scope: "user" }, requestUserId)
+      .then((data) => {
+        if (cancelled || currentUserIdRef.current !== requestUserId) return;
+        setSkills(data);
+        setSkillsUserId(requestUserId);
+      })
+      .catch((err: unknown) => {
+        if (cancelled || currentUserIdRef.current !== requestUserId) return;
+        setError(err instanceof Error ? err.message : "Failed to load skills.");
+      })
+      .finally(() => {
+        if (!cancelled && currentUserIdRef.current === requestUserId) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, userId]);
 
   const handleToggle = async (skill: SkillItem) => {
+    const requestUserId = userId;
     const isCurrentlyEnabled = enabledIds.has(skill.id);
     const updatedIds = isCurrentlyEnabled
-      ? enabledSkills.filter((s) => s.id !== skill.id).map((s) => s.id)
-      : [...enabledSkills.map((s) => s.id), skill.id];
+      ? enabledSkillsForUser.filter((s) => s.id !== skill.id).map((s) => s.id)
+      : [...enabledSkillsForUser.map((s) => s.id), skill.id];
 
     // Optimistic UI update
     const updatedSkills = isCurrentlyEnabled
-      ? enabledSkills.filter((s) => s.id !== skill.id)
-      : [...enabledSkills, skill];
+      ? enabledSkillsForUser.filter((s) => s.id !== skill.id)
+      : [...enabledSkillsForUser, skill];
     onSkillsChange(updatedSkills);
 
     const targetId = conversationId || "guest-chat";
     try {
-      const persisted = await setConversationSkills(targetId, updatedIds);
+      const persisted = await setConversationSkills(targetId, updatedIds, {
+        userId: requestUserId,
+        localSkills: updatedSkills,
+      });
+      if (!isCurrentUser(requestUserId)) return;
       onSkillsChange(persisted);
     } catch (err: unknown) {
+      if (!isCurrentUser(requestUserId)) return;
       // Rollback
-      onSkillsChange(enabledSkills);
+      onSkillsChange(enabledSkillsForUser);
       setError(err instanceof Error ? err.message : "Failed to toggle skill.");
     }
   };
@@ -112,12 +166,16 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
   const handleDelete = async (e: React.MouseEvent, skillId: string) => {
     e.stopPropagation();
     if (!confirm("Are you sure you want to delete this custom skill?")) return;
+    const requestUserId = userId;
     try {
-      await deleteSkill(skillId);
+      await deleteSkill(skillId, requestUserId);
+      if (!isCurrentUser(requestUserId)) return;
       setSkills((prev) => prev.filter((s) => s.id !== skillId));
-      onSkillsChange(enabledSkills.filter((s) => s.id !== skillId));
+      onSkillsChange(enabledSkillsForUser.filter((s) => s.id !== skillId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete skill.");
+      if (isCurrentUser(requestUserId)) {
+        setError(err instanceof Error ? err.message : "Failed to delete skill.");
+      }
     }
   };
 
@@ -125,6 +183,7 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0]!;
+    const requestUserId = userId;
 
     setIsUploading(true);
     setUploadError(null);
@@ -133,7 +192,7 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
       const lowerName = file.name.toLowerCase();
 
       if (lowerName.endsWith(".zip")) {
-        created = await uploadSkill(file, "user");
+        created = await uploadSkill(file, "user", requestUserId);
       } else if (lowerName.endsWith(".pdf")) {
         const { content } = await extractPdfText(file);
         const cleanName =
@@ -142,14 +201,17 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
             .toLowerCase()
             .replace(/[^a-z0-9-]/g, "-")
             .replace(/^-+|-+$/g, "") || "pdf-skill";
-        created = await createSkillFromJson({
-          name: cleanName,
-          description: `Used for referencing and applying knowledge from ${file.name}`,
-          skillMd: `---\nname: ${cleanName}\ndescription: Used for referencing and applying knowledge from ${file.name}\n---\n# ${file.name}\n\n${content}`,
-          files: [],
-          scope: "user",
-          approvalStatus: "approved",
-        });
+        created = await createSkillFromJson(
+          {
+            name: cleanName,
+            description: `Used for referencing and applying knowledge from ${file.name}`,
+            skillMd: `---\nname: ${cleanName}\ndescription: Used for referencing and applying knowledge from ${file.name}\n---\n# ${file.name}\n\n${content}`,
+            files: [],
+            scope: "user",
+            approvalStatus: "approved",
+          },
+          requestUserId
+        );
       } else if (
         lowerName.endsWith(".md") ||
         lowerName.endsWith(".markdown") ||
@@ -166,32 +228,38 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
         const skillMd = hasFrontmatter
           ? text
           : `---\nname: ${cleanName}\ndescription: Used for custom instructions from ${file.name}\n---\n${text}`;
-        created = await createSkillFromJson({
-          name: cleanName,
-          description: `Used for custom instructions from ${file.name}`,
-          skillMd,
-          files: [],
-          scope: "user",
-          approvalStatus: "approved",
-        });
+        created = await createSkillFromJson(
+          {
+            name: cleanName,
+            description: `Used for custom instructions from ${file.name}`,
+            skillMd,
+            files: [],
+            scope: "user",
+            approvalStatus: "approved",
+          },
+          requestUserId
+        );
       } else {
         throw new Error("Unsupported format. Please select a .md, .pdf, or .zip file.");
       }
 
+      if (!isCurrentUser(requestUserId)) return;
       setSkills((prev) => [created, ...prev.filter((s) => s.id !== created.id)]);
       await handleToggle(created);
     } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : "Failed to upload skill.");
+      if (isCurrentUser(requestUserId)) {
+        setUploadError(err instanceof Error ? err.message : "Failed to upload skill.");
+      }
     } finally {
-      setIsUploading(false);
+      if (isCurrentUser(requestUserId)) setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   // Strictly user-created custom skills appear here; built-in / platform skills are active defaults
   const userCreatedSkills = useMemo(() => {
-    return skills.filter(isUserCreatedSkill);
-  }, [skills]);
+    return visibleSkills.filter(isUserCreatedSkill);
+  }, [visibleSkills]);
 
   const filteredSkills = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -262,19 +330,23 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
+            disabled={visibleIsUploading}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-neutral-950 hover:bg-neutral-800 text-white rounded-xl text-[12.5px] font-medium transition-colors shrink-0 disabled:opacity-50 cursor-pointer shadow-xs"
           >
-            {isUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+            {visibleIsUploading ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Upload size={13} />
+            )}
             <span>Upload</span>
           </button>
         </div>
 
         {/* Upload error banner */}
-        {uploadError && (
+        {visibleUploadError && (
           <div className="mx-6 mb-3 p-3.5 bg-rose-50 rounded-2xl flex items-start gap-2 text-[12px] text-rose-700">
             <AlertCircle size={15} className="shrink-0 mt-0.5" />
-            <div className="flex-1">{uploadError}</div>
+            <div className="flex-1">{visibleUploadError}</div>
             <button
               type="button"
               onClick={() => setUploadError(null)}
@@ -287,13 +359,13 @@ export const SkillsMenuModal: React.FC<SkillsMenuModalProps> = ({
 
         {/* Content list */}
         <div className="flex-1 overflow-y-auto px-6 py-2 space-y-3">
-          {isLoading ? (
+          {visibleIsLoading ? (
             <div className="flex flex-col items-center justify-center py-12 text-neutral-400 gap-2">
               <Loader2 size={24} className="animate-spin text-neutral-900" />
               <span className="text-[13px]">Loading skills…</span>
             </div>
-          ) : error ? (
-            <div className="py-8 text-center text-rose-600 text-[13px]">{error}</div>
+          ) : visibleError ? (
+            <div className="py-8 text-center text-rose-600 text-[13px]">{visibleError}</div>
           ) : userCreatedSkills.length === 0 ? (
             <div className="py-12 text-center text-neutral-400 text-[13px]">
               No custom skills yet. Upload a .md, .pdf, or .zip file to get started.

@@ -15,6 +15,7 @@ import {
   getVaultAttestationFingerprint,
   verifyVaultHealth,
 } from "../application/credentialVault.js";
+import { normalizeBaseUrl } from "../../chat/providers/llm.service.js";
 
 function getAuthenticatedUid(req: Request, res: Response): string | null {
   const uid = req.principal?.uid;
@@ -45,9 +46,28 @@ export async function putCredential(req: Request, res: Response): Promise<void> 
   const uid = getAuthenticatedUid(req, res);
   if (!uid) return;
   const body = req.body as ProviderCredentialRequest;
+  let baseUrl: string | undefined;
+  if (body.baseUrl !== undefined) {
+    try {
+      baseUrl = normalizeBaseUrl(body.baseUrl);
+    } catch (err) {
+      res.status(400).json({
+        error: err instanceof Error ? err.message : "Provider base URL is invalid.",
+      });
+      return;
+    }
+  }
+  if (baseUrl === undefined) {
+    try {
+      baseUrl = (await getProviderCredential(uid, body.provider))?.baseUrl;
+    } catch (err) {
+      // Replacing a key is also the recovery path for an entry encrypted by a lost key.
+      if (!(err instanceof CredentialDecryptionError)) throw err;
+    }
+  }
   await saveProviderCredential(uid, body.provider, {
     apiKey: body.apiKey,
-    ...(body.baseUrl ? { baseUrl: body.baseUrl } : {}),
+    ...(baseUrl ? { baseUrl } : {}),
   });
   res.status(204).end();
 }
@@ -56,8 +76,17 @@ export async function updateCredentialEndpoint(req: Request, res: Response): Pro
   const uid = getAuthenticatedUid(req, res);
   if (!uid) return;
   const body = req.body as ProviderEndpointRequest;
+  let baseUrl: string;
   try {
-    const updated = await updateProviderEndpoint(uid, body.provider, body.baseUrl);
+    baseUrl = normalizeBaseUrl(body.baseUrl);
+  } catch (err) {
+    res.status(400).json({
+      error: err instanceof Error ? err.message : "Provider base URL is invalid.",
+    });
+    return;
+  }
+  try {
+    const updated = await updateProviderEndpoint(uid, body.provider, baseUrl);
     if (!updated) {
       res.status(404).json({ error: "No saved provider credential exists." });
       return;

@@ -28,7 +28,6 @@ import {
   downloadGeneratedFile,
   downloadUserUpload,
 } from "../../../platform/storage/supabaseStorage.js";
-import { ConversationRepository } from "../../conversations/repositories/conversationRepository.js";
 
 let activeRepository: SkillRepository | null = null;
 
@@ -57,14 +56,6 @@ export function getSkillRepository(): SkillRepository {
 
 export function setSkillRepository(repo: SkillRepository | null): void {
   activeRepository = repo;
-}
-
-function canViewSkill(skill: SkillRecord, userId: string, orgId: string | null): boolean {
-  if (skill.ownerId === userId) return true;
-  if (skill.approvalStatus !== "approved") return false;
-  if (skill.scope === "builtin" || skill.scope === "directory") return true;
-  if (skill.scope === "org" && orgId && skill.orgId === orgId) return true;
-  return false;
 }
 
 function canEditSkill(skill: SkillRecord, userId: string, isAdmin: boolean): boolean {
@@ -108,8 +99,8 @@ export async function getSkill(req: Request, res: Response): Promise<void> {
   const orgId = identity.orgId;
   const id = req.params["id"]!;
 
-  const skill = await repo.get(id);
-  if (!skill || !canViewSkill(skill, userId, orgId)) {
+  const skill = await repo.getVisibleSkill(id, userId, orgId);
+  if (!skill) {
     res.status(404).json({ error: "Skill not found or access denied.", requestId: req.id });
     return;
   }
@@ -171,8 +162,8 @@ export async function getSkillVersions(req: Request, res: Response): Promise<voi
   const identity = getRequestIdentity(req);
   const id = req.params["id"]!;
 
-  const skill = await repo.get(id);
-  if (!skill || !canViewSkill(skill, identity.userId, identity.orgId)) {
+  const skill = await repo.getVisibleSkill(id, identity.userId, identity.orgId);
+  if (!skill) {
     res.status(404).json({ error: "Skill not found or access denied.", requestId: req.id });
     return;
   }
@@ -186,8 +177,8 @@ export async function getSkillContents(req: Request, res: Response): Promise<voi
   const identity = getRequestIdentity(req);
   const id = req.params["id"]!;
 
-  const skill = await repo.get(id);
-  if (!skill || !canViewSkill(skill, identity.userId, identity.orgId)) {
+  const skill = await repo.getVisibleSkill(id, identity.userId, identity.orgId);
+  if (!skill) {
     res.status(404).json({ error: "Skill not found or access denied.", requestId: req.id });
     return;
   }
@@ -611,10 +602,20 @@ export async function deleteSkill(req: Request, res: Response): Promise<void> {
 
 export async function getConversationSkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
+  const identity = getRequestIdentity(req);
   const conversationId = req.params["id"]!;
   const projectId = req.query["projectId"] as string | undefined;
 
-  const skills = await repo.getConversationSkills(conversationId);
+  if (!(await repo.ownsConversation(conversationId, identity.userId))) {
+    res.status(404).json({ error: "Conversation not found.", requestId: req.id });
+    return;
+  }
+  if (projectId && !(await repo.ownsProject(projectId, identity.userId))) {
+    res.status(404).json({ error: "Project not found.", requestId: req.id });
+    return;
+  }
+
+  const skills = await repo.getConversationSkills(conversationId, identity.userId, identity.orgId);
   const metaList = await Promise.all(
     skills.map(async (s) => {
       const meta = await repo.getConversationSkillMeta(conversationId, s.id);
@@ -628,7 +629,7 @@ export async function getConversationSkills(req: Request, res: Response): Promis
 
   let hasProjectUpdate = false;
   if (projectId) {
-    const projectSkills = await repo.getProjectSkills(projectId);
+    const projectSkills = await repo.getProjectSkills(identity.userId, projectId, identity.orgId);
     const projectSkillIds = new Set(projectSkills.map((s) => s.id));
     const currentProjectSkills = metaList.filter((s) => s.source === "project");
     const currentProjectSkillIds = new Set(currentProjectSkills.map((s) => s.id));
@@ -657,11 +658,24 @@ export async function syncConversationProjectSkills(req: Request, res: Response)
     return;
   }
 
+  if (
+    !(await repo.ownsConversation(conversationId, identity.userId)) ||
+    !(await repo.ownsProject(projectId, identity.userId))
+  ) {
+    res.status(404).json({ error: "Conversation or project not found.", requestId: req.id });
+    return;
+  }
+
   // Remove existing skills that came from project
   await repo.removeProjectSourcedConversationSkills(conversationId);
 
   // Inherit latest project skills
-  const updated = await repo.inheritProjectSkills(conversationId, projectId, identity.userId);
+  const updated = await repo.inheritProjectSkills(
+    conversationId,
+    projectId,
+    identity.userId,
+    identity.orgId
+  );
   res.json({ skills: updated, synced: true });
 }
 
@@ -673,15 +687,24 @@ export async function setConversationSkills(req: Request, res: Response): Promis
   const conversationId = req.params["id"]!;
   const skillIds = (req.body?.skill_ids as string[]) || (req.body?.skillIds as string[]) || [];
 
+  if (!(await repo.ownsConversation(conversationId, userId))) {
+    res.status(404).json({ error: "Conversation not found.", requestId: req.id });
+    return;
+  }
+
   if (!Array.isArray(skillIds)) {
     res.status(400).json({ error: "skill_ids must be an array of string IDs.", requestId: req.id });
     return;
   }
 
-  // Verify that the user has permission to see EACH skill
+  if (!skillIds.every((skillId) => typeof skillId === "string")) {
+    res.status(400).json({ error: "skill_ids must contain string IDs.", requestId: req.id });
+    return;
+  }
+
+  const visibleIds = new Set((await repo.listVisible(userId, orgId)).map((skill) => skill.id));
   for (const skillId of skillIds) {
-    const skill = await repo.get(skillId);
-    if (!skill || !canViewSkill(skill, userId, orgId)) {
+    if (!visibleIds.has(skillId)) {
       res.status(403).json({
         error: `Cannot enable skill '${skillId}': skill not found or access denied.`,
         requestId: req.id,
@@ -694,14 +717,22 @@ export async function setConversationSkills(req: Request, res: Response): Promis
     req.body?.explicitly_selected !== undefined ? Boolean(req.body.explicitly_selected) : true;
   const enabled = await repo.setConversationSkills(conversationId, skillIds, userId, {
     explicitlySelected,
+    orgId,
   });
   res.json({ skills: enabled });
 }
 
 export async function getProjectSkills(req: Request, res: Response): Promise<void> {
   const repo = getSkillRepository();
+  const identity = getRequestIdentity(req);
   const projectId = req.params["id"]!;
-  const skills = await repo.getProjectSkills(projectId);
+
+  if (!(await repo.ownsProject(projectId, identity.userId))) {
+    res.status(404).json({ error: "Project not found.", requestId: req.id });
+    return;
+  }
+
+  const skills = await repo.getProjectSkills(identity.userId, projectId, identity.orgId);
   res.json({ skills });
 }
 
@@ -717,15 +748,24 @@ export async function setProjectSkills(req: Request, res: Response): Promise<voi
   const projectId = req.params["id"]!;
   const skillIds = (req.body?.skill_ids as string[]) || (req.body?.skillIds as string[]) || [];
 
+  if (!(await repo.ownsProject(projectId, userId))) {
+    res.status(404).json({ error: "Project not found.", requestId: req.id });
+    return;
+  }
+
   if (!Array.isArray(skillIds)) {
     res.status(400).json({ error: "skill_ids must be an array of string IDs.", requestId: req.id });
     return;
   }
 
-  // Verify that the user has permission to see EACH skill
+  if (!skillIds.every((skillId) => typeof skillId === "string")) {
+    res.status(400).json({ error: "skill_ids must contain string IDs.", requestId: req.id });
+    return;
+  }
+
+  const visibleIds = new Set((await repo.listVisible(userId, orgId)).map((skill) => skill.id));
   for (const skillId of skillIds) {
-    const skill = await repo.get(skillId);
-    if (!skill || !canViewSkill(skill, userId, orgId)) {
+    if (!visibleIds.has(skillId)) {
       res.status(403).json({
         error: `Cannot enable skill '${skillId}': skill not found or access denied.`,
         requestId: req.id,
@@ -734,21 +774,22 @@ export async function setProjectSkills(req: Request, res: Response): Promise<voi
     }
   }
 
-  const enabled = await repo.setProjectSkills(projectId, skillIds);
+  const enabled = await repo.setProjectSkills(userId, projectId, skillIds, orgId);
   res.json({ skills: enabled });
 }
 
 export async function downloadConversationFile(req: Request, res: Response): Promise<void> {
   const conversationId = req.params["id"]!;
   const filename = path.basename(req.params["filename"]!);
+  const identity = getRequestIdentity(req);
+  const repo = getSkillRepository();
+
+  if (!(await repo.ownsConversation(conversationId, identity.userId))) {
+    res.status(404).json({ error: "File not found.", requestId: req.id });
+    return;
+  }
 
   if (process.env["VERCEL"] === "1") {
-    const identity = getRequestIdentity(req);
-    const conversation = await new ConversationRepository().get(identity.userId, conversationId);
-    if (!conversation) {
-      res.status(404).json({ error: "File not found.", requestId: req.id });
-      return;
-    }
     const stored = await downloadGeneratedFile(identity.userId, conversationId, filename);
     if (!stored) {
       res.status(404).json({ error: "File not found.", requestId: req.id });
@@ -943,7 +984,8 @@ export async function testScratchSkill(req: Request, res: Response): Promise<voi
       created.name,
       scratchConvId,
       identity.userId,
-      scratchRepo
+      scratchRepo,
+      identity.orgId
     );
     traces.push({
       toolName: "Skill",

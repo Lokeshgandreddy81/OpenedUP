@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { getModelMeta, PROVIDER_CATALOG } from "@charan-interiors/contracts";
 import { authenticatedChatFetch } from "../../../app/api/chatApi";
@@ -22,6 +22,7 @@ import {
   renderChapterPageImages,
   type ChapterSource,
 } from "../services/chapterSource";
+import { commitForCurrentUser } from "../services/chapterChatIdentity";
 
 export interface ChapterChatMessage {
   id: string;
@@ -139,6 +140,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
   onOpenCitation,
 }) => {
   const { user } = useChatAuth();
+  const userId = user?.uid ?? null;
   const { hasKey } = useProviderKeys();
   const [selectedModel, setSelectedModel] = useState<AiModelId>(DEFAULT_MODEL);
   const supportsVision = getModelMeta(selectedModel).inputModalities?.includes("image") === true;
@@ -152,6 +154,18 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
   const userStoppedRequestRef = React.useRef(false);
   const generationStartedAtRef = React.useRef<number | null>(null);
   const isMountedRef = React.useRef(true);
+  const currentUserIdRef = useRef(userId);
+  currentUserIdRef.current = userId;
+  const previousUserIdRef = useRef(userId);
+  const [historyUserId, setHistoryUserId] = useState(userId);
+  const visibleHistory = historyUserId === userId ? history : [];
+
+  const publishHistory = (requestUserId: string | null, nextHistory: ChapterChatMessage[]) => {
+    if (historyUserId !== requestUserId) return false;
+    return commitForCurrentUser(requestUserId, currentUserIdRef.current, () =>
+      onHistoryChange(nextHistory)
+    );
+  };
 
   const sourceKey = `${chapterId}:${startPage}:${endPage}`;
   const pageRange = startPage === endPage ? `page ${startPage}` : `pages ${startPage}–${endPage}`;
@@ -171,6 +185,20 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
     },
     [chapterId, documentId, startPage, endPage]
   );
+
+  useEffect(() => {
+    if (previousUserIdRef.current === userId) return;
+    previousUserIdRef.current = userId;
+    setHistoryUserId(userId);
+    activeRequestControllerRef.current?.abort();
+    activeRequestControllerRef.current = null;
+    userStoppedRequestRef.current = false;
+    generationStartedAtRef.current = null;
+    setIsSending(false);
+    setChatPhase("searching");
+    setThinkingElapsedSeconds(0);
+    onHistoryChange([]);
+  }, [userId, onHistoryChange]);
 
   React.useEffect(() => {
     if (!isSending || generationStartedAtRef.current === null) return;
@@ -225,10 +253,12 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
     question: string,
     model: AiModelId,
     effort: EffortLevel = "Medium",
-    baseHistory: ChapterChatMessage[] = history
+    baseHistory: ChapterChatMessage[] = visibleHistory
   ) {
     const content = question.trim();
     if (!content || isSending || !source) return;
+    const requestUserId = userId;
+    const isCurrentIdentity = () => currentUserIdRef.current === requestUserId;
     const requestSupportsVision = getModelMeta(model).inputModalities?.includes("image") === true;
 
     const userMessage: ChapterChatMessage = {
@@ -240,7 +270,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
       effort,
     };
     const updatedHistory = [...baseHistory, userMessage];
-    onHistoryChange(updatedHistory);
+    if (!publishHistory(requestUserId, updatedHistory)) return;
     setChatPhase("searching");
     setThinkingElapsedSeconds(0);
     generationStartedAtRef.current = Date.now();
@@ -250,6 +280,10 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
     const requestTimeoutId = window.setTimeout(() => controller.abort(), 90_000);
     setIsSending(true);
     await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+    if (!isCurrentIdentity()) {
+      window.clearTimeout(requestTimeoutId);
+      return;
+    }
 
     let requestStage: "preparing" | "connecting" | "receiving" = "preparing";
     try {
@@ -283,10 +317,11 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
               ].slice(0, 8);
         imagePages = await renderChapterPageImages(pdfUrl, pageNumbers, controller.signal);
       }
+      if (!isCurrentIdentity()) return;
       const preparedEvidence = prepareChapterEvidence(retrieved, imagePages);
       imagePages = preparedEvidence.images;
       if (
-        !user &&
+        !requestUserId &&
         imagePages.reduce((total, image) => total + image.base64Data.length, 0) > 3_000_000
       ) {
         throw new Error(
@@ -295,7 +330,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
       }
       const evidence = preparedEvidence.evidence;
       if (evidence.length === 0) {
-        onHistoryChange([
+        publishHistory(requestUserId, [
           ...updatedHistory,
           {
             id: crypto.randomUUID(),
@@ -310,7 +345,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
         ]);
         return;
       }
-      const provider = getProviderChatRequestConfig(model);
+      const provider = getProviderChatRequestConfig(model, requestUserId);
       const recentHistory = baseHistory
         .slice(-10)
         .map(({ role, content: message }) => ({ role, content: message }));
@@ -336,11 +371,12 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
             ? {
                 imagePages: await Promise.all(
                   imagePages.map(async (image) => {
-                    if (!user) return image;
+                    if (!requestUserId) return image;
                     const storagePath = await uploadBlobForProcessing(
                       base64ToBlob(image.base64Data, image.mimeType),
                       `chapter-page-${image.pageNumber}.jpg`,
-                      "image"
+                      "image",
+                      requestUserId
                     );
                     return {
                       pageNumber: image.pageNumber,
@@ -353,10 +389,12 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
             : {}),
         }),
       };
+      if (!isCurrentIdentity()) return;
       requestStage = "connecting";
-      const response = await (user
-        ? authenticatedChatFetch("/api/chat/chapter/stream", requestInit)
+      const response = await (requestUserId
+        ? authenticatedChatFetch("/api/chat/chapter/stream", requestInit, requestUserId)
         : fetch("/api/chat/chapter/stream", requestInit));
+      if (!isCurrentIdentity()) return;
       if (!response.ok) {
         const error = (await response.json().catch(() => ({}))) as { error?: string };
         if (
@@ -365,7 +403,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
           error.error.startsWith("MISSING_API_KEY:")
         ) {
           const providerName = PROVIDER_CATALOG[getModelMeta(model).provider]?.name ?? "Provider";
-          onHistoryChange([
+          publishHistory(requestUserId, [
             ...updatedHistory,
             {
               id: crypto.randomUUID(),
@@ -382,11 +420,14 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
         throw new Error(error.error || `Chapter chat failed (${response.status}).`);
       }
       requestStage = "receiving";
+      if (!isCurrentIdentity()) return;
       setChatPhase("thinking");
-      const result = await consumeChapterChatStream(response, setChatPhase);
-      if (!isMountedRef.current) return;
+      const result = await consumeChapterChatStream(response, (phase) => {
+        if (isCurrentIdentity()) setChatPhase(phase);
+      });
+      if (!isMountedRef.current || !isCurrentIdentity()) return;
       if (result.status === "generation-error") {
-        onHistoryChange([
+        publishHistory(requestUserId, [
           ...updatedHistory,
           {
             id: crypto.randomUUID(),
@@ -400,7 +441,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
         ]);
         return;
       }
-      onHistoryChange([
+      publishHistory(requestUserId, [
         ...updatedHistory,
         {
           id: crypto.randomUUID(),
@@ -416,7 +457,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
     } catch (error) {
       const wasAborted = error instanceof DOMException && error.name === "AbortError";
       const wasStoppedByUser = wasAborted && userStoppedRequestRef.current;
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || !isCurrentIdentity()) return;
       const isBrowserRequestError =
         error instanceof TypeError &&
         (requestStage === "connecting" || requestStage === "receiving");
@@ -429,7 +470,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
             : error instanceof Error
               ? error.message
               : "Chapter chat failed.";
-      onHistoryChange([
+      publishHistory(requestUserId, [
         ...updatedHistory,
         {
           id: crypto.randomUUID(),
@@ -448,12 +489,12 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
         activeRequestControllerRef.current = null;
       }
       generationStartedAtRef.current = null;
-      if (isMountedRef.current) setIsSending(false);
+      if (isMountedRef.current && isCurrentIdentity()) setIsSending(false);
     }
   }
 
-  const chatMessages: ChatMessage[] = history.map((message, index) => {
-    const precedingUser = [...history.slice(0, index)]
+  const chatMessages: ChatMessage[] = visibleHistory.map((message, index) => {
+    const precedingUser = [...visibleHistory.slice(0, index)]
       .reverse()
       .find((entry) => entry.role === "user");
     const legacyMissingKey =
@@ -465,7 +506,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
     const requiresProviderKey = message.action === "connect-provider" || Boolean(legacyMissingKey);
     const messageModel = message.model ?? selectedModel;
     const providerKeyConnected =
-      requiresProviderKey && hasKey(getKeyForModel(messageModel).provider);
+      requiresProviderKey && hasKey(getKeyForModel(messageModel, userId).provider);
     return {
       id: message.id,
       role: message.role,
@@ -492,7 +533,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
   });
 
   const renderChapterMessageSupplement = (message: ChatMessage) => {
-    const chapterMessage = history.find((entry) => entry.id === message.id);
+    const chapterMessage = visibleHistory.find((entry) => entry.id === message.id);
     return (
       <>
         {chapterMessage?.citations && chapterMessage.citations.length > 0 && (
@@ -537,10 +578,10 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
   };
 
   const handleEditMessage = (messageId: string, content: string) => {
-    const index = history.findIndex((message) => message.id === messageId);
-    if (index < 0 || history[index]?.role !== "user") return;
-    const previousMessages = history.slice(0, index);
-    onHistoryChange(previousMessages);
+    const index = visibleHistory.findIndex((message) => message.id === messageId);
+    if (index < 0 || visibleHistory[index]?.role !== "user") return;
+    const previousMessages = visibleHistory.slice(0, index);
+    if (!publishHistory(userId, previousMessages)) return;
     void sendQuestion(content, selectedModel, "Medium", previousMessages);
   };
 
@@ -548,16 +589,16 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
     messageId: string,
     retry: NonNullable<ChatMessage["retryPayload"]>
   ) => {
-    const index = history.findIndex((message) => message.id === messageId);
+    const index = visibleHistory.findIndex((message) => message.id === messageId);
     if (index < 0) return;
-    const userIndex = history
+    const userIndex = visibleHistory
       .slice(0, index)
       .map((message, messageIndex) => ({ message, messageIndex }))
       .reverse()
       .find(({ message }) => message.role === "user")?.messageIndex;
     if (userIndex === undefined) return;
-    const previousMessages = history.slice(0, userIndex);
-    onHistoryChange(previousMessages);
+    const previousMessages = visibleHistory.slice(0, userIndex);
+    if (!publishHistory(userId, previousMessages)) return;
     setSelectedModel(retry.model);
     void sendQuestion(retry.prompt, retry.model, retry.effort, previousMessages);
   };
@@ -565,7 +606,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-white" aria-label="Chapter chat">
       <main className="relative flex min-h-0 flex-1 flex-col">
-        {isExtracting && history.length > 0 && (
+        {isExtracting && visibleHistory.length > 0 && (
           <p
             role="status"
             className="mx-6 mt-3 inline-flex w-fit items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-xs text-slate-500"
@@ -574,7 +615,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
             Preparing this chapter’s searchable text…
           </p>
         )}
-        {history.length === 0 ? (
+        {visibleHistory.length === 0 ? (
           <div className="flex min-h-0 flex-1 overflow-y-auto px-5 py-6">
             <div className="m-auto w-full max-w-[440px] animate-in fade-in duration-200">
               <div className="mb-5 px-1">
@@ -664,17 +705,17 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
                 return;
               }
               if (chip === "Retry question") {
-                const assistantIndex = history.findIndex((entry) => entry.id === messageId);
-                const userIndex = history
+                const assistantIndex = visibleHistory.findIndex((entry) => entry.id === messageId);
+                const userIndex = visibleHistory
                   .slice(0, assistantIndex)
                   .map((entry, entryIndex) => ({ entry, entryIndex }))
                   .reverse()
                   .find(({ entry }) => entry.role === "user")?.entryIndex;
                 if (userIndex === undefined) return;
-                const pendingQuestion = history[userIndex];
+                const pendingQuestion = visibleHistory[userIndex];
                 if (!pendingQuestion) return;
-                const previousHistory = history.slice(0, userIndex);
-                onHistoryChange(previousHistory);
+                const previousHistory = visibleHistory.slice(0, userIndex);
+                if (!publishHistory(userId, previousHistory)) return;
                 void sendQuestion(
                   pendingQuestion.content,
                   pendingQuestion.model ?? selectedModel,
@@ -688,7 +729,7 @@ export const ChapterChatPanel: React.FC<ChapterChatPanelProps> = ({
             renderMessageSupplement={renderChapterMessageSupplement}
           />
         )}
-        {sourceError && history.length > 0 && (
+        {sourceError && visibleHistory.length > 0 && (
           <p
             role="alert"
             className="mx-6 mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"

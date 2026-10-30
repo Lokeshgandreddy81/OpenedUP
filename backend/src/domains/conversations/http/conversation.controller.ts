@@ -5,6 +5,7 @@ import type {
   UpdateConversationRequest,
 } from "@charan-interiors/contracts";
 import { ConversationRepository } from "../repositories/conversationRepository.js";
+import { getRequestIdentity } from "../../../platform/auth/identity.js";
 
 const conversations = new ConversationRepository();
 
@@ -23,6 +24,7 @@ export async function getConversation(req: Request, res: Response): Promise<void
 
 export async function createConversation(req: Request, res: Response): Promise<void> {
   const body = req.body as CreateConversationRequest;
+  const identity = getRequestIdentity(req);
   const requestBody = req.body as CreateConversationRequest & {
     projectId?: unknown;
     project_id?: unknown;
@@ -30,13 +32,19 @@ export async function createConversation(req: Request, res: Response): Promise<v
   const requestedProjectId = requestBody.projectId ?? requestBody.project_id;
   const projectId = typeof requestedProjectId === "string" ? requestedProjectId : undefined;
   res.status(201).json({
-    conversation: await conversations.create(req.principal!.uid, body.title, body.model, projectId),
+    conversation: await conversations.create(
+      identity.userId,
+      body.title,
+      body.model,
+      projectId,
+      identity.orgId
+    ),
   });
 }
 
 export async function updateConversation(req: Request, res: Response): Promise<void> {
   const body = req.body as UpdateConversationRequest;
-  if (!await conversations.update(req.principal!.uid, req.params["id"]!, body)) {
+  if (!(await conversations.update(req.principal!.uid, req.params["id"]!, body))) {
     res.status(404).json({ error: "Conversation not found.", requestId: req.id });
     return;
   }
@@ -50,11 +58,11 @@ export async function deleteConversation(req: Request, res: Response): Promise<v
 
 export async function deleteMessagesFrom(req: Request, res: Response): Promise<void> {
   if (
-    !await conversations.deleteMessagesFrom(
+    !(await conversations.deleteMessagesFrom(
       req.principal!.uid,
       req.params["id"]!,
       req.params["messageId"]!
-    )
+    ))
   ) {
     res.status(404).json({ error: "Conversation message not found.", requestId: req.id });
     return;

@@ -55,6 +55,20 @@ test("Sandbox - initSandbox creates directories and mounts skills read-only", as
   }
 });
 
+test("Sandbox - refreshed mounts remove skills that are no longer enabled", async () => {
+  const { paths, cleanup } = await createTestSandbox();
+  try {
+    const revokedSkill = path.join(paths.skillsMountDir, "builtin", "csv-summary", "SKILL.md");
+    assert.ok(fs.existsSync(revokedSkill));
+
+    initSandbox("conv-sandbox-1", []);
+
+    assert.equal(fs.existsSync(revokedSkill), false);
+  } finally {
+    cleanup();
+  }
+});
+
 test("Sandbox - Write & Read tools in workspace", async () => {
   const { paths, cleanup } = await createTestSandbox();
   try {

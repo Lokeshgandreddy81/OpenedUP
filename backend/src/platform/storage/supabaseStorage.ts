@@ -7,12 +7,13 @@ const UPLOAD_BUCKETS: Record<UploadPurpose, string> = {
   pdf: "openedup-pdfs",
   image: "openedup-images",
   "skill-package": "openedup-skill-packages",
+  "project-snapshot": "openedup-project-snapshots",
 };
 const GENERATED_FILES_BUCKET = "openedup-generated-files";
 const GENERATED_FILE_MAX_BYTES = 25 * 1024 * 1024;
 export const MAX_PDF_UPLOAD_BYTES = 100 * 1024 * 1024;
 
-export type UploadPurpose = "pdf" | "image" | "skill-package";
+export type UploadPurpose = "pdf" | "image" | "skill-package" | "project-snapshot";
 
 const MIME_TYPES: Record<UploadPurpose, ReadonlySet<string>> = {
   pdf: new Set(["application/pdf"]),
@@ -23,12 +24,14 @@ const MIME_TYPES: Record<UploadPurpose, ReadonlySet<string>> = {
     "text/markdown",
     "text/plain",
   ]),
+  "project-snapshot": new Set(["application/json"]),
 };
 
 const MAX_BYTES: Record<UploadPurpose, number> = {
   pdf: MAX_PDF_UPLOAD_BYTES,
   image: 10 * 1024 * 1024,
   "skill-package": 20 * 1024 * 1024,
+  "project-snapshot": 20_001_024,
 };
 
 let adminClient: SupabaseClient | null = null;
@@ -51,6 +54,7 @@ export function getSupabaseStorageAdmin(): SupabaseClient {
 
 function extensionFor(fileName: string, contentType: string, purpose: UploadPurpose): string {
   if (purpose === "pdf") return ".pdf";
+  if (purpose === "project-snapshot") return ".json";
   if (purpose === "image") {
     const extensionByType: Record<string, string> = {
       "image/jpeg": ".jpg",
@@ -166,7 +170,16 @@ export async function storeGeneratedFile(input: {
   bytes: Buffer;
 }): Promise<{ objectKey: string; sizeBytes: number }> {
   const { userId, conversationId, bytes } = input;
-  const fileName = input.fileName.replace(/[\\/\0-\x1f\x7f]/g, "_").slice(0, 180) || "download";
+  const fileName =
+    [...input.fileName]
+      .map((character) => {
+        const code = character.charCodeAt(0);
+        return character === "/" || character === "\\" || code < 0x20 || code === 0x7f
+          ? "_"
+          : character;
+      })
+      .join("")
+      .slice(0, 180) || "download";
   if (!userId || !conversationId || userId.includes("/") || conversationId.includes("/")) {
     throw new AppError("Invalid owner or conversation for generated file.", 400);
   }
@@ -199,7 +212,27 @@ export async function downloadGeneratedFile(
   return { signedUrl: data.signedUrl };
 }
 
-/** Deletes old, unprocessed objects in the three signed-upload staging buckets. */
+export async function storeProjectSnapshotResponse(userId: string, bytes: Buffer): Promise<string> {
+  if (!userId || userId.includes("/") || bytes.length > MAX_BYTES["project-snapshot"]) {
+    throw new AppError("The project snapshot exceeds the storage limit.", 413);
+  }
+  const objectPath = `${userId}/project-snapshot/${crypto.randomUUID()}.json`;
+  const bucket = getSupabaseStorageAdmin().storage.from(UPLOAD_BUCKETS["project-snapshot"]);
+  const { error: uploadError } = await bucket.upload(objectPath, bytes, {
+    contentType: "application/json",
+    upsert: false,
+  });
+  if (uploadError) throw new AppError("Could not prepare the project snapshot download.", 503);
+
+  const { data, error } = await bucket.createSignedUrl(objectPath, 60);
+  if (error || !data) {
+    await bucket.remove([objectPath]);
+    throw new AppError("Could not prepare the project snapshot download.", 503);
+  }
+  return data.signedUrl;
+}
+
+/** Deletes old, unprocessed objects in the signed-upload staging buckets. */
 export async function cleanupAbandonedUploads(options?: {
   olderThanMs?: number;
   maxDeletes?: number;
@@ -259,8 +292,8 @@ export function isOwnedUploadPath(
   return (
     segments.length === 3 &&
     segments[0] === userId &&
-    ["pdf", "image", "skill-package"].includes(segments[1] || "") &&
+    ["pdf", "image", "skill-package", "project-snapshot"].includes(segments[1] || "") &&
     (!purpose || segments[1] === purpose) &&
-    /^[0-9a-f-]{36}\.(pdf|jpg|png|webp|gif|zip|md|markdown|txt|img)$/i.test(segments[2] || "")
+    /^[0-9a-f-]{36}\.(pdf|jpg|png|webp|gif|zip|md|markdown|txt|img|json)$/i.test(segments[2] || "")
   );
 }

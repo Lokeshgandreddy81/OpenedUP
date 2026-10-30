@@ -26,6 +26,7 @@ export interface AnthropicToolLoopOptions {
   systemInstruction: string;
   conversationId: string;
   userId?: string | null;
+  orgId?: string | null;
   tools?: unknown[];
   maxTokens?: number;
   maxIterations?: number;
@@ -67,7 +68,11 @@ export async function runAnthropicToolLoop(
   let lastStopReason = "end_turn";
 
   // Force-load explicitly selected skills once into context as synthetic tool_use/tool_result pair
-  const unpreloadedExplicitSkills = await repo.getUnpreloadedExplicitSkills(options.conversationId);
+  const unpreloadedExplicitSkills = await repo.getUnpreloadedExplicitSkills(
+    options.conversationId,
+    options.userId,
+    options.orgId
+  );
   for (const skill of unpreloadedExplicitSkills) {
     let body = "";
     if (skill.storagePath) {
@@ -202,7 +207,13 @@ export async function runAnthropicToolLoop(
           : String(toolInput["skill"] || toolName);
 
       if (toolName === "Skill") {
-        result = await handleSkillToolCall(skillName, options.conversationId, options.userId, repo);
+        result = await handleSkillToolCall(
+          skillName,
+          options.conversationId,
+          options.userId,
+          repo,
+          options.orgId
+        );
       } else if (options.executeCustomTool) {
         result = await options.executeCustomTool(toolName, toolInput);
       } else {

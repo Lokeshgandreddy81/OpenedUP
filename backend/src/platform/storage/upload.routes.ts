@@ -5,7 +5,7 @@ import { validateBody } from "../http/middleware/validate.js";
 import { createSignedUpload } from "./supabaseStorage.js";
 
 const SignedUploadRequestSchema = z.object({
-  purpose: z.enum(["pdf", "image", "skill-package"]),
+  purpose: z.enum(["pdf", "image", "skill-package", "project-snapshot"]),
   fileName: z.string().trim().min(1).max(300),
   contentType: z.string().trim().toLowerCase().min(1).max(100),
   sizeBytes: z.number().int().positive(),
@@ -19,6 +19,16 @@ uploadRouter.post(
   validateBody(SignedUploadRequestSchema),
   async (req, res) => {
     try {
+      if (
+        req.body.purpose === "project-snapshot" &&
+        req.get("X-Expected-User-Id") !== req.principal!.uid
+      ) {
+        res.status(409).json({
+          error: "The signed-in account changed before the project snapshot was uploaded.",
+          requestId: req.id,
+        });
+        return;
+      }
       const result = await createSignedUpload({
         ...req.body,
         userId: req.principal!.uid,
@@ -29,10 +39,14 @@ uploadRouter.post(
         error && typeof error === "object" && "statusCode" in error
           ? Number((error as { statusCode: unknown }).statusCode)
           : 503;
-      res.status(Number.isInteger(statusCode) && statusCode >= 400 && statusCode < 600 ? statusCode : 503).json({
-        error: error instanceof Error ? error.message : "Could not prepare this upload.",
-        requestId: req.id,
-      });
+      res
+        .status(
+          Number.isInteger(statusCode) && statusCode >= 400 && statusCode < 600 ? statusCode : 503
+        )
+        .json({
+          error: error instanceof Error ? error.message : "Could not prepare this upload.",
+          requestId: req.id,
+        });
     }
   }
 );

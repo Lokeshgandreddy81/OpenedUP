@@ -35,6 +35,7 @@ import {
   getKeyForModel,
   getProviderChatRequestConfig,
 } from "../../customize/publicApi";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { CreatorLogo } from "../../benchmarks/publicApi";
 import { ClockIcon } from "./ClockIcon";
 import { AssistantResponse } from "../../chat";
@@ -123,8 +124,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [mobileShowTemplates, setMobileShowTemplates] = useState(false);
+  const { user, loading: authLoading } = useChatAuth();
+  const currentUserId = user?.uid ?? null;
+  const currentUserIdRef = useRef(currentUserId);
+  currentUserIdRef.current = currentUserId;
   const { hasKey } = useProviderKeys();
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+  const [tasksOwnerId, setTasksOwnerId] = useState<string | null>(currentUserId);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
@@ -138,6 +144,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   // Runs history for selected task
   const [runsForSelectedTask, setRunsForSelectedTask] = useState<ScheduledTaskRunRecord[]>([]);
   const [isLoadingRuns, setIsLoadingRuns] = useState(false);
+  const runsRequestIdRef = useRef(0);
 
   // Delete confirmation modal state
   const [taskPendingDelete, setTaskPendingDelete] = useState<ScheduledTask | null>(null);
@@ -373,15 +380,48 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
     };
   }, [isExecuting]);
 
-  // Load tasks on open
+  // Clear account-owned task state immediately when identity changes.
+  useEffect(() => {
+    setTasks([]);
+    setTasksOwnerId(currentUserId);
+    setSelectedTaskId(null);
+    setRunsForSelectedTask([]);
+    setIsLoadingRuns(false);
+    setIsLoadingTasks(false);
+    setIsCreateModalOpen(false);
+    setEditingTaskId(null);
+    setModalTitle("");
+    setModalPrompt("");
+    setModalApiKey("");
+    setExecutingTask(null);
+    setIsExecuting(false);
+    setExecutionOutput("");
+    setExecutionRunRecord(null);
+    setTaskPendingDelete(null);
+    setToastMessage(null);
+    setIsSavingTask(false);
+    setIsDeleting(false);
+  }, [currentUserId]);
+
+  // Load tasks on open for the account captured by this request.
   useEffect(() => {
     if (!isOpen) return;
+    if (authLoading) return;
+    if (!currentUserId) {
+      setTasks([]);
+      setTasksOwnerId(null);
+      setSelectedTaskId(null);
+      setRunsForSelectedTask([]);
+      setIsLoadingTasks(false);
+      return;
+    }
     let active = true;
     setIsLoadingTasks(true);
-    void listScheduledTasks()
+    void listScheduledTasks(currentUserId)
       .then((loaded) => {
-        if (!active) return;
+        if (!active || currentUserIdRef.current !== currentUserId) return;
         setTasks(loaded);
+        setTasksOwnerId(currentUserId);
         if (loaded.length > 0) {
           setSelectedTaskId((current) => {
             if (current) return current;
@@ -390,52 +430,67 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
         }
       })
       .catch((error: unknown) => {
-        if (active)
+        if (active && currentUserIdRef.current === currentUserId)
           showToast(error instanceof Error ? error.message : "Could not load scheduled tasks.");
       })
       .finally(() => {
-        if (active) setIsLoadingTasks(false);
+        if (active && currentUserIdRef.current === currentUserId) setIsLoadingTasks(false);
       });
     return () => {
       active = false;
     };
-  }, [isOpen, showToast]);
+  }, [isOpen, authLoading, currentUserId, showToast]);
 
   // Fetch run history whenever selected task changes
-  const fetchTaskRuns = useCallback(async (taskId: string) => {
+  const fetchTaskRuns = useCallback(async (userId: string, taskId: string) => {
+    const requestId = ++runsRequestIdRef.current;
     setIsLoadingRuns(true);
     try {
-      const runs = await listScheduledTaskRuns(taskId);
-      setRunsForSelectedTask(runs);
+      const runs = await listScheduledTaskRuns(userId, taskId);
+      if (requestId === runsRequestIdRef.current && currentUserIdRef.current === userId) {
+        setRunsForSelectedTask(runs);
+      }
     } catch {
-      setRunsForSelectedTask([]);
+      if (requestId === runsRequestIdRef.current && currentUserIdRef.current === userId) {
+        setRunsForSelectedTask([]);
+      }
     } finally {
-      setIsLoadingRuns(false);
+      if (requestId === runsRequestIdRef.current && currentUserIdRef.current === userId) {
+        setIsLoadingRuns(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (selectedTaskId) {
-      void fetchTaskRuns(selectedTaskId);
+    if (selectedTaskId && currentUserId && !authLoading && tasksOwnerId === currentUserId) {
+      void fetchTaskRuns(currentUserId, selectedTaskId);
     } else {
+      runsRequestIdRef.current += 1;
       setRunsForSelectedTask([]);
+      setIsLoadingRuns(false);
     }
-  }, [selectedTaskId, fetchTaskRuns]);
+    return () => {
+      runsRequestIdRef.current += 1;
+    };
+  }, [selectedTaskId, currentUserId, authLoading, tasksOwnerId, fetchTaskRuns]);
 
   // Keep scheduled execution results current while the page stays open.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || authLoading || !currentUserId || tasksOwnerId !== currentUserId) return;
     let active = true;
     let timeoutId: number | undefined;
 
     const refreshScheduledData = async () => {
       try {
         const [latestTasks, latestRuns] = await Promise.all([
-          listScheduledTasks(),
-          selectedTaskId ? listScheduledTaskRuns(selectedTaskId) : Promise.resolve(null),
+          listScheduledTasks(currentUserId),
+          selectedTaskId
+            ? listScheduledTaskRuns(currentUserId, selectedTaskId)
+            : Promise.resolve(null),
         ]);
-        if (!active) return;
+        if (!active || currentUserIdRef.current !== currentUserId) return;
         setTasks(latestTasks);
+        setTasksOwnerId(currentUserId);
         if (latestRuns) setRunsForSelectedTask(latestRuns);
       } catch {
         // A transient polling failure should not interrupt the schedule view.
@@ -451,7 +506,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       active = false;
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
-  }, [isOpen, selectedTaskId]);
+  }, [isOpen, selectedTaskId, currentUserId, authLoading, tasksOwnerId]);
 
   // Filtered upcoming tasks
   const filteredTasks = useMemo(() => {
@@ -557,6 +612,11 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   // Persist schedule
   const handleSaveTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    const userId = currentUserId;
+    if (!userId) {
+      showToast("Sign in to manage scheduled tasks.");
+      return;
+    }
     const promptText = modalPrompt.trim();
     if (!promptText) return;
 
@@ -565,7 +625,7 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
     const existingTask = tasks.find((task) => task.id === editingTaskId);
     const provider = getModelMeta(selectedModel).provider;
-    const { apiKey } = getKeyForModel(selectedModel);
+    const { apiKey } = getKeyForModel(selectedModel, user?.uid ?? null);
     const resolvedKey = modalApiKey.trim() || apiKey;
 
     if (!hasKey(provider) && !resolvedKey) {
@@ -595,12 +655,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       ...(resolvedKey ? { apiKey: resolvedKey } : {}),
     };
 
-    const providerConfig = getProviderChatRequestConfig(selectedModel);
+    const providerConfig = getProviderChatRequestConfig(selectedModel, user?.uid ?? null);
     setIsSavingTask(true);
     try {
       const saved = existingTask
-        ? await updateScheduledTask(existingTask.id, draft, providerConfig.headers)
-        : await createScheduledTask(taskInput(draft), providerConfig.headers);
+        ? await updateScheduledTask(userId, existingTask.id, draft, providerConfig.headers)
+        : await createScheduledTask(userId, taskInput(draft), providerConfig.headers);
+      if (currentUserIdRef.current !== userId) return;
       setTasks((prev) =>
         existingTask ? prev.map((task) => (task.id === saved.id ? saved : task)) : [saved, ...prev]
       );
@@ -608,33 +669,52 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       setIsCreateModalOpen(false);
       showToast(existingTask ? "Task updated" : `Task "${saved.title}" scheduled`);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not save this task.");
+      if (currentUserIdRef.current === userId) {
+        showToast(error instanceof Error ? error.message : "Could not save this task.");
+      }
     } finally {
-      setIsSavingTask(false);
+      if (currentUserIdRef.current === userId) setIsSavingTask(false);
     }
   };
 
   // Toggle active / paused
   const handleToggleTaskActive = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    const userId = currentUserId;
+    if (!userId) {
+      showToast("Sign in to manage scheduled tasks.");
+      return;
+    }
     const task = tasks.find((item) => item.id === id);
     if (!task) return;
     try {
-      const updated = await updateScheduledTask(id, { ...task, isActive: !task.isActive });
+      const updated = await updateScheduledTask(userId, id, {
+        ...task,
+        isActive: !task.isActive,
+      });
+      if (currentUserIdRef.current !== userId) return;
       setTasks((prev) => prev.map((item) => (item.id === id ? updated : item)));
       showToast(updated.isActive ? `"${task.title}" resumed` : `"${task.title}" paused`);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not update this task.");
+      if (currentUserIdRef.current === userId) {
+        showToast(error instanceof Error ? error.message : "Could not update this task.");
+      }
     }
   };
 
   // Delete task confirmation
   const confirmDeleteTask = async () => {
     if (!taskPendingDelete) return;
+    const userId = currentUserId;
+    if (!userId) {
+      showToast("Sign in to manage scheduled tasks.");
+      return;
+    }
     const targetId = taskPendingDelete.id;
     setIsDeleting(true);
     try {
-      await deleteScheduledTask(targetId);
+      await deleteScheduledTask(userId, targetId);
+      if (currentUserIdRef.current !== userId) return;
       setTasks((prev) => prev.filter((task) => task.id !== targetId));
       if (selectedTaskId === targetId) {
         const remaining = tasks.filter((t) => t.id !== targetId);
@@ -643,15 +723,22 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
       setTaskPendingDelete(null);
       showToast("Task removed from schedule");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not remove this task.");
+      if (currentUserIdRef.current === userId) {
+        showToast(error instanceof Error ? error.message : "Could not remove this task.");
+      }
     } finally {
-      setIsDeleting(false);
+      if (currentUserIdRef.current === userId) setIsDeleting(false);
     }
   };
 
   // Trigger manual run
   const handleRunTask = async (task: ScheduledTask, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    const userId = currentUserId;
+    if (!userId) {
+      showToast("Sign in to run scheduled tasks.");
+      return;
+    }
     setExecutingTask(task);
     setIsExecuting(true);
     setExecutionOutput("");
@@ -659,27 +746,31 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
 
     try {
       const modelId = task.model || "gpt-6-astra";
-      const providerConfig = getProviderChatRequestConfig(modelId);
+      const providerConfig = getProviderChatRequestConfig(modelId, userId);
       const effectiveKey = task.apiKey || providerConfig.headers["x-provider-key"];
       const effectiveBaseUrl = providerConfig.headers["x-provider-base-url"];
       // Account-backed keys are intentionally never returned to the browser. Let the API
       // resolve those from the credential vault instead of treating an empty header as missing.
-      if (!effectiveKey && !hasKey(getKeyForModel(modelId).provider)) {
+      if (!effectiveKey && !hasKey(getKeyForModel(modelId, userId).provider)) {
         const meta = getModelMeta(modelId);
         const providerName = PROVIDER_CATALOG[meta.provider]?.name || "Provider";
         throw new Error(
           `Connect your ${providerName} key in Customize → Providers to run this task.`
         );
       }
-      const run = await runScheduledTask(task.id, effectiveKey, effectiveBaseUrl);
+      const run = await runScheduledTask(userId, task.id, effectiveKey, effectiveBaseUrl);
+      if (currentUserIdRef.current !== userId) return;
       setIsExecuting(false);
       setExecutionRunRecord(run);
       setExecutionOutput(scheduledRunMessage(run));
-      const updatedTasks = await listScheduledTasks();
+      const updatedTasks = await listScheduledTasks(userId);
+      if (currentUserIdRef.current !== userId) return;
       setTasks(updatedTasks);
+      setTasksOwnerId(userId);
       setSelectedTaskId(task.id);
-      void fetchTaskRuns(task.id);
+      void fetchTaskRuns(userId, task.id);
     } catch (error) {
+      if (currentUserIdRef.current !== userId) return;
       setIsExecuting(false);
       const errMsg = error instanceof Error ? error.message : "Scheduled task execution failed.";
       setExecutionOutput(errMsg);
@@ -687,6 +778,13 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
   };
 
   if (!isOpen) return null;
+  if (authLoading || tasksOwnerId !== currentUserId) {
+    return (
+      <div role="region" aria-label="Scheduled tasks" aria-busy="true">
+        Loading scheduled tasks…
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1282,7 +1380,9 @@ export const ScheduledTasksView: React.FC<ScheduledTasksViewProps> = ({
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => fetchTaskRuns(selectedTask.id)}
+                        onClick={() =>
+                          currentUserId && void fetchTaskRuns(currentUserId, selectedTask.id)
+                        }
                         disabled={isLoadingRuns}
                         title="Refresh history"
                         className="p-1 rounded-md text-slate-400 hover:text-slate-900 hover:bg-black/[0.04] transition-colors cursor-pointer"

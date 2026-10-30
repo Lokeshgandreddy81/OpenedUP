@@ -47,7 +47,7 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
       explicitlySelected: true,
     });
 
-    const unpreloaded = await repo.getUnpreloadedExplicitSkills(conversationId);
+    const unpreloaded = await repo.getUnpreloadedExplicitSkills(conversationId, "test-user");
     assert.equal(unpreloaded.length, 1);
     assert.equal(unpreloaded[0]!.name, "hello-format");
 
@@ -84,6 +84,7 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
       messages: [{ role: "user", content: "Hi there" }],
       systemInstruction: "System",
       conversationId,
+      userId: "test-user",
       repo,
       fetchFn: mockFetch,
     });
@@ -112,7 +113,7 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
     assert.ok(syntheticToolResult, "Turn 1 must contain synthetic tool_result with SKILL.md body");
 
     // Check that skill is now marked as preloaded in database
-    const unpreloadedAfter = await repo.getUnpreloadedExplicitSkills(conversationId);
+    const unpreloadedAfter = await repo.getUnpreloadedExplicitSkills(conversationId, "test-user");
     assert.equal(unpreloadedAfter.length, 0, "Skill must be marked as preloaded after Turn 1");
 
     // Turn 2: Send another message in the same conversation
@@ -136,13 +137,14 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
       messages: [{ role: "user", content: "Second question" }],
       systemInstruction: "System",
       conversationId,
+      userId: "test-user",
       repo,
       fetchFn: mockTurn2Fetch,
     });
     assert.equal(turn2Result.finalText, "Turn 2 response.");
 
     // On Turn 2, toolTraces in result must NOT contain another pre-load
-    const unpreloadedTurn2 = await repo.getUnpreloadedExplicitSkills(conversationId);
+    const unpreloadedTurn2 = await repo.getUnpreloadedExplicitSkills(conversationId, "test-user");
     assert.equal(unpreloadedTurn2.length, 0);
 
     // 2. Unselected enabled skill (explicitlySelected = false) uses progressive loading (not preloaded)
@@ -151,7 +153,7 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
       explicitlySelected: false,
     });
 
-    const unselectedUnpreloaded = await repo.getUnpreloadedExplicitSkills(convAutoId);
+    const unselectedUnpreloaded = await repo.getUnpreloadedExplicitSkills(convAutoId, "test-user");
     assert.equal(
       unselectedUnpreloaded.length,
       0,
@@ -184,6 +186,7 @@ describe("Phase 3: Force-load on Explicit Selection", () => {
       messages: [{ role: "user", content: "Summarize something" }],
       systemInstruction: "System",
       conversationId: convAutoId,
+      userId: "test-user",
       repo,
       fetchFn: mockAutoFetch,
     });

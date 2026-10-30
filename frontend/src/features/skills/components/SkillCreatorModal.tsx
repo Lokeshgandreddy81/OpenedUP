@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import {
   X,
   Play,
@@ -45,6 +46,8 @@ export const SkillCreatorModal: React.FC<SkillCreatorModalProps> = ({
   onSkillCreated,
   initialDraft,
 }) => {
+  const { user } = useChatAuth();
+  const userId = user?.uid;
   const [activeTab, setActiveTab] = useState<"editor" | "test">("editor");
 
   // Form fields
@@ -128,17 +131,20 @@ ${instructions}`;
   useEffect(() => {
     if (!name && !description) return;
     const timer = setTimeout(() => {
-      void validateSkillDraft({
-        name,
-        description,
-        skillMd: fullSkillMd,
-        files: extraFiles,
-      }).then((res) => {
+      void validateSkillDraft(
+        {
+          name,
+          description,
+          skillMd: fullSkillMd,
+          files: extraFiles,
+        },
+        userId
+      ).then((res) => {
         setValidationErrors(res.errors || []);
       });
     }, 300);
     return () => clearTimeout(timer);
-  }, [name, description, fullSkillMd, extraFiles]);
+  }, [name, description, fullSkillMd, extraFiles, userId]);
 
   if (!isOpen) return null;
 
@@ -264,7 +270,8 @@ ${instructions}`;
           skillMd: fullSkillMd,
           files: extraFiles,
         },
-        testPrompt
+        testPrompt,
+        userId
       );
       setTestResult(res);
     } catch (err: unknown) {
@@ -279,14 +286,17 @@ ${instructions}`;
     setSaveError(null);
 
     try {
-      const created = await createSkillFromJson({
-        name: name.trim(),
-        description: description.trim(),
-        skillMd: fullSkillMd,
-        files: extraFiles,
-        scope,
-        approvalStatus: status,
-      });
+      const created = await createSkillFromJson(
+        {
+          name: name.trim(),
+          description: description.trim(),
+          skillMd: fullSkillMd,
+          files: extraFiles,
+          scope,
+          approvalStatus: status,
+        },
+        userId
+      );
       onSkillCreated(created);
       onClose();
     } catch (err: unknown) {

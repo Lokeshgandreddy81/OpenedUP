@@ -146,3 +146,87 @@ test("background worker claims a due task once and records its completed run", a
     db.close();
   }
 });
+
+test("worker startup recovery does not steal a run with a live lease", async () => {
+  const db = openChatDatabase(":memory:");
+  try {
+    const tasks = new ScheduledTaskRepository(db);
+    const task = await tasks.create("schedule-lease-user", {
+      title: "Lease recovery check",
+      prompt: "Return lease status.",
+      icon: "🧪",
+      frequency: "daily",
+      time: "09:00",
+      timezone: "UTC",
+      isActive: true,
+      model: "gpt-6-astra",
+      effort: "Low",
+      notifications: "Failed runs only",
+      startInNewChat: false,
+    });
+    const run = await tasks.createManualRun("schedule-lease-user", task.id);
+    assert.ok(run);
+
+    const now = Date.now();
+    const leaseMs = 5 * 60_000;
+    assert.equal((await tasks.claimNextRun(now, leaseMs))?.id, run.id);
+
+    const service = new ScheduledTaskService(
+      tasks,
+      new ConversationRepository(db),
+      async () => {
+        throw new Error("not expected");
+      },
+      async () => ({ apiKey: "test-provider-key" })
+    );
+    await service.recoverAfterRestart();
+
+    assert.equal(await tasks.claimNextRun(now + 1, leaseMs), null);
+  } finally {
+    db.close();
+  }
+});
+
+test("worker startup recovery makes an expired run claimable again", async () => {
+  const db = openChatDatabase(":memory:");
+  try {
+    const tasks = new ScheduledTaskRepository(db);
+    const task = await tasks.create("schedule-expired-lease-user", {
+      title: "Expired lease recovery check",
+      prompt: "Return lease status.",
+      icon: "🧪",
+      frequency: "daily",
+      time: "09:00",
+      timezone: "UTC",
+      isActive: true,
+      model: "gpt-6-astra",
+      effort: "Low",
+      notifications: "Failed runs only",
+      startInNewChat: false,
+    });
+    const run = await tasks.createManualRun("schedule-expired-lease-user", task.id);
+    assert.ok(run);
+
+    const now = Date.now();
+    const leaseMs = 5 * 60_000;
+    assert.equal((await tasks.claimNextRun(now - leaseMs - 1, leaseMs))?.id, run.id);
+
+    const service = new ScheduledTaskService(
+      tasks,
+      new ConversationRepository(db),
+      async () => {
+        throw new Error("not expected");
+      },
+      async () => ({ apiKey: "test-provider-key" })
+    );
+    await service.recoverAfterRestart();
+
+    const recoveredLease = db
+      .prepare("SELECT lease_until FROM scheduled_task_runs WHERE id = ?")
+      .get(run.id) as { lease_until: number | null };
+    assert.equal(recoveredLease.lease_until, 0);
+    assert.equal((await tasks.claimNextRun(Date.now(), leaseMs))?.id, run.id);
+  } finally {
+    db.close();
+  }
+});

@@ -46,6 +46,45 @@ test("SkillTool - handleSkillToolCall loads SKILL.md body and logs usage when en
   assert.equal(usage[0]?.userId, "user-1");
 });
 
+test("SkillTool refuses an organization skill after the caller loses organization access", async () => {
+  const db = openChatDatabase(":memory:");
+  const repo = new SkillRepository(db);
+  try {
+    const skill = await repo.create({
+      id: "revoked-org-tool-skill",
+      name: "Former organization tool skill",
+      description: "Private instructions",
+      scope: "org",
+      ownerId: "org-admin",
+      orgId: "old-org",
+      storagePath: "/missing/skill",
+    });
+    await repo.setConversationSkills("revoked-org-tool-conversation", [skill.id], "former-member", {
+      orgId: "old-org",
+      explicitlySelected: true,
+    });
+
+    const result = await handleSkillToolCall(
+      skill.name,
+      "revoked-org-tool-conversation",
+      "former-member",
+      repo,
+      null
+    );
+    assert.deepEqual(result, { content: "Skill not enabled", isError: true });
+    assert.deepEqual(
+      await repo.getUnpreloadedExplicitSkills(
+        "revoked-org-tool-conversation",
+        "former-member",
+        null
+      ),
+      []
+    );
+  } finally {
+    db.close();
+  }
+});
+
 test("AnthropicToolLoop - completes tool call turn and finishes loop", async () => {
   const db = openChatDatabase(":memory:");
   const repo = new SkillRepository(db);

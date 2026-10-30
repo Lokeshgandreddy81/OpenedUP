@@ -1,20 +1,22 @@
 import { z } from "zod";
 import { PROVIDER_IDS } from "../types/models.js";
 
-export const PhotoInputSchema = z.object({
-  globalIndex: z.number().int().positive(),
-  totalPhotos: z.number().int().positive(),
-  mimeType: z
-    .string()
-    .trim()
-    .max(100)
-    .regex(/^image\/[a-zA-Z0-9.+-]+$/i, "Invalid image MIME type")
-    .default("image/jpeg"),
-  base64Data: z.string().max(20_000_000).default(""),
-  storagePath: z.string().trim().min(1).max(500).optional(),
-}).refine((photo) => Boolean(photo.base64Data || photo.storagePath), {
-  message: "Either base64Data or storagePath is required.",
-});
+export const PhotoInputSchema = z
+  .object({
+    globalIndex: z.number().int().positive(),
+    totalPhotos: z.number().int().positive(),
+    mimeType: z
+      .string()
+      .trim()
+      .max(100)
+      .regex(/^image\/[a-zA-Z0-9.+-]+$/i, "Invalid image MIME type")
+      .default("image/jpeg"),
+    base64Data: z.string().max(20_000_000).default(""),
+    storagePath: z.string().trim().min(1).max(500).optional(),
+  })
+  .refine((photo) => Boolean(photo.base64Data || photo.storagePath), {
+    message: "Either base64Data or storagePath is required.",
+  });
 
 export const ReadReceiptsRequestSchema = z
   .object({
@@ -24,7 +26,10 @@ export const ReadReceiptsRequestSchema = z
     customProvider: z.enum(PROVIDER_IDS).optional(),
   })
   .superRefine(({ photos }, context) => {
-    const encodedPhotoBytes = photos.reduce((total, photo) => total + (photo.base64Data?.length || 0), 0);
+    const encodedPhotoBytes = photos.reduce(
+      (total, photo) => total + (photo.base64Data?.length || 0),
+      0
+    );
     if (encodedPhotoBytes > 50_000_000) {
       context.addIssue({
         code: "custom",
@@ -55,17 +60,19 @@ export const CheckDuplicatesRequestSchema = z.object({
   customProvider: z.enum(PROVIDER_IDS).optional(),
 });
 
-export const ParsePdfChaptersRequestSchema = z.object({
-  mimeType: z.string().trim().max(100).optional().default("application/pdf"),
-  base64Data: z.string().max(50_000_000).default(""),
-  storagePath: z.string().trim().min(1).max(500).optional(),
-  fileName: z.string().max(300).optional(),
-  model: z.string().trim().min(1).max(200),
-  customModel: z.string().trim().max(200).optional(),
-  customProvider: z.enum(PROVIDER_IDS).optional(),
-}).refine((request) => Boolean(request.base64Data) !== Boolean(request.storagePath), {
-  message: "Provide either base64Data or storagePath.",
-});
+export const ParsePdfChaptersRequestSchema = z
+  .object({
+    mimeType: z.string().trim().max(100).optional().default("application/pdf"),
+    base64Data: z.string().max(50_000_000).default(""),
+    storagePath: z.string().trim().min(1).max(500).optional(),
+    fileName: z.string().max(300).optional(),
+    model: z.string().trim().min(1).max(200),
+    customModel: z.string().trim().max(200).optional(),
+    customProvider: z.enum(PROVIDER_IDS).optional(),
+  })
+  .refine((request) => Boolean(request.base64Data) !== Boolean(request.storagePath), {
+    message: "Provide either base64Data or storagePath.",
+  });
 
 export const ChatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -124,18 +131,20 @@ export const ChatRequestSchema = z.object({
     .optional(),
   images: z
     .array(
-      z.object({
-        name: z.string().max(200).optional(),
-        mimeType: z
-          .string()
-          .trim()
-          .max(100)
-          .regex(/^image\/[a-zA-Z0-9.+-]+$/i, "Invalid image MIME type"),
-        base64Data: z.string().max(20_000_000).default(""),
-        storagePath: z.string().trim().min(1).max(500).optional(),
-      }).refine((image) => Boolean(image.base64Data || image.storagePath), {
-        message: "Either base64Data or storagePath is required.",
-      })
+      z
+        .object({
+          name: z.string().max(200).optional(),
+          mimeType: z
+            .string()
+            .trim()
+            .max(100)
+            .regex(/^image\/[a-zA-Z0-9.+-]+$/i, "Invalid image MIME type"),
+          base64Data: z.string().max(20_000_000).default(""),
+          storagePath: z.string().trim().min(1).max(500).optional(),
+        })
+        .refine((image) => Boolean(image.base64Data || image.storagePath), {
+          message: "Either base64Data or storagePath is required.",
+        })
     )
     .max(10)
     .refine(
@@ -171,14 +180,16 @@ export const ChapterChatRequestSchema = z
       .refine((items) => items.reduce((size, item) => size + item.text.length, 0) <= 32_000),
     imagePages: z
       .array(
-        z.object({
-          pageNumber: z.number().int().positive(),
-          mimeType: z.enum(["image/jpeg", "image/png"]),
-          base64Data: z.string().max(1_500_000).default(""),
-          storagePath: z.string().trim().min(1).max(500).optional(),
-        }).refine((image) => Boolean(image.base64Data) !== Boolean(image.storagePath), {
-          message: "Provide either base64Data or storagePath.",
-        })
+        z
+          .object({
+            pageNumber: z.number().int().positive(),
+            mimeType: z.enum(["image/jpeg", "image/png"]),
+            base64Data: z.string().max(1_500_000).default(""),
+            storagePath: z.string().trim().min(1).max(500).optional(),
+          })
+          .refine((image) => Boolean(image.base64Data) !== Boolean(image.storagePath), {
+            message: "Provide either base64Data or storagePath.",
+          })
       )
       .max(8)
       .optional(),
@@ -314,7 +325,8 @@ export const SetArtifactSharingRequestSchema = z.object({ isShared: z.boolean() 
 
 const PROJECT_IMAGE_MAX_BYTES = 10_000_000;
 const PROJECT_IMAGE_MAX_BASE64_CHARS = Math.ceil(PROJECT_IMAGE_MAX_BYTES / 3) * 4;
-const PROJECTS_PAYLOAD_MAX_CHARS = 20_000_000;
+export const PROJECTS_PAYLOAD_MAX_BYTES = 20_000_000;
+export const PROJECTS_COLLECTION_MAX_ITEMS = 1_000;
 
 const ProjectFileSchema = z.object({
   id: z.string().min(1).max(200),
@@ -436,8 +448,8 @@ export const ProjectSnapshotSchema = z
     });
   });
 
-const ProjectsCollectionSchema = z
-  .object({ projects: z.array(ProjectSnapshotSchema).max(100) })
+export const ProjectsCollectionSchema = z
+  .object({ projects: z.array(ProjectSnapshotSchema).max(PROJECTS_COLLECTION_MAX_ITEMS) })
   .superRefine((input, context) => {
     const ids = input.projects.map((project) => project.id);
     if (new Set(ids).size !== ids.length) {
@@ -447,11 +459,11 @@ const ProjectsCollectionSchema = z
         path: ["projects"],
       });
     }
-    const encodedLength = JSON.stringify(input.projects).length;
-    if (encodedLength > PROJECTS_PAYLOAD_MAX_CHARS) {
+    const encodedBytes = new TextEncoder().encode(JSON.stringify(input.projects)).byteLength;
+    if (encodedBytes > PROJECTS_PAYLOAD_MAX_BYTES) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Project data exceeds the 20 MB limit.",
+        message: "Project data exceeds the 20 MB limit when encoded as UTF-8.",
         path: ["projects"],
       });
     }

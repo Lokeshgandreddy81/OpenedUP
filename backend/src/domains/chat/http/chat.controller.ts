@@ -30,6 +30,7 @@ import { SKILLS } from "../application/skillRegistry.js";
 import { actionableProviderError, classifyProviderFailure } from "../providers/providerErrors.js";
 import { deleteUserUploads, downloadUserImage } from "../../../platform/storage/supabaseStorage.js";
 import { AppError } from "../../../platform/errors/errors.js";
+import { getRequestIdentity } from "../../../platform/auth/identity.js";
 
 function isLoopbackRequest(req: Request): boolean {
   const address = req.socket.remoteAddress?.replace(/^::ffff:/, "");
@@ -57,7 +58,11 @@ function publicProviderError(message: string): string {
   return actionableProviderError(message);
 }
 
-async function resolveStoredChatImages(req: Request, res: Response, payload: ChatRequest): Promise<ChatRequest> {
+async function resolveStoredChatImages(
+  req: Request,
+  res: Response,
+  payload: ChatRequest
+): Promise<ChatRequest> {
   const images = payload.images || [];
   const storagePaths = images.flatMap((image) => (image.storagePath ? [image.storagePath] : []));
   if (!storagePaths.length) return payload;
@@ -83,7 +88,9 @@ async function resolveStoredChapterImages(
   request: ChapterChatRequest
 ): Promise<ChapterChatRequest> {
   const imagePages = request.imagePages || [];
-  const storagePaths = imagePages.flatMap((image) => (image.storagePath ? [image.storagePath] : []));
+  const storagePaths = imagePages.flatMap((image) =>
+    image.storagePath ? [image.storagePath] : []
+  );
   if (!storagePaths.length) return request;
   if (!req.principal?.uid) throw new AppError("Sign in to process these chapter images.", 401);
   const userId = req.principal.uid;
@@ -104,6 +111,7 @@ async function resolveStoredChapterImages(
 export async function handleChat(req: Request, res: Response, _next: NextFunction): Promise<void> {
   const startTime = Date.now();
   const timeoutSignal = AbortSignal.timeout(CHAT_GENERATION_TIMEOUT_MS);
+  const identity = getRequestIdentity(req);
   let payload = req.body as ChatRequest;
   try {
     payload = await resolveStoredChatImages(req, res, payload);
@@ -114,7 +122,8 @@ export async function handleChat(req: Request, res: Response, _next: NextFunctio
       injectedApiKey: credential.apiKey,
       injectedBaseUrl: credential.baseUrl,
       signal: timeoutSignal,
-      userId: req.principal?.uid ?? null,
+      userId: identity.userId,
+      orgId: identity.orgId,
     });
     res.json(result);
   } catch (error: unknown) {
@@ -155,6 +164,7 @@ export async function handleChatStream(
   _next: NextFunction
 ): Promise<void> {
   const startTime = Date.now();
+  const identity = getRequestIdentity(req);
   let payload = req.body as ChatRequest;
   let credential: Awaited<ReturnType<typeof resolveRequestProviderCredential>>;
   try {
@@ -215,7 +225,8 @@ export async function handleChatStream(
         injectedBaseUrl: credential.baseUrl,
         toolTraces,
         signal: requestSignal,
-        userId: req.principal?.uid ?? null,
+        userId: identity.userId,
+        orgId: identity.orgId,
       },
       (delta) => {
         emittedAnyDelta = true;

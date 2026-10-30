@@ -18,12 +18,7 @@ import {
 import { base64ToBlob, uploadBlobForProcessing } from "../../../app/files/storageUploads";
 import type { ChatConversation, ChatMessage, AiModelId, EffortLevel } from "./chatTypes";
 import { getModelMeta, type ComputedRow } from "@charan-interiors/contracts";
-import {
-  getConversationSkills,
-  setConversationSkills as apiSetConversationSkills,
-  SkillsMenuModal,
-  type SkillItem,
-} from "../../skills";
+import { getConversationSkills, SkillsMenuModal, type SkillItem } from "../../skills";
 
 const DEFAULT_CHAT_MODEL: AiModelId = "openrouter-nemotron-3.5-lightning-free";
 
@@ -96,6 +91,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onOpenScheduledTasks,
 }) => {
   const { user } = useChatAuth();
+  const currentUserId = user?.uid ?? null;
+  const currentUserIdRef = useRef<string | null>(currentUserId);
+  currentUserIdRef.current = currentUserId;
   const [activeView, setActiveView] = useState<
     | "chat"
     | "projects"
@@ -230,6 +228,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Cleared all dummy chats: Start fresh with an empty list
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [loadedConversationsUserId, setLoadedConversationsUserId] = useState<string | null>(null);
+  const conversationsReady = loadedConversationsUserId === currentUserId;
+  const visibleConversations = useMemo(
+    () => (conversationsReady ? conversations : []),
+    [conversationsReady, conversations]
+  );
   const [activeConversationId, setActiveConversationId] = useState<string>("");
   const [enabledSkills, setEnabledSkills] = useState<SkillItem[]>([]);
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
@@ -237,7 +241,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   useEffect(() => {
     let cancelled = false;
     const targetId = activeConversationId || "guest-chat";
-    getConversationSkills(targetId)
+    getConversationSkills(targetId, user?.uid)
       .then((skills) => {
         if (!cancelled) setEnabledSkills(skills);
       })
@@ -247,32 +251,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [activeConversationId]);
-
-  const handleRemoveSkill = async (skillId: string) => {
-    const updated = enabledSkills.filter((s) => s.id !== skillId);
-    setEnabledSkills(updated);
-    const targetId = activeConversationId || "guest-chat";
-    try {
-      await apiSetConversationSkills(
-        targetId,
-        updated.map((s) => s.id)
-      );
-    } catch {
-      // Keep optimistic update in local state
-    }
-  };
+  }, [activeConversationId, user?.uid]);
 
   useEffect(() => {
-    if (!user) {
-      setConversations([]);
-      setActiveConversationId("");
+    setConversations([]);
+    setActiveConversationId("");
+    setLoadedConversationsUserId(null);
+    setTemporaryMessages([]);
+    setIsTemporaryChat(false);
+    setEnabledSkills([]);
+    activeRequestControllerRef.current?.abort();
+    activeRequestControllerRef.current = null;
+    userStoppedRequestRef.current = false;
+    setIsThinking(false);
+    setIsResponding(false);
+    if (!currentUserId) {
+      setLoadedConversationsUserId(null);
       return;
     }
+    const userId = currentUserId;
     let cancelled = false;
+    setLoadedConversationsUserId(userId);
     void (async () => {
       try {
-        const response = await authenticatedChatFetch("/api/conversations");
+        const response = await authenticatedChatFetch("/api/conversations", {}, userId);
         if (!response.ok) return;
         const data = (await response.json()) as {
           conversations: Array<{
@@ -287,7 +289,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const loaded = await Promise.all(
           data.conversations.map(async (summary) => {
             const detailResponse = await authenticatedChatFetch(
-              `/api/conversations/${encodeURIComponent(summary.id)}`
+              `/api/conversations/${encodeURIComponent(summary.id)}`,
+              {},
+              userId
             );
             if (!detailResponse.ok) {
               return {
@@ -325,7 +329,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         );
         if (!cancelled) {
           setConversations(loaded);
-          setActiveConversationId((current) => current || loaded[0]?.id || "");
+          setActiveConversationId(loaded[0]?.id || "");
           if (loaded[0]?.model) setSelectedModel(getSelectableChatModel(loaded[0].model));
         }
       } catch {
@@ -335,11 +339,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [currentUserId]);
 
   const activeConversation = useMemo(() => {
-    return conversations.find((c) => c.id === activeConversationId) || null;
-  }, [conversations, activeConversationId]);
+    return visibleConversations.find((c) => c.id === activeConversationId) || null;
+  }, [visibleConversations, activeConversationId]);
 
   // Keyboard navigation: Escape key closes layered elements cleanly
   useEffect(() => {
@@ -367,6 +371,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Handle + New chat
   const handleNewChat = useCallback(async () => {
+    const ownerUserId = user?.uid ?? null;
     setActiveView("chat");
     if (isTemporaryChat) {
       setTemporaryMessages([]);
@@ -374,17 +379,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     let newId = `chat-${Date.now()}`;
     if (user) {
       try {
-        const response = await authenticatedChatFetch("/api/conversations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "New chat", model: selectedModel }),
-        });
+        const response = await authenticatedChatFetch(
+          "/api/conversations",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: "New chat", model: selectedModel }),
+          },
+          user.uid
+        );
         if (response.ok)
           newId = ((await response.json()) as { conversation: { id: string } }).conversation.id;
       } catch {
         /* retain a local unsaved chat if the API is unavailable */
       }
     }
+    if (currentUserIdRef.current !== ownerUserId) return;
     const newChat: ChatConversation = {
       id: newId,
       title: "New chat",
@@ -400,11 +410,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     (id: string) => {
       const current = conversations.find((conversation) => conversation.id === id);
       if (user && current && !id.startsWith("chat-"))
-        void authenticatedChatFetch(`/api/conversations/${encodeURIComponent(id)}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isPinned: !current.isPinned }),
-        });
+        void authenticatedChatFetch(
+          `/api/conversations/${encodeURIComponent(id)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isPinned: !current.isPinned }),
+          },
+          user.uid
+        );
       setConversations((prev) =>
         prev.map((c) => (c.id === id ? { ...c, isPinned: !c.isPinned } : c))
       );
@@ -416,11 +430,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleRenameConversation = useCallback(
     (id: string, newTitle: string) => {
       if (user && !id.startsWith("chat-"))
-        void authenticatedChatFetch(`/api/conversations/${encodeURIComponent(id)}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: newTitle }),
-        });
+        void authenticatedChatFetch(
+          `/api/conversations/${encodeURIComponent(id)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: newTitle }),
+          },
+          user.uid
+        );
       setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c)));
     },
     [user]
@@ -430,11 +448,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleArchiveConversation = useCallback(
     (id: string) => {
       if (user && !id.startsWith("chat-"))
-        void authenticatedChatFetch(`/api/conversations/${encodeURIComponent(id)}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isArchived: true }),
-        });
+        void authenticatedChatFetch(
+          `/api/conversations/${encodeURIComponent(id)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isArchived: true }),
+          },
+          user.uid
+        );
       setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, isArchived: true } : c)));
     },
     [user]
@@ -450,7 +472,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ isArchived: false }),
-            }
+            },
+            user.uid
           );
           if (!response.ok) return false;
         }
@@ -497,6 +520,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       attachments: ChatAttachmentFile[] = []
     ) => {
       if (activeRequestControllerRef.current) return;
+      const ownerUserId = user?.uid ?? null;
       const controller = new AbortController();
       activeRequestControllerRef.current = controller;
       userStoppedRequestRef.current = false;
@@ -509,6 +533,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         () => controller.abort(),
         90000
       );
+      const stoppedForIdentityChange = () => {
+        if (currentUserIdRef.current === ownerUserId) return false;
+        clearTimeout(requestTimeoutId);
+        if (activeRequestControllerRef.current === controller) {
+          activeRequestControllerRef.current = null;
+        }
+        return true;
+      };
       let pendingStreamMessageId: string | null = null;
       let streamedAssistantMessage: ChatMessage | null = null;
 
@@ -545,12 +577,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         targetId = `chat-${Date.now()}`;
         if (user) {
           try {
-            const created = await authenticatedChatFetch("/api/conversations", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title: text.slice(0, 200) || "New chat", model }),
-              signal: controller.signal,
-            });
+            const created = await authenticatedChatFetch(
+              "/api/conversations",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: text.slice(0, 200) || "New chat", model }),
+                signal: controller.signal,
+              },
+              user.uid
+            );
             if (created.ok)
               targetId = ((await created.json()) as { conversation: { id: string } }).conversation
                 .id;
@@ -558,6 +594,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             /* the response can still be shown as a local chat */
           }
         }
+        if (stoppedForIdentityChange()) return;
         const newConv: ChatConversation = {
           id: targetId,
           title: text.slice(0, 24) + (text.length > 24 ? "..." : ""),
@@ -586,12 +623,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       if (user && !isTemporaryChat && !targetId.startsWith("chat-")) {
         try {
           if (!activeConversation || activeConversation.messages.length === 0)
-            await authenticatedChatFetch(`/api/conversations/${encodeURIComponent(targetId)}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title: text.slice(0, 200) || "New chat" }),
-              signal: controller.signal,
-            });
+            await authenticatedChatFetch(
+              `/api/conversations/${encodeURIComponent(targetId)}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: text.slice(0, 200) || "New chat" }),
+                signal: controller.signal,
+              },
+              user.uid
+            );
           const savedUserMsgResponse = await authenticatedChatFetch(
             `/api/conversations/${encodeURIComponent(targetId)}/messages`,
             {
@@ -613,12 +654,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   : {}),
               }),
               signal: controller.signal,
-            }
+            },
+            user.uid
           );
+          if (stoppedForIdentityChange()) return;
           if (savedUserMsgResponse.ok) {
             const savedData = (await savedUserMsgResponse.json()) as {
               message?: { id?: string };
             };
+            if (stoppedForIdentityChange()) return;
             const savedId = savedData.message?.id;
             if (savedId) {
               const clientId = userMessage.id;
@@ -648,7 +692,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           (isTemporaryChat ? temporaryMessages : activeConversation?.messages || []);
 
         // Resolve BYOK credentials for the selected model
-        const providerConfig = getProviderChatRequestConfig(model);
+        const providerConfig = getProviderChatRequestConfig(model, user?.uid ?? null);
         const { providerName, modelName } = providerConfig;
 
         const imageAttachments = await Promise.all(
@@ -657,10 +701,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             return {
               name: image.name,
               mimeType: image.mimeType,
-              storagePath: await uploadBlobForProcessing(blob, image.name || "chat-image", "image"),
+              storagePath: await uploadBlobForProcessing(
+                blob,
+                image.name || "chat-image",
+                "image",
+                user?.uid
+              ),
             };
           })
         );
+        if (currentUserIdRef.current !== ownerUserId) return;
         const body = JSON.stringify({
           ...(targetId ? { conversationId: targetId } : {}),
           messages: [...priorMessages, userMessage].map((message) => ({
@@ -689,8 +739,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           body,
         };
         const response = user
-          ? await authenticatedChatFetch("/api/chat/stream", requestInit)
+          ? await authenticatedChatFetch("/api/chat/stream", requestInit, user.uid)
           : await fetch("/api/chat/stream", requestInit);
+        if (currentUserIdRef.current !== ownerUserId) return;
         if (response.ok) {
           const msgId = `msg-a-${Date.now()}`;
           pendingStreamMessageId = msgId;
@@ -703,6 +754,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           };
           streamedAssistantMessage = assistantMessage;
           const updateAssistant = (patch: Partial<ChatMessage>) => {
+            if (currentUserIdRef.current !== ownerUserId) return;
             assistantMessage = { ...assistantMessage, ...patch };
             streamedAssistantMessage = assistantMessage;
             if (isTemporaryChat)
@@ -732,7 +784,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             );
           let firstTokenAt: number | null = null;
           await consumeChatStream(response, (delta) => {
-            if (!delta) return;
+            if (!delta || currentUserIdRef.current !== ownerUserId) return;
             if (firstTokenAt === null) {
               firstTokenAt = Date.now();
               const elapsedThinking = Math.max(
@@ -746,6 +798,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             }
             updateAssistant({ content: assistantMessage.content + delta });
           });
+          if (currentUserIdRef.current !== ownerUserId) return;
           const elapsedThinking = firstTokenAt
             ? Math.max(1, Math.ceil((firstTokenAt - generationStartMs) / 1000))
             : Math.max(1, Math.ceil((Date.now() - generationStartMs) / 1000));
@@ -774,11 +827,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     actionChips: assistantMessage.actionChips,
                   },
                 }),
-              }
+              },
+              user.uid
             );
           }
         } else {
           const errData = await response.json().catch(() => ({}));
+          if (currentUserIdRef.current !== ownerUserId) return;
           if (
             response.status === 401 &&
             typeof errData.error === "string" &&
@@ -821,6 +876,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           );
         }
       } catch (error: unknown) {
+        if (currentUserIdRef.current !== ownerUserId) return;
         const elapsedSeconds = Math.max(1, Math.ceil((Date.now() - generationStartMs) / 1000));
         if (userStoppedRequestRef.current) {
           if (streamedAssistantMessage) {
@@ -862,7 +918,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         thinkingTime: stoppedMessage.thinkingTime,
                       },
                     }),
-                  }
+                  },
+                  user.uid
                 ).catch(() => undefined);
               }
             }
@@ -920,13 +977,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           );
         }
       } finally {
-        if (activeRequestControllerRef.current === controller)
-          activeRequestControllerRef.current = null;
-        userStoppedRequestRef.current = false;
         if (requestTimeoutId) clearTimeout(requestTimeoutId);
-        generationStartedAtRef.current = null;
-        setIsThinking(false);
-        setIsResponding(false);
+        if (currentUserIdRef.current === ownerUserId) {
+          if (activeRequestControllerRef.current === controller)
+            activeRequestControllerRef.current = null;
+          userStoppedRequestRef.current = false;
+          generationStartedAtRef.current = null;
+          setIsThinking(false);
+          setIsResponding(false);
+        }
       }
     },
     [
@@ -963,7 +1022,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ model }),
-            }
+            },
+            user.uid
           ).catch(() => undefined);
         }
       }
@@ -990,7 +1050,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         if (user && !activeConversation.id.startsWith("chat-")) {
           await authenticatedChatFetch(
             `/api/conversations/${encodeURIComponent(activeConversation.id)}/messages/${encodeURIComponent(messageId)}`,
-            { method: "DELETE" }
+            { method: "DELETE" },
+            user.uid
           ).catch(() => undefined);
         }
       }
@@ -1036,17 +1097,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       const promptTitle = previousUserMessage?.replace(/\s+/g, " ").trim();
       const title = (heading || promptTitle || `${category} from chat`).slice(0, 100);
       const { persistArtifactItem } = await import("../../artifacts");
-      const { modelName } = getKeyForModel(selectedModel);
-      await persistArtifactItem({
-        title,
-        category,
-        content,
-        language,
-        modelUsed: modelName,
-        isShared: false,
-      });
+      const { modelName } = getKeyForModel(selectedModel, user?.uid ?? null);
+      await persistArtifactItem(
+        {
+          title,
+          category,
+          content,
+          language,
+          modelUsed: modelName,
+          isShared: false,
+        },
+        user?.uid ?? null
+      );
     },
-    [currentMessages, selectedModel]
+    [currentMessages, selectedModel, user?.uid]
   );
 
   if (!isOpen) return null;
@@ -1059,13 +1123,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     >
       {/* Left history and navigation drawer */}
       <ChatSidebar
-        conversations={conversations}
+        conversations={visibleConversations}
         activeConversationId={isTemporaryChat ? "" : activeConversationId}
         onSelectConversation={(id) => {
           setIsTemporaryChat(false);
           setTemporaryMessages([]);
           setActiveConversationId(id);
-          const conversation = conversations.find((item) => item.id === id);
+          const conversation = visibleConversations.find((item) => item.id === id);
           if (conversation?.model) setSelectedModel(getSelectableChatModel(conversation.model));
         }}
         onNewChat={() => {
@@ -1079,12 +1143,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         onDeleteConversation={(id, e) => {
           e.stopPropagation();
           if (user && !id.startsWith("chat-"))
-            void authenticatedChatFetch(`/api/conversations/${encodeURIComponent(id)}`, {
-              method: "DELETE",
-            });
+            void authenticatedChatFetch(
+              `/api/conversations/${encodeURIComponent(id)}`,
+              {
+                method: "DELETE",
+              },
+              user.uid
+            );
           setConversations((prev) => prev.filter((c) => c.id !== id));
           if (activeConversationId === id) {
-            const remaining = conversations.filter((c) => c.id !== id);
+            const remaining = visibleConversations.filter((c) => c.id !== id);
             setActiveConversationId(remaining[0]?.id || "");
           }
         }}
@@ -1102,7 +1170,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         projectsNavKey={projectsNavKey}
         benchmarksNavKey={benchmarksNavKey}
         isScheduledTasksOpen={isScheduledTasksInternalOpen}
-        conversations={conversations}
+        conversations={visibleConversations}
         onSelectView={handleSelectView}
         onRestoreConversation={handleRestoreConversation}
         onOpenArchivedConversation={handleOpenArchivedConversation}
@@ -1299,7 +1367,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     ) {
                       const response = await authenticatedChatFetch(
                         `/api/conversations/${encodeURIComponent(activeConversation.id)}/messages/${encodeURIComponent(previousUserMessage.id)}`,
-                        { method: "DELETE" }
+                        { method: "DELETE" },
+                        user.uid
                       );
                       if (!response.ok) {
                         setRetryActionError(
@@ -1382,6 +1451,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         isOpen={isSkillsModalOpen}
         onClose={() => setIsSkillsModalOpen(false)}
         conversationId={activeConversationId}
+        userId={user?.uid}
         enabledSkills={enabledSkills}
         onSkillsChange={setEnabledSkills}
       />

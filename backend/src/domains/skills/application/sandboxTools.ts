@@ -99,13 +99,23 @@ export async function executeSandboxTool(
   conversationId: string,
   paths?: SandboxPaths,
   repo: SkillRepository = new SkillRepository(),
-  userId?: string | null
+  userId?: string | null,
+  orgId?: string | null
 ): Promise<{ content: string; isError?: boolean }> {
   const sandboxPaths =
-    paths || initSandbox(conversationId, await repo.getConversationSkills(conversationId));
+    paths ||
+    initSandbox(conversationId, await repo.getConversationSkills(conversationId, userId, orgId));
 
   if (process.env["VERCEL"] === "1") {
-    return executeOnVercelSandbox(toolName, input, conversationId, sandboxPaths, repo, userId);
+    return executeOnVercelSandbox(
+      toolName,
+      input,
+      conversationId,
+      sandboxPaths,
+      repo,
+      userId,
+      orgId
+    );
   }
 
   switch (toolName) {
@@ -138,7 +148,8 @@ async function executeOnVercelSandbox(
   conversationId: string,
   paths: SandboxPaths,
   repo: SkillRepository,
-  userId?: string | null
+  userId?: string | null,
+  orgId?: string | null
 ): Promise<{ content: string; isError?: boolean }> {
   const executor = new VercelSandboxExecutor();
   const sandbox = await (async () => {
@@ -153,7 +164,12 @@ async function executeOnVercelSandbox(
 
   // Mirror approved skill package files into the isolated workspace. The only
   // credentials available here are those needed to fetch skill bytes server-side.
-  const skills = await repo.getConversationSkills(conversationId);
+  const skills = await repo.getConversationSkills(conversationId, userId, orgId);
+  const clearSkillsMount = await sandbox.runCommand("rm", ["-rf", "/vercel/sandbox/mnt/skills"]);
+  if (clearSkillsMount.exitCode !== 0) {
+    throw new Error("Could not refresh the visible skill files in the sandbox.");
+  }
+  await sandbox.mkDir("/vercel/sandbox/mnt/skills");
   const mounts: Array<{ path: string; content: Buffer; mode: number }> = [];
   for (const skill of skills) {
     if (!skill.storagePath) continue;

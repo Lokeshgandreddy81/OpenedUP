@@ -35,7 +35,10 @@ export class SandboxSecurityError extends Error {
 
 function isPathInside(root: string, candidate: string): boolean {
   const relative = path.relative(path.resolve(root), path.resolve(candidate));
-  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+  return (
+    relative === "" ||
+    (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))
+  );
 }
 
 /**
@@ -52,6 +55,18 @@ export function getSandboxBaseDir(conversationId: string): string {
   return path.join(root, conversationId);
 }
 
+function clearSkillMount(skillsMountDir: string): void {
+  if (!fs.existsSync(skillsMountDir)) return;
+  const makeDirectoriesWritable = (directory: string) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory()) makeDirectoriesWritable(path.join(directory, entry.name));
+    }
+    fs.chmodSync(directory, 0o755);
+  };
+  makeDirectoriesWritable(skillsMountDir);
+  fs.rmSync(skillsMountDir, { recursive: true, force: true });
+}
+
 /**
  * Initializes and ensures the isolated sandbox directories exist for a conversation.
  */
@@ -64,6 +79,7 @@ export function initSandbox(
   const skillsMountDir = path.join(baseDir, "mnt", "skills");
   const attachmentsDir = path.join(baseDir, "attachments");
 
+  clearSkillMount(skillsMountDir);
   fs.mkdirSync(workspaceDir, { recursive: true });
   fs.mkdirSync(skillsMountDir, { recursive: true });
   fs.mkdirSync(attachmentsDir, { recursive: true });

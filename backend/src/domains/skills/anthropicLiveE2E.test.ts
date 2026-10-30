@@ -32,7 +32,7 @@ describe("Live Anthropic E2E Tool Loop", () => {
     await repo.setConversationSkills(conversationId, [csvSkill.id], "test-user");
 
     // Init sandbox
-    const enabledSkills = await repo.getConversationSkills(conversationId);
+    const enabledSkills = await repo.getConversationSkills(conversationId, "test-user");
     const sandbox = initSandbox(conversationId, enabledSkills);
 
     // Put a sample CSV in workspace
@@ -59,10 +59,18 @@ describe("Live Anthropic E2E Tool Loop", () => {
       ],
       systemInstruction: fullSystemPrompt,
       conversationId,
+      userId: "test-user",
       tools,
       repo,
       executeCustomTool: async (toolName, input) => {
-        return await executeSandboxTool(toolName, input, conversationId, sandbox, repo);
+        return await executeSandboxTool(
+          toolName,
+          input,
+          conversationId,
+          sandbox,
+          repo,
+          "test-user"
+        );
       },
     });
 

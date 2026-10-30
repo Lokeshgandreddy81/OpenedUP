@@ -199,13 +199,12 @@ CREATE INDEX IF NOT EXISTS idx_conversation_skills_conv
   ON conversation_skills(conversation_id);
 
 CREATE TABLE IF NOT EXISTS project_skills (
+  user_id TEXT NOT NULL,
   project_id TEXT NOT NULL,
   skill_id TEXT NOT NULL,
-  PRIMARY KEY(project_id, skill_id),
+  PRIMARY KEY(user_id, project_id, skill_id),
   FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS idx_project_skills_project
-  ON project_skills(project_id);
 
 CREATE TABLE IF NOT EXISTS skill_usage (
   id TEXT PRIMARY KEY,
@@ -324,13 +323,12 @@ function migrateChatDatabase(database: ChatDatabase): void {
       ON conversation_skills(conversation_id);
 
     CREATE TABLE IF NOT EXISTS project_skills (
+      user_id TEXT NOT NULL,
       project_id TEXT NOT NULL,
       skill_id TEXT NOT NULL,
-      PRIMARY KEY(project_id, skill_id),
+      PRIMARY KEY(user_id, project_id, skill_id),
       FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
     );
-    CREATE INDEX IF NOT EXISTS idx_project_skills_project
-      ON project_skills(project_id);
 
     CREATE TABLE IF NOT EXISTS skill_usage (
       id TEXT PRIMARY KEY,
@@ -488,6 +486,32 @@ function migrateChatDatabase(database: ChatDatabase): void {
     `);
 
     database.exec("PRAGMA user_version = 6;");
+  }
+
+  if (userVersion < 7) {
+    const projectSkillCols = (
+      database.pragma("table_info(project_skills)") as Array<{ name: string }>
+    ).map((column) => column.name);
+    if (!projectSkillCols.includes("user_id")) {
+      // Legacy project-skill rows have no owner. Quarantine them rather than guess
+      // which account's project should inherit potentially private skill associations.
+      database.exec(`
+        PRAGMA foreign_keys = OFF;
+        ALTER TABLE project_skills RENAME TO project_skills_legacy;
+        CREATE TABLE project_skills (
+          user_id TEXT NOT NULL,
+          project_id TEXT NOT NULL,
+          skill_id TEXT NOT NULL,
+          PRIMARY KEY(user_id, project_id, skill_id),
+          FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
+        );
+        INSERT INTO project_skills (user_id, project_id, skill_id)
+          SELECT '__legacy_unowned__', project_id, skill_id FROM project_skills_legacy;
+        DROP TABLE project_skills_legacy;
+        PRAGMA foreign_keys = ON;
+      `);
+    }
+    database.exec("PRAGMA user_version = 7;");
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   Plus,
@@ -16,7 +16,6 @@ import {
   X,
   BookOpenText,
   ArrowUpRight,
-  Sparkles,
   Puzzle,
 } from "lucide-react";
 import {
@@ -26,8 +25,13 @@ import {
   PROVIDER_CATALOG,
 } from "@charan-interiors/contracts";
 import { useProviderKeys } from "../../customize/publicApi";
+import { useChatAuth } from "../../../app/auth/useChatAuth";
 import { useSpeechInput } from "../../../app/hooks/useSpeechInput";
-import { readChatAttachments, type ChatAttachmentFile } from "../../../app/files/chatAttachments";
+import {
+  readChatAttachments,
+  revokeChatAttachmentPreviewUrls,
+  type ChatAttachmentFile,
+} from "../../../app/files/chatAttachments";
 import type { AiModelId, AiModelOption, EffortLevel } from "./chatTypes";
 import { ImageLightboxModal } from "./ImageLightboxModal";
 
@@ -151,6 +155,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   landingMode = false,
   onOpenSkillsModal,
 }) => {
+  const { user } = useChatAuth();
+  const userId = user?.uid ?? null;
   const [text, setText] = useState(initialText);
   const [attachments, setAttachments] = useState<ChatAttachmentFile[]>([]);
   const [isReadingFiles, setIsReadingFiles] = useState(false);
@@ -190,14 +196,51 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     fileName?: string;
     fileSize?: string;
   } | null>(null);
+  const [draftUserId, setDraftUserId] = useState(userId);
+  const currentUserIdentityRef = useRef({ userId, generation: 0 });
+  const currentUserIdRef = useRef(userId);
+  const attachmentsRef = useRef(attachments);
+  const draftUserIdRef = useRef(draftUserId);
+  const userGeneration =
+    currentUserIdentityRef.current.generation +
+    (currentUserIdentityRef.current.userId === userId ? 0 : 1);
+  useLayoutEffect(() => {
+    if (currentUserIdentityRef.current.userId !== userId) {
+      currentUserIdentityRef.current = {
+        userId,
+        generation: currentUserIdentityRef.current.generation + 1,
+      };
+    }
+    currentUserIdRef.current = userId;
+  }, [userId]);
+  const isCurrentDraftIdentity = (requestUserId: string | null, requestGeneration: number) =>
+    currentUserIdentityRef.current.userId === requestUserId &&
+    currentUserIdentityRef.current.generation === requestGeneration;
+  useLayoutEffect(() => {
+    attachmentsRef.current = attachments;
+    draftUserIdRef.current = draftUserId;
+  }, [attachments, draftUserId]);
+  const transferredPreviewUrlsRef = useRef(new Set<string>());
+  const draftBelongsToCurrentUser = draftUserId === userId;
+  const visibleText = draftBelongsToCurrentUser ? text : "";
+  const visibleAttachments = draftBelongsToCurrentUser ? attachments : [];
+  const visibleIsReadingFiles = draftBelongsToCurrentUser && isReadingFiles;
+  const visibleFileError = draftBelongsToCurrentUser ? fileError : "";
+  const visibleLightboxImage = draftBelongsToCurrentUser ? activeLightboxImage : null;
 
   const {
     isListening: isDictating,
     error: dictationError,
     toggle: toggleDictation,
-  } = useSpeechInput((transcript) =>
-    setText((current) => `${current}${current ? " " : ""}${transcript}`)
-  );
+  } = useSpeechInput((transcript) => {
+    if (
+      !draftBelongsToCurrentUser ||
+      !isCurrentDraftIdentity(userId, userGeneration) ||
+      currentUserIdRef.current !== userId
+    )
+      return;
+    setText((current) => `${current}${current ? " " : ""}${transcript}`);
+  });
 
   // Auto-expand textarea height reactively whenever text changes
   useEffect(() => {
@@ -205,14 +248,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     textareaRef.current.style.height = "auto";
     const nextHeight = Math.min(200, Math.max(22, textareaRef.current.scrollHeight));
     textareaRef.current.style.height = `${nextHeight}px`;
-  }, [text]);
+  }, [visibleText]);
 
   useEffect(() => {
-    if (initialText) {
-      setText(initialText);
-      textareaRef.current?.focus();
-    }
-  }, [initialText]);
+    if (
+      !initialText ||
+      draftUserIdRef.current !== userId ||
+      !isCurrentDraftIdentity(userId, userGeneration)
+    )
+      return;
+    setText(initialText);
+    textareaRef.current?.focus();
+  }, [initialText, userId, userGeneration]);
 
   const [modelMenuDirection, setModelMenuDirection] = useState<"up" | "down">("down");
   const [dropdownMaxHeight, setDropdownMaxHeight] = useState<number>(460);
@@ -228,6 +275,39 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const plusButtonRef = useRef<HTMLButtonElement>(null);
   const modelHoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const setTextForCurrentDraft = (nextText: string) => {
+    if (
+      !draftBelongsToCurrentUser ||
+      !isCurrentDraftIdentity(userId, userGeneration) ||
+      currentUserIdRef.current !== userId
+    )
+      return;
+    setText(nextText);
+  };
+
+  useEffect(() => {
+    if (draftUserId === userId) return;
+    setDraftUserId(userId);
+    setText("");
+    setAttachments((previous) => {
+      revokeChatAttachmentPreviewUrls(previous);
+      return [];
+    });
+    transferredPreviewUrlsRef.current.clear();
+    if (isDictating) toggleDictation();
+    setIsReadingFiles(false);
+    setFileError("");
+    setIsFileDragActive(false);
+    setActiveLightboxImage(null);
+  }, [draftUserId, isDictating, toggleDictation, userId]);
+
+  useEffect(
+    () => () => {
+      revokeChatAttachmentPreviewUrls(attachmentsRef.current, transferredPreviewUrlsRef.current);
+    },
+    []
+  );
 
   const showModelHoverCard = (model: AiModelOption, target: HTMLButtonElement) => {
     if (modelHoverTimeoutRef.current) clearTimeout(modelHoverTimeoutRef.current);
@@ -376,7 +456,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleSubmit = () => {
-    if (isThinking || isReadingFiles || isSendDisabled) return;
+    if (
+      !draftBelongsToCurrentUser ||
+      !isCurrentDraftIdentity(userId, userGeneration) ||
+      currentUserIdRef.current !== userId ||
+      isThinking ||
+      isReadingFiles ||
+      isSendDisabled
+    )
+      return;
     if (
       attachments.some((attachment) => Boolean(attachment.base64Data)) &&
       !selectedModelSupportsImages
@@ -392,6 +480,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         : imageCount === 1
           ? "Please analyze this image."
           : "Please review the attached file(s).";
+    for (const attachment of attachments) {
+      if (attachment.previewUrl?.startsWith("blob:")) {
+        transferredPreviewUrlsRef.current.add(attachment.previewUrl);
+      }
+    }
     onSendMessage(
       trimmed || fallbackText,
       selectedModel,
@@ -406,20 +499,47 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  const handleRemoveAttachment = (fileId: string) => {
+    if (
+      !draftBelongsToCurrentUser ||
+      !isCurrentDraftIdentity(userId, userGeneration) ||
+      currentUserIdRef.current !== userId
+    )
+      return;
+    const removed = attachments.find((attachment) => attachment.id === fileId);
+    if (removed) revokeChatAttachmentPreviewUrls([removed]);
+    setAttachments((current) => current.filter((attachment) => attachment.id !== fileId));
+  };
+
   const handleFilesSelected = async (files: FileList | null) => {
-    if (!files?.length || isReadingFiles) return;
+    if (
+      !draftBelongsToCurrentUser ||
+      !isCurrentDraftIdentity(userId, userGeneration) ||
+      currentUserIdRef.current !== userId ||
+      !files?.length ||
+      isReadingFiles
+    )
+      return;
+    const requestUserId = userId;
+    const requestUserGeneration = userGeneration;
     setIsReadingFiles(true);
     setFileError("");
     try {
-      const result = await readChatAttachments(Array.from(files), attachments);
+      const result = await readChatAttachments(Array.from(files), visibleAttachments);
+      if (!isCurrentDraftIdentity(requestUserId, requestUserGeneration)) {
+        revokeChatAttachmentPreviewUrls(result.files);
+        return;
+      }
       setAttachments((current) => [...current, ...result.files]);
       setFileError(result.errors.join(" "));
     } catch {
-      setFileError(
-        "One or more files could not be read. Try again with an image, PDF, or text file."
-      );
+      if (isCurrentDraftIdentity(requestUserId, requestUserGeneration)) {
+        setFileError(
+          "One or more files could not be read. Try again with an image, PDF, or text file."
+        );
+      }
     } finally {
-      setIsReadingFiles(false);
+      if (isCurrentDraftIdentity(requestUserId, requestUserGeneration)) setIsReadingFiles(false);
     }
   };
 
@@ -429,7 +549,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       : AVAILABLE_MODELS.find((m) => m.id === selectedModel)?.name || AVAILABLE_MODELS[0].name;
 
   const selectedModelSupportsImages = modelSupportsInput(selectedModel, "image");
-  const hasImageAttachments = attachments.some((a) => Boolean(a.base64Data));
+  const hasImageAttachments = visibleAttachments.some((a) => Boolean(a.base64Data));
   const isImageCapabilityBlocked = hasImageAttachments && !selectedModelSupportsImages;
   const selectedInMore = moreModels.find((m) => m.id === selectedModel);
   const connectedProviderIds = useMemo(
@@ -503,7 +623,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             type="file"
             ref={fileInputRef}
             className="hidden"
-            disabled={isReadingFiles}
+            disabled={visibleIsReadingFiles}
             multiple
             accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.csv,.json,.xml,.yaml,.yml,.log,image/*,application/pdf,text/plain,text/markdown,text/csv,application/json,application/xml"
             onChange={(e) => {
@@ -512,12 +632,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             }}
           />
 
-          {(attachments.length > 0 || isReadingFiles) && (
+          {(visibleAttachments.length > 0 || visibleIsReadingFiles) && (
             <div
               className="flex flex-wrap items-center gap-2.5 px-1 py-1 animate-in fade-in slide-in-from-bottom-1 duration-150"
               aria-label="Attached files"
             >
-              {attachments.map((file) => {
+              {visibleAttachments.map((file) => {
                 const previewUrl =
                   file.previewUrl ||
                   (file.base64Data
@@ -552,9 +672,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setAttachments((current) =>
-                            current.filter((item) => item.id !== file.id)
-                          );
+                          handleRemoveAttachment(file.id);
                         }}
                         className="absolute top-1 right-1 h-5 w-5 rounded-full bg-slate-900/80 hover:bg-slate-950 text-white shadow-xs flex items-center justify-center transition-all hover:scale-110 active:scale-90 cursor-pointer z-10"
                         aria-label={`Remove ${file.name}`}
@@ -583,9 +701,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     </span>
                     <button
                       type="button"
-                      onClick={() =>
-                        setAttachments((current) => current.filter((item) => item.id !== file.id))
-                      }
+                      onClick={() => handleRemoveAttachment(file.id)}
                       className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200/60 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 cursor-pointer"
                       aria-label={`Remove ${file.name}`}
                       title={`Remove ${file.name}`}
@@ -595,7 +711,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   </div>
                 );
               })}
-              {isReadingFiles && (
+              {visibleIsReadingFiles && (
                 <div
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-500"
                   role="status"
@@ -606,9 +722,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               )}
             </div>
           )}
-          {fileError && (
+          {visibleFileError && (
             <p role="alert" className="px-1 text-xs leading-5 text-amber-700">
-              {fileError}
+              {visibleFileError}
             </p>
           )}
           {hasImageAttachments && !selectedModelSupportsImages && (
@@ -635,8 +751,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <textarea
             data-testid="chat-composer"
             ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+            value={visibleText}
+            onChange={(e) => setTextForCurrentDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Listening… speak now…" : placeholder}
             rows={1}
@@ -678,7 +794,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   title="Add context, files, or extensions"
                   aria-label="Add context"
                   aria-expanded={isPlusMenuOpen}
-                  disabled={isReadingFiles}
+                  disabled={visibleIsReadingFiles}
                   className={`h-7 w-7 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center disabled:cursor-wait disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ${
                     isPlusMenuOpen
                       ? "bg-neutral-100 text-neutral-900"
@@ -1203,35 +1319,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   disabled={
                     isThinking ||
                     isSendDisabled ||
-                    isReadingFiles ||
+                    visibleIsReadingFiles ||
                     isImageCapabilityBlocked ||
-                    (!text.trim() && attachments.length === 0)
+                    (!visibleText.trim() && visibleAttachments.length === 0)
                   }
-                  aria-busy={isReadingFiles}
+                  aria-busy={visibleIsReadingFiles}
                   title={
-                    isReadingFiles
+                    visibleIsReadingFiles
                       ? "Reading files…"
                       : isImageCapabilityBlocked
                         ? "Choose a model that accepts images to send this attachment"
-                        : !text.trim() && attachments.length === 0
+                        : !visibleText.trim() && visibleAttachments.length === 0
                           ? "Type a message to send"
                           : "Send message"
                   }
-                  aria-label={isReadingFiles ? "Reading files…" : "Send message"}
+                  aria-label={visibleIsReadingFiles ? "Reading files…" : "Send message"}
                   className={`group h-7 w-7 rounded-full flex items-center justify-center transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ${
-                    (Boolean(text.trim()) || attachments.length > 0) && !isImageCapabilityBlocked
+                    (Boolean(visibleText.trim()) || visibleAttachments.length > 0) &&
+                    !isImageCapabilityBlocked
                       ? "bg-neutral-900 text-white shadow-sm hover:bg-black hover:scale-105 active:scale-95 cursor-pointer"
                       : "bg-neutral-100 text-neutral-300 cursor-not-allowed scale-100 shadow-none"
                   }`}
                 >
-                  {isReadingFiles ? (
+                  {visibleIsReadingFiles ? (
                     <LoaderCircle size={15} className="animate-spin text-slate-500" />
                   ) : (
                     <ArrowUp
                       size={14}
                       strokeWidth={2.5}
                       className={`transition-transform duration-150 ${
-                        Boolean(text.trim()) || attachments.length > 0
+                        Boolean(visibleText.trim()) || visibleAttachments.length > 0
                           ? "group-hover:-translate-y-0.5"
                           : ""
                       }`}
@@ -1255,7 +1372,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               key={label}
               type="button"
               onClick={() => {
-                setText(prompt);
+                setTextForCurrentDraft(prompt);
                 textareaRef.current?.focus();
               }}
               className={`group inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-medium transition-all duration-150 active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${landingMode ? "text-slate-600 hover:bg-slate-100/80 hover:text-slate-950" : "border border-slate-200/90 bg-white/90 text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 hover:text-slate-950 hover:-translate-y-0.5 hover:shadow-xs"}`}
@@ -1342,12 +1459,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </div>,
           document.body
         )}
-      {activeLightboxImage && (
+      {visibleLightboxImage && (
         <ImageLightboxModal
-          src={activeLightboxImage.src}
-          alt={activeLightboxImage.alt}
-          fileName={activeLightboxImage.fileName}
-          fileSize={activeLightboxImage.fileSize}
+          src={visibleLightboxImage.src}
+          alt={visibleLightboxImage.alt}
+          fileName={visibleLightboxImage.fileName}
+          fileSize={visibleLightboxImage.fileSize}
           onClose={() => setActiveLightboxImage(null)}
         />
       )}
