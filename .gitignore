@@ -81,3 +81,7 @@ __pycache__/
 .mypy_cache/
 venv/
 .venv/
+
+# Large assets & marketing
+marketing/
+*.zip

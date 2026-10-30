@@ -85,6 +85,16 @@ const AuthCallbackPage = lazyWithRetry(() =>
     default: AuthCallbackPage,
   }))
 );
+const PrivacyPolicyPage = lazyWithRetry(() =>
+  import("./features/legal/pages/PrivacyPolicyPage").then(({ PrivacyPolicyPage }) => ({
+    default: PrivacyPolicyPage,
+  }))
+);
+const TermsOfServicePage = lazyWithRetry(() =>
+  import("./features/legal/pages/TermsOfServicePage").then(({ TermsOfServicePage }) => ({
+    default: TermsOfServicePage,
+  }))
+);
 
 const HomeRoute: React.FC<{ allowChatClose?: boolean }> = ({ allowChatClose = false }) => {
   const { user, loading } = useChatAuth();
@@ -171,6 +181,24 @@ export const AppShell: React.FC = () => {
         <Route path="/reset-password" element={<Navigate to="/sign-in" replace />} />
         <Route path="/login" element={<Navigate to="/sign-in" replace />} />
         <Route path="/signup" element={<Navigate to="/sign-in" replace />} />
+        <Route
+          path="/privacy"
+          element={
+            <PageRoute name="Privacy Policy" fallback={<div className="min-h-screen bg-black" />}>
+              <PrivacyPolicyPage />
+            </PageRoute>
+          }
+        />
+        <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
+        <Route
+          path="/terms"
+          element={
+            <PageRoute name="Terms of Service" fallback={<div className="min-h-screen bg-black" />}>
+              <TermsOfServicePage />
+            </PageRoute>
+          }
+        />
+        <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
         <Route path="/" element={<HomeRoute />} />
         <Route path="/welcome" element={<HomeRoute allowChatClose />} />
         <Route element={<RequireAuth />}>

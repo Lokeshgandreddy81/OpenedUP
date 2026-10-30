@@ -112,6 +112,18 @@ export const AuthPage: React.FC = () => {
           New here? Your account is created when you continue. Come back and use the same button to
           sign in.
         </p>
+
+        <p className="mt-4 text-[11.5px] leading-relaxed text-neutral-400">
+          By continuing, you agree to our{" "}
+          <Link to="/terms" className="text-neutral-600 underline hover:text-neutral-900 transition-colors">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="text-neutral-600 underline hover:text-neutral-900 transition-colors">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </section>
     </main>
   );
