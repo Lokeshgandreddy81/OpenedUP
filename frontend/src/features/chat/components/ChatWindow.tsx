@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Plus, Plug, Puzzle, X } from "lucide-react";
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
@@ -19,11 +18,6 @@ import {
 import { base64ToBlob, uploadBlobForProcessing } from "../../../app/files/storageUploads";
 import type { ChatConversation, ChatMessage, AiModelId, EffortLevel } from "./chatTypes";
 import { getModelMeta, type ComputedRow } from "@charan-interiors/contracts";
-import {
-  CHAT_PLUGINS,
-  setPluginInstalled,
-  useInstalledPluginIds,
-} from "../../plugins/publicApi";
 import {
   getConversationSkills,
   setConversationSkills as apiSetConversationSkills,
@@ -125,7 +119,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [selectedModel, setSelectedModel] = useState<AiModelId>(
     "openrouter-nemotron-3.5-lightning-free"
   );
-  const installedPluginIds = useInstalledPluginIds();
   const [artifactDraftPrompt, setArtifactDraftPrompt] = useState("");
   const [artifactActionError, setArtifactActionError] = useState("");
   const [retryActionError, setRetryActionError] = useState("");
@@ -687,7 +680,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           model,
           ...providerConfig.customModelFields,
           effort,
-          skillIds: installedPluginIds,
           packageSkillIds: enabledSkills.map((skill) => skill.id),
         });
         const requestInit = {
@@ -947,7 +939,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       temporaryMessages,
       user,
       enabledSkills,
-      installedPluginIds,
     ]
   );
 
@@ -1144,7 +1135,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           className="relative flex h-full min-w-0 flex-1 flex-col justify-between overflow-hidden bg-white"
         >
           {/* Top Header Bar: Responsive Navigation, Brand, Temporary Chat Indicator & Profile */}
-          <header className="w-full flex flex-col sm:flex-row sm:items-start justify-between gap-3 px-4 sm:px-6 py-2.5 sm:py-3 z-30 shrink-0 relative bg-white/95 backdrop-blur-xs">
+          <header className="w-full flex items-center justify-between gap-3 px-4 sm:px-6 py-2.5 sm:py-3 z-30 shrink-0 relative bg-white/95 backdrop-blur-xs">
             {/* Left: Brand Title + Conversation Breadcrumb */}
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="flex items-center gap-2 min-w-0">
@@ -1163,15 +1154,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               </div>
             </div>
 
-            {/* Top-right controls: temporary mode and active tools */}
-            <section
-              aria-label="Chat controls and active tools"
-              className="w-full sm:w-auto sm:max-w-[min(48vw,520px)] shrink-0 rounded-xl border border-slate-200 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.04)]"
-            >
-              <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Chat tools</p>
-                </div>
+            {/* Center/Right: Temporary Chat Toggle Button */}
+            <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-2.5">
+              {/* Temporary Chat Toggle Button */}
               <button
                 type="button"
                 onClick={() => {
@@ -1186,53 +1171,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     : "Turn on temporary chat (history not saved)"
                 }
                 aria-label="Temporary chat"
-                className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                className={`h-8 px-2 sm:px-2.5 rounded-lg flex items-center gap-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer ${
                   isTemporaryChat
-                    ? "border-slate-800 bg-slate-900 text-white hover:bg-slate-800"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-slate-900 text-white hover:bg-slate-800 shadow-xs ring-1 ring-slate-950"
+                    : "text-slate-600 hover:text-slate-950 hover:bg-slate-100"
                 }`}
               >
                 <GhostIcon
                   size={16}
                   className={isTemporaryChat ? "text-white" : "text-slate-600"}
                 />
-                <span>{isTemporaryChat ? "Temporary chat on" : "Temporary chat"}</span>
+                <span className="hidden md:inline">
+                  {isTemporaryChat ? "Temporary On" : "Temporary"}
+                </span>
               </button>
-              </div>
-
-              <div className="flex max-h-[112px] flex-wrap items-center gap-1.5 overflow-y-auto p-2.5" aria-label="Active tools">
-                {installedPluginIds.map((pluginId) => {
-                  const plugin = CHAT_PLUGINS.find((item) => item.id === pluginId);
-                  if (!plugin) return null;
-                  return (
-                    <div key={plugin.id} title={plugin.description} className="inline-flex max-w-[220px] items-center gap-2 rounded-md border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-[11px] text-slate-700">
-                      <Plug size={13} strokeWidth={1.8} className="shrink-0 text-slate-500" />
-                      <span className="truncate">{plugin.name}</span>
-                      <button type="button" onClick={() => setPluginInstalled(plugin.id, false)} className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm text-slate-400 hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" aria-label={`Disable ${plugin.name}`} title={`Disable ${plugin.name}`}>
-                        <X size={11} />
-                      </button>
-                    </div>
-                  );
-                })}
-                {enabledSkills.map((skill) => (
-                  <div key={skill.id} title={skill.description} className="inline-flex max-w-[240px] items-center gap-2 rounded-md border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-[11px] text-slate-700">
-                    <Puzzle size={13} strokeWidth={1.8} className="shrink-0 text-slate-500" />
-                    <span className="truncate">{skill.name}</span>
-                    {skill.source === "project" && <span className="shrink-0 border-l border-slate-200 pl-1.5 text-[9px] uppercase tracking-wide text-slate-400">Project</span>}
-                    <button type="button" onClick={() => void handleRemoveSkill(skill.id)} className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm text-slate-400 hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300" aria-label={`Disable ${skill.name}`} title={`Disable ${skill.name}`}>
-                      <X size={11} />
-                    </button>
-                  </div>
-                ))}
-                <button type="button" onClick={() => setIsSkillsModalOpen(true)} className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">
-                  <Plus size={12} strokeWidth={2} />
-                  <span>Add skill</span>
-                </button>
-                {installedPluginIds.length === 0 && enabledSkills.length === 0 && (
-                  <span className="px-1 text-[11px] text-slate-400">No active tools</span>
-                )}
-              </div>
-            </section>
+            </div>
           </header>
 
           {isEmptyChat ? (
@@ -1283,6 +1236,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     onOpenSkills={handleOpenSkillsTab}
                     onOpenBenchmarks={() => handleSelectView("benchmarks")}
                     onOpenProviders={handleOpenProvidersTab}
+                    enabledSkills={enabledSkills}
+                    onRemoveSkill={handleRemoveSkill}
+                    onOpenSkillsModal={() => setIsSkillsModalOpen(true)}
                     starterPrompts={[
                       { label: "Explain a concept", prompt: "Explain a concept to me simply: " },
                       { label: "Help me write", prompt: "Help me write: " },
@@ -1417,6 +1373,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   onOpenSkills={handleOpenSkillsTab}
                   onOpenBenchmarks={() => handleSelectView("benchmarks")}
                   onOpenProviders={handleOpenProvidersTab}
+                  enabledSkills={enabledSkills}
+                  onRemoveSkill={handleRemoveSkill}
+                  onOpenSkillsModal={() => setIsSkillsModalOpen(true)}
                 />
               </div>
             </>

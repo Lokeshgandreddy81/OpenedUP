@@ -1,2 +1,1 @@
-export { CHAT_PLUGINS, setPluginInstalled, useInstalledPluginIds } from "./state/pluginStore";
-export type { ChatPluginDefinition } from "./state/pluginStore";
+export { CHAT_PLUGINS, useInstalledPluginIds } from "./state/pluginStore";
