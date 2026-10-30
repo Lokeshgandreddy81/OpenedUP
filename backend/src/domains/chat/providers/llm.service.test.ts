@@ -1638,6 +1638,39 @@ test("Google streaming returns generated text and emits incremental candidate co
   });
 });
 
+test("Google streaming retries an empty stream through the non-streaming endpoint", async (t) => {
+  const requests: string[] = [];
+  t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+    const url = input instanceof Request ? input.url : String(input);
+    requests.push(url);
+    if (url.includes(":streamGenerateContent")) {
+      return chunkedSseResponse([]);
+    }
+    return new Response(
+      JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "Recovered" }] } }] }),
+      { headers: { "Content-Type": "application/json" } }
+    );
+  });
+
+  const deltas: string[] = [];
+  const result = await generateMultiProviderChatStream(
+    {
+      modelId: "gemini-3.5-flash-lite",
+      messages: [{ role: "user", content: "hello" }],
+      systemInstruction: "Be concise.",
+      injectedApiKey: "google-enterprise-token",
+      injectedBaseUrl: "https://1.1.1.1/v1beta",
+    },
+    (delta) => deltas.push(delta)
+  );
+
+  assert.equal(requests.length, 2);
+  assert.match(requests[0]!, /:streamGenerateContent/);
+  assert.match(requests[1]!, /:generateContent/);
+  assert.deepEqual(deltas, ["Recovered"]);
+  assert.equal(result.text, "Recovered");
+});
+
 test("Google streaming does not switch models when the selected model is unavailable", async (t) => {
   const requests: string[] = [];
   t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {

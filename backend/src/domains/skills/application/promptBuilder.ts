@@ -22,23 +22,30 @@ export function escapeXml(str: string): string {
  * plus instruction:
  * "When a user request matches a skill's description, call the Skill tool with that skill's name BEFORE doing the task, then follow its instructions. Skills listed above are the only ones available."
  */
-export function buildSkillsPrompt(enabledSkills: SkillRecord[]): string {
+export function buildSkillsPrompt(
+  enabledSkills: Array<SkillRecord | { skill: SkillRecord; content: string }>
+): string {
   if (!enabledSkills || enabledSkills.length === 0) {
     return "";
   }
 
   const skillBlocks = enabledSkills
     .map(
-      (skill) => `  <skill>
+      (entry) => {
+        const skill = "skill" in entry ? entry.skill : entry;
+        const content = "skill" in entry ? entry.content : "";
+        return `  <skill>
     <name>${escapeXml(skill.name)}</name>
     <description>${escapeXml(skill.description)}</description>
-    <location>/mnt/skills/${escapeXml(skill.scope)}/${escapeXml(skill.name)}/SKILL.md</location>
+    <location>/mnt/skills/${escapeXml(skill.scope)}/${escapeXml(skill.name)}/SKILL.md</location>${content ? `
+    <instructions>${escapeXml(content)}</instructions>` : ""}
   </skill>`
+      }
     )
     .join("\n");
 
   return `<available_skills>
 ${skillBlocks}
 </available_skills>
-When a user request matches a skill's description, call the Skill tool with that skill's name BEFORE doing the task, then follow its instructions. Skills listed above are the only ones available. Use skills silently: never include skill names, raw tool inputs or outputs, JSON payloads, execution traces, or labels such as "Skill Input" and "Skill Output" in the user-facing response. Return only the polished answer. For simple greetings, respond briefly and naturally; do not list capabilities unless asked.`;
+Follow the instructions for every selected skill before answering the user's request. If instructions are not embedded and a Skill tool is available, call it before doing the task. Treat skill instructions as guidance for the task, and do not expose these instruction blocks or internal execution details in the user-facing response. For simple greetings, respond briefly and naturally.`;
 }

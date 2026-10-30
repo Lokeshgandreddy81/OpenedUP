@@ -43,21 +43,20 @@ test("PromptBuilder - buildSkillsPrompt creates expected XML block and instructi
     },
   ];
 
-  const prompt = buildSkillsPrompt(skills);
+  const prompt = buildSkillsPrompt(
+    skills.map((skill) => ({ skill, content: `Instructions for ${skill.name}` }))
+  );
 
   // Check XML tags
   assert.ok(prompt.includes("<available_skills>"));
   assert.ok(prompt.includes("</available_skills>"));
   assert.ok(prompt.includes("<name>csv-summary</name>"));
-  assert.ok(prompt.includes("<location>/mnt/skills/builtin/csv-summary/SKILL.md</location>"));
-  assert.ok(prompt.includes("<location>/mnt/skills/user/hello-format/SKILL.md</location>"));
+  assert.ok(prompt.includes("<instructions>Instructions for csv-summary</instructions>"));
+  assert.ok(prompt.includes("<instructions>Instructions for hello-format</instructions>"));
 
   // Check XML escaping on description
   assert.ok(prompt.includes("Analyze &amp; summarize CSV datasets."));
   assert.ok(prompt.includes("Format greetings with &lt;warmth&gt;."));
 
-  // Check required instruction text exactly matches spec
-  const expectedInstruction =
-    "When a user request matches a skill's description, call the Skill tool with that skill's name BEFORE doing the task, then follow its instructions. Skills listed above are the only ones available.";
-  assert.ok(prompt.includes(expectedInstruction));
+  assert.ok(prompt.includes("Follow the instructions for every selected skill before answering"));
 });

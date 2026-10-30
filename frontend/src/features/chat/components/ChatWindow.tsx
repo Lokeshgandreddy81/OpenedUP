@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
-import { useInstalledPluginIds } from "../../plugins/publicApi";
 import type { CustomizeCategory } from "../../customize";
 import {
   ChatWorkspaceScreens,
@@ -120,17 +119,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [selectedModel, setSelectedModel] = useState<AiModelId>(
     "openrouter-nemotron-3.5-lightning-free"
   );
-  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [artifactDraftPrompt, setArtifactDraftPrompt] = useState("");
   const [artifactActionError, setArtifactActionError] = useState("");
   const [retryActionError, setRetryActionError] = useState("");
-  const installedPluginIds = useInstalledPluginIds();
-
-  useEffect(() => {
-    setSelectedSkillIds((current) =>
-      current.filter((id) => installedPluginIds.includes(id as (typeof installedPluginIds)[number]))
-    );
-  }, [installedPluginIds]);
 
   useEffect(() => {
     if (processedInitialViewRef.current === initialView) return;
@@ -689,9 +680,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           model,
           ...providerConfig.customModelFields,
           effort,
-          skillIds: selectedSkillIds.filter((id) =>
-            installedPluginIds.includes(id as (typeof installedPluginIds)[number])
-          ),
+          packageSkillIds: enabledSkills.map((skill) => skill.id),
         });
         const requestInit = {
           method: "POST",
@@ -949,8 +938,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       isTemporaryChat,
       temporaryMessages,
       user,
-      selectedSkillIds,
-      installedPluginIds,
+      enabledSkills,
     ]
   );
 

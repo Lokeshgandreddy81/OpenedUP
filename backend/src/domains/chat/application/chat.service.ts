@@ -13,6 +13,7 @@ import { runAgenticWorkspaceTools } from "./tools.service.js";
 import { executeSkills } from "./skillRegistry.js";
 import { getSkillRepository } from "../../skills/http/skill.controller.js";
 import { buildSkillsPrompt } from "../../skills/application/promptBuilder.js";
+import { readSkillFile } from "../../skills/application/skillStorage.js";
 import { runAnthropicToolLoop } from "../../skills/application/anthropicToolLoop.js";
 import { initSandbox } from "../../skills/application/sandboxManager.js";
 import { SANDBOX_TOOLS, executeSandboxTool } from "../../skills/application/sandboxTools.js";
@@ -46,15 +47,26 @@ async function resolveChatSkillsContext(
       ? await skillRepo.getConversationSkills(payload.conversationId)
       : [];
     const visibleSkills = await skillRepo.listVisible(userId, orgId);
-    const mergedMap = new Map<string, SkillRecord>();
-    for (const s of conversationSkills) mergedMap.set(s.id, s);
-    for (const s of visibleSkills) {
-      if (!mergedMap.has(s.id)) mergedMap.set(s.id, s);
-    }
-    const skillsForPrompt =
-      conversationSkills.length > 0 ? conversationSkills : Array.from(mergedMap.values());
+    const visibleById = new Map(visibleSkills.map((skill) => [skill.id, skill]));
+    const requestedIds = payload.packageSkillIds ?? [];
+    const skillsForPrompt = requestedIds.length
+      ? requestedIds.flatMap((id) => {
+          const skill = visibleById.get(id);
+          return skill ? [skill] : [];
+        })
+      : conversationSkills;
+    const skillInstructions = await Promise.all(
+      skillsForPrompt.map(async (skill) => {
+        if (!skill.storagePath) return { skill, content: "" };
+        const content = await readSkillFile(skill.storagePath, "SKILL.md");
+        return {
+          skill,
+          content: content?.toString("utf8").slice(0, 60_000) ?? "",
+        };
+      })
+    );
     return {
-      progressiveSkillsPrompt: buildSkillsPrompt(skillsForPrompt),
+      progressiveSkillsPrompt: buildSkillsPrompt(skillInstructions),
       conversationSkills,
     };
   } catch {

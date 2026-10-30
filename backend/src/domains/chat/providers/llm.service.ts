@@ -484,6 +484,24 @@ export async function generateMultiProviderChatStream(
       onDelta
     );
   }
+  // Some Gemini-compatible endpoints close a successful stream without emitting text.
+  // Retry that empty stream once using the non-streaming endpoint before failing the turn.
+  if (!text.trim() && provider === "google") {
+    const fallback = await callGoogleGemini({
+      apiKey,
+      baseUrl,
+      model: upstreamModelId,
+      messages: params.messages,
+      systemInstruction: params.systemInstruction,
+      effort: effectiveEffort,
+      supportsNativeEffort,
+      maxTokens,
+      images: allImages,
+      signal: params.signal,
+    });
+    text = fallback.text;
+    onDelta(text);
+  }
   if (!text.trim()) {
     throw new Error(`EMPTY_PROVIDER_RESPONSE:${provider}:The selected provider returned no text.`);
   }
