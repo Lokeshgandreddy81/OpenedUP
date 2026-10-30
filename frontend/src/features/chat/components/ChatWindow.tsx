@@ -1236,8 +1236,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     onOpenSkills={handleOpenSkillsTab}
                     onOpenBenchmarks={() => handleSelectView("benchmarks")}
                     onOpenProviders={handleOpenProvidersTab}
-                    enabledSkills={enabledSkills}
-                    onRemoveSkill={handleRemoveSkill}
                     onOpenSkillsModal={() => setIsSkillsModalOpen(true)}
                     starterPrompts={[
                       { label: "Explain a concept", prompt: "Explain a concept to me simply: " },
@@ -1373,8 +1371,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   onOpenSkills={handleOpenSkillsTab}
                   onOpenBenchmarks={() => handleSelectView("benchmarks")}
                   onOpenProviders={handleOpenProvidersTab}
-                  enabledSkills={enabledSkills}
-                  onRemoveSkill={handleRemoveSkill}
                   onOpenSkillsModal={() => setIsSkillsModalOpen(true)}
                 />
               </div>
