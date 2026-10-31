@@ -113,7 +113,7 @@ export function actionableProviderError(message: string): string {
     sanitized.match(/(?:error\s*\(|HTTP\s+|status(?:\s+code)?\s*[:=]?\s*)(\d{3})\)?/i)?.[1] ||
     sanitized.match(/\b(400|401|403|404|408|429|5\d\d)\b/)?.[1];
   if (/permission_(?:denied|error)/i.test(sanitized)) {
-    return "The provider denied this API key's permissions. Check the key, selected provider, and model access in Customize → Providers.";
+    return "This API key may not have access to the selected model. Check that the model is enabled for your provider account and API tier, or choose a model available to your key.";
   }
   if (
     status === "401" ||
@@ -144,6 +144,8 @@ export function actionableProviderError(message: string): string {
     return "The provider is temporarily unavailable. Retry in a moment or check the provider’s status page.";
   }
   if (status === "400" || status === "404" || /invalid[\s_-]*request_error/i.test(sanitized)) {
+    if (/model|not found/i.test(sanitized))
+      return "Your provider could not use this model with the current API key. Model availability varies by account, region, and API tier; check your provider access or choose another model.";
     return "The provider rejected this model request. Check that the model ID is valid for the selected provider and endpoint.";
   }
   if (/fetch failed|network|socket|dns|econnreset|econnrefused|enotfound/i.test(sanitized)) {

@@ -788,7 +788,7 @@ test("statusless permission and API errors produce actionable provider guidance"
   assert.equal(classifyProviderFailure(permissionError), "authentication");
   assert.match(
     actionableProviderError(permissionError.message),
-    /permissions.*Customize → Providers/i
+    /API key may not have access.*API tier/i
   );
   assert.equal(classifyProviderFailure(apiError), "provider_unavailable");
   assert.match(actionableProviderError(apiError.message), /temporarily unavailable.*Retry/i);
@@ -1647,7 +1647,9 @@ test("Google streaming retries an empty stream through the non-streaming endpoin
       return chunkedSseResponse([]);
     }
     return new Response(
-      JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: "Recovered" }] } }] }),
+      JSON.stringify({
+        candidates: [{ content: { role: "model", parts: [{ text: "Recovered" }] } }],
+      }),
       { headers: { "Content-Type": "application/json" } }
     );
   });

@@ -1570,7 +1570,7 @@ function modalityLabel(modality: string): string {
 
 function formatTokenLimit(tokens: number): string {
   if (tokens >= 1_000_000) {
-    return `${(tokens / 1_000_000).toFixed(2).replace(/\.?0+$/, "")}M`;
+    return `${(tokens / 1_000_000).toFixed(1).replace(/\.?0+$/, "")}M`;
   }
   if (tokens >= 1_000) return `${Math.round(tokens / 1_000)}K`;
   return tokens.toLocaleString();
